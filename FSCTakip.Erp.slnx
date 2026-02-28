@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="FSCTakip.Business/FSCTakip.Business.csproj" />
+  <Project Path="FSCTakip.Core/FSCTakip.Core.csproj" />
+  <Project Path="FSCTakip.DataAccess/FSCTakip.DataAccess.csproj" />
+  <Project Path="FSCTakip.WebUI/FSCTakip.WebUI.csproj" />
+</Solution>
