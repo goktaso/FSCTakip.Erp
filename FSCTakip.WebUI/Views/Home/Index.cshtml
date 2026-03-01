@@ -1,8 +1,111 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Ürün Listesi";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="product-container">
+    <div id="filterPanel" class="filter-card" style="display:none;">
+        <div class="row">
+            <div class="col-md-3">
+                <label>Ürün Grubu</label>
+                <select class="form-control" id="groupFilter">
+                    <option value="">Hepsi</option>
+                    <option value="1">1-Hammadde</option>
+                    <option value="6">6-Mamül</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>FSC Tipi</label>
+                <select class="form-control" id="fscFilter">
+                    <option value="">Hepsi</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Hızlı Ara</label>
+                <input type="text" class="form-control" placeholder="Kod veya Ad...">
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive shadow-sm rounded bg-white">
+        <table class="table table-hover mb-0">
+            <thead class="thead-light">
+                <tr>
+                    <th>Stok Kodu</th>
+                    <th>Ürün Adı</th>
+                    <th>Grup</th>
+                    <th>Gramaj</th>
+                    <th>Teknik Detay (Bobin/Ölçü)</th>
+                    <th>FSC Tipi</th>
+                    <th class="text-right">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>10001</strong></td>
+                    <td>Esmer Kraft Bobin</td>
+                    <td><span class="badge badge-info">1-Hammadde</span></td>
+                    <td>80 gr</td>
+                    <td><span class="text-primary font-weight-bold">Bobin: 70 cm</span></td>
+                    <td>FSC Mix</td>
+                    <td class="text-right">
+                        <button class="btn btn-sm btn-outline-secondary" title="Düzenle">📝</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>60001</strong></td>
+                    <td>Bakkal Torbası</td>
+                    <td><span class="badge badge-success">6-Mamül</span></td>
+                    <td>80 gr</td>
+                    <td><span class="text-success font-weight-bold">24 x 30 x 12 cm</span></td>
+                    <td><span class="text-danger">FSC-SIZ</span></td>
+                    <td class="text-right">
+                        <button class="btn btn-sm btn-outline-secondary" title="Düzenle">📝</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Layout'taki "Filtrele" butonuna tıklandığında paneli aç/kapat
+        function toggleFilter() {
+            var panel = document.getElementById("filterPanel");
+            if (panel.style.display === "none") {
+                panel.style.display = "block";
+            } else {
+                panel.style.display = "none";
+            }
+        }
+
+        // Layout'taki butonlarla eşleştirme yapıyoruz
+        document.querySelector('.btn-filter').onclick = toggleFilter;
+
+        // Excel ve Yazdır fonksiyonları buraya gelecek
+        function exportToExcel() { alert("Excel'e aktarma işlemi başlatılıyor..."); }
+        function windowPrint() { window.print(); }
+    </script>
+}
+
+<style>
+    .filter-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 5px solid #f39c12;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table thead th {
+        border-top: none;
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+    }
+
+    .badge {
+        padding: 8px 12px;
+    }
+</style>

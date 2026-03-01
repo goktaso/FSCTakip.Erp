@@ -1,49 +1,296 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - FSCTakip.WebUI</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/FSCTakip.WebUI.styles.css" asp-append-version="true" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>@ViewData["Title"] - FSC ERP | 2026</title>
+
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css">
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css">
+
+    <style>
+        /* --- GENEL TASARIM --- */
+        body {
+            margin: 0;
+            background: #f4f7f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .main-wrapper {
+            display: flex;
+            height: 100vh;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        /* --- SIDEBAR (HAMBURGER METODU) --- */
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s;
+            z-index: 1050;
+        }
+            /* Masaüstü Daraltılmış Menü (Mini) */
+            .sidebar.collapsed {
+                width: 70px;
+                min-width: 70px;
+            }
+
+                .sidebar.collapsed .sidebar-header h4,
+                .sidebar.collapsed .menu-label,
+                .sidebar.collapsed .nav-link span,
+                .sidebar.collapsed .nav-link .float-right {
+                    display: none;
+                }
+
+        /* Mobil Sidebar Gizleme */
+        @@media (max-width: 992px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                height: 100%;
+            }
+
+                .sidebar.active {
+                    left: 0;
+                }
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background: #1a252f;
+            text-align: center;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .menu-label {
+            padding: 15px 20px 5px 20px;
+            font-size: 0.7rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .nav-link {
+            color: #bdc3c7;
+            padding: 12px 20px;
+            display: block;
+            text-decoration: none !important;
+            transition: 0.2s;
+        }
+
+            .nav-link:hover {
+                background: #34495e;
+                color: #3498db;
+            }
+
+            .nav-link i {
+                width: 25px;
+                font-size: 1.1rem;
+            }
+
+        /* --- İÇERİK ALANI --- */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .page-header {
+            background: white;
+            padding: 10px 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        #hamburgerBtn {
+            background: #2c3e50;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* [2026-02-25] Standart Butonlar (Kaydırılabilir) */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+            scrollbar-width: none;
+        }
+
+            .action-buttons::-webkit-scrollbar {
+                display: none;
+            }
+
+        .btn-filter {
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .btn-excel {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .btn-print {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .btn-add {
+            background-color: #8e44ad;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .page-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        /* Overlay */
+        .overlay {
+            display: none;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1040;
+        }
+
+            .overlay.active {
+                display: block;
+            }
+    </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">FSCTakip.WebUI</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
+
+    <div class="overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrapper">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h4 class="mb-0 text-white">FSC ERP</h4>
+                <small class="text-info">2026-v1</small>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
+
+            <nav class="sidebar-menu overflow-auto">
+                <div class="menu-label">ANA MENÜ</div>
+                <a href="/Home/Index" class="nav-link"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+
+                <div class="menu-label">OPERASYON</div>
+                <a href="/Products/Index" class="nav-link"><i class="fas fa-boxes"></i> <span>Ürün Yönetimi</span></a>
+                <a href="/Planning/Index" class="nav-link"><i class="fas fa-calendar-check"></i> <span>Üretim Planlama</span></a>
+                <a href="/Stock/Movements" class="nav-link"><i class="fas fa-exchange-alt"></i> <span>Stok Hareketleri</span></a>
+
+                <div class="menu-label">TİCARİ</div>
+                <a href="/Customers/Index" class="nav-link"><i class="fas fa-users"></i> <span>Müşteriler</span></a>
+                <a href="/Suppliers/Index" class="nav-link"><i class="fas fa-truck-loading"></i> <span>Tedarikçiler</span></a>
+
+                <div class="menu-label">SİSTEM</div>
+                <a class="nav-link" href="#" data-toggle="collapse" data-target="#setPaper">
+                    <i class="fas fa-scroll"></i> <span>Kağıt Ayarları</span>
+                    <i class="fas fa-chevron-down float-right mt-1 small"></i>
+                </a>
+                <div id="setPaper" class="collapse">
+                    <div class="bg-dark py-2">
+                        <a class="nav-link small pl-5" href="/Settings/PaperTypes">Kağıt Tipleri</a>
+                        <a class="nav-link small pl-5" href="/Settings/PaperColors">Kağıt Renkleri</a>
+                    </div>
+                </div>
+
+                <a class="nav-link" href="#" data-toggle="collapse" data-target="#setProd">
+                    <i class="fas fa-industry"></i> <span>Üretim Ayarları</span>
+                    <i class="fas fa-chevron-down float-right mt-1 small"></i>
+                </a>
+                <div id="setProd" class="collapse">
+                    <div class="bg-dark py-2">
+                        <a class="nav-link small pl-5" href="/Settings/Machines">Makineler</a>
+                        <a class="nav-link small pl-5" href="/Settings/BagTypes">Torba Tipleri</a>
+                        <a class="nav-link small pl-5" href="/Settings/ProductGroups">Ürün Grupları</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="content-area">
+            <header class="page-header">
+                <div class="header-top">
+                    <button id="hamburgerBtn" type="button"><i class="fas fa-bars"></i></button>
+                    <h2 class="h5 mb-0 font-weight-bold">@ViewData["Title"]</h2>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn-filter" onclick="toggleFilter()"><i class="fas fa-filter"></i> Filtrele</button>
+                    <button class="btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                    <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Yazdır</button>
+                    <button class="btn-add"><i class="fas fa-plus-circle"></i> Yeni Ekle</button>
+                </div>
+            </header>
+
+            <section class="page-body">
+                @RenderBody()
+            </section>
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - FSCTakip.WebUI - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/lib/jquery/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Hamburger Mekanizması
+            $('#hamburgerBtn').click(function() {
+                if ($(window).width() > 992) {
+                    $('#sidebar').toggleClass('collapsed');
+                } else {
+                    $('#sidebar').toggleClass('active');
+                    $('#sidebarOverlay').toggleClass('active');
+                }
+            });
+
+            $('#sidebarOverlay').click(function() {
+                $('#sidebar').removeClass('active');
+                $(this).removeClass('active');
+            });
+        });
+
+        function toggleFilter() { $('#filterPanel').slideToggle('fast'); }
+        function exportToExcel() { alert("Excel modülü çalışıyor..."); }
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

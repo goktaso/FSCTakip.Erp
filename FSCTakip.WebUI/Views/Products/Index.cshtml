@@ -1,0 +1,121 @@
+﻿@using FSCTakip.Core.Entities
+@model IEnumerable<Product>
+
+<div class="product-container p-4">
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr class="header-main">
+                        <th class="border-0">STOK KODU</th>
+                        <th class="border-0">ÜRÜN TANIMI</th>
+                        <th colspan="3" class="text-center border-0">KAĞIT & KARAKTERİSTİK</th>
+                        <th colspan="2" class="text-center border-0">TEKNİK ÖLÇÜLER</th>
+                        <th colspan="2" class="text-center border-0">LOJİSTİK (PAKETLEME)</th>
+                        <th class="border-0">FSC</th>
+                        <th class="border-0">İŞLEM</th>
+                    </tr>
+                    <tr class="header-sub">
+                        <th colspan="2" class="border-0"></th>
+                        <th class="text-center">TİP</th>
+                        <th class="text-center">RENK</th>
+                        <th class="text-center">GR.</th>
+                        <th class="text-center">BOBİN ENİ</th>
+                        <th class="text-center">ÖLÇÜ (EXBXK)</th>
+                        <th class="text-center">KOLİ/PALET</th>
+                        <th class="text-center">NET/BRÜT</th>
+                        <th colspan="2" class="border-0"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="font-weight-bold">30168</td>
+                        <td class="product-name">QP TW 90 g Unprinted Brown Recycled</td>
+                        <td class="text-center font-weight-bold">Recycle</td>
+                        <td class="text-center">Brown</td>
+                        <td class="text-center">90g</td>
+                        <td class="text-center text-muted">-</td>
+                        <td class="text-center">260 x 320 x 120</td>
+                        <td class="text-center">250 / 250</td>
+                        <td class="text-center">12.5 / 13.0</td>
+                        <td class="text-center">Mix</td>
+                        <td class="text-center">
+                            <button class="btn btn-action"><i class="fas fa-edit"></i> 📝</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="font-weight-bold">10001</td>
+                        <td class="product-name">Natron VBMF090 1080 FSC 100%</td>
+                        <td class="text-center font-weight-bold">Virgin</td>
+                        <td class="text-center">Brown</td>
+                        <td class="text-center">90g</td>
+                        <td class="text-center">108 cm</td>
+                        <td class="text-center text-muted">-</td>
+                        <td class="text-center">-</td>
+                        <td class="text-center">- / 450.0</td>
+                        <td class="text-center">100%</td>
+                        <td class="text-center">
+                            <button class="btn btn-action"><i class="fas fa-edit"></i> 📝</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Görseldeki (image_042522.png) Tasarımı Yakalamak İçin CSS */
+    .table-custom {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    /* Başlık Stilleri */
+    .header-main th {
+        font-size: 13px;
+        font-weight: 800;
+        color: #000;
+        padding-bottom: 5px;
+        letter-spacing: 0.3px;
+    }
+
+    .header-sub th {
+        font-size: 11px;
+        font-weight: 700;
+        color: #333;
+        padding-top: 0;
+        border-bottom: 1px solid #dee2e6 !important;
+    }
+
+    /* Hücre Stilleri */
+    .table-custom td {
+        padding: 12px 8px;
+        vertical-align: middle;
+        font-size: 13px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .product-name {
+        color: #444;
+        font-size: 12px;
+    }
+
+    /* Bobin Eni ve Ölçü Sütunlarındaki Ayraç Çizgileri */
+    .text-center {
+        text-align: center;
+    }
+
+    /* İşlem Butonu */
+    .btn-action {
+        background: #f8f9fa;
+        border: 1px solid #ccc;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    /* Görseldeki gibi her sütun grubunun arasına ince dikey çizgiler */
+    td:nth-child(5), td:nth-child(7), td:nth-child(9) {
+        border-right: 1px solid #eee;
+    }
+</style>
