@@ -1,16 +1,15 @@
-﻿@{
+﻿@model IEnumerable<FSCTakip.Core.Entities.BagType>
+@{
     ViewData["Title"] = "Torba Tipi Tanımları";
-    }
-<div class="card shadow mb-4">
-    @* [2026-02-25] Kuralı: Ortak buton yapısı. *@
-    @await Html.PartialAsync("_TableActions", "Torba Tipleri")
+}
 
+@* Filtre Paneli - Layout'taki Turuncu Buton Burayı Tetikler *@
 <div id="filterPanel" class="card mb-3 shadow-sm border-left-dark" style="display:none;">
     <div class="card-body py-3">
         <div class="row align-items-end">
             <div class="col-md-9">
                 <label class="small font-weight-bold text-uppercase">Torba Tipi Ara</label>
-                <input type="text" id="bagTypeSearch" class="form-control form-control-sm border-dark" placeholder="Örn: Kare Dip, Takviyeli, Pencereli...">
+                <input type="text" id="bagTypeSearch" class="form-control form-control-sm border-dark" placeholder="Örn: Kare Dip, Takviyeli...">
             </div>
             <div class="col-md-3">
                 <button class="btn btn-dark btn-sm btn-block text-white" onclick="filterBagTypes()">
@@ -20,8 +19,8 @@
         </div>
     </div>
 </div>
-    </div>
 
+@* Tablo Alanı *@
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -37,9 +36,135 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td><strong class="text-dark">Kare Dip Torba</strong></td>
-                        <td><span class="badge badge-light border text-dark">KD-01</span></td>
-                        <td><small class="text-muted">Körüklü ve düz tabanlı yapı.</small></td>
-                        <td>
+                    @if (Model != null)
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.Id</td>
+                                <td><strong class="text-dark">@item.Name</strong></td>
+                                <td><span class="badge badge-light border text-dark">@item.Code</span></td>
+                                <td><small class="text-muted">@item.Description</small></td>
+                                <td>
+                                    <span class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
+                                        @(item.IsActive ? "Aktif" : "Pasif")
+                                    </span>
+                                </td>
+                                <td class="text-right">
+                                    <button class="btn btn-sm btn-outline-primary mr-1"
+                                            onclick="editBagType(@item.Id, '@item.Name', '@item.Code', '@item.Description')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteBagType(@item.Id)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* Modal: Ekleme & Düzenleme *@
+<div class="modal fade" id="bagTypeModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-shopping-bag mr-2"></i>Torba Tipi Formu</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form asp-action="SaveBagType" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="bagId" value="0" />
+                    <div class="form-group">
+                        <label class="small font-weight-bold text-dark">Torba Tipi Adı</label>
+                        <input type="text" name="Name" id="bagName" class="form-control border-dark" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold text-dark">Kısa Kod</label>
+                        <input type="text" name="Code" id="bagCode" class="form-control border-dark">
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold text-dark">Açıklama</label>
+                        <textarea name="Description" id="bagDesc" class="form-control border-dark" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-dark btn-sm px-4">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Layout'taki "Yeni Ekle" butonu burayı tetikler
+        function openAddModal() {
+            $('#bagId').val(0);
+            $('#bagName').val('');
+            $('#bagCode').val('');
+            $('#bagDesc').val('');
+            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Torba Tipi');
+            $('#bagTypeModal').modal('show');
+        }
+
+        function editBagType(id, name, code, desc) {
+            $('#bagId').val(id);
+            $('#bagName').val(name);
+            $('#bagCode').val(code);
+            $('#bagDesc').val(desc);
+            $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Torba Tipi Düzenle');
+            $('#bagTypeModal').modal('show');
+        }
+
+        function filterBagTypes() {
+            var value = $("#bagTypeSearch").val().toLowerCase();
+            $("#bagTypesTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        }
+
+                       function deleteBagType(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu işlem geri alınamaz! Torba tipi kalıcı olarak silinecektir.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#2c3e50', // Sidebar rengine uygun
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Evet, Sil!',
+                cancelButtonText: 'Vazgeç',
+                background: '#f4f7f6'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Silme işlemi başlasın
+                    $.post('/Product/DeleteBagType', { id: id }, function (response) {
+                        if (response.success) {
+                            Swal.fire({
+                                title: 'Silindi!',
+                                text: response.message,
+                                icon: 'success',
+                                timer: 1500,
+                                showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('Hata!', response.message, 'error');
+                        }
+                    });
+                }
+            })
+        }
+
+        // Excel fonksiyonu (Layout'taki buton için)
+        function exportToExcel() {
+            window.location.href = '/Product/ExportBagTypes';
+        }
+    </script>
+}

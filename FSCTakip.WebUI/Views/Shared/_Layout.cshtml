@@ -22,7 +22,7 @@
             position: relative;
         }
 
-        /* --- SIDEBAR TASARIMI --- */
+        /* --- SIDEBAR --- */
         .sidebar {
             width: 260px;
             min-width: 260px;
@@ -98,7 +98,13 @@
                 color: #3498db !important;
             }
 
-        /* --- İÇERİK ALANI --- */
+            .collapse-item.active {
+                color: white !important;
+                font-weight: bold;
+                background: #3498db;
+            }
+
+        /* --- CONTENT --- */
         .content-area {
             flex: 1;
             display: flex;
@@ -111,6 +117,7 @@
             background: white;
             padding: 10px 20px;
             border-bottom: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
         .header-top {
@@ -177,6 +184,7 @@
 
             .btn-filter:hover, .btn-excel:hover, .btn-print:hover, .btn-add:hover {
                 opacity: 0.85;
+                transform: translateY(-1px);
             }
 
         .page-body {
@@ -238,7 +246,21 @@
                 <div class="menu-label">SİSTEM AYARLARI</div>
 
                 <div class="nav-item">
-                    <a class="nav-link" href="#" data-toggle="collapse" data-target="#paperSet">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTorba">
+                        <i class="fas fa-shopping-bag"></i> <span>Torba Tanımları</span>
+                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
+                    </a>
+                    <div id="collapseTorba" class="collapse @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Product" ? "show" : "")">
+                        <div class="collapse-inner">
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "BagTypes" ? "active" : "")"
+                               href="@Url.Action("BagTypes", "Product")">Torba Tipleri</a>
+                            <a class="collapse-item" href="#">Torba Ölçüleri</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#paperSet">
                         <i class="fas fa-scroll"></i> <span>Kağıt Ayarları</span>
                         <i class="fas fa-chevron-down float-right mt-1 small"></i>
                     </a>
@@ -246,23 +268,7 @@
                         <div class="collapse-inner">
                             <a class="collapse-item" href="/Paper/Types">Kağıt Tipleri</a>
                             <a class="collapse-item" href="/Paper/Colors">Kağıt Renkleri</a>
-                            <a class="collapse-item" href="/Paper/FscTypes">FSC Tipleri</a>
                             <a class="collapse-item" href="/Paper/Weights">Gramajlar</a>
-                            <a class="collapse-item" href="/Paper/Widths">Bobin Enleri</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="nav-item">
-                    <a class="nav-link" href="#" data-toggle="collapse" data-target="#prodSet">
-                        <i class="fas fa-industry"></i> <span>Üretim Tanımları</span>
-                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
-                    </a>
-                    <div id="prodSet" class="collapse">
-                        <div class="collapse-inner">
-                            <a class="collapse-item" href="/Machine/Machines">Makineler</a>
-                            <a class="collapse-item" href="/Product/Groups">Ürün Grupları</a>
-                            <a class="collapse-item" href="/Product/BagTypes">Torba Tipleri</a>
                         </div>
                     </div>
                 </div>
@@ -292,10 +298,11 @@
 
     <script src="~/lib/jquery/jquery.min.js"></script>
     <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         $(document).ready(function() {
-            // Sidebar Toggle
+            // Sidebar Kontrolü
             $('#hamburgerBtn').click(function() {
                 if ($(window).width() > 992) {
                     $('#sidebar').toggleClass('collapsed');
@@ -310,18 +317,52 @@
                 $(this).removeClass('active');
             });
 
-            // "Yeni Ekle" butonu için her sayfada tetiklenecek ortak olay
+            // "Yeni Ekle" Global Tetikleyici
             $('#globalAddBtn').click(function() {
                 if (typeof openAddModal === "function") {
                     openAddModal();
                 } else {
-                    $('.btn-add-local').click(); // Sayfa içinde gizli veya yerel buton varsa tetikle
+                    Swal.fire('Bilgi', 'Bu sayfa için ekleme fonksiyonu henüz tanımlanmadı.', 'info');
                 }
             });
         });
 
-        function toggleFilter() { $('#filterPanel').slideToggle('fast'); }
-        function exportToExcel() { alert("Excel export işlemi başlatıldı."); }
+        // Ortak Filtre Paneli Aç/Kapat
+        function toggleFilter() {
+            let panel = $('#filterPanel');
+            if(panel.length > 0) panel.slideToggle('fast');
+            else Swal.fire({ icon: 'info', title: 'Filtre', text: 'Bu sayfada aktif bir filtre paneli bulunamadı.', timer: 2000 });
+        }
+
+        // Ortak Excel Export (Sayfa bazlı ezilebilir)
+        function exportToExcel() {
+            let currentAction = '@ViewContext.RouteData.Values["Action"]';
+            let currentController = '@ViewContext.RouteData.Values["Controller"]';
+            window.location.href = `/${currentController}/Export${currentAction}`;
+        }
+
+        // Profesyonel Durum Değiştirme (Global)
+        function globalToggleStatus(id, tableName) {
+            Swal.fire({
+                title: 'Durum Değiştirilsin mi?',
+                text: "Kaydın aktiflik durumu güncellenecektir.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#2c3e50',
+                confirmButtonText: 'Evet, Değiştir',
+                cancelButtonText: 'Vazgeç'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/Product/ToggleStatus', { id: id, tableName: tableName }, function (res) {
+                        if (res.success) {
+                            Swal.fire({ icon: 'success', title: res.message, timer: 1000, showConfirmButton: false }).then(() => location.reload());
+                        } else {
+                            Swal.fire('Hata', res.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

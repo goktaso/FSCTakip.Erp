@@ -1,42 +1,82 @@
-﻿using Microsoft.AspNetCore.Mvc;
-
+﻿using FSCTakip.Core.Entities;
+using FSCTakip.DataAc.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ClosedXML.Excel;
 namespace FSC_ERP.Controllers
 {
-    public class PaperController : Controller
+    public class PaperController : BaseController
     {
-        // 1. Kağıt Tipleri (Kraft, Sülfit vb.)
-        public IActionResult Types()
+        public PaperController(AppDbContext context) : base(context) { }
+
+        // --- LİSTELEME METOTLARI ---
+        public async Task<IActionResult> Types() => View(await _context.PaperTypes.ToListAsync());
+        public async Task<IActionResult> Colors() => View(await _context.PaperColors.ToListAsync());
+        public async Task<IActionResult> FscTypes() => View(await _context.FscTypes.ToListAsync());
+        public async Task<IActionResult> Widths() => View(await _context.PaperWidths.ToListAsync());
+        public async Task<IActionResult> Weights() => View(await _context.PaperWeights.ToListAsync());
+
+        // --- KAYDETME METOTLARI ---
+
+        [HttpPost]
+        public async Task<IActionResult> SaveType(PaperType model)
         {
-            ViewData["Title"] = "Kağıt Tipleri";
-            return View();
+            if (model.Id == 0) { model.IsActive = true; _context.PaperTypes.Add(model); }
+            else _context.PaperTypes.Update(model);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Types));
         }
 
-        // 2. Kağıt Renkleri (Beyaz, Kahve vb.)
-        public IActionResult Colors()
+        [HttpPost]
+        public async Task<IActionResult> SaveColor(PaperColor model)
         {
-            ViewData["Title"] = "Kağıt Renkleri";
-            return View();
+            if (model.Id == 0) { model.IsActive = true; _context.PaperColors.Add(model); }
+            else _context.PaperColors.Update(model);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Colors));
         }
 
-        // 3. FSC Sertifika Tipleri (100%, Mix, Recycled vb.)
-        public IActionResult FscTypes()
+        [HttpPost]
+       
+        public async Task<IActionResult> SaveFscType(FSCTakip.Core.Entities.FscType model)
         {
-            ViewData["Title"] = "FSC Sertifika Tipleri";
-            return View();
+            if (model.Id == 0)
+            {
+                model.IsActive = true;
+                _context.FscTypes.Add(model);
+            }
+            else
+            {
+                _context.FscTypes.Update(model);
+            }
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(FscTypes));
         }
 
-        // 4. Bobin En Tanımları (mm bazlı: 70mm, 80mm vb.)
-        public IActionResult Widths()
+        [HttpPost]
+        public async Task<IActionResult> SaveWidth(PaperWidth model)
         {
-            ViewData["Title"] = "Bobin En Tanımları";
-            return View();
+            if (model.Id == 0) { model.IsActive = true; _context.PaperWidths.Add(model); }
+            else _context.PaperWidths.Update(model);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Widths));
         }
 
-        // 5. Gramaj Tanımları (70gr, 80gr vb.)
-        public IActionResult Weights()
+        [HttpPost]
+        public async Task<IActionResult> SaveWeight(PaperWeight model)
         {
-            ViewData["Title"] = "Gramaj Tanımları";
-            return View();
+            if (model.Id == 0) { model.IsActive = true; _context.PaperWeights.Add(model); }
+            else _context.PaperWeights.Update(model);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Weights));
         }
+
+        // --- EXCEL EXPORT METOTLARI ---
+        public async Task<IActionResult> ExportWeights() => ExportToExcel(await _context.PaperWeights.ToListAsync(), "Gramajlar");
+        public async Task<IActionResult> ExportColors() => ExportToExcel(await _context.PaperColors.ToListAsync(), "Renkler");
+        public async Task<IActionResult> ExportTypes() => ExportToExcel(await _context.PaperTypes.ToListAsync(), "KagitTipleri");
+        public async Task<IActionResult> ExportWidths() => ExportToExcel(await _context.PaperWidths.ToListAsync(), "BobinEnleri");
+        public async Task<IActionResult> ExportFscTypes() => ExportToExcel(await _context.FscTypes.ToListAsync(), "FSCTipleri");
     }
 }

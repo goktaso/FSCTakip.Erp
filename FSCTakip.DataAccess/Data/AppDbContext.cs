@@ -21,7 +21,7 @@ namespace FSCTakip.DataAc.Data
         public DbSet<ProductGroup> ProductGroups { get; set; }
         public DbSet<Warehouse> Warehouses { get; set; }
         #endregion
-
+        public DbSet<PaperWeight> PaperWeights { get; set; }
         #region Ticari ve Operasyonel Tablolar
         public DbSet<Customer> Customers { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }

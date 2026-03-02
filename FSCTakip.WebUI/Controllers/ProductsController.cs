@@ -1,21 +1,22 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using FSC_ERP.Controllers;
+using FSCTakip.DataAc.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
-namespace FSCTakip.WebUI.Controllers
+public class ProductController : BaseController // Base'den türüyor
 {
-    public class ProductController : Controller
-    {
-        // Ürün Grupları (Örn: Saplı Çanta, Flat Bag, Ekmek Kesesi vb.)
-        public IActionResult Groups()
-        {
-            ViewData["Title"] = "Ürün Grupları";
-            return View();
-        }
+    public ProductController(AppDbContext context) : base(context) { }
 
-        // Torba Tipleri (Örn: V Kesim, Dip Takviyeli, Pencereli vb.)
-        public IActionResult BagTypes()
-        {
-            ViewData["Title"] = "Torba Tipleri";
-            return View();
-        }
+    public async Task<IActionResult> BagTypes()
+    {
+        var list = await _context.BagTypes.ToListAsync();
+        return View(list);
+    }
+
+    // Excel için sadece tek satır!
+    public async Task<IActionResult> ExportBagTypes()
+    {
+        var data = await _context.BagTypes.ToListAsync();
+        return ExportToExcel(data, "TorbaTipleri");
     }
 }
