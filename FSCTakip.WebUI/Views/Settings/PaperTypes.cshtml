@@ -1,0 +1,91 @@
+﻿@{
+    ViewData["Title"] = "Kağıt Tipleri";
+}
+
+<div id="filterPanel" class="card mb-3 shadow-sm" style="display:none; border-left: 5px solid #f39c12;">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-9 mb-2">
+                <label class="small font-weight-bold">Kağıt Tipi Adı</label>
+                <input type="text" class="form-control form-control-sm" placeholder="Kağıt tipi ara...">
+            </div>
+            <div class="col-md-3 mb-2 align-self-end">
+                <button class="btn btn-primary btn-sm btn-block"><i class="fas fa-search"></i> Filtrele</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-dark">
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th>Kağıt Tipi</th>
+                        <th>Kısa Kod</th>
+                        <th>Açıklama</th>
+                        <th>Durum</th>
+                        <th class="text-right">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><span class="fw-bold text-primary">Esmer Kraft</span></td>
+                        <td>EK-01</td>
+                        <td>Dayanıklı ambalaj kağıdı</td>
+                        <td><span class="badge badge-success">Aktif</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-light border text-primary" title="Düzenle"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-light border text-danger" title="Sil"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addPaperTypeModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title"><i class="fas fa-scroll mr-2"></i> Yeni Kağıt Tipi Kaydı</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="paperTypeForm">
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Kağıt Tipi Adı</label>
+                        <input type="text" class="form-control" placeholder="Örn: Beyaz Sülfit">
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Kısa Kod</label>
+                        <input type="text" class="form-control" placeholder="Örn: BS-02">
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Açıklama</label>
+                        <textarea class="form-control" rows="2" placeholder="Kağıt özellikleri..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-success"><i class="fas fa-save"></i> Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // [2026-02-25] Layout'taki "Yeni Ekle" butonu için modal tetikleyici [cite: 2026-02-25]
+            $(document).off('click', '.btn-add').on('click', '.btn-add', function() {
+                $('#addPaperTypeModal').modal('show');
+            });
+        });
+    </script>
+}

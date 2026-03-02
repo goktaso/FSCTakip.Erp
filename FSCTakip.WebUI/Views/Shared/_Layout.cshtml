@@ -3,31 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>@ViewData["Title"] - FSC ERP | 2026</title>
+    <title>@ViewData["Title"] - FSC ERP</title>
 
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css">
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css">
 
     <style>
-        /* --- GENEL TASARIM --- */
         body {
             margin: 0;
             background: #f4f7f6;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             overflow-x: hidden;
         }
 
         .main-wrapper {
             display: flex;
             height: 100vh;
-            transition: all 0.3s;
             position: relative;
         }
 
-        /* --- SIDEBAR (HAMBURGER METODU) --- */
+        /* --- SIDEBAR TASARIMI --- */
         .sidebar {
-            width: 280px;
-            min-width: 280px;
+            width: 260px;
+            min-width: 260px;
             background: #2c3e50;
             color: white;
             display: flex;
@@ -35,7 +33,7 @@
             transition: all 0.3s;
             z-index: 1050;
         }
-            /* Masaüstü Daraltılmış Menü (Mini) */
+
             .sidebar.collapsed {
                 width: 70px;
                 min-width: 70px;
@@ -45,35 +43,51 @@
                 .sidebar.collapsed .menu-label,
                 .sidebar.collapsed .nav-link span,
                 .sidebar.collapsed .nav-link .float-right {
-                    display: none;
+                    display: none !important;
                 }
 
-        /* Mobil Sidebar Gizleme */
+                .sidebar.collapsed .collapse, .sidebar.collapsed .collapse.show {
+                    display: none !important;
+                }
+
+        /* Alt menü elemanlarını dikey hizalar */
+        .collapse-inner {
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        .collapse-item {
+            padding: 8px 0 8px 45px !important;
+            display: block !important;
+        }
+
         @@media (max-width: 992px) {
-            .sidebar {
-                position: fixed;
-                left: -280px;
-                height: 100%;
-            }
+            .sidebar
 
-                .sidebar.active {
-                    left: 0;
-                }
+        {
+            position: fixed;
+            left: -260px;
+            height: 100%;
+        }
+
+        .sidebar.active {
+            left: 0;
+        }
+
         }
 
         .sidebar-header {
             padding: 20px;
             background: #1a252f;
             text-align: center;
-            border-bottom: 1px solid #34495e;
         }
 
         .menu-label {
             padding: 15px 20px 5px 20px;
             font-size: 0.7rem;
             color: #7f8c8d;
-            text-transform: uppercase;
             font-weight: bold;
+            text-transform: uppercase;
         }
 
         .nav-link {
@@ -82,6 +96,7 @@
             display: block;
             text-decoration: none !important;
             transition: 0.2s;
+            cursor: pointer;
         }
 
             .nav-link:hover {
@@ -91,7 +106,24 @@
 
             .nav-link i {
                 width: 25px;
-                font-size: 1.1rem;
+            }
+
+        .collapse-inner {
+            background: #1a252f;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .collapse-item {
+            padding: 10px 20px 10px 50px;
+            color: #bdc3c7 !important;
+            font-size: 0.85rem;
+            text-decoration: none !important;
+        }
+
+            .collapse-item:hover {
+                background: #243342;
+                color: #3498db !important;
             }
 
         /* --- İÇERİK ALANI --- */
@@ -125,7 +157,7 @@
             cursor: pointer;
         }
 
-        /* [2026-02-25] Standart Butonlar (Kaydırılabilir) */
+        /* [2026-02-25] Buton Standartları [cite: 2026-02-25] */
         .action-buttons {
             display: flex;
             gap: 8px;
@@ -133,10 +165,6 @@
             padding-bottom: 5px;
             scrollbar-width: none;
         }
-
-            .action-buttons::-webkit-scrollbar {
-                display: none;
-            }
 
         .btn-filter {
             background-color: #f39c12;
@@ -180,7 +208,6 @@
             flex: 1;
         }
 
-        /* Overlay */
         .overlay {
             display: none;
             position: fixed;
@@ -202,44 +229,51 @@
     <div class="main-wrapper">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h4 class="mb-0 text-white">FSC ERP</h4>
-                <small class="text-info">2026-v1</small>
+                <h4 class="mb-0 text-white border-bottom pb-2">FSC ERP</h4>
+                <small class="text-info font-weight-bold">LOCAL SERVER | 2026</small>
             </div>
 
             <nav class="sidebar-menu overflow-auto">
-                <div class="menu-label">ANA MENÜ</div>
-                <a href="/Home/Index" class="nav-link"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+                <div class="menu-label">GENEL</div>
+                <a href="/Home/Index" class="nav-link"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
 
-                <div class="menu-label">OPERASYON</div>
+                <div class="menu-label">OPERASYONEL</div>
+                <a href="/Planning/Index" class="nav-link"><i class="fas fa-calendar-alt"></i> <span>Üretim Planlama</span></a>
                 <a href="/Products/Index" class="nav-link"><i class="fas fa-boxes"></i> <span>Ürün Yönetimi</span></a>
-                <a href="/Planning/Index" class="nav-link"><i class="fas fa-calendar-check"></i> <span>Üretim Planlama</span></a>
-                <a href="/Stock/Movements" class="nav-link"><i class="fas fa-exchange-alt"></i> <span>Stok Hareketleri</span></a>
+                <a href="/Stock/Index" class="nav-link"><i class="fas fa-warehouse"></i> <span>Stok Yönetimi</span></a>
+                <a href="/Shipping/Index" class="nav-link"><i class="fas fa-shipping-fast"></i> <span>Sevkiyat Paneli</span></a>
 
                 <div class="menu-label">TİCARİ</div>
-                <a href="/Customers/Index" class="nav-link"><i class="fas fa-users"></i> <span>Müşteriler</span></a>
-                <a href="/Suppliers/Index" class="nav-link"><i class="fas fa-truck-loading"></i> <span>Tedarikçiler</span></a>
+                <a href="/Customers/Index" class="nav-link"><i class="fas fa-user-tie"></i> <span>Müşteriler</span></a>
+                <a href="/Suppliers/Index" class="nav-link"><i class="fas fa-truck"></i> <span>Tedarikçiler</span></a>
 
-                <div class="menu-label">SİSTEM</div>
-                <a class="nav-link" href="#" data-toggle="collapse" data-target="#setPaper">
-                    <i class="fas fa-scroll"></i> <span>Kağıt Ayarları</span>
-                    <i class="fas fa-chevron-down float-right mt-1 small"></i>
-                </a>
-                <div id="setPaper" class="collapse">
-                    <div class="bg-dark py-2">
-                        <a class="nav-link small pl-5" href="/Settings/PaperTypes">Kağıt Tipleri</a>
-                        <a class="nav-link small pl-5" href="/Settings/PaperColors">Kağıt Renkleri</a>
+                <div class="menu-label">SİSTEM AYARLARI</div>
+                <div class="nav-item">
+                    <a class="nav-link" href="#" data-toggle="collapse" data-target="#paperSet">
+                        <i class="fas fa-scroll"></i> <span>Kağıt Ayarları</span>
+                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
+                    </a>
+                    <div id="paperSet" class="collapse">
+                        <div class="collapse-inner">
+                            <a class="collapse-item" href="/Settings/PaperTypes">Kağıt Tipleri</a>
+                            <a class="collapse-item" href="/Settings/PaperColors">Kağıt Renkleri</a>
+                            <a class="collapse-item" href="/Settings/FscTypes">FSC Tipleri</a>
+                            <a class="collapse-item" href="/Settings/BobinEnleri">Bobin Enleri</a>
+                        </div>
                     </div>
                 </div>
 
-                <a class="nav-link" href="#" data-toggle="collapse" data-target="#setProd">
-                    <i class="fas fa-industry"></i> <span>Üretim Ayarları</span>
-                    <i class="fas fa-chevron-down float-right mt-1 small"></i>
-                </a>
-                <div id="setProd" class="collapse">
-                    <div class="bg-dark py-2">
-                        <a class="nav-link small pl-5" href="/Settings/Machines">Makineler</a>
-                        <a class="nav-link small pl-5" href="/Settings/BagTypes">Torba Tipleri</a>
-                        <a class="nav-link small pl-5" href="/Settings/ProductGroups">Ürün Grupları</a>
+                <div class="nav-item">
+                    <a class="nav-link" href="#" data-toggle="collapse" data-target="#prodSet">
+                        <i class="fas fa-industry"></i> <span>Üretim Tanımları</span>
+                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
+                    </a>
+                    <div id="prodSet" class="collapse">
+                        <div class="collapse-inner">
+                            <a class="collapse-item" href="/Settings/Machines">Makineler</a>
+                            <a class="collapse-item" href="/Settings/ProductGroups">Ürün Grupları</a>
+                            <a class="collapse-item" href="/Settings/BagTypes">Torba Tipleri</a>
+                        </div>
                     </div>
                 </div>
             </nav>
@@ -271,7 +305,6 @@
 
     <script>
         $(document).ready(function() {
-            // Hamburger Mekanizması
             $('#hamburgerBtn').click(function() {
                 if ($(window).width() > 992) {
                     $('#sidebar').toggleClass('collapsed');
@@ -288,7 +321,7 @@
         });
 
         function toggleFilter() { $('#filterPanel').slideToggle('fast'); }
-        function exportToExcel() { alert("Excel modülü çalışıyor..."); }
+        function exportToExcel() { alert("Excel export işlemi başlatıldı."); }
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
