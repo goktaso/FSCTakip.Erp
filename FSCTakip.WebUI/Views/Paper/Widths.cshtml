@@ -1,0 +1,51 @@
+﻿@{
+    ViewData["Title"] = "Bobin En Tanımları";
+}
+
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-secondary" style="display:none;">
+    <div class="card-body py-3">
+        <div class="row align-items-end">
+            <div class="col-md-9">
+                <label class="small font-weight-bold text-uppercase">Genişlik Ara (mm)</label>
+                <input type="number" id="widthSearch" class="form-control form-control-sm border-secondary" placeholder="Örn: 600, 750, 1000...">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-secondary btn-sm btn-block text-white" onclick="filterWidths()">
+                    <i class="fas fa-search mr-1"></i> Sorgula
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="widthsTable">
+                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
+                    <tr>
+                        <th style="width: 80px;">ID</th>
+                        <th>Bobin Eni (Genişlik)</th>
+                        <th>Birim</th>
+                        <th>ERP Kodu</th>
+                        <th>Durum</th>
+                        <th class="text-right" style="width: 150px;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><strong class="text-primary">600</strong></td>
+                        <td><span class="badge badge-light border">mm</span></td>
+                        <td><code>EN-600</code></td>
+                        <td><span class="badge badge-success">Aktif</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><strong class="text-primary">1050</strong></td>
+                        <td><span class="badge badge-light border">mm</span></td>
+                        <td><code>EN-1

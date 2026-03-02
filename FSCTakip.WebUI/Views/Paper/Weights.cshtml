@@ -1,0 +1,107 @@
+﻿@{
+    ViewData["Title"] = "Kağıt Gramaj Tanımları";
+}
+
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-info" style="display:none;">
+    <div class="card-body py-3">
+        <div class="row align-items-end">
+            <div class="col-md-9">
+                <label class="small font-weight-bold text-uppercase text-info">Gramaj Değeri Ara</label>
+                <input type="number" id="weightSearch" class="form-control form-control-sm border-info" placeholder="Örn: 70, 80, 110...">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-info btn-sm btn-block text-white" onclick="filterWeights()">
+                    <i class="fas fa-search mr-1"></i> Sorgula
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="weightsTable">
+                <thead class="bg-light text-dark">
+                    <tr>
+                        <th style="width: 80px;">ID</th>
+                        <th>Gramaj Değeri</th>
+                        <th>Birim</th>
+                        <th>ERP Kodu</th>
+                        <th>Durum</th>
+                        <th class="text-right" style="width: 150px;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><strong>70</strong></td>
+                        <td><span class="text-muted">gr/m²</span></td>
+                        <td><code>GR-70</code></td>
+                        <td><span class="badge badge-success">Aktif</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><strong>110</strong></td>
+                        <td><span class="text-muted">gr/m²</span></td>
+                        <td><code>GR-110</code></td>
+                        <td><span class="badge badge-success">Aktif</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addWeightModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-info text-white p-2 pl-3">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-weight-hanging mr-2"></i>Yeni Gramaj Ekle</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="small font-weight-bold">Gramaj (Sayısal)</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" class="form-control" placeholder="Örn: 90">
+                        <div class="input-group-append">
+                            <span class="input-group-text bg-light font-weight-bold">gr/m²</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="small font-weight-bold">ERP Kodu</label>
+                    <input type="text" class="form-control form-control-sm" placeholder="Örn: GR90">
+                </div>
+            </div>
+            <div class="modal-footer bg-light p-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-info btn-sm px-3 text-white">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openAddModal() {
+            $('#addWeightModal').modal('show');
+        }
+
+        function filterWeights() {
+            var value = $("#weightSearch").val();
+            $("#weightsTable tbody tr").filter(function() {
+                $(this).toggle($(this).find('td:nth-child(2)').text().indexOf(value) > -1)
+            });
+        }
+    </script>
+}

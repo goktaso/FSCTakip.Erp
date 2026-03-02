@@ -1,0 +1,109 @@
+﻿@{
+    ViewData["Title"] = "FSC Sertifika Tanımları";
+}
+
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-success" style="display:none;">
+    <div class="card-body py-3">
+        <div class="row align-items-end">
+            <div class="col-md-9">
+                <label class="small font-weight-bold text-uppercase text-success">Sertifika Ara</label>
+                <input type="text" id="fscSearch" class="form-control form-control-sm border-success" placeholder="Örn: Mix, Recycled, 100%...">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-success btn-sm btn-block" onclick="filterFsc()">
+                    <i class="fas fa-search mr-1"></i> Sorgula
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="fscTable">
+                <thead class="bg-light text-dark">
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th>Sertifika Tipi</th>
+                        <th>ERP / Lisans Kodu</th>
+                        <th>Açıklama</th>
+                        <th>Durum</th>
+                        <th class="text-right" style="width: 150px;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><span class="badge badge-success p-2"><i class="fas fa-tree mr-1"></i> FSC 100%</span></td>
+                        <td><code>FSC-100</code></td>
+                        <td><small class="text-muted">Tamamı sertifikalı ormanlardan.</small></td>
+                        <td><span class="badge badge-pill badge-success">Aktif</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><span class="badge badge-info p-2"><i class="fas fa-recycle mr-1"></i> FSC Mix</span></td>
+                        <td><code>FSC-MIX</code></td>
+                        <td><small class="text-muted">Geri dönüştürülmüş ve sertifikalı karışım.</small></td>
+                        <td><span class="badge badge-pill badge-success">Aktif</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addFscModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-certificate mr-2"></i>Yeni FSC Sertifikası Ekle</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label class="small font-weight-bold text-dark">Sertifika Adı</label>
+                        <input type="text" class="form-control form-control-sm" placeholder="Örn: FSC Mix">
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label class="small font-weight-bold text-dark">Lisans Kodu</label>
+                        <input type="text" class="form-control form-control-sm" placeholder="Örn: FSC-C123456">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="small font-weight-bold text-dark">Kısa Açıklama</label>
+                    <textarea class="form-control form-control-sm" rows="2" placeholder="Sertifika kapsamı hakkında notlar..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer bg-light p-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-success btn-sm px-4">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Layout'taki global "Yeni Ekle" butonuyla tetiklenir
+        function openAddModal() {
+            $('#addFscModal').modal('show');
+        }
+
+        function filterFsc() {
+            var value = $("#fscSearch").val().toLowerCase();
+            $("#fscTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        }
+    </script>
+}

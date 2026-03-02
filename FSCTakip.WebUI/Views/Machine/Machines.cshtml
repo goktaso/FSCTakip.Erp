@@ -1,0 +1,82 @@
+﻿@{
+    ViewData["Title"] = "Makine Tanımlamaları";
+}
+
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-danger" style="display:none;">
+    <div class="card-body py-3">
+        <div class="row align-items-end">
+            <div class="col-md-5">
+                <label class="small font-weight-bold text-uppercase text-danger">Makine Adı / Kod</label>
+                <input type="text" id="machineSearch" class="form-control form-control-sm border-danger" placeholder="Örn: Matbaa-01, Kesim-A...">
+            </div>
+            <div class="col-md-4">
+                <label class="small font-weight-bold text-uppercase text-danger">Makine Türü</label>
+                <select class="form-control form-control-sm border-danger">
+                    <option value="">Tümü</option>
+                    <option value="Printing">Matbaa</option>
+                    <option value="Cutting">Kesim</option>
+                    <option value="Slitting">Dilimleme</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-danger btn-sm btn-block" onclick="filterMachines()">
+                    <i class="fas fa-search mr-1"></i> Sorgula
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="machineTable">
+                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
+                    <tr>
+                        <th style="width: 70px;">Kod</th>
+                        <th>Makine Adı</th>
+                        <th>Tür</th>
+                        <th>Maks. Hız</th>
+                        <th>Kapasite (Günlük)</th>
+                        <th>Durum</th>
+                        <th class="text-right" style="width: 150px;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>M-01</code></td>
+                        <td><strong>8 Renk Flexo Matbaa</strong></td>
+                        <td><span class="badge badge-info">Matbaa</span></td>
+                        <td><small>250 m/dk</small></td>
+                        <td><small>45.000 m</small></td>
+                        <td><span class="badge badge-success">Çalışıyor</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>K-05</code></td>
+                        <td><strong>V-Kesim Torba Makinesi</strong></td>
+                        <td><span class="badge badge-warning">Kesim</span></td>
+                        <td><small>300 ad/dk</small></td>
+                        <td><small>120.000 ad</small></td>
+                        <td><span class="badge badge-success">Çalışıyor</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addMachineModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-industry mr-2"></i>Yeni Makine Tanımla</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>

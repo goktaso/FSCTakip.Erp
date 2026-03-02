@@ -1,0 +1,62 @@
+﻿@{
+    ViewData["Title"] = "Ürün Grup Tanımları";
+}
+
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-primary" style="display:none;">
+    <div class="card-body py-3">
+        <div class="row align-items-end">
+            <div class="col-md-9">
+                <label class="small font-weight-bold text-uppercase text-primary">Grup Adı Ara</label>
+                <input type="text" id="groupSearch" class="form-control form-control-sm border-primary" placeholder="Örn: Saplı Çanta, Altıgen Dip...">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary btn-sm btn-block" onclick="filterGroups()">
+                    <i class="fas fa-search mr-1"></i> Sorgula
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="groupsTable">
+                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
+                    <tr>
+                        <th style="width: 80px;">ID</th>
+                        <th>Grup Adı</th>
+                        <th>Kısa Kod</th>
+                        <th>Ürün Sayısı</th>
+                        <th>Durum</th>
+                        <th class="text-right" style="width: 150px;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><strong class="text-dark">Saplı Kağıt Çanta</strong></td>
+                        <td><span class="badge badge-light border">SPC</span></td>
+                        <td><span class="badge badge-pill badge-info">12 Ürün</span></td>
+                        <td><span class="badge badge-success">Aktif</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><strong class="text-dark">V-Kesim Pencereli Torba</strong></td>
+                        <td><span class="badge badge-light border">V-PNC</span></td>
+                        <td><span class="badge badge-pill badge-info">8 Ürün</span></td>
+                        <td><span class="badge badge-success">Aktif</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

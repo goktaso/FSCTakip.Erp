@@ -39,42 +39,13 @@
                 min-width: 70px;
             }
 
-                .sidebar.collapsed .sidebar-header h4,
-                .sidebar.collapsed .menu-label,
-                .sidebar.collapsed .nav-link span,
-                .sidebar.collapsed .nav-link .float-right {
+                .sidebar.collapsed .sidebar-header h4, .sidebar.collapsed .menu-label, .sidebar.collapsed .nav-link span, .sidebar.collapsed .nav-link .float-right {
                     display: none !important;
                 }
 
-                .sidebar.collapsed .collapse, .sidebar.collapsed .collapse.show {
+                .sidebar.collapsed .collapse {
                     display: none !important;
                 }
-
-        /* Alt menü elemanlarını dikey hizalar */
-        .collapse-inner {
-            display: flex !important;
-            flex-direction: column !important;
-        }
-
-        .collapse-item {
-            padding: 8px 0 8px 45px !important;
-            display: block !important;
-        }
-
-        @@media (max-width: 992px) {
-            .sidebar
-
-        {
-            position: fixed;
-            left: -260px;
-            height: 100%;
-        }
-
-        .sidebar.active {
-            left: 0;
-        }
-
-        }
 
         .sidebar-header {
             padding: 20px;
@@ -119,6 +90,7 @@
             color: #bdc3c7 !important;
             font-size: 0.85rem;
             text-decoration: none !important;
+            display: block;
         }
 
             .collapse-item:hover {
@@ -157,7 +129,7 @@
             cursor: pointer;
         }
 
-        /* [2026-02-25] Buton Standartları [cite: 2026-02-25] */
+        /* [2026-02-25] Buton Standartları */
         .action-buttons {
             display: flex;
             gap: 8px;
@@ -173,6 +145,7 @@
             padding: 8px 15px;
             border-radius: 4px;
             white-space: nowrap;
+            transition: 0.2s;
         }
 
         .btn-excel {
@@ -202,6 +175,10 @@
             white-space: nowrap;
         }
 
+            .btn-filter:hover, .btn-excel:hover, .btn-print:hover, .btn-add:hover {
+                opacity: 0.85;
+            }
+
         .page-body {
             padding: 20px;
             overflow-y: auto;
@@ -220,6 +197,18 @@
             .overlay.active {
                 display: block;
             }
+
+        @@media (max-width: 992px) {
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                height: 100%;
+            }
+
+                .sidebar.active {
+                    left: 0;
+                }
+        }
     </style>
 </head>
 <body>
@@ -239,7 +228,6 @@
 
                 <div class="menu-label">OPERASYONEL</div>
                 <a href="/Planning/Index" class="nav-link"><i class="fas fa-calendar-alt"></i> <span>Üretim Planlama</span></a>
-                <a href="/Products/Index" class="nav-link"><i class="fas fa-boxes"></i> <span>Ürün Yönetimi</span></a>
                 <a href="/Stock/Index" class="nav-link"><i class="fas fa-warehouse"></i> <span>Stok Yönetimi</span></a>
                 <a href="/Shipping/Index" class="nav-link"><i class="fas fa-shipping-fast"></i> <span>Sevkiyat Paneli</span></a>
 
@@ -248,6 +236,7 @@
                 <a href="/Suppliers/Index" class="nav-link"><i class="fas fa-truck"></i> <span>Tedarikçiler</span></a>
 
                 <div class="menu-label">SİSTEM AYARLARI</div>
+
                 <div class="nav-item">
                     <a class="nav-link" href="#" data-toggle="collapse" data-target="#paperSet">
                         <i class="fas fa-scroll"></i> <span>Kağıt Ayarları</span>
@@ -255,10 +244,11 @@
                     </a>
                     <div id="paperSet" class="collapse">
                         <div class="collapse-inner">
-                            <a class="collapse-item" href="/Settings/PaperTypes">Kağıt Tipleri</a>
-                            <a class="collapse-item" href="/Settings/PaperColors">Kağıt Renkleri</a>
-                            <a class="collapse-item" href="/Settings/FscTypes">FSC Tipleri</a>
-                            <a class="collapse-item" href="/Settings/BobinEnleri">Bobin Enleri</a>
+                            <a class="collapse-item" href="/Paper/Types">Kağıt Tipleri</a>
+                            <a class="collapse-item" href="/Paper/Colors">Kağıt Renkleri</a>
+                            <a class="collapse-item" href="/Paper/FscTypes">FSC Tipleri</a>
+                            <a class="collapse-item" href="/Paper/Weights">Gramajlar</a>
+                            <a class="collapse-item" href="/Paper/Widths">Bobin Enleri</a>
                         </div>
                     </div>
                 </div>
@@ -270,9 +260,9 @@
                     </a>
                     <div id="prodSet" class="collapse">
                         <div class="collapse-inner">
-                            <a class="collapse-item" href="/Settings/Machines">Makineler</a>
-                            <a class="collapse-item" href="/Settings/ProductGroups">Ürün Grupları</a>
-                            <a class="collapse-item" href="/Settings/BagTypes">Torba Tipleri</a>
+                            <a class="collapse-item" href="/Machine/Machines">Makineler</a>
+                            <a class="collapse-item" href="/Product/Groups">Ürün Grupları</a>
+                            <a class="collapse-item" href="/Product/BagTypes">Torba Tipleri</a>
                         </div>
                     </div>
                 </div>
@@ -283,14 +273,14 @@
             <header class="page-header">
                 <div class="header-top">
                     <button id="hamburgerBtn" type="button"><i class="fas fa-bars"></i></button>
-                    <h2 class="h5 mb-0 font-weight-bold">@ViewData["Title"]</h2>
+                    <h2 class="h5 mb-0 font-weight-bold text-dark">@ViewData["Title"]</h2>
                 </div>
 
                 <div class="action-buttons">
                     <button class="btn-filter" onclick="toggleFilter()"><i class="fas fa-filter"></i> Filtrele</button>
                     <button class="btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
                     <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Yazdır</button>
-                    <button class="btn-add"><i class="fas fa-plus-circle"></i> Yeni Ekle</button>
+                    <button class="btn-add" id="globalAddBtn"><i class="fas fa-plus-circle"></i> Yeni Ekle</button>
                 </div>
             </header>
 
@@ -305,6 +295,7 @@
 
     <script>
         $(document).ready(function() {
+            // Sidebar Toggle
             $('#hamburgerBtn').click(function() {
                 if ($(window).width() > 992) {
                     $('#sidebar').toggleClass('collapsed');
@@ -317,6 +308,15 @@
             $('#sidebarOverlay').click(function() {
                 $('#sidebar').removeClass('active');
                 $(this).removeClass('active');
+            });
+
+            // "Yeni Ekle" butonu için her sayfada tetiklenecek ortak olay
+            $('#globalAddBtn').click(function() {
+                if (typeof openAddModal === "function") {
+                    openAddModal();
+                } else {
+                    $('.btn-add-local').click(); // Sayfa içinde gizli veya yerel buton varsa tetikle
+                }
             });
         });
 

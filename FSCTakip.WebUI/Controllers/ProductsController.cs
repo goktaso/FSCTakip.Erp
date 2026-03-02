@@ -1,18 +1,20 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace FSCTakip.Web.Controllers
+namespace FSCTakip.WebUI.Controllers
 {
-    public class ProductsController : Controller
+    public class ProductController : Controller
     {
-        // localhost:xxxx/Products dediğinde burası çalışır
-        public IActionResult Index()
+        // Ürün Grupları (Örn: Saplı Çanta, Flat Bag, Ekmek Kesesi vb.)
+        public IActionResult Groups()
         {
+            ViewData["Title"] = "Ürün Grupları";
             return View();
         }
 
-        // Yeni Ürün Ekleme sayfası veya işlemi için
-        public IActionResult Create()
+        // Torba Tipleri (Örn: V Kesim, Dip Takviyeli, Pencereli vb.)
+        public IActionResult BagTypes()
         {
+            ViewData["Title"] = "Torba Tipleri";
             return View();
         }
     }
