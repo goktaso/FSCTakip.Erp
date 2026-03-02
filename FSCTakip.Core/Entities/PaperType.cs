@@ -1,17 +1,10 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-
-namespace FSCTakip.Core.Entities // Namespace'i CORE olarak güncelledik
+﻿namespace FSCTakip.Core.Entities
 {
-    public class PaperType : BaseEntity
+    public class PaperType:BaseEntity
     {
-        [Required(ErrorMessage = "Kağıt tipi adı zorunludur.")]
-        [StringLength(50)]
+        public int Id { get; set; }
         public string Name { get; set; }
-
+        public string ShortCode { get; set; }
         public bool IsActive { get; set; } = true;
-
-        // ICollection için yukarıya using System.Collections.Generic ekledik
-        public virtual ICollection<Product> Products { get; set; }
     }
 }

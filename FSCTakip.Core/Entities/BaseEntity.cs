@@ -6,15 +6,12 @@ namespace FSCTakip.Core.Entities
     {
         public int Id { get; set; }
 
-        // Veriyi ilk giren (Operatör veya Planlamacı)
+        // DbContext içinde kullandığımız zorunlu alanlar:
+        public string CreatedBy { get; set; } = "System";
         public DateTime CreatedDate { get; set; } = DateTime.Now;
-        public string CreatedBy { get; set; }
 
-        // Planlamacı değişiklik yaparsa dolacak alanlar
-        public DateTime? ModifiedDate { get; set; }
-        public string ModifiedBy { get; set; }
-
-        // Denetçi için veriyi silmiyoruz, sadece işaretliyoruz (Soft Delete)
-        public bool IsDeleted { get; set; } = false;
+        // Opsiyonel alanlar
+        public string? UpdatedBy { get; set; }
+        public DateTime? UpdatedDate { get; set; }
     }
 }

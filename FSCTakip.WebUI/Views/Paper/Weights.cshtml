@@ -1,6 +1,9 @@
 ﻿@{
     ViewData["Title"] = "Kağıt Gramaj Tanımları";
 }
+<div class="card shadow mb-4">
+@* [2026-02-25] Kuralı: Ortak buton yapısı. Başlığı gönderiyoruz. *@
+@await Html.PartialAsync("_TableActions", "Kağıt Gramajları")
 
 <div id="filterPanel" class="card mb-3 shadow-sm border-left-info" style="display:none;">
     <div class="card-body py-3">
@@ -17,7 +20,7 @@
         </div>
     </div>
 </div>
-
+</div>
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">

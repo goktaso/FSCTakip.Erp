@@ -1,8 +1,16 @@
-﻿using FSCTakip.Core.Entities;
+﻿using System;
 
-public class Warehouse : BaseEntity
+namespace FSCTakip.Core.Entities
 {
-    public string WarehouseCode { get; set; } // WH-01
-    public string WarehouseName { get; set; } // Örn: Ana Hammadde Deposu
-    public bool IsActive { get; set; } = true;
+    public class Warehouse : BaseEntity
+    {
+        // Hata veren eksik parça buydu:
+        public string Name { get; set; } // Örn: "Hammadde Deposu"
+
+        // Depo kodu (Örn: "DEP-01")
+        public string Code { get; set; }
+
+        // Deponun aktiflik durumu
+        public bool IsActive { get; set; } = true;
+    }
 }

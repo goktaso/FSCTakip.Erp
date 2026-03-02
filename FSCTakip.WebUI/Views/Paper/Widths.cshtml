@@ -2,11 +2,14 @@
     ViewData["Title"] = "Bobin En Tanımları";
 }
 
-<div id="filterPanel" class="card mb-3 shadow-sm border-left-secondary" style="display:none;">
-    <div class="card-body py-3">
+<div class="card shadow mb-4">
+    @* [2026-02-25] Kuralı: Ortak buton yapısı. *@
+    @await Html.PartialAsync("_TableActions", "Bobin En Tanımları")
+
+    <div id="filterPanel" class="card-body border-bottom bg-light" style="display:none;">
         <div class="row align-items-end">
             <div class="col-md-9">
-                <label class="small font-weight-bold text-uppercase">Genişlik Ara (mm)</label>
+                <label class="small font-weight-bold text-uppercase text-secondary">Genişlik Ara (mm)</label>
                 <input type="number" id="widthSearch" class="form-control form-control-sm border-secondary" placeholder="Örn: 600, 750, 1000...">
             </div>
             <div class="col-md-3">
@@ -16,9 +19,7 @@
             </div>
         </div>
     </div>
-</div>
 
-<div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="widthsTable">
@@ -29,7 +30,7 @@
                         <th>Birim</th>
                         <th>ERP Kodu</th>
                         <th>Durum</th>
-                        <th class="text-right" style="width: 150px;">İşlemler</th>
+                        <th class="text-right" style="width: 120px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -48,4 +49,51 @@
                         <td>2</td>
                         <td><strong class="text-primary">1050</strong></td>
                         <td><span class="badge badge-light border">mm</span></td>
-                        <td><code>EN-1
+                        <td><code>EN-1050</code></td>
+                        <td><span class="badge badge-success">Aktif</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addMachineModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-secondary text-white">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-arrows-alt-h mr-2"></i>Yeni En Tanımla</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="small font-weight-bold">Genişlik (mm)</label>
+                    <input type="number" class="form-control form-control-sm border-secondary" placeholder="Örn: 750">
+                </div>
+                <div class="form-group mb-0">
+                    <label class="small font-weight-bold">ERP Kodu</label>
+                    <input type="text" class="form-control form-control-sm border-secondary" placeholder="Örn: EN-750">
+                </div>
+            </div>
+            <div class="modal-footer bg-light p-2">
+                <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-secondary btn-sm px-3 text-white">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function filterWidths() {
+            var value = $("#widthSearch").val().toLowerCase();
+            $("#widthsTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        }
+    </script>
+}

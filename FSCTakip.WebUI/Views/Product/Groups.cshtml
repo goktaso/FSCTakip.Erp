@@ -1,23 +1,27 @@
 ﻿@{
     ViewData["Title"] = "Ürün Grup Tanımları";
 }
+<div class="card shadow mb-4">
+    @* [2026-02-25] Kuralı: Ortak buton yapısı. *@
+    @await Html.PartialAsync("_TableActions", "Malzeme Grupları")
 
-<div id="filterPanel" class="card mb-3 shadow-sm border-left-primary" style="display:none;">
-    <div class="card-body py-3">
-        <div class="row align-items-end">
-            <div class="col-md-9">
-                <label class="small font-weight-bold text-uppercase text-primary">Grup Adı Ara</label>
-                <input type="text" id="groupSearch" class="form-control form-control-sm border-primary" placeholder="Örn: Saplı Çanta, Altıgen Dip...">
-            </div>
-            <div class="col-md-3">
-                <button class="btn btn-primary btn-sm btn-block" onclick="filterGroups()">
-                    <i class="fas fa-search mr-1"></i> Sorgula
-                </button>
+
+    <div id="filterPanel" class="card mb-3 shadow-sm border-left-primary" style="display:none;">
+        <div class="card-body py-3">
+            <div class="row align-items-end">
+                <div class="col-md-9">
+                    <label class="small font-weight-bold text-uppercase text-primary">Grup Adı Ara</label>
+                    <input type="text" id="groupSearch" class="form-control form-control-sm border-primary" placeholder="Örn: Saplı Çanta, Altıgen Dip...">
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary btn-sm btn-block" onclick="filterGroups()">
+                        <i class="fas fa-search mr-1"></i> Sorgula
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">

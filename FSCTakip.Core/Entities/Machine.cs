@@ -1,15 +1,15 @@
-﻿namespace FSCTakip.Core.Entities
+﻿using System;
+
+namespace FSCTakip.Core.Entities
 {
     public class Machine : BaseEntity
     {
-        // Örn: "M-01", "HAT-02" (ERP entegrasyonu için kod)
-        public string MachineCode { get; set; }
+        // Hata veren kısım burasıydı, bu satırı eklediğinden emin ol:
+        public string Name { get; set; } // Örn: "8 Renk Flexo"
 
-        // Örn: "1 Nolu Torba Hattı", "Burgu Sap Makinesi"
-        public string MachineName { get; set; }
+        public string Code { get; set; } // Örn: "M-01"
 
-        // Makine tipi (Torba, Sap, Etiket makinesi vb.)
-        public string MachineType { get; set; }
+        public string Type { get; set; } // Örn: "Matbaa"
 
         public bool IsActive { get; set; } = true;
     }
