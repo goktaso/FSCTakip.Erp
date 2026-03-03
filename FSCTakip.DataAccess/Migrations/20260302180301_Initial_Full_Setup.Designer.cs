@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FSCTakip.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260302125703_FixProductRecipeRelation")]
-    partial class FixProductRecipeRelation
+    [Migration("20260302180301_Initial_Full_Setup")]
+    partial class Initial_Full_Setup
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -454,6 +454,29 @@ namespace FSCTakip.DataAccess.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FSCTakip.Core.Entities.PaperWeight", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PaperWeights");
+                });
+
             modelBuilder.Entity("FSCTakip.Core.Entities.PaperWidth", b =>
                 {
                     b.Property<int>("Id")
@@ -523,42 +546,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasIndex("PaperColorId");
 
                     b.ToTable("Products");
-                });
-
-            modelBuilder.Entity("FSCTakip.Core.Entities.ProductGrammage", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Value")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ProductGrammages");
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.ProductGroup", b =>

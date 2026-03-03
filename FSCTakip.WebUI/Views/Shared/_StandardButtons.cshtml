@@ -1,5 +1,17 @@
-﻿<div class="btn-group float-end mb-3">
-    <button type="button" class="btn btn-outline-primary" id="btnFilter">🔍 Filtrele</button>
-    <button type="button" class="btn btn-outline-success" id="btnExportExcel">📊 Excel</button>
-    <button type="button" class="btn btn-outline-secondary" id="btnPrint">🖨️ Yazdır</button>
+﻿@model string
+@* Model: Excel metodunun adını alır (Örn: ExportBagTypes) *@
+
+<div class="btn-group float-end mb-3">
+    <button type="button" class="btn btn-outline-primary" id="btnFilter">
+        <i class="fas fa-search"></i> Filtrele
+    </button>
+
+    <a href="@Url.Action(Model, ViewContext.RouteData.Values["controller"].ToString())"
+       class="btn btn-outline-success" id="btnExportExcel">
+        <i class="fas fa-file-excel"></i> Excel
+    </a>
+
+    <button type="button" class="btn btn-outline-secondary" id="btnPrint" onclick="window.print()">
+        <i class="fas fa-print"></i> Yazdır
+    </button>
 </div>

@@ -136,7 +136,6 @@
             cursor: pointer;
         }
 
-        /* [2026-02-25] Buton Standartları */
         .action-buttons {
             display: flex;
             gap: 8px;
@@ -252,9 +251,8 @@
                     </a>
                     <div id="collapseTorba" class="collapse @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Product" ? "show" : "")">
                         <div class="collapse-inner">
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "BagTypes" ? "active" : "")"
-                               href="@Url.Action("BagTypes", "Product")">Torba Tipleri</a>
-                            <a class="collapse-item" href="#">Torba Ölçüleri</a>
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "BagTypes" ? "active" : "")" href="/Product/BagTypes">Torba Tipleri</a>
+                            <a class="collapse-item" href="/Product/Groups">Ürün Grupları</a>
                         </div>
                     </div>
                 </div>
@@ -264,14 +262,19 @@
                         <i class="fas fa-scroll"></i> <span>Kağıt Ayarları</span>
                         <i class="fas fa-chevron-down float-right mt-1 small"></i>
                     </a>
-                    <div id="paperSet" class="collapse">
+                    <div id="paperSet" class="collapse @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Paper" ? "show" : "")">
                         <div class="collapse-inner">
                             <a class="collapse-item" href="/Paper/Types">Kağıt Tipleri</a>
                             <a class="collapse-item" href="/Paper/Colors">Kağıt Renkleri</a>
                             <a class="collapse-item" href="/Paper/Weights">Gramajlar</a>
+                            <a class="collapse-item" href="/Paper/Widths">Kağıt Enleri</a>
+                            <a class="collapse-item" href="/Paper/FscTypes">FSC Tipleri</a>
                         </div>
                     </div>
                 </div>
+
+                <a href="/Machine/Machines" class="nav-link"><i class="fas fa-industry"></i> <span>Makineler</span></a>
+
             </nav>
         </aside>
 
@@ -302,66 +305,31 @@
 
     <script>
         $(document).ready(function() {
-            // Sidebar Kontrolü
+            // Sidebar Toggle
             $('#hamburgerBtn').click(function() {
-                if ($(window).width() > 992) {
-                    $('#sidebar').toggleClass('collapsed');
-                } else {
-                    $('#sidebar').toggleClass('active');
-                    $('#sidebarOverlay').toggleClass('active');
-                }
+                if ($(window).width() > 992) { $('#sidebar').toggleClass('collapsed'); }
+                else { $('#sidebar').toggleClass('active'); $('#sidebarOverlay').toggleClass('active'); }
             });
 
-            $('#sidebarOverlay').click(function() {
-                $('#sidebar').removeClass('active');
-                $(this).removeClass('active');
-            });
+            $('#sidebarOverlay').click(function() { $('#sidebar').removeClass('active'); $(this).removeClass('active'); });
 
-            // "Yeni Ekle" Global Tetikleyici
+            // Global Yeni Ekle
             $('#globalAddBtn').click(function() {
-                if (typeof openAddModal === "function") {
-                    openAddModal();
-                } else {
-                    Swal.fire('Bilgi', 'Bu sayfa için ekleme fonksiyonu henüz tanımlanmadı.', 'info');
-                }
+                if (typeof openAddModal === "function") { openAddModal(); }
+                else { Swal.fire('Bilgi', 'Bu sayfa için ekleme fonksiyonu henüz tanımlanmadı.', 'info'); }
             });
         });
 
-        // Ortak Filtre Paneli Aç/Kapat
         function toggleFilter() {
             let panel = $('#filterPanel');
             if(panel.length > 0) panel.slideToggle('fast');
             else Swal.fire({ icon: 'info', title: 'Filtre', text: 'Bu sayfada aktif bir filtre paneli bulunamadı.', timer: 2000 });
         }
 
-        // Ortak Excel Export (Sayfa bazlı ezilebilir)
         function exportToExcel() {
-            let currentAction = '@ViewContext.RouteData.Values["Action"]';
-            let currentController = '@ViewContext.RouteData.Values["Controller"]';
-            window.location.href = `/${currentController}/Export${currentAction}`;
-        }
-
-        // Profesyonel Durum Değiştirme (Global)
-        function globalToggleStatus(id, tableName) {
-            Swal.fire({
-                title: 'Durum Değiştirilsin mi?',
-                text: "Kaydın aktiflik durumu güncellenecektir.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#2c3e50',
-                confirmButtonText: 'Evet, Değiştir',
-                cancelButtonText: 'Vazgeç'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.post('/Product/ToggleStatus', { id: id, tableName: tableName }, function (res) {
-                        if (res.success) {
-                            Swal.fire({ icon: 'success', title: res.message, timer: 1000, showConfirmButton: false }).then(() => location.reload());
-                        } else {
-                            Swal.fire('Hata', res.message, 'error');
-                        }
-                    });
-                }
-            });
+            let action = '@ViewContext.RouteData.Values["Action"]';
+            let controller = '@ViewContext.RouteData.Values["Controller"]';
+            window.location.href = `/${controller}/Export${action}`;
         }
     </script>
 

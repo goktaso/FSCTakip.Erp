@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FSCTakip.DataAccess.Migrations
 {
     /// <inheritdoc />
-    public partial class FixProductRecipeRelation : Migration
+    public partial class Initial_Full_Setup : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -139,6 +139,21 @@ namespace FSCTakip.DataAccess.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PaperWeights",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Value = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Unit = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaperWeights", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PaperWidths",
                 columns: table => new
                 {
@@ -156,25 +171,6 @@ namespace FSCTakip.DataAccess.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PaperWidths", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ProductGrammages",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Value = table.Column<int>(type: "int", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    UpdatedDate = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ProductGrammages", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -656,10 +652,10 @@ namespace FSCTakip.DataAccess.Migrations
                 name: "PaperTypes");
 
             migrationBuilder.DropTable(
-                name: "PaperWidths");
+                name: "PaperWeights");
 
             migrationBuilder.DropTable(
-                name: "ProductGrammages");
+                name: "PaperWidths");
 
             migrationBuilder.DropTable(
                 name: "ProductGroups");

@@ -26,7 +26,6 @@ namespace FSCTakip.DataAc.Data
         public DbSet<Customer> Customers { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<Product> Products { get; set; }
-        public DbSet<ProductGrammage> ProductGrammages { get; set; }
         public DbSet<ProductRecipe> ProductRecipes { get; set; }
         public DbSet<WorkOrder> WorkOrders { get; set; }
         public DbSet<WorkOrderRecipe> WorkOrderRecipes { get; set; }
