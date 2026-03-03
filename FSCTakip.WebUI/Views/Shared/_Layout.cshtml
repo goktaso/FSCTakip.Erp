@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
@@ -136,13 +136,21 @@
             cursor: pointer;
         }
 
-        /* [2026-02-25] Buton Standartları */
+        /* [2026-02-25] Müşteri sayfası standartları - Buton Yapısı */
         .action-buttons {
             display: flex;
+            align-items: center;
             gap: 8px;
             overflow-x: auto;
             padding-bottom: 5px;
             scrollbar-width: none;
+            flex-wrap: wrap;
+        }
+
+        .action-buttons-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .btn-filter {
@@ -173,13 +181,31 @@
             white-space: nowrap;
         }
 
-        .btn-add {
-            background-color: #8e44ad;
+        .btn-actions {
+            background-color: #7f8c8d;
             color: white;
             border: none;
             padding: 8px 15px;
             border-radius: 4px;
             white-space: nowrap;
+            transition: 0.2s;
+        }
+
+            .btn-actions:hover {
+                background-color: #95a5a6;
+                color: white;
+            }
+
+        .btn-add {
+            background-color: #8e44ad;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 4px;
+            white-space: nowrap;
+            margin-left: auto;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(142, 68, 173, 0.3);
         }
 
             .btn-filter:hover, .btn-excel:hover, .btn-print:hover, .btn-add:hover {
@@ -283,9 +309,21 @@
                 </div>
 
                 <div class="action-buttons">
-                    <button class="btn-filter" onclick="toggleFilter()"><i class="fas fa-filter"></i> Filtrele</button>
-                    <button class="btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
-                    <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Yazdır</button>
+                    <div class="action-buttons-left">
+                        <button class="btn-filter" onclick="toggleFilter()"><i class="fas fa-filter"></i> Filtrele</button>
+                        <button class="btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Yazdır</button>
+                        <div class="dropdown">
+                            <button class="btn btn-actions dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-cog"></i> İşlemler
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item" href="#" onclick="bulkDelete(); return false;"><i class="fas fa-trash-alt mr-2"></i>Toplu Sil</a>
+                                <a class="dropdown-item" href="#" onclick="bulkArchive(); return false;"><i class="fas fa-archive mr-2"></i>Arşivle</a>
+                                <a class="dropdown-item" href="#" onclick="bulkChangeStatus(); return false;"><i class="fas fa-exchange-alt mr-2"></i>Durum Değiştir</a>
+                            </div>
+                        </div>
+                    </div>
                     <button class="btn-add" id="globalAddBtn"><i class="fas fa-plus-circle"></i> Yeni Ekle</button>
                 </div>
             </header>
@@ -339,6 +377,20 @@
             let currentAction = '@ViewContext.RouteData.Values["Action"]';
             let currentController = '@ViewContext.RouteData.Values["Controller"]';
             window.location.href = `/${currentController}/Export${currentAction}`;
+        }
+
+        // [2026-02-25] Toplu İşlem Fonksiyon Taslakları
+        function bulkDelete() {
+            if (typeof pageBulkDelete === "function") pageBulkDelete();
+            else Swal.fire('Bilgi', 'Toplu silme işlemi bu sayfa için henüz tanımlanmadı.', 'info');
+        }
+        function bulkArchive() {
+            if (typeof pageBulkArchive === "function") pageBulkArchive();
+            else Swal.fire('Bilgi', 'Arşivleme işlemi bu sayfa için henüz tanımlanmadı.', 'info');
+        }
+        function bulkChangeStatus() {
+            if (typeof pageBulkChangeStatus === "function") pageBulkChangeStatus();
+            else Swal.fire('Bilgi', 'Toplu durum değiştirme bu sayfa için henüz tanımlanmadı.', 'info');
         }
 
         // Profesyonel Durum Değiştirme (Global)
