@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using FSCTakip.Core.Entities;
 using System;
 
@@ -34,6 +34,8 @@ namespace FSCTakip.DataAc.Data
         public DbSet<StockMovement> StockMovements { get; set; }
         public DbSet<FscLot> FscLots { get; set; }
         public DbSet<FscSerial> FscSerials { get; set; }
+        public DbSet<FscAudit> FscAudits { get; set; }
+        public DbSet<FscAuditItem> FscAuditItems { get; set; }
         public DbSet<WasteManagement> WasteManagements { get; set; }
         #endregion
 

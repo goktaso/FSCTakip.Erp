@@ -1,19 +1,28 @@
-﻿@model string
+@model string
+@* [2026-02-25] Müşteri sayfası standartları - Filtrele, Excel, Yazdır, İşlemler, Yeni Ekle *@
 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
-    <h6 class="m-0 font-weight-bold text-danger">
-        <i class="fas fa-industry mr-2"></i>@Model
+    <h6 class="m-0 font-weight-bold text-dark">
+        <i class="fas fa-list mr-2"></i>@Model
     </h6>
     <div class="btn-group shadow-sm">
-        <button type="button" class="btn btn-outline-danger btn-sm" onclick="$('#filterPanel').slideToggle();">
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="$('#filterPanel').slideToggle();">
             <i class="fas fa-filter fa-sm"></i> Filtrele
         </button>
-        <button type="button" class="btn btn-outline-success btn-sm" id="exportExcel">
+        <button type="button" class="btn btn-outline-success btn-sm" onclick="typeof exportToExcel === 'function' ? exportToExcel() : window.location.reload();">
             <i class="fas fa-file-excel fa-sm"></i> Excel
         </button>
-        <button type="button" class="button btn btn-outline-dark btn-sm" onclick="window.print();">
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print();">
             <i class="fas fa-print fa-sm"></i> Yazdır
         </button>
-        <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#addModal">
+        <div class="dropdown">
+            <button class="btn btn-outline-dark btn-sm dropdown-toggle" type="button" data-toggle="dropdown">İşlemler</button>
+            <div class="dropdown-menu dropdown-menu-right">
+                <a class="dropdown-item" href="#" onclick="typeof bulkDelete === 'function' ? bulkDelete() : Swal.fire('Bilgi','Toplu silme bu sayfa için tanımlanmadı.','info'); return false;"><i class="fas fa-trash-alt mr-2"></i>Toplu Sil</a>
+                <a class="dropdown-item" href="#" onclick="typeof bulkArchive === 'function' ? bulkArchive() : Swal.fire('Bilgi','Arşivleme bu sayfa için tanımlanmadı.','info'); return false;"><i class="fas fa-archive mr-2"></i>Arşivle</a>
+                <a class="dropdown-item" href="#" onclick="typeof bulkChangeStatus === 'function' ? bulkChangeStatus() : Swal.fire('Bilgi','Durum değiştirme bu sayfa için tanımlanmadı.','info'); return false;"><i class="fas fa-exchange-alt mr-2"></i>Durum Değiştir</a>
+            </div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addModal">
             <i class="fas fa-plus fa-sm"></i> Yeni Ekle
         </button>
     </div>

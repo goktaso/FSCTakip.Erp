@@ -269,35 +269,30 @@
                 <a href="/Customers/Index" class="nav-link"><i class="fas fa-user-tie"></i> <span>Müşteriler</span></a>
                 <a href="/Suppliers/Index" class="nav-link"><i class="fas fa-truck"></i> <span>Tedarikçiler</span></a>
 
+                <div class="menu-label">FSC DENETİM</div>
+                <a href="/FscAudit/Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "FscAudit" ? "active" : "")"><i class="fas fa-clipboard-check"></i> <span>Denetim Kayıtları</span></a>
+                <a href="/FscAudit/Import" class="nav-link"><i class="fas fa-file-import"></i> <span>Excel İçe Aktar</span></a>
+
+                <div class="menu-label">TANIMLAMALAR</div>
+                <div class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTanimlamalar">
+                        <i class="fas fa-list-ul"></i> <span>Tanımlamalar</span>
+                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
+                    </a>
+                    <div id="collapseTanimlamalar" class="collapse @(new[]{"FscTypes","Gruplar","TorbaTip","Makinalar","KagitRenk","KagitTip","Gramaj"}.Contains(ViewContext.RouteData.Values["Controller"]?.ToString()) ? "show" : "")">
+                        <div class="collapse-inner">
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "FscTypes" ? "active" : "")" href="/FscTypes/Index">FSC Tipleri</a>
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Gruplar" ? "active" : "")" href="/Gruplar/Index">Gruplar</a>
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "TorbaTip" ? "active" : "")" href="/TorbaTip/Index">Torba Tip</a>
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Makinalar" ? "active" : "")" href="/Makinalar/Index">Makinalar</a>
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "KagitRenk" ? "active" : "")" href="/KagitRenk/Index">Kağıt Rengi</a>
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "KagitTip" ? "active" : "")" href="/KagitTip/Index">Kağıt Tipi</a>
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Gramaj" ? "active" : "")" href="/Gramaj/Index">Gramaj</a>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="menu-label">SİSTEM AYARLARI</div>
-
-                <div class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTorba">
-                        <i class="fas fa-shopping-bag"></i> <span>Torba Tanımları</span>
-                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
-                    </a>
-                    <div id="collapseTorba" class="collapse @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Product" ? "show" : "")">
-                        <div class="collapse-inner">
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "BagTypes" ? "active" : "")"
-                               href="@Url.Action("BagTypes", "Product")">Torba Tipleri</a>
-                            <a class="collapse-item" href="#">Torba Ölçüleri</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#paperSet">
-                        <i class="fas fa-scroll"></i> <span>Kağıt Ayarları</span>
-                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
-                    </a>
-                    <div id="paperSet" class="collapse">
-                        <div class="collapse-inner">
-                            <a class="collapse-item" href="/Paper/Types">Kağıt Tipleri</a>
-                            <a class="collapse-item" href="/Paper/Colors">Kağıt Renkleri</a>
-                            <a class="collapse-item" href="/Paper/Weights">Gramajlar</a>
-                        </div>
-                    </div>
-                </div>
             </nav>
         </aside>
 
