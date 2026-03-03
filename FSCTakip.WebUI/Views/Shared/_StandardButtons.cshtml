@@ -1,5 +1,12 @@
-﻿<div class="btn-group float-end mb-3">
-    <button type="button" class="btn btn-outline-primary" id="btnFilter">🔍 Filtrele</button>
-    <button type="button" class="btn btn-outline-success" id="btnExportExcel">📊 Excel</button>
-    <button type="button" class="btn btn-outline-secondary" id="btnPrint">🖨️ Yazdır</button>
+@* [2026-02-25] Ortak Filtre/Excel/Yazdır butonları - Layout toggleFilter/exportToExcel ile uyumlu *@
+<div class="btn-group float-end mb-3">
+    <button type="button" class="btn btn-outline-primary" id="btnFilter" onclick="typeof toggleFilter === 'function' ? toggleFilter() : $('#filterPanel').slideToggle();">
+        <i class="fas fa-filter"></i> Filtrele
+    </button>
+    <button type="button" class="btn btn-outline-success" id="btnExportExcel" onclick="typeof exportToExcel === 'function' ? exportToExcel() : window.location.reload();">
+        <i class="fas fa-file-excel"></i> Excel
+    </button>
+    <button type="button" class="btn btn-outline-secondary" id="btnPrint" onclick="window.print();">
+        <i class="fas fa-print"></i> Yazdır
+    </button>
 </div>

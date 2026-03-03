@@ -1,12 +1,20 @@
-﻿@model IEnumerable<FSCTakip.Core.Entities.BagType>
+@model IEnumerable<FSCTakip.Core.Entities.BagType>
 @{
     ViewData["Title"] = "Torba Tipi Tanımları";
 }
 
-@* Filtre Paneli - Layout'taki Turuncu Buton Burayı Tetikler *@
-<div id="filterPanel" class="card mb-3 shadow-sm border-left-dark" style="display:none;">
-    <div class="card-body py-3">
-        <div class="row align-items-end">
+@* [2026-02-25] _StandardButtons - Filtre/Excel/Yazdır *@
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
+        <h6 class="m-0 font-weight-bold text-dark">
+            <i class="fas fa-shopping-bag mr-2"></i>Torba Tipi Tanımları
+        </h6>
+        @await Html.PartialAsync("_StandardButtons")
+    </div>
+
+@* Filtre Paneli - _StandardButtons Filtrele ile tetiklenir *@
+<div id="filterPanel" class="card-body py-3 border-bottom bg-light" style="display:none;">
+    <div class="row align-items-end">
             <div class="col-md-9">
                 <label class="small font-weight-bold text-uppercase">Torba Tipi Ara</label>
                 <input type="text" id="bagTypeSearch" class="form-control form-control-sm border-dark" placeholder="Örn: Kare Dip, Takviyeli...">
@@ -17,11 +25,11 @@
                 </button>
             </div>
         </div>
-    </div>
+</div>
 </div>
 
 @* Tablo Alanı *@
-<div class="card shadow-sm border-0">
+<div class="card shadow-sm border-0 mt-3">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="bagTypesTable">
@@ -76,7 +84,7 @@
                 <h5 class="modal-title font-weight-bold"><i class="fas fa-shopping-bag mr-2"></i>Torba Tipi Formu</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
-            <form asp-action="SaveBagType" method="post">
+            <form asp-controller="Product" asp-action="SaveBagType" method="post">
                 <div class="modal-body">
                     <input type="hidden" name="Id" id="bagId" value="0" />
                     <div class="form-group">
