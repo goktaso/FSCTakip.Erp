@@ -1,0 +1,33 @@
+﻿@{
+    ViewData["Title"] = "Kağıt Tipleri";
+}
+
+<div id="filterPanel" class="card mb-3 shadow-sm" style="display:none; border-left: 5px solid #f39c12;">
+    <div class="card-body text-center py-4">
+        <div class="d-flex justify-content-center gap-3">
+            <input type="text" class="form-control w-50" placeholder="Kağıt cinsi ara...">
+            <button class="btn btn-warning text-white px-4">Listele</button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card border-0 shadow-sm border-top-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1 font-weight-bold text-dark">Kahverengi Kraft</h6>
+                        <small class="text-muted text-uppercase">Kod: KRF-001</small>
+                    </div>
+                    <span class="badge badge-info">FSC</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-sm btn-outline-primary px-3">Düzenle</button>
+                    <button class="btn btn-sm btn-outline-danger px-3">Sil</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

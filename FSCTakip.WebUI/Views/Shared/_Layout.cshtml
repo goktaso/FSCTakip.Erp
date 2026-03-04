@@ -136,7 +136,6 @@
             cursor: pointer;
         }
 
-        /* [2026-02-25] Müşteri sayfası standartları - Buton Yapısı */
         .action-buttons {
             display: flex;
             align-items: center;
@@ -281,18 +280,26 @@
                     </a>
                     <div id="collapseTanimlamalar" class="collapse @(new[]{"FscTypes","Gruplar","TorbaTip","Makinalar","KagitRenk","KagitTip","Gramaj"}.Contains(ViewContext.RouteData.Values["Controller"]?.ToString()) ? "show" : "")">
                         <div class="collapse-inner">
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "FscTypes" ? "active" : "")" href="/FscTypes/Index">FSC Tipleri</a>
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Gruplar" ? "active" : "")" href="/Gruplar/Index">Gruplar</a>
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "TorbaTip" ? "active" : "")" href="/TorbaTip/Index">Torba Tip</a>
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Makinalar" ? "active" : "")" href="/Makinalar/Index">Makinalar</a>
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "KagitRenk" ? "active" : "")" href="/KagitRenk/Index">Kağıt Rengi</a>
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "KagitTip" ? "active" : "")" href="/KagitTip/Index">Kağıt Tipi</a>
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Gramaj" ? "active" : "")" href="/Gramaj/Index">Gramaj</a>
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "BagTypes" ? "active" : "")"
+                               href="@Url.Action("BagTypes", "Product")">Torba Tipleri</a>
+                            <a class="collapse-item" href="#">Torba Ölçüleri</a>
                         </div>
                     </div>
                 </div>
 
-                <div class="menu-label">SİSTEM AYARLARI</div>
+                <div class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#paperSet">
+                        <i class="fas fa-scroll"></i> <span>Kağıt Ayarları</span>
+                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
+                    </a>
+                    <div id="paperSet" class="collapse">
+                        <div class="collapse-inner">
+                            <a class="collapse-item" href="/Paper/Types">Kağıt Tipleri</a>
+                            <a class="collapse-item" href="/Paper/Colors">Kağıt Renkleri</a>
+                            <a class="collapse-item" href="/Paper/Weights">Gramajlar</a>
+                        </div>
+                    </div>
+                </div>
             </nav>
         </aside>
 
@@ -335,57 +342,31 @@
 
     <script>
         $(document).ready(function() {
-            // Sidebar Kontrolü
+            // Sidebar Toggle
             $('#hamburgerBtn').click(function() {
-                if ($(window).width() > 992) {
-                    $('#sidebar').toggleClass('collapsed');
-                } else {
-                    $('#sidebar').toggleClass('active');
-                    $('#sidebarOverlay').toggleClass('active');
-                }
+                if ($(window).width() > 992) { $('#sidebar').toggleClass('collapsed'); }
+                else { $('#sidebar').toggleClass('active'); $('#sidebarOverlay').toggleClass('active'); }
             });
 
-            $('#sidebarOverlay').click(function() {
-                $('#sidebar').removeClass('active');
-                $(this).removeClass('active');
-            });
+            $('#sidebarOverlay').click(function() { $('#sidebar').removeClass('active'); $(this).removeClass('active'); });
 
-            // "Yeni Ekle" Global Tetikleyici
+            // Global Yeni Ekle
             $('#globalAddBtn').click(function() {
-                if (typeof openAddModal === "function") {
-                    openAddModal();
-                } else {
-                    Swal.fire('Bilgi', 'Bu sayfa için ekleme fonksiyonu henüz tanımlanmadı.', 'info');
-                }
+                if (typeof openAddModal === "function") { openAddModal(); }
+                else { Swal.fire('Bilgi', 'Bu sayfa için ekleme fonksiyonu henüz tanımlanmadı.', 'info'); }
             });
         });
 
-        // Ortak Filtre Paneli Aç/Kapat
         function toggleFilter() {
             let panel = $('#filterPanel');
             if(panel.length > 0) panel.slideToggle('fast');
             else Swal.fire({ icon: 'info', title: 'Filtre', text: 'Bu sayfada aktif bir filtre paneli bulunamadı.', timer: 2000 });
         }
 
-        // Ortak Excel Export (Sayfa bazlı ezilebilir)
         function exportToExcel() {
             let currentAction = '@ViewContext.RouteData.Values["Action"]';
             let currentController = '@ViewContext.RouteData.Values["Controller"]';
             window.location.href = `/${currentController}/Export${currentAction}`;
-        }
-
-        // [2026-02-25] Toplu İşlem Fonksiyon Taslakları
-        function bulkDelete() {
-            if (typeof pageBulkDelete === "function") pageBulkDelete();
-            else Swal.fire('Bilgi', 'Toplu silme işlemi bu sayfa için henüz tanımlanmadı.', 'info');
-        }
-        function bulkArchive() {
-            if (typeof pageBulkArchive === "function") pageBulkArchive();
-            else Swal.fire('Bilgi', 'Arşivleme işlemi bu sayfa için henüz tanımlanmadı.', 'info');
-        }
-        function bulkChangeStatus() {
-            if (typeof pageBulkChangeStatus === "function") pageBulkChangeStatus();
-            else Swal.fire('Bilgi', 'Toplu durum değiştirme bu sayfa için henüz tanımlanmadı.', 'info');
         }
 
         // Profesyonel Durum Değiştirme (Global)

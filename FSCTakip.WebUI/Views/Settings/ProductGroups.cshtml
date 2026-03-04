@@ -1,0 +1,113 @@
+﻿@{
+    ViewData["Title"] = "Ürün Grupları";
+}
+
+<div id="filterPanel" class="card mb-3 shadow-sm" style="display:none; border-left: 5px solid #f39c12;">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-9 mb-2">
+                <label class="small font-weight-bold">Grup Adı veya Açıklama</label>
+                <input type="text" class="form-control form-control-sm" placeholder="Grup ara...">
+            </div>
+            <div class="col-md-3 mb-2 align-self-end">
+                <button class="btn btn-primary btn-sm btn-block"><i class="fas fa-search"></i> Filtrele</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-dark">
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th>Grup Adı</th>
+                        <th>Kısa Kod</th>
+                        <th>Ürün Sayısı</th>
+                        <th>Durum</th>
+                        <th class="text-right">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><span class="fw-bold text-primary">Saplı Kağıt Torba</span></td>
+                        <td>SKT</td>
+                        <td>12</td>
+                        <td><span class="badge badge-success">Aktif</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-light border text-primary" title="Düzenle"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-light border text-danger" title="Sil"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><span class="fw-bold text-primary">Sapsız Dip Kese</span></td>
+                        <td>SDK</td>
+                        <td>45</td>
+                        <td><span class="badge badge-success">Aktif</span></td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-light border text-primary" title="Düzenle"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-light border text-danger" title="Sil"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addProductGroupModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title"><i class="fas fa-folder-plus mr-2"></i> Yeni Ürün Grubu</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="productGroupForm">
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Ürün Grubu Adı</label>
+                        <input type="text" class="form-control" placeholder="Örn: E-Ticaret Torbaları">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Grup Kodu (Kısa)</label>
+                                <input type="text" class="form-control" placeholder="Örn: ETC">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Durum</label>
+                                <select class="form-control">
+                                    <option value="1">Aktif</option>
+                                    <option value="0">Pasif</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Açıklama / Notlar</label>
+                        <textarea class="form-control" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-success"><i class="fas fa-save"></i> Grubu Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // [2026-02-25] Layout'taki ana "Yeni Ekle" butonunu bu sayfadaki modal'a bağlar [cite: 2026-02-25]
+            $(".btn-add").attr("onclick", "$('#addProductGroupModal').modal('show')");
+        });
+    </script>
+}

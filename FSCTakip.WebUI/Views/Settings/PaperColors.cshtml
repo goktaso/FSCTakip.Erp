@@ -1,0 +1,88 @@
+﻿@{
+    ViewData["Title"] = "Kağıt Renk Tanımları";
+}
+
+<div id="filterPanel" class="card mb-3 shadow-sm" style="display:none; border-left: 5px solid #f39c12;">
+    <div class="card-body py-3">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <input type="text" class="form-control form-control-sm" placeholder="Renk adı veya hex kodu ile ara...">
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary btn-sm btn-block" onclick="alert('Filtreleniyor...')">
+                    <i class="fas fa-search"></i> Sorgula
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th style="width: 60px;">Renk</th>
+                        <th>Renk Tanımı</th>
+                        <th>HEX</th>
+                        <th class="text-right">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><div style="width:25px; height:25px; border-radius:4px; background:#FFFFFF; border:1px solid #ddd;"></div></td>
+                        <td>Beyaz (Standart)</td>
+                        <td>#FFFFFF</td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><div style="width:25px; height:25px; border-radius:4px; background:#8b4513;"></div></td>
+                        <td>Doğal Kraft</td>
+                        <td>#8B4513</td>
+                        <td class="text-right">
+                            <button class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addColorModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h6 class="modal-title">Yeni Renk Tanımla</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="small">Renk Adı</label>
+                    <input type="text" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="small">Renk Seç</label>
+                    <input type="color" class="form-control" style="height:45px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success btn-block btn-sm">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Layout'taki butona tıklandığında modalı aç (Kilitlenmeyi önlemek için doğrudan bağlama)
+            $(document).off('click', '.btn-add').on('click', '.btn-add', function() {
+                $('#addColorModal').modal('show');
+            });
+        });
+    </script>
+}
