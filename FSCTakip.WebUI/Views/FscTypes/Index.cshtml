@@ -1,0 +1,151 @@
+@model IEnumerable<FSCTakip.Core.Entities.FscType>
+@{
+    ViewData["Title"] = "FSC Tipleri";
+}
+
+<div class="card shadow mb-4">
+    <div id="filterPanel" class="card-body border-bottom bg-light" style="display:none;">
+        <div class="row align-items-end">
+            <div class="col-md-9">
+                <label class="small font-weight-bold text-uppercase">Sertifika Ara</label>
+                <input type="text" id="searchBox" class="form-control form-control-sm" placeholder="Kod, ad veya açıklama...">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-success btn-sm btn-block" onclick="filterTable()">
+                    <i class="fas fa-search mr-1"></i> Sorgula
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="dataTable">
+                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
+                    <tr>
+                        <th style="width:70px;">ID</th>
+                        <th>Kod</th>
+                        <th>Ad</th>
+                        <th>Açıklama</th>
+                        <th>Durum</th>
+                        <th class="text-right" style="width:130px;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model != null)
+                {
+                    foreach (var item in Model)
+                    {
+                        var safeCode = item.Code?.Replace("'", "\\'") ?? "";
+                        var safeName = item.Name?.Replace("'", "\\'") ?? "";
+                        var safeDesc = item.Description?.Replace("'", "\\'") ?? "";
+                        <tr>
+                            <td>@item.Id</td>
+                            <td><code>@item.Code</code></td>
+                            <td><strong>@item.Name</strong></td>
+                            <td><small class="text-muted">@item.Description</small></td>
+                            <td>
+                                <span class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
+                                    @(item.IsActive ? "Aktif" : "Pasif")
+                                </span>
+                            </td>
+                            <td class="text-right">
+                                <button class="btn btn-sm btn-outline-primary mr-1"
+                                        onclick="editItem(@item.Id, '@safeCode', '@safeName', '@safeDesc')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteItem(@item.Id)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-certificate mr-2"></i>FSC Tipi Formu</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form asp-action="Save" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="formId" value="0" />
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Kod</label>
+                        <input type="text" name="Code" id="formCode" class="form-control" placeholder="FSC-100" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Ad</label>
+                        <input type="text" name="Name" id="formName" class="form-control" placeholder="FSC %100" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Açıklama</label>
+                        <textarea name="Description" id="formDesc" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-success btn-sm px-4">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openAddModal() {
+            $('#formId').val(0);
+            $('#formCode').val('');
+            $('#formName').val('');
+            $('#formDesc').val('');
+            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni FSC Tipi');
+            $('#addModal').modal('show');
+        }
+        function editItem(id, code, name, desc) {
+            $('#formId').val(id);
+            $('#formCode').val(code);
+            $('#formName').val(name);
+            $('#formDesc').val(desc || '');
+            $('.modal-title').html('<i class="fas fa-edit mr-2"></i>FSC Tipi Düzenle');
+            $('#addModal').modal('show');
+        }
+        function filterTable() {
+            var v = $('#searchBox').val().toLowerCase();
+            $('#dataTable tbody tr').filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(v) > -1);
+            });
+        }
+        function exportToExcel() {
+            window.location.href = '/FscTypes/Export';
+        }
+        function deleteItem(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: 'Bu kayıt silinecek.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç'
+            }).then(function (r) {
+                if (r.isConfirmed) {
+                    $.post('/FscTypes/Delete', { id: id }, function (res) {
+                        if (res.success) {
+                            Swal.fire('Silindi!', '', 'success').then(function () { location.reload(); });
+                        } else {
+                            Swal.fire('Hata', res.message || 'Silme işlemi başarısız.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}
+

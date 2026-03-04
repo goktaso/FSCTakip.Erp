@@ -1,0 +1,90 @@
+﻿@model FSCTakip.Core.Entities.Product
+
+@{
+    ViewData["Title"] = "Yeni Ürün Kartı";
+}
+
+<div class="page-body">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="m-0 font-weight-bold text-dark"><i class="fas fa-plus-circle text-primary mr-2"></i>Yeni Ürün Tanımlama</h5>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-list"></i> Listeye Dön
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            <form asp-action="Create">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="ProductGroupId" class="small font-weight-bold text-muted">Ürün Grubu</label>
+                        <select asp-for="ProductGroupId" class="form-control" asp-items="ViewBag.ProductGroupId">
+                            <option value="">-- Grup Seçiniz --</option>
+                        </select>
+                        <span asp-validation-for="ProductGroupId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="ProductCode" class="small font-weight-bold text-muted">Ürün Kodu</label>
+                        <input asp-for="ProductCode" class="form-control" placeholder="Örn: KRT-70-G50-MIX" />
+                        <span asp-validation-for="ProductCode" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="ProductName" class="small font-weight-bold text-muted">Ürün Adı</label>
+                        <input asp-for="ProductName" class="form-control" placeholder="Ürün adını giriniz..." />
+                        <span asp-validation-for="ProductName" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-md-3 mb-3">
+                        <label asp-for="PaperTypeId" class="small font-weight-bold text-muted">Kağıt Tipi</label>
+                        <select asp-for="PaperTypeId" class="form-control" asp-items="ViewBag.PaperTypeId">
+                            <option value="">-- Seçiniz --</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label asp-for="PaperWeightId" class="small font-weight-bold text-muted">Gramaj</label>
+                        <select asp-for="PaperWeightId" class="form-control" asp-items="ViewBag.PaperWeightId">
+                            <option value="">-- Seçiniz --</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label asp-for="PaperWidthId" class="small font-weight-bold text-muted">En (Genişlik)</label>
+                        <select asp-for="PaperWidthId" class="form-control" asp-items="ViewBag.PaperWidthId">
+                            <option value="">-- Seçiniz --</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label asp-for="FscTypeId" class="small font-weight-bold text-muted">FSC Tipi</label>
+                        <select asp-for="FscTypeId" class="form-control" asp-items="ViewBag.FscTypeId">
+                            <option value="">-- Seçiniz --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-end">
+                    <button type="reset" class="btn btn-light px-4 mr-2">Temizle</button>
+                    <button type="submit" class="btn btn-primary px-5 shadow-sm">
+                        <i class="fas fa-save mr-1"></i> Kaydet ve Tamamla
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

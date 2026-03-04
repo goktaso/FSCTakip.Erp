@@ -1,0 +1,141 @@
+@model IEnumerable<FSCTakip.Core.Entities.PaperWeight>
+@{
+    ViewData["Title"] = "Gramaj";
+}
+
+<div class="card shadow mb-4">
+    <div id="filterPanel" class="card-body border-bottom bg-light" style="display:none;">
+        <div class="row align-items-end">
+            <div class="col-md-9">
+                <label class="small font-weight-bold text-uppercase">Gramaj Ara</label>
+                <input type="number" id="searchBox" class="form-control form-control-sm" placeholder="70, 80, 110...">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-info btn-sm btn-block text-white" onclick="filterTable()">
+                    <i class="fas fa-search mr-1"></i> Sorgula
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="dataTable">
+                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
+                    <tr>
+                        <th style="width:70px;">ID</th>
+                        <th>Değer</th>
+                        <th>Birim</th>
+                        <th>Durum</th>
+                        <th class="text-right" style="width:130px;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model != null)
+                {
+                    foreach (var item in Model)
+                    {
+                        var unit = item.Unit ?? "gr";
+                        <tr>
+                            <td>@item.Id</td>
+                            <td><strong>@item.Value</strong></td>
+                            <td>@unit</td>
+                            <td>
+                                <span class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
+                                    @(item.IsActive ? "Aktif" : "Pasif")
+                                </span>
+                            </td>
+                            <td class="text-right">
+                                <button class="btn btn-sm btn-outline-primary mr-1"
+                                        onclick="editItem(@item.Id, @item.Value, '@unit')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteItem(@item.Id)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-weight-hanging mr-2"></i>Gramaj Formu</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form asp-action="Save" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="formId" value="0" />
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Değer (gr/m²)</label>
+                        <input type="number" step="0.01" name="Value" id="formValue" class="form-control" placeholder="70" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Birim</label>
+                        <input type="text" name="Unit" id="formUnit" class="form-control" value="gr" />
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-info btn-sm px-4 text-white">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openAddModal() {
+            $('#formId').val(0);
+            $('#formValue').val('');
+            $('#formUnit').val('gr');
+            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Gramaj');
+            $('#addModal').modal('show');
+        }
+        function editItem(id, val, unit) {
+            $('#formId').val(id);
+            $('#formValue').val(val);
+            $('#formUnit').val(unit || 'gr');
+            $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Gramaj Düzenle');
+            $('#addModal').modal('show');
+        }
+        function filterTable() {
+            var v = $('#searchBox').val();
+            $('#dataTable tbody tr').filter(function () {
+                $(this).toggle($(this).text().indexOf(v) > -1);
+            });
+        }
+        function exportToExcel() {
+            window.location.href = '/Gramaj/Export';
+        }
+        function deleteItem(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: 'Bu kayıt silinecek.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç'
+            }).then(function (r) {
+                if (r.isConfirmed) {
+                    $.post('/Gramaj/Delete', { id: id }, function (res) {
+                        if (res.success) {
+                            Swal.fire('Silindi!', '', 'success').then(function () { location.reload(); });
+                        } else {
+                            Swal.fire('Hata', res.message || 'Silme işlemi başarısız.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}
+

@@ -1,0 +1,151 @@
+@model IEnumerable<FSCTakip.Core.Entities.BagType>
+@{
+    ViewData["Title"] = "Torba Tip";
+}
+
+<div class="card shadow mb-4">
+    <div id="filterPanel" class="card-body border-bottom bg-light" style="display:none;">
+        <div class="row align-items-end">
+            <div class="col-md-9">
+                <label class="small font-weight-bold text-uppercase">Torba Tipi Ara</label>
+                <input type="text" id="searchBox" class="form-control form-control-sm" placeholder="Örn: Kare Dip, Takviyeli...">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-dark btn-sm btn-block text-white" onclick="filterTable()">
+                    <i class="fas fa-search mr-1"></i> Sorgula
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="dataTable">
+                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
+                    <tr>
+                        <th style="width:70px;">ID</th>
+                        <th>Torba Tipi</th>
+                        <th>Kısa Kod</th>
+                        <th>Açıklama</th>
+                        <th>Durum</th>
+                        <th class="text-right" style="width:130px;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model != null)
+                {
+                    foreach (var item in Model)
+                    {
+                        var safeName = item.Name?.Replace("'", "\\'") ?? "";
+                        var safeCode = item.Code?.Replace("'", "\\'") ?? "";
+                        var safeDesc = item.Description?.Replace("'", "\\'") ?? "";
+                        <tr>
+                            <td>@item.Id</td>
+                            <td><strong>@item.Name</strong></td>
+                            <td><span class="badge badge-light border">@item.Code</span></td>
+                            <td><small class="text-muted">@item.Description</small></td>
+                            <td>
+                                <span class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
+                                    @(item.IsActive ? "Aktif" : "Pasif")
+                                </span>
+                            </td>
+                            <td class="text-right">
+                                <button class="btn btn-sm btn-outline-primary mr-1"
+                                        onclick="editItem(@item.Id, '@safeName', '@safeCode', '@safeDesc')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteItem(@item.Id)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-shopping-bag mr-2"></i>Torba Tipi Formu</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form asp-action="Save" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="formId" value="0" />
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Torba Tipi Adı</label>
+                        <input type="text" name="Name" id="formName" class="form-control" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Kısa Kod</label>
+                        <input type="text" name="Code" id="formCode" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Açıklama</label>
+                        <textarea name="Description" id="formDesc" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-dark btn-sm px-4">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openAddModal() {
+            $('#formId').val(0);
+            $('#formName').val('');
+            $('#formCode').val('');
+            $('#formDesc').val('');
+            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Torba Tipi');
+            $('#addModal').modal('show');
+        }
+        function editItem(id, name, code, desc) {
+            $('#formId').val(id);
+            $('#formName').val(name);
+            $('#formCode').val(code);
+            $('#formDesc').val(desc || '');
+            $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Torba Tipi Düzenle');
+            $('#addModal').modal('show');
+        }
+        function filterTable() {
+            var v = $('#searchBox').val().toLowerCase();
+            $('#dataTable tbody tr').filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(v) > -1);
+            });
+        }
+        function exportToExcel() {
+            window.location.href = '/TorbaTip/Export';
+        }
+        function deleteItem(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: 'Bu kayıt silinecek.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç'
+            }).then(function (r) {
+                if (r.isConfirmed) {
+                    $.post('/TorbaTip/Delete', { id: id }, function (res) {
+                        if (res.success) {
+                            Swal.fire('Silindi!', '', 'success').then(function () { location.reload(); });
+                        } else {
+                            Swal.fire('Hata', res.message || 'Silme işlemi başarısız.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}
+

@@ -15,20 +15,7 @@ public class ProductController : BaseController // Base'den türüyor
     }
 
     [HttpPost]
-    public async Task<IActionResult> SaveBagType(BagType model)
-    {
-        if (model.Id == 0)
-        {
-            model.IsActive = true;
-            _context.BagTypes.Add(model);
-        }
-        else
-        {
-            _context.BagTypes.Update(model);
-        }
-        await _context.SaveChangesAsync();
-        return RedirectToAction(nameof(BagTypes));
-    }
+    
 
     [HttpPost]
     public async Task<IActionResult> DeleteBagType(int id)

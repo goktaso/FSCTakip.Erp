@@ -1,0 +1,116 @@
+﻿@model IEnumerable<FSCTakip.Core.Entities.Product>
+@{
+    ViewData["Title"] = "Ürün Kartları";
+}
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
+        <h6 class="m-0 font-weight-bold text-dark">
+            <i class="fas fa-box mr-2 text-primary"></i>Ürün Kartları Listesi
+        </h6>
+        @* [2026-02-25] Filtre, Excel, Yazdır ve Yeni Ekle butonları *@
+        @await Html.PartialAsync("_StandardButtons")
+    </div>
+
+    @* Filtre Paneli *@
+    <div id="filterPanel" class="card-body py-3 border-bottom bg-light" style="display:none;">
+        <div class="row align-items-end">
+            <div class="col-md-9">
+                <label class="small font-weight-bold text-uppercase">Ürün Ara (Ad veya Kod)</label>
+                <input type="text" id="productSearch" class="form-control form-control-sm border-dark" placeholder="Ara...">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-dark btn-sm btn-block text-white" onclick="filterProducts()">
+                    <i class="fas fa-search mr-1"></i> Sorgula
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mt-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="productsTable">
+                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
+                    <tr>
+                        <th style="width: 150px;">Ürün Kodu</th>
+                        <th>Ürün Adı</th>
+                        <th>Grup</th>
+                        <th>FSC Tipi</th>
+                        <th class="text-right" style="width: 120px;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null)
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><span class="badge badge-light border text-dark">@item.ProductCode</span></td>
+                                <td><strong class="text-dark">@item.ProductName</strong></td>
+                                <td>
+                                    @* Name yerine GroupName olarak düzelttik *@
+                                    @(item.ProductGroup != null ? item.ProductGroup.GroupName : "-")
+                                </td>
+                                <td>
+                                    @* Burası da Name hatası verirse item.FscType.TypeName veya ToString() dene *@
+                                    @(item.FscType != null ? item.FscType.ToString() : "-")
+                                </td>
+                                <td class="text-right">
+                                    <a href="/Product/Edit/@item.Id" class="btn btn-sm btn-outline-primary mr-1" title="Düzenle">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(@item.Id)" title="Sil">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Layout'taki butonlar tarafından tetiklenen fonksiyonlar
+        function toggleFilter() { $('#filterPanel').slideToggle('fast'); }
+
+        function openAddModal() { window.location.href = '/Product/Create'; }
+
+        function filterProducts() {
+            var value = $("#productSearch").val().toLowerCase();
+            $("#productsTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        }
+
+        function exportToExcel() { window.location.href = '/Product/ExportToExcel'; }
+
+        function deleteProduct(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu ürün kartı silinecektir!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#2c3e50',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Evet, Sil!',
+                cancelButtonText: 'Vazgeç'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/Product/Delete', { id: id }, function (res) {
+                        if (res.success) {
+                            location.reload();
+                        } else {
+                            Swal.fire('Hata!', 'Silme işlemi başarısız.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}
