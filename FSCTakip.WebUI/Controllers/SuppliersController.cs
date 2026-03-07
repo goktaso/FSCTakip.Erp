@@ -1,49 +1,54 @@
 using FSCTakip.Core.Entities;
+using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace FSCTakip.WebUI.Controllers
+namespace FSC_ERP.Controllers
 {
-    public class SuppliersController : Controller
+    public class SuppliersController : BaseController
     {
-        // Namespace belirsizliğini önlemek için tam yol kullanıldı
-        private readonly FSCTakip.DataAccess.Data.AppDbContext _context;
+        public SuppliersController(AppDbContext context) : base(context) { }
 
-        public SuppliersController(FSCTakip.DataAccess.Data.AppDbContext context)
+        public async Task<IActionResult> Index() => View(await _context.Suppliers.ToListAsync());
+
+        [HttpGet]
+        public async Task<IActionResult> GetSupplier(int id)
         {
-            _context = context;
+            var item = await _context.Suppliers.FindAsync(id);
+            if (item == null) return Json(new { success = false });
+            return Json(new { success = true, data = item });
         }
 
-        // Tedarikçi Listesi (Müşteri sayfası formatında)
-        public async Task<IActionResult> Index()
-        {
-            var suppliers = await _context.Suppliers
-                .OrderBy(s => s.Name)
-                .ToListAsync();
-            return View(suppliers);
-        }
-
-        // Kaydetme ve Güncelleme İşlemi (ID Bazlı)
         [HttpPost]
         public async Task<IActionResult> Save(Supplier model)
         {
-            if (model.Id == 0)
+            // --- Veri Temizleme ve Formatlama ---
+            if (!string.IsNullOrEmpty(model.Email))
+                model.Email = model.Email.Trim().ToLowerInvariant();
+
+            if (!string.IsNullOrEmpty(model.Phone))
+                model.Phone = new string(model.Phone.Where(char.IsDigit).ToArray());
+
+            if (model.Id == 0) // Yeni Kayıt
             {
-                // Yeni Kayıt
+                var count = await _context.Suppliers.CountAsync();
+                model.SupplierCode = $"TED-{(count + 1):D3}";
+                model.CreatedDate = DateTime.Now;
+                model.IsActive = true;
                 _context.Suppliers.Add(model);
             }
-            else
+            else // Güncelleme
             {
-                // Güncelleme
                 var existing = await _context.Suppliers.FindAsync(model.Id);
                 if (existing != null)
                 {
-                    existing.SupplierCode = model.SupplierCode;
                     existing.Name = model.Name;
+                    existing.ContactPerson = model.ContactPerson;
+                    existing.Email = model.Email;
+                    existing.Phone = model.Phone;
                     existing.FscCode = model.FscCode;
                     existing.FscExpiryDate = model.FscExpiryDate;
-                    existing.IsFscActive = model.IsFscActive;
+                    existing.UpdatedDate = DateTime.Now;
                     _context.Suppliers.Update(existing);
                 }
             }
@@ -52,30 +57,16 @@ namespace FSCTakip.WebUI.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // Modal için Tedarikçi Verisi Getirme
-        [HttpGet]
-        public async Task<IActionResult> GetSupplier(int id)
+        [HttpPost]
+        public async Task<IActionResult> ToggleStatus(int id)
         {
-            var s = await _context.Suppliers.FindAsync(id);
-            if (s == null) return Json(new { success = false });
+            var item = await _context.Suppliers.FindAsync(id);
+            if (item == null) return Json(new { success = false });
 
-            return Json(new
-            {
-                success = true,
-                id = s.Id,
-                name = s.Name,
-                fscCode = s.FscCode,
-                supplierCode = s.SupplierCode,
-                fscExpiryDate = s.FscExpiryDate?.ToString("yyyy-MM-dd"),
-                isFscActive = s.IsFscActive
-            });
-        }
-
-        // Excel Export (Müşteri sayfası ile aynı format)
-        public IActionResult ExportExcel()
-        {
-            // İleride Excel kütüphanesi eklendiğinde burası doldurulacak
-            return Content("Excel hazırlama altyapısı hazırlandı.");
+            item.IsActive = !item.IsActive;
+            item.UpdatedDate = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, isActive = item.IsActive });
         }
     }
 }
