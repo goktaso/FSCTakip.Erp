@@ -1,8 +1,186 @@
-@{
-    ViewData["Title"] = "Müşteriler";
-}
-<div class="card shadow-sm border-0 p-5 text-center">
-    <i class="fas fa-user-tie fa-4x text-muted mb-3"></i>
-    <h4 class="text-dark">Müşteriler</h4>
-    <p class="text-muted">Bu modül yakında aktif olacaktır.</p>
+@model IEnumerable<FSCTakip.Core.Entities.Customer>
+
+@* --- ÜST PANEL: Standart Buton Formatı --- *@
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-users mr-2 text-info"></i>Müşteri Listesi</h5>
+    <div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
+            <i class="fas fa-filter"></i> Filtrele
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-success">
+            <i class="fas fa-file-excel"></i> Excel
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-dark" onclick="window.print()">
+            <i class="fas fa-print"></i> Yazdır
+        </button>
+        <button type="button" class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
+            <i class="fas fa-plus"></i> Yeni Müşteri Ekle
+        </button>
+    </div>
 </div>
+
+@* --- TABLO --- *@
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
+                    <tr>
+                        <th>Müşteri Ünvanı / Adres</th>
+                        <th>Vergi Bilgisi</th>
+                        <th>İletişim</th>
+                        <th>FSC Detayları</th>
+                        <th class="text-center">Durum</th>
+                        <th class="text-right">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <strong class="text-info">@(item.Name ?? "-")</strong><br />
+                                    <small class="text-muted">@(item.Address ?? "-") / @(item.City ?? "-")</small>
+                                </td>
+                                <td><small>@(item.TaxOffice ?? "-") / @(item.TaxNumber ?? "-")</small></td>
+                                <td>
+                                    <small>@item.Phone</small><br />
+                                    @* E-posta adresini zorla küçük harf gösteriyoruz *@
+                                    <small class="text-primary" style="text-transform: lowercase !important;">@item.Email</small>
+                                </td>
+                                <td>
+                                    <span class="badge @(item.IsFscActive ? "badge-info" : "badge-warning")">@(item.FscLicenseCode ?? "YOK")</span><br />
+                                    <small>@(item.FscExpiryDate?.ToString("dd.MM.yyyy") ?? "-")</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">@(item.IsActive ? "Aktif" : "Pasif")</span>
+                                </td>
+                                <td class="text-right">
+                                    <button class="btn btn-sm btn-outline-info" onclick="editCustomer(@item.Id)"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* --- MODAL: TÜM ALANLAR --- *@
+<div class="modal fade" id="customerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-secondary text-white">
+                <h6 class="modal-title font-weight-bold">Müşteri Formu</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form asp-controller="Customers" asp-action="Save" method="post" id="customerForm">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="custId" value="0" />
+                    <div class="row">
+                        <div class="col-md-8 form-group">
+                            <label class="small font-weight-bold">MÜŞTERİ ÜNVANI *</label>
+                            <input type="text" class="form-control text-uppercase" name="Name" id="custName" required>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="small font-weight-bold">MÜŞTERİ KODU</label>
+                            <input type="text" class="form-control bg-light" name="CustomerCode" id="custCode" readonly>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold">VERGİ DAİRESİ / NO</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="TaxOffice" id="custTaxOffice" placeholder="Daire">
+                                <input type="text" class="form-control" name="TaxNumber" id="custTaxNumber" placeholder="No">
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold">TELEFON *</label>
+                            <input type="text" class="form-control" name="Phone" id="custPhone" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold">E-POSTA</label>
+                            @* Input içine yazılan her şeyi görsel olarak anında küçültür *@
+                            <input type="text" class="form-control" name="Email" id="custEmail" style="text-transform: lowercase;">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold">ŞEHİR</label>
+                            <input type="text" class="form-control" name="City" id="custCity">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 form-group">
+                            <label class="small font-weight-bold">ADRES</label>
+                            <textarea class="form-control" name="Address" id="custAddress" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="row bg-light p-2 rounded border mx-1">
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold">FSC LİSANS KODU</label>
+                            <input type="text" class="form-control" name="FscLicenseCode" id="custFscCode">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold">SERTİFİKA BİTİŞ</label>
+                            <input type="date" class="form-control" name="FscExpiryDate" id="custFscDate">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-secondary px-4">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // E-posta Küçük Harf ve Türkçe Karakter Düzeltme [cite: 2026-03-04]
+            $('#custEmail').on('input blur', function () {
+                let inputVal = $(this).val();
+                let fixedVal = inputVal
+                    .replace(/İ/g, 'i')
+                    .replace(/I/g, 'ı')
+                    .toLowerCase()
+                    .trim();
+
+                if (inputVal !== fixedVal) {
+                    $(this).val(fixedVal);
+                }
+            });
+        });
+
+        function openAddModal() {
+            $('#customerForm')[0].reset();
+            $('#custId').val(0);
+            $('#customerModal').modal('show');
+        }
+
+        function editCustomer(id) {
+            $.get('/Customers/GetCustomer/' + id, function (res) {
+                if (res.success) {
+                    $('#custId').val(res.data.id);
+                    $('#custName').val(res.data.name);
+                    $('#custCode').val(res.data.customerCode);
+                    $('#custTaxOffice').val(res.data.taxOffice);
+                    $('#custTaxNumber').val(res.data.taxNumber);
+                    $('#custPhone').val(res.data.phone);
+                    $('#custEmail').val(res.data.email);
+                    $('#custCity').val(res.data.city);
+                    $('#custAddress').val(res.data.address);
+                    $('#custFscCode').val(res.data.fscLicenseCode);
+                    if(res.data.fscExpiryDate) $('#custFscDate').val(res.data.fscExpiryDate.split('T')[0]);
+                    $('#customerModal').modal('show');
+                }
+            });
+        }
+    </script>
+}

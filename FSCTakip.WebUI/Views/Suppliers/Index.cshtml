@@ -3,7 +3,7 @@
     ViewData["Title"] = "Tedarikçi Yönetimi";
 }
 
-@* --- ÜST PANEL: Standart Buton Grubu --- *@
+@* --- ÜST PANEL --- *@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-truck mr-2 text-primary"></i>Tedarikçi Listesi</h5>
     <div>
@@ -48,7 +48,7 @@
                     <tr>
                         <th>Tedarikçi Adı</th>
                         <th>Kod</th>
-                        <th>Yetkili / Tel</th>
+                        <th>İletişim (Yetkili / Tel / Mail)</th> @* Başlık güncellendi *@
                         <th>FSC No / Geçerlilik</th>
                         <th class="text-center">Durum</th>
                         <th class="text-right" style="width: 130px;">İşlemler</th>
@@ -62,7 +62,9 @@
                             <td><small class="badge badge-light border">@item.SupplierCode</small></td>
                             <td>
                                 <small class="font-weight-bold">@item.ContactPerson</small><br />
-                                <small class="text-muted">@item.Phone</small>
+                                <small class="text-muted">@item.Phone</small><br />
+                                @* Mail adresi eklendi ve küçük harf zorunluluğu getirildi *@
+                                <small class="text-info" style="text-transform: lowercase !important;">@(item.Email ?? "-")</small>
                             </td>
                             <td>
                                 <span class="badge badge-info">@item.FscCode</span> <br />
@@ -95,7 +97,7 @@
     </div>
 </div>
 
-@* --- MODAL: EKLE/DÜZENLE --- *@
+@* --- MODAL --- *@
 <div class="modal fade" id="supplierModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -128,7 +130,8 @@
                     </div>
                     <div class="form-group">
                         <label class="small font-weight-bold text-uppercase">E-Posta</label>
-                        <input type="email" class="form-control" name="Email" id="suppEmail" placeholder="orn@mail.com" style="text-transform: lowercase;">
+                        @* style="text-transform: lowercase;" ile görsel kontrol sağlandı *@
+                        <input type="text" class="form-control" name="Email" id="suppEmail" placeholder="orn@mail.com" style="text-transform: lowercase;">
                     </div>
                     <div class="row bg-light p-2 mt-2 border-radius">
                         <div class="col-md-6 form-group">
@@ -153,9 +156,14 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            // E-posta: Yazılırken küçült ve boşlukları sil
-            $('#suppEmail').on('input', function () {
-                this.value = this.value.toLowerCase().replace(/\s/g, '');
+            // E-posta: Türkçe karakter düzeltme ve otomatik küçültme [cite: 2026-03-04]
+            $('#suppEmail').on('input blur', function () {
+                let val = $(this).val()
+                    .replace(/İ/g, 'i')
+                    .replace(/I/g, 'ı')
+                    .replace(/\s/g, '') // Boşlukları siler
+                    .toLowerCase();
+                $(this).val(val);
             });
 
             // Telefon: Sadece rakama izin ver (Maks 11 hane)
