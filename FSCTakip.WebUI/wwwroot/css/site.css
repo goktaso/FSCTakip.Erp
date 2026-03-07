@@ -1,22 +1,55 @@
 html {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+    html {
+        font-size: 16px;
+    }
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+/* FSC Kurumsal Renk Tanımlamaları */
+:root {
+    --fsc-green: #2c5e1a; /* Ana Orman Yeşili */
+    --fsc-light-green: #4ca637; /* Parlak Yaprak Yeşili */
+    --fsc-hover: #1a3a10; /* Koyu Odunsu Ton */
 }
+
+/* Form ve Buton Focus Renklerini FSC Yeşiline Çevirelim */
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem var(--fsc-light-green);
+    border-color: var(--fsc-green);
+}
+
+/* SOL MENÜ (Sidebar) FSC GÜNCELLEMESİ */
+.sidebar {
+    background-color: var(--fsc-green) !important;
+    background-image: linear-gradient(180deg, var(--fsc-green) 0%, var(--fsc-hover) 100%) !important;
+}
+
+    /* Sidebar üzerindeki ikonların rengi */
+    .sidebar .nav-item .nav-link i {
+        color: var(--fsc-light-green) !important;
+    }
+
+    /* Aktif menü öğesinin vurgusu */
+    .sidebar .nav-item.active .nav-link {
+        font-weight: bold;
+        background-color: rgba(255, 255, 255, 0.1);
+    }
 
 html {
-  position: relative;
-  min-height: 100%;
+    position: relative;
+    min-height: 100%;
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 60px;
+    background-color: #f4f7f2; /* Sayfa arka planına çok hafif bir yeşil-gri tonu */
+}
+
+/* Tablo başlıklarındaki metinlerin büyük harf kuralını koruyalım 
+   ancak e-posta gibi alanların küçük harf kalmasını CSS ile garantiye alalım */
+.email-field {
+    text-transform: lowercase !important;
 }

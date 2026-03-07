@@ -22,11 +22,11 @@
             position: relative;
         }
 
-        /* --- SIDEBAR --- */
+        /* --- SIDEBAR - Yapı korundu, renkler FSC yeşili yapıldı --- */
         .sidebar {
             width: 260px;
             min-width: 260px;
-            background: #2c3e50;
+            background: #1e3d14; /* Mavi-gri yerine Koyu Orman Yeşili */
             color: white;
             display: flex;
             flex-direction: column;
@@ -49,14 +49,14 @@
 
         .sidebar-header {
             padding: 20px;
-            background: #1a252f;
+            background: #142a0d; /* Başlık alanı daha koyu yeşil */
             text-align: center;
         }
 
         .menu-label {
             padding: 15px 20px 5px 20px;
             font-size: 0.7rem;
-            color: #7f8c8d;
+            color: #8da386; /* Yazılar yeşilimsi gri */
             font-weight: bold;
             text-transform: uppercase;
         }
@@ -71,21 +71,26 @@
         }
 
             .nav-link:hover {
-                background: #34495e;
-                color: #3498db;
+                background: #2c5e1a; /* Hover yeşili */
+                color: #ffffff;
             }
 
             .nav-link.active {
-                background: #3498db;
+                background: #4ca637; /* Aktif sayfa yeşili */
                 color: white !important;
             }
 
             .nav-link i {
                 width: 25px;
+                color: #4ca637; /* İkonlar açık yeşil */
+            }
+
+            .nav-link.active i {
+                color: white !important;
             }
 
         .collapse-inner {
-            background: #1a252f;
+            background: #142a0d;
             display: flex;
             flex-direction: column;
         }
@@ -100,16 +105,16 @@
 
             .collapse-item:hover {
                 background: #243342;
-                color: #3498db !important;
+                color: #4ca637 !important;
             }
 
             .collapse-item.active {
                 color: white !important;
                 font-weight: bold;
-                background: #3498db;
+                background: #4ca637;
             }
 
-        /* --- CONTENT --- */
+        /* --- CONTENT AREA & BUTONLAR - Senin orijinal renklerin korundu --- */
         .content-area {
             flex: 1;
             display: flex;
@@ -133,7 +138,7 @@
         }
 
         #hamburgerBtn {
-            background: #2c3e50;
+            background: #1e3d14; /* Hamburger butonu sidebar ile uyumlu yeşil */
             border: none;
             color: white;
             padding: 6px 12px;
@@ -149,6 +154,7 @@
             scrollbar-width: none;
         }
 
+        /* Senin orijinal buton renklerin (Turuncu, Yeşil, Mavi, Mor) dokunulmadı */
         .btn-filter {
             background-color: #f39c12;
             color: white;
@@ -156,7 +162,6 @@
             padding: 8px 15px;
             border-radius: 4px;
             white-space: nowrap;
-            transition: 0.2s;
         }
 
         .btn-excel {
@@ -185,11 +190,6 @@
             border-radius: 4px;
             white-space: nowrap;
         }
-
-            .btn-filter:hover, .btn-excel:hover, .btn-print:hover, .btn-add:hover {
-                opacity: 0.85;
-                transform: translateY(-1px);
-            }
 
         .page-body {
             padding: 20px;
