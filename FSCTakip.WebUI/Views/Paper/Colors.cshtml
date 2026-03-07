@@ -1,104 +1,193 @@
-﻿@{
+@model IEnumerable<FSCTakip.Core.Entities.PaperColor>
+@{
     ViewData["Title"] = "Kağıt Renk Tanımları";
 }
-<div class="card shadow mb-4">
-    @* [2026-02-25] Kuralı: Ortak buton yapısı. Başlığı gönderiyoruz. *@
-    @await Html.PartialAsync("_TableActions", "Kağıt Renkleri")
-    
-<div id="filterPanel" class="card mb-3 shadow-sm border-left-warning" style="display:none;">
+
+@* --- ÜST PANEL: Standart Buton Grubu --- *@
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-palette mr-2"></i>Kağıt Renk Listesi</h5>
+    <div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
+            <i class="fas fa-filter"></i> Filtrele
+        </button>
+        <button class="btn btn-sm btn-outline-success" onclick="location.href='@Url.Action("ExportColors", "Paper")'">
+            <i class="fas fa-file-excel"></i> Excel
+        </button>
+        <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
+            <i class="fas fa-print"></i> Yazdır
+        </button>
+        <button class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
+            <i class="fas fa-plus"></i> Yeni Renk Ekle
+        </button>
+    </div>
+</div>
+
+@* --- FİLTRELEME PANELİ --- *@
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-secondary" style="display:none;">
     <div class="card-body py-3">
         <div class="row align-items-end">
             <div class="col-md-9">
-                <label class="small font-weight-bold text-uppercase">Renk Adı Ara</label>
+                <label class="small font-weight-bold text-uppercase">Renk Ara (İsim veya ID)</label>
                 <input type="text" id="colorSearch" class="form-control form-control-sm" placeholder="Örn: Beyaz, Kahverengi...">
             </div>
             <div class="col-md-3">
-                <button class="btn btn-warning btn-sm btn-block text-white" onclick="filterColors()">
+                <button class="btn btn-secondary btn-sm btn-block text-white" onclick="filterColors()">
                     <i class="fas fa-search mr-1"></i> Sorgula
                 </button>
             </div>
         </div>
     </div>
-    </div>
 </div>
 
-
+@* --- TABLO ALANI --- *@
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="colorsTable">
-                <thead class="bg-light text-dark">
+                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
                     <tr>
-                        <th style="width: 80px;">Önizleme</th>
+                        <th style="width: 80px;">ID</th>
                         <th>Renk Adı</th>
-                        <th>Renk Kodu (HEX)</th>
-                        <th>Durum</th>
+                        @* [YENİ]: Anlık değişim için Durum Switch sütunu *@
+                        <th class="text-center">Durum</th>
                         <th class="text-right" style="width: 150px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td><div style="width:30px; height:30px; background:#FFFFFF; border:1px solid #ddd; border-radius:4px;"></div></td>
-                        <td><strong>Beyaz (Standart)</strong></td>
-                        <td><code>#FFFFFF</code></td>
-                        <td><span class="badge badge-success">Aktif</span></td>
-                        <td class="text-right">
-                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><div style="width:30px; height:30px; background:#D2B48C; border:1px solid #ddd; border-radius:4px;"></div></td>
-                        <td><strong>Kahverengi / Kraft</strong></td>
-                        <td><code>#D2B48C</code></td>
-                        <td><span class="badge badge-success">Aktif</span></td>
-                        <td class="text-right">
-                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
+                    @if (Model != null)
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><code>#@item.Id</code></td>
+                                <td><strong class="text-primary">@item.Name</strong></td>
+
+                                @* --- [YENİ: DURUM SWITCH] --- *@
+                                <td class="text-center">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="status_@item.Id"
+                                               @(item.IsActive ? "checked" : "")
+                                               onchange="toggleColorStatus(@item.Id)">
+                                        <label class="custom-control-label cursor-pointer" for="status_@item.Id">
+                                            <span id="badge_@item.Id" class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
+                                                @(item.IsActive ? "Aktif" : "Pasif")
+                                            </span>
+                                        </label>
+                                    </div>
+                                </td>
+
+                                <td class="text-right">
+                                    <button class="btn btn-sm btn-outline-primary mr-1"
+                                            onclick="editColor(@item.Id, '@(item.Name?.Replace("'", "\\'") ?? "")', @item.IsActive.ToString().ToLower())">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteColor(@item.Id)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
+@* --- MODAL: EKLE/DÜZENLE --- *@
 <div class="modal fade" id="addColorModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
+        @* Modal boyutu sm yapıldı *@
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-warning text-white p-2 pl-3">
-                <h6 class="modal-title font-weight-bold"><i class="fas fa-palette mr-2"></i>Yeni Renk Ekle</h6>
+            <div class="modal-header bg-secondary text-white">
+                <h6 class="modal-title font-weight-bold">Renk Formu</h6>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="small font-weight-bold">Renk Tanımı</label>
-                    <input type="text" class="form-control form-control-sm" placeholder="Örn: Somon">
+            <form asp-controller="Paper" asp-action="SaveColor" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="colorId" value="0" />
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Renk Adı <span class="text-danger">*</span></label>
+                        <input type="text" name="Name" id="colorName" class="form-control" required placeholder="Örn: Beyaz">
+                    </div>
+                    @* [YENİ]: Modal içine de Aktiflik switch'i eklendi *@
+                    <div class="custom-control custom-switch mt-3">
+                        <input type="checkbox" class="custom-control-input" id="isActiveSwitch" name="IsActive" checked>
+                        <label class="custom-control-label small font-weight-bold" for="isActiveSwitch">Aktif</label>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="small font-weight-bold">Renk Seçimi</label>
-                    <input type="color" class="form-control form-control-sm" style="height:45px; cursor:pointer;">
+                <div class="modal-footer bg-light p-2">
+                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-secondary btn-sm px-3 text-white">Kaydet</button>
                 </div>
-            </div>
-            <div class="modal-footer bg-light p-2">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Kapat</button>
-                <button type="button" class="btn btn-warning btn-sm px-3 text-white">Kaydet</button>
-            </div>
+            </form>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        // Layout'taki global "Yeni Ekle" butonuyla tetiklenir
-        function openAddModal() {
-            $('#addColorModal').modal('show');
-        }
-
+        // Filtreleme fonksiyonu
         function filterColors() {
             var value = $("#colorSearch").val().toLowerCase();
             $("#colorsTable tbody tr").filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            });
+        }
+
+        // --- [YENİ: ANLIK DURUM GÜNCELLEME] ---
+        function toggleColorStatus(id) {
+            $.post('/Paper/ToggleColorStatus', { id: id }, function (res) {
+                if (res.success) {
+                    const badge = $(`#badge_${id}`);
+                    if (res.isActive) {
+                        badge.removeClass('badge-secondary').addClass('badge-success').text('Aktif');
+                    } else {
+                        badge.removeClass('badge-success').addClass('badge-secondary').text('Pasif');
+                    }
+                } else {
+                    Swal.fire('Hata!', res.message, 'error');
+                    $(`#status_${id}`).prop('checked', !$(`#status_${id}`).is(':checked'));
+                }
+            });
+        }
+
+        function openAddModal() {
+            $('#colorId').val(0);
+            $('#colorName').val('');
+            $('#isActiveSwitch').prop('checked', true); // Yeni kayıtta varsayılan aktif
+            $('.modal-title').text('Yeni Renk Tanımla');
+            $('#addColorModal').modal('show');
+        }
+
+        function editColor(id, name, isActive) {
+            $('#colorId').val(id);
+            $('#colorName').val(name);
+            $('#isActiveSwitch').prop('checked', isActive); // Mevcut durumu yükle
+            $('.modal-title').text('Renk Düzenle');
+            $('#addColorModal').modal('show');
+        }
+
+        function deleteColor(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: 'Bu kağıt rengi silinecektir!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#5a5c69',
+                cancelButtonColor: '#e74a3b',
+                confirmButtonText: 'Evet, Sil!',
+                cancelButtonText: 'Vazgeç'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/Paper/DeleteColor', { id: id }, function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            Swal.fire('Hata!', response.message, 'error');
+                        }
+                    });
+                }
             });
         }
     </script>

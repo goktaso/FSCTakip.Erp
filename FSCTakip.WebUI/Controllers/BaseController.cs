@@ -1,4 +1,4 @@
-﻿using FSCTakip.DataAc.Data;
+﻿using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text;

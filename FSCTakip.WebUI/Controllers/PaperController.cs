@@ -1,8 +1,8 @@
-﻿using FSCTakip.Core.Entities;
-using FSCTakip.DataAc.Data;
+using FSCTakip.Core.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ClosedXML.Excel;
+using FSCTakip.DataAccess.Data;
 namespace FSC_ERP.Controllers
 {
     public class PaperController : BaseController
@@ -28,6 +28,31 @@ namespace FSC_ERP.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> DeleteType(int id)
+        {
+            var item = await _context.PaperTypes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            _context.PaperTypes.Remove(item);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Kağıt tipi silindi." });
+        }
+
+        // --- [YENİ EKLENDİ] - Kağıt Tipi Durum Değiştirme Metodu ---
+        [HttpPost]
+        public async Task<IActionResult> ToggleTypeStatus(int id)
+        {
+            var item = await _context.PaperTypes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+            item.IsActive = !item.IsActive; // Durumu tersine çevir
+            item.UpdatedDate = DateTime.Now;
+            item.UpdatedBy = User.Identity?.Name ?? "System";
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, isActive = item.IsActive });
+        }
+
+        [HttpPost]
         public async Task<IActionResult> SaveColor(PaperColor model)
         {
             if (model.Id == 0) { model.IsActive = true; _context.PaperColors.Add(model); }
@@ -37,7 +62,31 @@ namespace FSC_ERP.Controllers
         }
 
         [HttpPost]
-       
+        public async Task<IActionResult> DeleteColor(int id)
+        {
+            var item = await _context.PaperColors.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            _context.PaperColors.Remove(item);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Kağıt rengi silindi." });
+        }
+
+        // --- [YENİ EKLENDİ] - Renk Durum Değiştirme Metodu ---
+        [HttpPost]
+        public async Task<IActionResult> ToggleColorStatus(int id)
+        {
+            var item = await _context.PaperColors.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+            item.IsActive = !item.IsActive; // Durumu tersine çevir
+            item.UpdatedDate = DateTime.Now;
+            item.UpdatedBy = User.Identity?.Name ?? "System";
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, isActive = item.IsActive });
+        }
+
+        [HttpPost]
         public async Task<IActionResult> SaveFscType(FSCTakip.Core.Entities.FscType model)
         {
             if (model.Id == 0)
@@ -55,12 +104,90 @@ namespace FSC_ERP.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> DeleteFscType(int id)
+        {
+            var item = await _context.FscTypes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            _context.FscTypes.Remove(item);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "FSC tipi silindi." });
+        }
+
+        // --- [YENİ EKLENDİ] - FSC Tipi Durum Değiştirme Metodu ---
+        [HttpPost]
+        public async Task<IActionResult> ToggleFscStatus(int id)
+        {
+            var item = await _context.FscTypes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+            item.IsActive = !item.IsActive;
+            item.UpdatedDate = DateTime.Now;
+            item.UpdatedBy = User.Identity?.Name ?? "System";
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, isActive = item.IsActive });
+        }
+
+        [HttpPost]
         public async Task<IActionResult> SaveWidth(PaperWidth model)
         {
-            if (model.Id == 0) { model.IsActive = true; _context.PaperWidths.Add(model); }
-            else _context.PaperWidths.Update(model);
+            if (model.Value <= 0)
+            {
+                TempData["Error"] = "Geçerli bir genişlik değeri giriniz.";
+                return RedirectToAction(nameof(Widths));
+            }
+
+            if (model.Id == 0)
+            {
+                model.IsActive = true;
+                // BaseEntity'den geliyorsa bu alanları dolduruyoruz
+                model.CreatedDate = DateTime.Now;
+                model.CreatedBy = User.Identity?.Name ?? "System";
+                _context.PaperWidths.Add(model);
+            }
+            else
+            {
+                var existing = await _context.PaperWidths.FindAsync(model.Id);
+                if (existing != null)
+                {
+                    existing.Value = model.Value;
+                    existing.Code = model.Code;
+                    existing.Unit = model.Unit;
+                    existing.IsActive = model.IsActive;
+                    existing.UpdatedDate = DateTime.Now;
+                    existing.UpdatedBy = User.Identity?.Name ?? "System";
+                    _context.PaperWidths.Update(existing);
+                }
+            }
+
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Widths));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteWidth(int id)
+        {
+            var item = await _context.PaperWidths.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+            _context.PaperWidths.Remove(item);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Kağıt eni başarıyla silindi." });
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> ToggleWidthStatus(int id)
+        {
+            var item = await _context.PaperWidths.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+            item.IsActive = !item.IsActive; // Mevcut durumun tersini yap (True ise False, False ise True)
+            item.UpdatedDate = DateTime.Now;
+            item.UpdatedBy = User.Identity?.Name ?? "System";
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, isActive = item.IsActive });
         }
 
         [HttpPost]
@@ -70,6 +197,30 @@ namespace FSC_ERP.Controllers
             else _context.PaperWeights.Update(model);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Weights));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteWeight(int id)
+        {
+            var item = await _context.PaperWeights.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            _context.PaperWeights.Remove(item);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Gramaj kaydı silindi." });
+        }
+
+        // --- [YENİ EKLENDİ] - Gramaj Durum Değiştirme Metodu ---
+        [HttpPost]
+        public async Task<IActionResult> ToggleWeightStatus(int id)
+        {
+            var item = await _context.PaperWeights.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+            item.IsActive = !item.IsActive; // Durumu tersine çevir (True/False)
+            ;
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, isActive = item.IsActive });
         }
 
         // --- EXCEL EXPORT METOTLARI ---

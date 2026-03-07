@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FSCTakip.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260302180301_Initial_Full_Setup")]
-    partial class Initial_Full_Setup
+    [Migration("20260306022451_AddProductFields")]
+    partial class AddProductFields
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -532,8 +532,32 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("FscTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("PaperColorId")
                         .HasColumnType("int");
+
+                    b.Property<int?>("PaperTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ProductGroupId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -543,7 +567,13 @@ namespace FSCTakip.DataAccess.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("FscTypeId");
+
                     b.HasIndex("PaperColorId");
+
+                    b.HasIndex("PaperTypeId");
+
+                    b.HasIndex("ProductGroupId");
 
                     b.ToTable("Products");
                 });
@@ -1044,9 +1074,32 @@ namespace FSCTakip.DataAccess.Migrations
 
             modelBuilder.Entity("FSCTakip.Core.Entities.Product", b =>
                 {
-                    b.HasOne("FSCTakip.Core.Entities.PaperColor", null)
+                    b.HasOne("FSCTakip.Core.Entities.FscType", "FscType")
+                        .WithMany()
+                        .HasForeignKey("FscTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FSCTakip.Core.Entities.PaperColor", "PaperColor")
                         .WithMany("Products")
                         .HasForeignKey("PaperColorId");
+
+                    b.HasOne("FSCTakip.Core.Entities.PaperType", "PaperType")
+                        .WithMany()
+                        .HasForeignKey("PaperTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FSCTakip.Core.Entities.ProductGroup", "ProductGroup")
+                        .WithMany()
+                        .HasForeignKey("ProductGroupId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("FscType");
+
+                    b.Navigation("PaperColor");
+
+                    b.Navigation("PaperType");
+
+                    b.Navigation("ProductGroup");
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.ProductRecipe", b =>

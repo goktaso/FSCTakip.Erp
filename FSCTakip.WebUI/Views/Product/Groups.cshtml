@@ -1,66 +1,195 @@
-﻿@{
+@model IEnumerable<FSCTakip.Core.Entities.ProductGroup>
+@{
     ViewData["Title"] = "Ürün Grup Tanımları";
 }
-<div class="card shadow mb-4">
-    @* [2026-02-25] Kuralı: Ortak buton yapısı. *@
-    @await Html.PartialAsync("_TableActions", "Malzeme Grupları")
 
+@* --- ÜST AKSİYON BUTONLARI --- *@
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-folder-open mr-2"></i>Ürün Grup Listesi</h5>
+    <div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
+            <i class="fas fa-filter"></i> Filtrele
+        </button>
+        <button class="btn btn-sm btn-outline-success" onclick="location.href='@Url.Action("ExportProductGroups", "Product")'">
+            <i class="fas fa-file-excel"></i> Excel
+        </button>
+        <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
+            <i class="fas fa-print"></i> Yazdır
+        </button>
+        <button class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
+            <i class="fas fa-plus"></i> Yeni Grup Ekle
+        </button>
+    </div>
+</div>
 
-    <div id="filterPanel" class="card mb-3 shadow-sm border-left-primary" style="display:none;">
-        <div class="card-body py-3">
-            <div class="row align-items-end">
-                <div class="col-md-9">
-                    <label class="small font-weight-bold text-uppercase text-primary">Grup Adı Ara</label>
-                    <input type="text" id="groupSearch" class="form-control form-control-sm border-primary" placeholder="Örn: Saplı Çanta, Altıgen Dip...">
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-primary btn-sm btn-block" onclick="filterGroups()">
-                        <i class="fas fa-search mr-1"></i> Sorgula
-                    </button>
-                </div>
+@* --- FİLTRELEME PANELİ (Standart Format) --- *@
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-secondary" style="display:none;">
+    <div class="card-body py-3">
+        <div class="row align-items-end">
+            <div class="col-md-9">
+                <label class="small font-weight-bold text-uppercase text-secondary">Grup Adı veya Kod Ara</label>
+                <input type="text" id="groupSearch" class="form-control form-control-sm border-secondary" placeholder="Aramak istediğiniz grup bilgisi...">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-secondary btn-sm btn-block text-white" onclick="filterGroups()">
+                    <i class="fas fa-search mr-1"></i> Sorgula
+                </button>
             </div>
         </div>
     </div>
 </div>
+
+@* --- LİSTE TABLOSU --- *@
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="groupsTable">
                 <thead class="bg-light text-dark text-uppercase small font-weight-bold">
                     <tr>
-                        <th style="width: 80px;">ID</th>
+                        <th style="width: 80px;" class="text-center">KOD</th>
                         <th>Grup Adı</th>
-                        <th>Kısa Kod</th>
-                        <th>Ürün Sayısı</th>
-                        <th>Durum</th>
-                        <th class="text-right" style="width: 150px;">İşlemler</th>
+                        <th class="text-center">Kod Aralığı</th>
+                        <th class="text-center" style="width: 100px;">Durum</th>
+                        <th class="text-right" style="width: 130px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td><strong class="text-dark">Saplı Kağıt Çanta</strong></td>
-                        <td><span class="badge badge-light border">SPC</span></td>
-                        <td><span class="badge badge-pill badge-info">12 Ürün</span></td>
-                        <td><span class="badge badge-success">Aktif</span></td>
-                        <td class="text-right">
-                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td><strong class="text-dark">V-Kesim Pencereli Torba</strong></td>
-                        <td><span class="badge badge-light border">V-PNC</span></td>
-                        <td><span class="badge badge-pill badge-info">8 Ürün</span></td>
-                        <td><span class="badge badge-success">Aktif</span></td>
-                        <td class="text-right">
-                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
+                    @if (Model != null)
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="text-center"><code>@item.GroupCode</code></td>
+                                <td><strong class="text-primary">@item.GroupName</strong></td>
+                                <td class="text-center text-muted small">@item.RangeStart - @item.RangeEnd</td>
+                                <td class="text-center">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="status_@item.Id"
+                                               @(item.IsActive ? "checked" : "")
+                                               onchange="toggleGroupStatus(@item.Id)">
+                                        <label class="custom-control-label cursor-pointer" for="status_@item.Id"></label>
+                                    </div>
+                                </td>
+                                <td class="text-right">
+                                    <button class="btn btn-sm btn-outline-primary mr-1"
+                                            onclick="editGroup(@item.Id, '@item.GroupName', @item.GroupCode, @item.RangeStart, @item.RangeEnd)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup(@item.Id)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+@* --- MODAL: EKLE/DÜZENLE --- *@
+<div class="modal fade" id="groupModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-secondary text-white">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-folder mr-2"></i>Ürün Grubu Formu</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form asp-controller="Product" asp-action="SaveProductGroup" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="groupId" value="0" />
+
+                    <div class="form-group mb-3">
+                        <label class="small font-weight-bold">Grup Adı <span class="text-danger">*</span></label>
+                        <input type="text" name="GroupName" id="groupName" class="form-control" required placeholder="Örn: SAPLI KAĞIT ÇANTA">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 form-group mb-3">
+                            <label class="small font-weight-bold">Grup Kodu (Sıralama)</label>
+                            <input type="number" name="GroupCode" id="groupCode" class="form-control" value="1" min="1">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold">Aralık Başlangıç</label>
+                            <input type="number" name="RangeStart" id="rangeStart" class="form-control" value="10000">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold">Aralık Bitiş</label>
+                            <input type="number" name="RangeEnd" id="rangeEnd" class="form-control" value="19999">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-2">
+                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-secondary btn-sm px-4 text-white">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // JS Filtreleme (Client-side)
+        function filterGroups() {
+            var value = $("#groupSearch").val().toLowerCase();
+            $("#groupsTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            });
+        }
+
+        function openAddModal() {
+            $('#groupId').val(0);
+            $('#groupName').val('');
+            $('#groupCode').val('1');
+            $('#rangeStart').val('10000');
+            $('#rangeEnd').val('19999');
+            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Ürün Grubu');
+            $('#groupModal').modal('show');
+        }
+
+        function editGroup(id, name, code, rangeStart, rangeEnd) {
+            $('#groupId').val(id);
+            $('#groupName').val(name);
+            $('#groupCode').val(code);
+            $('#rangeStart').val(rangeStart);
+            $('#rangeEnd').val(rangeEnd);
+            $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Ürün Grubu Düzenle');
+            $('#groupModal').modal('show');
+        }
+
+        function toggleGroupStatus(id) {
+            $.post('/Product/ToggleGroupStatus', { id: id }, function (res) {
+                if (!res.success) {
+                    Swal.fire('Hata!', res.message, 'error');
+                    let checkbox = $(`#status_${id}`);
+                    checkbox.prop('checked', !checkbox.is(':checked'));
+                }
+            });
+        }
+
+        function deleteGroup(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: 'Bu ürün grubu silinecektir!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#5a5c69',
+                cancelButtonColor: '#e74a3b',
+                confirmButtonText: 'Evet, Sil!',
+                cancelButtonText: 'Vazgeç'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/Product/DeleteProductGroup', { id: id }, function(res) {
+                        if (res.success) {
+                            Swal.fire({ icon: 'success', title: 'Başarılı', text: res.message, timer: 1000, showConfirmButton: false }).then(() => location.reload());
+                        } else {
+                            Swal.fire('Hata!', res.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}

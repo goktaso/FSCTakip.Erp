@@ -1,99 +1,193 @@
-﻿@{
+@model IEnumerable<FSCTakip.Core.Entities.PaperWidth>
+@{
     ViewData["Title"] = "Bobin En Tanımları";
 }
 
-<div class="card shadow mb-4">
-    @* [2026-02-25] Kuralı: Ortak buton yapısı. *@
-    @await Html.PartialAsync("_TableActions", "Bobin En Tanımları")
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-arrows-alt-h mr-2"></i>Bobin En Listesi</h5>
+    <div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
+            <i class="fas fa-filter"></i> Filtrele
+        </button>
+        <button class="btn btn-sm btn-outline-success" onclick="location.href='@Url.Action("ExportWidths", "Paper")'">
+            <i class="fas fa-file-excel"></i> Excel
+        </button>
+        <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
+            <i class="fas fa-print"></i> Yazdır
+        </button>
+        <button class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
+            <i class="fas fa-plus"></i> Yeni En Ekle
+        </button>
+    </div>
+</div>
 
-    <div id="filterPanel" class="card-body border-bottom bg-light" style="display:none;">
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-secondary" style="display:none;">
+    <div class="card-body py-3">
         <div class="row align-items-end">
             <div class="col-md-9">
-                <label class="small font-weight-bold text-uppercase text-secondary">Genişlik Ara (mm)</label>
-                <input type="number" id="widthSearch" class="form-control form-control-sm border-secondary" placeholder="Örn: 600, 750, 1000...">
+                <label class="small font-weight-bold text-uppercase">En Ara (Değer veya Kod)</label>
+                <input type="text" id="searchTerm" class="form-control form-control-sm" placeholder="Örn: 750 veya EN-750...">
             </div>
             <div class="col-md-3">
-                <button class="btn btn-secondary btn-sm btn-block text-white" onclick="filterWidths()">
+                <button class="btn btn-secondary btn-sm btn-block text-white" onclick="filterTable()">
                     <i class="fas fa-search mr-1"></i> Sorgula
                 </button>
             </div>
         </div>
     </div>
+</div>
 
+<div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="widthsTable">
                 <thead class="bg-light text-dark text-uppercase small font-weight-bold">
                     <tr>
-                        <th style="width: 80px;">ID</th>
-                        <th>Bobin Eni (Genişlik)</th>
+                        <th style="width: 80px;">Kod</th>
+                        <th>Genişlik (Değer)</th>
                         <th>Birim</th>
-                        <th>ERP Kodu</th>
-                        <th>Durum</th>
-                        <th class="text-right" style="width: 120px;">İşlemler</th>
+                        <th class="text-center">Durum</th>
+                        <th class="text-right" style="width: 150px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td><strong class="text-primary">600</strong></td>
-                        <td><span class="badge badge-light border">mm</span></td>
-                        <td><code>EN-600</code></td>
-                        <td><span class="badge badge-success">Aktif</span></td>
-                        <td class="text-right">
-                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td><strong class="text-primary">1050</strong></td>
-                        <td><span class="badge badge-light border">mm</span></td>
-                        <td><code>EN-1050</code></td>
-                        <td><span class="badge badge-success">Aktif</span></td>
-                        <td class="text-right">
-                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td><code>@item.Code</code></td>
+                            <td><strong class="text-primary">@item.Value</strong></td>
+                            <td><span class="badge badge-light border">@item.Unit</span></td>
+                            <td class="text-center">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="status_@item.Id"
+                                           @(item.IsActive ? "checked" : "")
+                                           onchange="toggleStatus(@item.Id)">
+                                    <label class="custom-control-label cursor-pointer" for="status_@item.Id">
+                                        <span id="badge_@item.Id" class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
+                                            @(item.IsActive ? "Aktif" : "Pasif")
+                                        </span>
+                                    </label>
+                                </div>
+                            </td>
+                            <td class="text-right">
+                                <button class="btn btn-sm btn-outline-primary mr-1"
+                                        onclick="editWidth(@item.Id, '@item.Value', '@item.Unit', '@item.Code', @item.IsActive.ToString().ToLower())">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteWidth(@item.Id)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="addMachineModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal fade" id="widthModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-secondary text-white">
-                <h6 class="modal-title font-weight-bold"><i class="fas fa-arrows-alt-h mr-2"></i>Yeni En Tanımla</h6>
+                <h6 class="modal-title font-weight-bold">Yeni En Tanımla</h6>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="small font-weight-bold">Genişlik (mm)</label>
-                    <input type="number" class="form-control form-control-sm border-secondary" placeholder="Örn: 750">
+            <form asp-controller="Paper" asp-action="SaveWidth" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="widthId" value="0" />
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Genişlik Değeri</label>
+                        <input type="number" step="0.01" class="form-control" name="Value" id="widthValue" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Birim</label>
+                        <input type="text" class="form-control" name="Unit" id="widthUnit" value="mm">
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Kod</label>
+                        <input type="text" class="form-control" name="Code" id="widthCode">
+                    </div>
+                    <div class="custom-control custom-switch mt-3">
+                        <input type="checkbox" class="custom-control-input" id="isActiveSwitch" name="IsActive" checked>
+                        <label class="custom-control-label small font-weight-bold" for="isActiveSwitch">Aktif</label>
+                    </div>
                 </div>
-                <div class="form-group mb-0">
-                    <label class="small font-weight-bold">ERP Kodu</label>
-                    <input type="text" class="form-control form-control-sm border-secondary" placeholder="Örn: EN-750">
+                <div class="modal-footer bg-light p-2">
+                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-secondary btn-sm text-white px-3">Kaydet</button>
                 </div>
-            </div>
-            <div class="modal-footer bg-light p-2">
-                <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
-                <button type="button" class="btn btn-secondary btn-sm px-3 text-white">Kaydet</button>
-            </div>
+            </form>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        function filterWidths() {
-            var value = $("#widthSearch").val().toLowerCase();
+        function filterTable() {
+            var value = $("#searchTerm").val().toLowerCase();
             $("#widthsTable tbody tr").filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
             });
+        }
+
+        function toggleStatus(id) {
+            $.post('/Paper/ToggleWidthStatus', { id: id }, function (res) {
+                if (res.success) {
+                    const badge = $(`#badge_${id}`);
+                    if (res.isActive) {
+                        badge.removeClass('badge-secondary').addClass('badge-success').text('Aktif');
+                    } else {
+                        badge.removeClass('badge-success').addClass('badge-secondary').text('Pasif');
+                    }
+                } else {
+                    Swal.fire('Hata!', res.message, 'error');
+                    // Hata olursa switch'i geri çek
+                    $(`#status_${id}`).prop('checked', !$(`#status_${id}`).is(':checked'));
+                }
+            });
+        }
+
+        function openAddModal() {
+            $('#widthId').val(0);
+            $('#widthValue').val('');
+            $('#widthCode').val('');
+            $('#isActiveSwitch').prop('checked', true);
+            $('.modal-title').text('Yeni En Tanımla');
+            $('#widthModal').modal('show');
+        }
+
+        function editWidth(id, value, unit, code, isActive) {
+            $('#widthId').val(id);
+            $('#widthValue').val(value.replace(',', '.'));
+            $('#widthUnit').val(unit);
+            $('#widthCode').val(code);
+            $('#isActiveSwitch').prop('checked', isActive);
+            $('.modal-title').text('En Düzenle');
+            $('#widthModal').modal('show');
+        }
+
+        function deleteWidth(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu kağıt enini silmek istediğinize emin misiniz?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#5a5c69',
+                cancelButtonColor: '#e74a3b',
+                confirmButtonText: 'Evet, Sil!',
+                cancelButtonText: 'Vazgeç'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/Paper/DeleteWidth', { id: id }, function(res) {
+                        if (res.success) {
+                            location.reload();
+                        } else {
+                            Swal.fire('Hata!', res.message, 'error');
+                        }
+                    });
+                }
+            })
         }
     </script>
 }

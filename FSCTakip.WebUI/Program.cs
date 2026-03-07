@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using FSCTakip.DataAc.Data;
+using FSCTakip.DataAccess.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 

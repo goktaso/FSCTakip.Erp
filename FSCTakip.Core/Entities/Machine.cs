@@ -1,16 +1,33 @@
-﻿using System;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace FSCTakip.Core.Entities
 {
-    public class Machine : BaseEntity
+    public class Machine
     {
-        // Hata veren kısım burasıydı, bu satırı eklediğinden emin ol:
-        public string Name { get; set; } // Örn: "8 Renk Flexo"
+        [Key]
+        public int Id { get; set; }
 
-        public string Code { get; set; } // Örn: "M-01"
+        [Required]
+        public string Name { get; set; }
 
-        public string Type { get; set; } // Örn: "Matbaa"
+        [Required]
+        public string Code { get; set; } // SQL'de NOT NULL olduğu için zorunlu
+
+        [Required]
+        public string Type { get; set; } // SQL'de NOT NULL olduğu için zorunlu
 
         public bool IsActive { get; set; } = true;
+
+        // SQL'deki datetime2(7) ve nvarchar(max) alanların karşılığı
+        public string CreatedBy { get; set; } = "System";
+        public DateTime CreatedDate { get; set; } = DateTime.Now;
+
+        public string? UpdatedBy { get; set; }
+        public DateTime? UpdatedDate { get; set; }
+
+        // SQL'de olmayan ama senin daha önce bahsettiğin alanlar (isteğe bağlı)
+        // Eğer bunları da kullanacaksan SQL'e ALTER TABLE ile eklemelisin:
+        // public string? Brand { get; set; } 
+        // public string? Capacity { get; set; }
     }
 }

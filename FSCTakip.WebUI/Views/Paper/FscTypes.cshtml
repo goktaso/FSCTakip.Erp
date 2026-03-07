@@ -1,16 +1,34 @@
-﻿@{
+@model IEnumerable<FSCTakip.Core.Entities.FscType>
+@{
     ViewData["Title"] = "FSC Sertifika Tanımları";
 }
 
-<div class="card shadow mb-4">
-    @* [2026-02-25] Kuralı: Ortak buton yapısı. Başlığı gönderiyoruz. *@
-    @await Html.PartialAsync("_TableActions", "FSC Sertifika Tanımları")
+@* --- ÜST PANEL: Standart Buton Grubu --- *@
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-certificate mr-2 text-success"></i>FSC Sertifika Listesi</h5>
+    <div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
+            <i class="fas fa-filter"></i> Filtrele
+        </button>
+        <button class="btn btn-sm btn-outline-success" onclick="location.href='@Url.Action("ExportFscTypes", "Paper")'">
+            <i class="fas fa-file-excel"></i> Excel
+        </button>
+        <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
+            <i class="fas fa-print"></i> Yazdır
+        </button>
+        <button class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
+            <i class="fas fa-plus"></i> Yeni Sertifika Ekle
+        </button>
+    </div>
+</div>
 
-    <div id="filterPanel" class="card-body border-bottom bg-light" style="display:none;">
+@* --- FİLTRELEME PANELİ --- *@
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-success" style="display:none;">
+    <div class="card-body py-3">
         <div class="row align-items-end">
             <div class="col-md-9">
-                <label class="small font-weight-bold text-uppercase text-success">Sertifika Ara</label>
-                <input type="text" id="fscSearch" class="form-control form-control-sm border-success" placeholder="Örn: Mix, Recycled, 100%...">
+                <label class="small font-weight-bold text-uppercase">Sertifika Ara (İsim, Kod veya Açıklama)</label>
+                <input type="text" id="fscSearch" class="form-control form-control-sm" placeholder="Örn: Mix, Recycled, FSC-MIX...">
             </div>
             <div class="col-md-3">
                 <button class="btn btn-success btn-sm btn-block" onclick="filterFsc()">
@@ -19,79 +37,101 @@
             </div>
         </div>
     </div>
+</div>
 
+@* --- TABLO ALANI --- *@
+<div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="fscTable">
-                <thead class="bg-light text-dark text-uppercase small font-weight-bold border-bottom">
+                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
                     <tr>
-                        <th style="width: 50px;">#</th>
+                        <th style="width: 60px;">ID</th>
                         <th>Sertifika Tipi</th>
-                        <th>ERP / Lisans Kodu</th>
+                        <th>Kısa Kod</th>
                         <th>Açıklama</th>
-                        <th>Durum</th>
-                        <th class="text-right" style="width: 120px;">İşlemler</th>
+                        <th class="text-center">Durum</th>
+                        <th class="text-right" style="width: 130px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td><span class="badge badge-success p-2"><i class="fas fa-tree mr-1"></i> FSC 100%</span></td>
-                        <td><code>FSC-100</code></td>
-                        <td><small class="text-muted">Tamamı sertifikalı ormanlardan.</small></td>
-                        <td><span class="badge badge-pill badge-success">Aktif</span></td>
-                        <td class="text-right">
-                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td><span class="badge badge-info p-2"><i class="fas fa-recycle mr-1"></i> FSC Mix</span></td>
-                        <td><code>FSC-MIX</code></td>
-                        <td><small class="text-muted">Geri dönüştürülmüş ve sertifikalı karışım.</small></td>
-                        <td><span class="badge badge-pill badge-success">Aktif</span></td>
-                        <td class="text-right">
-                            <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
+                    @if (Model != null)
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><code>#@item.Id</code></td>
+                                <td><strong class="text-success">@item.Name</strong></td>
+                                <td><span class="badge badge-light border text-dark">@item.Code</span></td>
+                                <td><small class="text-muted">@item.Description</small></td>
+
+                                @* --- ANLIK DURUM SWITCH --- *@
+                                <td class="text-center">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="status_@item.Id"
+                                               @(item.IsActive ? "checked" : "")
+                                               onchange="toggleFscStatus(@item.Id)">
+                                        <label class="custom-control-label cursor-pointer" for="status_@item.Id">
+                                            <span id="badge_@item.Id" class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
+                                                @(item.IsActive ? "Aktif" : "Pasif")
+                                            </span>
+                                        </label>
+                                    </div>
+                                </td>
+
+                                <td class="text-right">
+                                    <button class="btn btn-sm btn-outline-primary mr-1"
+                                            onclick="editFsc(@item.Id, '@item.Name', '@item.Code', '@(item.Description?.Replace("'", "\\'").Replace("\r\n", " ") ?? "")', @item.IsActive.ToString().ToLower())">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteFsc(@item.Id)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
-@* ÖNEMLİ: _TableActions içindeki buton addMachineModal'ı açtığı için ID'yi buna göre set ettim *@
-<div class="modal fade" id="addMachineModal" tabindex="-1" role="dialog" aria-hidden="true">
+@* --- MODAL: EKLE/DÜZENLE --- *@
+<div class="modal fade" id="fscModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-success text-white p-3">
-                <h5 class="modal-title font-weight-bold"><i class="fas fa-certificate mr-2"></i>Yeni FSC Sertifikası Ekle</h5>
+            <div class="modal-header bg-secondary text-white">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-certificate mr-2"></i>FSC Sertifika Formu</h6>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
-            <div class="modal-body p-4">
-                <form id="addFscForm">
+            <form asp-controller="Paper" asp-action="SaveFscType" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="fscId" value="0" />
                     <div class="row">
                         <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold text-dark">Sertifika Adı</label>
-                            <input type="text" class="form-control form-control-sm border-success" placeholder="Örn: FSC Mix">
+                            <label class="small font-weight-bold">Sertifika Adı <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="Name" id="fscName" required placeholder="Örn: Mix">
                         </div>
                         <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold text-dark">Lisans Kodu</label>
-                            <input type="text" class="form-control form-control-sm border-success" placeholder="Örn: FSC-C123456">
+                            <label class="small font-weight-bold">Kısa Kod <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="Code" id="fscCode" required placeholder="Örn: FSC-MIX">
                         </div>
                     </div>
-                    <div class="form-group mb-0">
-                        <label class="small font-weight-bold text-dark">Kısa Açıklama</label>
-                        <textarea class="form-control form-control-sm border-success" rows="2" placeholder="Sertifika kapsamı hakkında notlar..."></textarea>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Açıklama</label>
+                        <textarea class="form-control" rows="2" name="Description" id="fscDescription"></textarea>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer bg-light p-2">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">İptal</button>
-                <button type="button" class="btn btn-success btn-sm px-4">Kaydet</button>
-            </div>
+                    <div class="custom-control custom-switch mt-2">
+                        <input type="checkbox" class="custom-control-input" id="isActiveSwitch" name="IsActive" checked>
+                        <label class="custom-control-label small font-weight-bold" for="isActiveSwitch">Aktif</label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-2">
+                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-secondary btn-sm px-4 text-white">Kaydet</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -101,7 +141,66 @@
         function filterFsc() {
             var value = $("#fscSearch").val().toLowerCase();
             $("#fscTable tbody tr").filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            });
+        }
+
+        function toggleFscStatus(id) {
+            $.post('/Paper/ToggleFscStatus', { id: id }, function (res) {
+                if (res.success) {
+                    const badge = $(`#badge_${id}`);
+                    if (res.isActive) {
+                        badge.removeClass('badge-secondary').addClass('badge-success').text('Aktif');
+                    } else {
+                        badge.removeClass('badge-success').addClass('badge-secondary').text('Pasif');
+                    }
+                } else {
+                    Swal.fire('Hata!', res.message, 'error');
+                    $(`#status_${id}`).prop('checked', !$(`#status_${id}`).is(':checked'));
+                }
+            });
+        }
+
+        function openAddModal() {
+            $('#fscId').val(0);
+            $('#fscName').val('');
+            $('#fscCode').val('');
+            $('#fscDescription').val('');
+            $('#isActiveSwitch').prop('checked', true);
+            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni FSC Sertifikası');
+            $('#fscModal').modal('show');
+        }
+
+        function editFsc(id, name, code, description, isActive) {
+            $('#fscId').val(id);
+            $('#fscName').val(name);
+            $('#fscCode').val(code);
+            $('#fscDescription').val(description);
+            $('#isActiveSwitch').prop('checked', isActive);
+            $('.modal-title').html('<i class="fas fa-edit mr-2"></i>FSC Sertifikası Düzenle');
+            $('#fscModal').modal('show');
+        }
+
+        function deleteFsc(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: 'Bu FSC tipi silinecektir!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#5a5c69',
+                cancelButtonColor: '#e74a3b',
+                confirmButtonText: 'Evet, Sil!',
+                cancelButtonText: 'Vazgeç'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/Paper/DeleteFscType', { id: id }, function(res) {
+                        if (res.success) {
+                            location.reload();
+                        } else {
+                            Swal.fire('Hata!', res.message, 'error');
+                        }
+                    });
+                }
             });
         }
     </script>

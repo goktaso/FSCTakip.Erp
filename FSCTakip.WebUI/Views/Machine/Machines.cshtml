@@ -1,21 +1,38 @@
-﻿@model IEnumerable<FSCTakip.Core.Entities.Machine>
+@model IEnumerable<FSCTakip.Core.Entities.Machine>
 @{
     ViewData["Title"] = "Makine Tanımlamaları";
 }
 
-<div class="card shadow mb-4">
-    @* [2026-02-25] Kuralı: Ortak buton yapısını çağırıyoruz *@
-    @await Html.PartialAsync("_TableActions", "Makine Tanımlamaları")
+@* --- ÜST PANEL: Standart Buton Grubu --- *@
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-industry mr-2"></i>Makine Listesi</h5>
+    <div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
+            <i class="fas fa-filter"></i> Filtrele
+        </button>
+        <button class="btn btn-sm btn-outline-success" onclick="location.href='@Url.Action("ExportMachines", "Machine")'">
+            <i class="fas fa-file-excel"></i> Excel
+        </button>
+        <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
+            <i class="fas fa-print"></i> Yazdır
+        </button>
+        <button class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
+            <i class="fas fa-plus"></i> Yeni Makine Ekle
+        </button>
+    </div>
+</div>
 
-    <div id="filterPanel" class="card-body border-bottom bg-light" style="display:none;">
+@* --- FİLTRELEME PANELİ --- *@
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-secondary" style="display:none;">
+    <div class="card-body py-3">
         <div class="row align-items-end">
             <div class="col-md-5">
-                <label class="small font-weight-bold text-uppercase text-danger">Makine Adı / Kod</label>
-                <input type="text" id="machineSearch" class="form-control form-control-sm border-danger" placeholder="Örn: Matbaa-01...">
+                <label class="small font-weight-bold text-uppercase">Makine Adı / Kod</label>
+                <input type="text" id="machineSearch" class="form-control form-control-sm" placeholder="Ara...">
             </div>
             <div class="col-md-4">
-                <label class="small font-weight-bold text-uppercase text-danger">Makine Türü</label>
-                <select class="form-control form-control-sm border-danger" id="machineTypeFilter">
+                <label class="small font-weight-bold text-uppercase">Makine Türü</label>
+                <select class="form-control form-control-sm" id="machineTypeFilter">
                     <option value="">Tümü</option>
                     <option value="Printing">Matbaa</option>
                     <option value="Cutting">Kesim</option>
@@ -23,65 +40,63 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <button class="btn btn-danger btn-sm btn-block" onclick="filterMachines()">
+                <button class="btn btn-secondary btn-sm btn-block text-white" onclick="filterTable()">
                     <i class="fas fa-search mr-1"></i> Sorgula
                 </button>
             </div>
         </div>
     </div>
+</div>
 
+@* --- TABLO ALANI --- *@
+<div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="machineTable">
                 <thead class="bg-light text-dark text-uppercase small font-weight-bold">
                     <tr>
-                        <th style="width: 70px;">Kod</th>
+                        <th style="width: 100px;">Kod</th>
                         <th>Makine Adı</th>
                         <th>Tür</th>
-                        <th>Maks. Hız</th>
-                        <th>Kapasite</th>
-                        <th>Durum</th>
-                        <th class="text-right" style="width: 120px;">İşlemler</th>
+                        <th class="text-center">Durum</th>
+                        <th class="text-right" style="width: 130px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model != null && Model.Any())
+                    @if (Model != null)
                     {
                         foreach (var item in Model)
                         {
                             <tr>
                                 <td><code>@item.Code</code></td>
-                                <td><strong>@item.Name</strong></td>
-                                <td><span class="badge badge-info">@item.Type</span></td>
-                                <td><small>---</small></td> @* Veritabanı şemana göre güncellenebilir *@
-                                <td><small>---</small></td>
-                                <td>
-                                    <span class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
-                                        @(item.IsActive ? "Aktif" : "Pasif")
-                                    </span>
+                                <td><strong class="text-primary">@item.Name</strong></td>
+                                <td><span class="badge badge-light border text-dark">@item.Type</span></td>
+
+                                @* --- ANLIK DURUM SWITCH --- *@
+                                <td class="text-center">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="status_@item.Id"
+                                               @(item.IsActive ? "checked" : "")
+                                               onchange="toggleMachineStatus(@item.Id)">
+                                        <label class="custom-control-label cursor-pointer" for="status_@item.Id">
+                                            <span id="badge_@item.Id" class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
+                                                @(item.IsActive ? "Aktif" : "Pasif")
+                                            </span>
+                                        </label>
+                                    </div>
                                 </td>
+
                                 <td class="text-right">
-                                    <button class="btn btn-sm btn-outline-primary mr-1" title="Düzenle"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger" title="Sil"><i class="fas fa-trash"></i></button>
+                                    <button class="btn btn-sm btn-outline-primary mr-1"
+                                            onclick="editMachine(@item.Id, '@item.Name', '@item.Code', '@item.Type', @item.IsActive.ToString().ToLower())">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteMachine(@item.Id)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </td>
                             </tr>
                         }
-                    }
-                    else
-                    {
-                        @* Test verisi (Veritabanı boşsa görünür) *@
-                        <tr>
-                            <td><code>M-01</code></td>
-                            <td><strong>8 Renk Flexo Matbaa</strong></td>
-                            <td><span class="badge badge-info">Matbaa</span></td>
-                            <td><small>250 m/dk</small></td>
-                            <td><small>45.000 m</small></td>
-                            <td><span class="badge badge-success">Aktif</span></td>
-                            <td class="text-right">
-                                <button class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-edit"></i></button>
-                                <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>
                     }
                 </tbody>
             </table>
@@ -89,65 +104,124 @@
     </div>
 </div>
 
-<div class="modal fade" id="addMachineModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+@* --- MODAL: EKLE/DÜZENLE --- *@
+<div class="modal fade" id="machineModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title font-weight-bold"><i class="fas fa-industry mr-2"></i>Yeni Makine Tanımla</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+            <div class="modal-header bg-secondary text-white">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-industry mr-2"></i>Makine Formu</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
-            <div class="modal-body">
-                <form id="addMachineForm">
+            <form asp-controller="Machine" asp-action="SaveMachine" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="machineId" value="0" />
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="small font-weight-bold">Makine Adı</label>
-                            <input type="text" class="form-control" name="Name" required>
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold">Makine Adı <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="Name" id="machineName" required>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="small font-weight-bold">Makine Kodu</label>
-                            <input type="text" class="form-control" name="Code" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="small font-weight-bold">Makine Türü</label>
-                            <select class="form-control" name="Type">
-                                <option value="Printing">Matbaa</option>
-                                <option value="Cutting">Kesim</option>
-                                <option value="Slitting">Dilimleme</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="small font-weight-bold">Durum</label>
-                            <div class="custom-control custom-switch mt-2">
-                                <input type="checkbox" class="custom-control-input" id="isActiveSwitch" name="IsActive" checked>
-                                <label class="custom-control-label" for="isActiveSwitch">Aktif</label>
-                            </div>
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold">Makine Kodu <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="Code" id="machineCode" required>
                         </div>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Vazgeç</button>
-                <button type="button" class="btn btn-danger" onclick="saveMachine()">Kaydet</button>
-            </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Makine Türü</label>
+                        <select class="form-control" name="Type" id="machineType">
+                            <option value="Printing">Matbaa</option>
+                            <option value="Cutting">Kesim</option>
+                            <option value="Slitting">Dilimleme</option>
+                        </select>
+                    </div>
+                    <div class="custom-control custom-switch mt-2">
+                        <input type="checkbox" class="custom-control-input" id="isActiveSwitch" name="IsActive" checked>
+                        <label class="custom-control-label small font-weight-bold" for="isActiveSwitch">Aktif</label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-2">
+                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                    <button type="submit" class="btn btn-secondary btn-sm px-4 text-white">Kaydet</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        function filterMachines() {
-            // Filtreleme mantığı buraya gelecek
-            toastr.info("Filtreleme uygulandı.");
+        // Tablo Filtreleme (Ad/Kod ve Tür Kombinasyonu)
+        function filterTable() {
+            var searchTerm = $("#machineSearch").val().toLowerCase();
+            var typeFilter = $("#machineTypeFilter").val().toLowerCase();
+
+            $("#machineTable tbody tr").filter(function() {
+                var textMatch = $(this).find('td:nth-child(1)').text().toLowerCase().indexOf(searchTerm) > -1 ||
+                                $(this).find('td:nth-child(2)').text().toLowerCase().indexOf(searchTerm) > -1;
+
+                var typeMatch = typeFilter === "" || $(this).find('td:nth-child(3)').text().toLowerCase().indexOf(typeFilter) > -1;
+
+                $(this).toggle(textMatch && typeMatch);
+            });
         }
 
-        function saveMachine() {
-            // Kaydetme Ajax işlemleri buraya gelecek
-            $('#addMachineModal').modal('hide');
-            toastr.success("Makine başarıyla kaydedildi.");
+        // Anlık Durum Güncelleme
+        function toggleMachineStatus(id) {
+            $.post('/Machine/ToggleMachineStatus', { id: id }, function (res) {
+                if (res.success) {
+                    const badge = $(`#badge_${id}`);
+                    if (res.isActive) {
+                        badge.removeClass('badge-secondary').addClass('badge-success').text('Aktif');
+                    } else {
+                        badge.removeClass('badge-success').addClass('badge-secondary').text('Pasif');
+                    }
+                } else {
+                    Swal.fire('Hata!', res.message, 'error');
+                    $(`#status_${id}`).prop('checked', !$(`#status_${id}`).is(':checked'));
+                }
+            });
         }
 
-        // Excel aktarımı site.js üzerinden merkezi yönetilecek
+        function openAddModal() {
+            $('#machineId').val(0);
+            $('#machineName').val('');
+            $('#machineCode').val('');
+            $('#machineType').val('Printing');
+            $('#isActiveSwitch').prop('checked', true);
+            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Makine Ekle');
+            $('#machineModal').modal('show');
+        }
+
+        function editMachine(id, name, code, type, isActive) {
+            $('#machineId').val(id);
+            $('#machineName').val(name);
+            $('#machineCode').val(code);
+            $('#machineType').val(type);
+            $('#isActiveSwitch').prop('checked', isActive);
+            $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Makine Düzenle');
+            $('#machineModal').modal('show');
+        }
+
+        function deleteMachine(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: 'Bu makine silinecektir!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#5a5c69',
+                cancelButtonColor: '#e74a3b',
+                confirmButtonText: 'Evet, Sil!',
+                cancelButtonText: 'Vazgeç'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/Machine/DeleteMachine', { id: id }, function(res) {
+                        if (res.success) {
+                            location.reload();
+                        } else {
+                            Swal.fire('Hata!', res.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
     </script>
 }

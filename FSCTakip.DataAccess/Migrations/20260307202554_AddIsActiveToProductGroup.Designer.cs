@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FSCTakip.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260302180301_Initial_Full_Setup")]
-    partial class Initial_Full_Setup
+    [Migration("20260307202554_AddIsActiveToProductGroup")]
+    partial class AddIsActiveToProductGroup
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -282,9 +282,9 @@ namespace FSCTakip.DataAccess.Migrations
                         {
                             Id = 1,
                             Code = "FSC-100",
-                            CreatedBy = "System",
+                            CreatedBy = "SYSTEM",
                             CreatedDate = new DateTime(2026, 2, 25, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Tamamı sertifikalı",
+                            Description = "TAMAMI SERTIFIKALI",
                             IsActive = true,
                             Name = "FSC %100"
                         },
@@ -292,11 +292,11 @@ namespace FSCTakip.DataAccess.Migrations
                         {
                             Id = 2,
                             Code = "FSC-MIX",
-                            CreatedBy = "System",
+                            CreatedBy = "SYSTEM",
                             CreatedDate = new DateTime(2026, 2, 25, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Karışım içerik",
+                            Description = "KARISIM ICERIK",
                             IsActive = true,
-                            Name = "FSC Mix"
+                            Name = "FSC MIX"
                         });
                 });
 
@@ -339,28 +339,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Machines");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Code = "M-01",
-                            CreatedBy = "System",
-                            CreatedDate = new DateTime(2026, 2, 25, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsActive = true,
-                            Name = "8 Renk Flexo",
-                            Type = "Matbaa"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Code = "K-01",
-                            CreatedBy = "System",
-                            CreatedDate = new DateTime(2026, 2, 25, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsActive = true,
-                            Name = "Kare Dip Kesim",
-                            Type = "Kesim"
-                        });
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.PaperColor", b =>
@@ -432,26 +410,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PaperTypes");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedBy = "System",
-                            CreatedDate = new DateTime(2026, 2, 25, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsActive = true,
-                            Name = "Kraft Kağıt",
-                            ShortCode = "KRT"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CreatedBy = "System",
-                            CreatedDate = new DateTime(2026, 2, 25, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsActive = true,
-                            Name = "Sülfit Kağıt",
-                            ShortCode = "SLF"
-                        });
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.PaperWeight", b =>
@@ -532,8 +490,32 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("FscTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("PaperColorId")
                         .HasColumnType("int");
+
+                    b.Property<int?>("PaperTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ProductGroupId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -543,7 +525,13 @@ namespace FSCTakip.DataAccess.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("FscTypeId");
+
                     b.HasIndex("PaperColorId");
+
+                    b.HasIndex("PaperTypeId");
+
+                    b.HasIndex("ProductGroupId");
 
                     b.ToTable("Products");
                 });
@@ -569,6 +557,9 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<string>("GroupName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<int>("RangeEnd")
                         .HasColumnType("int");
@@ -806,26 +797,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Warehouses");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Code = "DEP-01",
-                            CreatedBy = "System",
-                            CreatedDate = new DateTime(2026, 2, 25, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsActive = true,
-                            Name = "Hammadde Deposu"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Code = "DEP-02",
-                            CreatedBy = "System",
-                            CreatedDate = new DateTime(2026, 2, 25, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsActive = true,
-                            Name = "Mamul Deposu"
-                        });
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.WasteManagement", b =>
@@ -1044,9 +1015,32 @@ namespace FSCTakip.DataAccess.Migrations
 
             modelBuilder.Entity("FSCTakip.Core.Entities.Product", b =>
                 {
-                    b.HasOne("FSCTakip.Core.Entities.PaperColor", null)
+                    b.HasOne("FSCTakip.Core.Entities.FscType", "FscType")
+                        .WithMany()
+                        .HasForeignKey("FscTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FSCTakip.Core.Entities.PaperColor", "PaperColor")
                         .WithMany("Products")
                         .HasForeignKey("PaperColorId");
+
+                    b.HasOne("FSCTakip.Core.Entities.PaperType", "PaperType")
+                        .WithMany()
+                        .HasForeignKey("PaperTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FSCTakip.Core.Entities.ProductGroup", "ProductGroup")
+                        .WithMany()
+                        .HasForeignKey("ProductGroupId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("FscType");
+
+                    b.Navigation("PaperColor");
+
+                    b.Navigation("PaperType");
+
+                    b.Navigation("ProductGroup");
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.ProductRecipe", b =>

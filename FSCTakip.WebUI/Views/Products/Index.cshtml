@@ -1,121 +1,295 @@
-﻿@using FSCTakip.Core.Entities
-@model IEnumerable<Product>
+@model IEnumerable<FSCTakip.Core.Entities.Product>
+@{
+    ViewData["Title"] = "Ürün Tanımları";
+    var productGroups = ViewData["ProductGroups"] as SelectList ?? new SelectList(new List<SelectListItem>());
+    var fscTypes = ViewData["FscTypes"] as SelectList ?? new SelectList(new List<SelectListItem>());
+    var paperTypes = ViewData["PaperTypes"] as SelectList ?? new SelectList(new List<SelectListItem>());
+    var paperColors = ViewData["PaperColors"] as SelectList ?? new SelectList(new List<SelectListItem>());
 
-<div class="product-container p-4">
-    <div class="card shadow-sm border-0">
+    // ID Bazlı Listeler [cite: 2026-03-04]
+    var paperWeights = ViewData["PaperWeights"] as SelectList ?? new SelectList(new List<SelectListItem>());
+    var paperWidths = ViewData["PaperWidths"] as SelectList ?? new SelectList(new List<SelectListItem>());
+    var suppliers = ViewData["Suppliers"] as SelectList ?? new SelectList(new List<SelectListItem>());
+}
+
+@* Üst Aksiyon Çubuğu [cite: 2026-02-25] *@
+<div class="row mb-3 align-items-center">
+    <div class="col-md-6">
+        <h4 class="mb-0 font-weight-bold text-primary text-uppercase">Ürün Listesi</h4>
+    </div>
+    <div class="col-md-6 text-right">
+        <button class="btn btn-outline-secondary btn-sm" onclick="$('#filterPanel').slideToggle()">
+            <i class="fas fa-filter mr-1"></i> Filtrele
+        </button>
+        <button class="btn btn-outline-success btn-sm ml-1" onclick="exportToExcel()">
+            <i class="fas fa-file-excel mr-1"></i> Excel
+        </button>
+        <button class="btn btn-primary btn-sm ml-1" onclick="openAddModal()">
+            <i class="fas fa-plus mr-1"></i> Yeni Ürün
+        </button>
+    </div>
+</div>
+
+@* Filtre Paneli *@
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-primary" style="display:none;">
+    <div class="card-body py-3">
+        <div class="row align-items-end">
+            <div class="col-md-4">
+                <label class="small font-weight-bold text-uppercase">Ürün Ara (Kod/Ad/Grup/Tedarikçi)</label>
+                <input type="text" id="productSearch" class="form-control form-control-sm" placeholder="Arama yapın...">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary btn-sm btn-block" onclick="filterProducts()">
+                    <i class="fas fa-search mr-1"></i> Sorgula
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Ürün Tablosu *@
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-custom mb-0">
-                <thead>
-                    <tr class="header-main">
-                        <th class="border-0">STOK KODU</th>
-                        <th class="border-0">ÜRÜN TANIMI</th>
-                        <th colspan="3" class="text-center border-0">KAĞIT & KARAKTERİSTİK</th>
-                        <th colspan="2" class="text-center border-0">TEKNİK ÖLÇÜLER</th>
-                        <th colspan="2" class="text-center border-0">LOJİSTİK (PAKETLEME)</th>
-                        <th class="border-0">FSC</th>
-                        <th class="border-0">İŞLEM</th>
-                    </tr>
-                    <tr class="header-sub">
-                        <th colspan="2" class="border-0"></th>
-                        <th class="text-center">TİP</th>
-                        <th class="text-center">RENK</th>
-                        <th class="text-center">GR.</th>
-                        <th class="text-center">BOBİN ENİ</th>
-                        <th class="text-center">ÖLÇÜ (EXBXK)</th>
-                        <th class="text-center">KOLİ/PALET</th>
-                        <th class="text-center">NET/BRÜT</th>
-                        <th colspan="2" class="border-0"></th>
+            <table class="table table-hover align-middle mb-0" id="productsTable">
+                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
+                    <tr>
+                        <th style="width: 100px;">Ürün Kodu</th>
+                        <th>Ürün Adı</th>
+                        <th>Tedarikçi</th>
+                        <th>Grup</th>
+                        <th>Renk</th>
+                        <th>Gr.</th>
+                        <th>En</th>
+                        <th>Birim</th>
+                        <th>FSC Tipi</th>
+                        <th style="width: 100px;">Durum</th>
+                        <th class="text-right" style="width: 80px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td class="font-weight-bold">30168</td>
-                        <td class="product-name">QP TW 90 g Unprinted Brown Recycled</td>
-                        <td class="text-center font-weight-bold">Recycle</td>
-                        <td class="text-center">Brown</td>
-                        <td class="text-center">90g</td>
-                        <td class="text-center text-muted">-</td>
-                        <td class="text-center">260 x 320 x 120</td>
-                        <td class="text-center">250 / 250</td>
-                        <td class="text-center">12.5 / 13.0</td>
-                        <td class="text-center">Mix</td>
-                        <td class="text-center">
-                            <button class="btn btn-action"><i class="fas fa-edit"></i> 📝</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="font-weight-bold">10001</td>
-                        <td class="product-name">Natron VBMF090 1080 FSC 100%</td>
-                        <td class="text-center font-weight-bold">Virgin</td>
-                        <td class="text-center">Brown</td>
-                        <td class="text-center">90g</td>
-                        <td class="text-center">108 cm</td>
-                        <td class="text-center text-muted">-</td>
-                        <td class="text-center">-</td>
-                        <td class="text-center">- / 450.0</td>
-                        <td class="text-center">100%</td>
-                        <td class="text-center">
-                            <button class="btn btn-action"><i class="fas fa-edit"></i> 📝</button>
-                        </td>
-                    </tr>
+                    @if (Model != null)
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><strong class="text-primary">@item.ProductCode</strong></td>
+                                <td class="small font-weight-bold">@item.ProductName</td>
+                                <td><span class="text-muted small">@(item.Supplier?.Name ?? "-")</span></td>
+                                <td><span class="badge badge-light border">@(item.ProductGroup?.GroupName ?? "-")</span></td>
+                                <td>@(item.PaperColor?.Name ?? "-")</td>
+                                <td>@(item.PaperWeight != null ? $"{item.PaperWeight.Value} {item.PaperWeight.Unit}" : "-")</td>
+                                <td>@(item.PaperWidth != null ? $"{item.PaperWidth.Value} {item.PaperWidth.Unit}" : "-")</td>
+                                <td>@item.Unit</td>
+                                <td><small>@(item.FscType?.Name ?? "-")</small></td>
+                                <td>
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="sw_@item.Id" @(item.IsActive ? "checked" : "") onclick="toggleProduct(@item.Id)">
+                                        <label class="custom-control-label" for="sw_@item.Id">@(item.IsActive ? "Aktif" : "Pasif")</label>
+                                    </div>
+                                </td>
+                                <td class="text-right">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editProduct(@item.Id)" title="Düzenle">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<style>
-    /* Görseldeki (image_042522.png) Tasarımı Yakalamak İçin CSS */
-    .table-custom {
-        border-collapse: separate;
-        border-spacing: 0;
-    }
+@* Ürün Form Modalı *@
+<div class="modal fade" id="productModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-box mr-2"></i>Ürün Formu</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form asp-controller="Products" asp-action="Save" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="productId" value="0" />
 
-    /* Başlık Stilleri */
-    .header-main th {
-        font-size: 13px;
-        font-weight: 800;
-        color: #000;
-        padding-bottom: 5px;
-        letter-spacing: 0.3px;
-    }
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Ürün Grubu <span class="text-danger">*</span></label>
+                                <select name="ProductGroupId" id="productGroupId" class="form-control" required>
+                                    <option value="">-- Seçiniz --</option>
+                                    @foreach (var g in productGroups)
+                                    {
+                                        <option value="@g.Value">@g.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Tedarikçi</label>
+                                <select name="SupplierId" id="supplierId" class="form-control">
+                                    <option value="">-- Tedarikçi Seçiniz --</option>
+                                    @foreach (var s in suppliers)
+                                    {
+                                        <option value="@s.Value">@s.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
-    .header-sub th {
-        font-size: 11px;
-        font-weight: 700;
-        color: #333;
-        padding-top: 0;
-        border-bottom: 1px solid #dee2e6 !important;
-    }
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Ürün Kodu</label>
+                                <input type="text" id="productCode" class="form-control bg-light" readonly placeholder="Otomatik" />
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Ürün Adı <span class="text-danger">*</span></label>
+                                <input type="text" name="ProductName" id="productName" class="form-control text-uppercase" required />
+                            </div>
+                        </div>
+                    </div>
 
-    /* Hücre Stilleri */
-    .table-custom td {
-        padding: 12px 8px;
-        vertical-align: middle;
-        font-size: 13px;
-        border-bottom: 1px solid #f0f0f0;
-    }
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Kağıt Rengi</label>
+                                <select name="PaperColorId" id="paperColorId" class="form-control">
+                                    <option value="">-- Seçiniz --</option>
+                                    @foreach (var c in paperColors)
+                                    {
+                                        <option value="@c.Value">@c.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Gramaj (gr) [cite: 2026-03-04]</label>
+                                <select name="PaperWeightId" id="paperWeightId" class="form-control">
+                                    <option value="">-- Seçiniz --</option>
+                                    @foreach (var w in paperWeights)
+                                    {
+                                        <option value="@w.Value">@w.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">En (cm) [cite: 2026-03-04]</label>
+                                <select name="PaperWidthId" id="paperWidthId" class="form-control">
+                                    <option value="">-- Seçiniz --</option>
+                                    @foreach (var w in paperWidths)
+                                    {
+                                        <option value="@w.Value">@w.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
-    .product-name {
-        color: #444;
-        font-size: 12px;
-    }
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Birim</label>
+                                <input type="text" name="Unit" id="unit" class="form-control text-uppercase" value="ADET" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">FSC Tipi</label>
+                                <select name="FscTypeId" id="fscTypeId" class="form-control">
+                                    <option value="">-- Seçiniz --</option>
+                                    @foreach (var f in fscTypes)
+                                    {
+                                        <option value="@f.Value">@f.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Kağıt Tipi</label>
+                                <select name="PaperTypeId" id="paperTypeId" class="form-control">
+                                    <option value="">-- Seçiniz --</option>
+                                    @foreach (var p in paperTypes)
+                                    {
+                                        <option value="@p.Value">@p.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-    /* Bobin Eni ve Ölçü Sütunlarındaki Ayraç Çizgileri */
-    .text-center {
-        text-align: center;
-    }
+@section Scripts {
+    <script>
+        function openAddModal() {
+            $('#productId').val(0);
+            $('#productGroupId').val('');
+            $('#supplierId').val(''); // Temizleme
+            $('#productCode').val('');
+            $('#productName').val('');
+            $('#paperColorId').val('');
+            $('#paperWeightId').val('');
+            $('#paperWidthId').val('');
+            $('#fscTypeId').val('');
+            $('#paperTypeId').val('');
+            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Ürün Ekle');
+            $('#productModal').modal('show');
+        }
 
-    /* İşlem Butonu */
-    .btn-action {
-        background: #f8f9fa;
-        border: 1px solid #ccc;
-        padding: 2px 8px;
-        border-radius: 4px;
-    }
+        function editProduct(id) {
+            $.get('/Products/GetProduct', { id: id }, function(data) {
+                if (data.success) {
+                    $('#productId').val(data.id);
+                    $('#productGroupId').val(data.productGroupId || '');
+                    $('#supplierId').val(data.supplierId || ''); // Yükleme
+                    $('#productCode').val(data.productCode);
+                    $('#productName').val(data.productName);
+                    $('#paperColorId').val(data.paperColorId || '');
+                    $('#paperWeightId').val(data.paperWeightId || '');
+                    $('#paperWidthId').val(data.paperWidthId || '');
+                    $('#unit').val(data.unit);
+                    $('#fscTypeId').val(data.fscTypeId || '');
+                    $('#paperTypeId').val(data.paperTypeId || '');
+                    $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Ürün Düzenle');
+                    $('#productModal').modal('show');
+                }
+            });
+        }
 
-    /* Görseldeki gibi her sütun grubunun arasına ince dikey çizgiler */
-    td:nth-child(5), td:nth-child(7), td:nth-child(9) {
-        border-right: 1px solid #eee;
-    }
-</style>
+        function toggleProduct(id) {
+            $.post('/Products/ToggleStatus', { id: id }, function(res) {
+                if (res.success) {
+                    const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                    toast.fire({ icon: 'success', title: 'Güncellendi' });
+                }
+            });
+        }
+
+        function filterProducts() {
+            var val = $("#productSearch").val().toLowerCase();
+            $("#productsTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1);
+            });
+        }
+
+        function exportToExcel() { window.location.href = '/Products/ExportIndex'; }
+    </script>
+}

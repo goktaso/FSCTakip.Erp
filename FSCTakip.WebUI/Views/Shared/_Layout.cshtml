@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
@@ -73,6 +73,11 @@
             .nav-link:hover {
                 background: #34495e;
                 color: #3498db;
+            }
+
+            .nav-link.active {
+                background: #3498db;
+                color: white !important;
             }
 
             .nav-link i {
@@ -241,6 +246,7 @@
                 <div class="menu-label">TİCARİ</div>
                 <a href="/Customers/Index" class="nav-link"><i class="fas fa-user-tie"></i> <span>Müşteriler</span></a>
                 <a href="/Suppliers/Index" class="nav-link"><i class="fas fa-truck"></i> <span>Tedarikçiler</span></a>
+                <a href="/Products/Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Products" ? "active" : "")"><i class="fas fa-box"></i> <span>Ürünler</span></a>
 
                 <div class="menu-label">SİSTEM AYARLARI</div>
 
