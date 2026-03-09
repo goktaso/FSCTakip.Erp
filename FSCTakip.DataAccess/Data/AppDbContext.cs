@@ -35,6 +35,9 @@ namespace FSCTakip.DataAccess.Data
         public DbSet<StockMovement> StockMovements { get; set; }
         public DbSet<FscLot> FscLots { get; set; }
         public DbSet<FscSerial> FscSerials { get; set; }
+        // Tanımlamalar (Parametrik Tablolar) region'ı altına:
+        public DbSet<Unit> Units { get; set; }
+        public DbSet<AuditPeriod> AuditPeriods { get; set; }
         public DbSet<WasteManagement> WasteManagements { get; set; }
         #endregion
 

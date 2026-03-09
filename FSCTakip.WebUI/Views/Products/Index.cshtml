@@ -6,13 +6,14 @@
     var paperTypes = ViewData["PaperTypes"] as SelectList ?? new SelectList(new List<SelectListItem>());
     var paperColors = ViewData["PaperColors"] as SelectList ?? new SelectList(new List<SelectListItem>());
 
-    // ID Bazlı Listeler [cite: 2026-03-04]
+    // GÜNCELLENDİ: Birim Listesi ve Diğerleri
+    var units = ViewData["Units"] as SelectList ?? new SelectList(new List<SelectListItem>());
     var paperWeights = ViewData["PaperWeights"] as SelectList ?? new SelectList(new List<SelectListItem>());
     var paperWidths = ViewData["PaperWidths"] as SelectList ?? new SelectList(new List<SelectListItem>());
     var suppliers = ViewData["Suppliers"] as SelectList ?? new SelectList(new List<SelectListItem>());
 }
 
-@* Üst Aksiyon Çubuğu [cite: 2026-02-25] *@
+@* Üst Aksiyon Çubuğu *@
 <div class="row mb-3 align-items-center">
     <div class="col-md-6">
         <h4 class="mb-0 font-weight-bold text-primary text-uppercase">Ürün Listesi</h4>
@@ -61,7 +62,7 @@
                         <th>Renk</th>
                         <th>Gr.</th>
                         <th>En</th>
-                        <th>Birim</th>
+                        <th>Birim</th> @* GÜNCELLENDİ *@
                         <th>FSC Tipi</th>
                         <th style="width: 100px;">Durum</th>
                         <th class="text-right" style="width: 80px;">İşlemler</th>
@@ -80,7 +81,7 @@
                                 <td>@(item.PaperColor?.Name ?? "-")</td>
                                 <td>@(item.PaperWeight != null ? $"{item.PaperWeight.Value} {item.PaperWeight.Unit}" : "-")</td>
                                 <td>@(item.PaperWidth != null ? $"{item.PaperWidth.Value} {item.PaperWidth.Unit}" : "-")</td>
-                                <td>@item.Unit</td>
+                                <td><span class="badge badge-info py-1 px-2">@(item.Unit?.Name ?? "-")</span></td> @* GÜNCELLENDİ: İlişkisel Birim *@
                                 <td><small>@(item.FscType?.Name ?? "-")</small></td>
                                 <td>
                                     <div class="custom-control custom-switch">
@@ -171,7 +172,7 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label class="small font-weight-bold">Gramaj (gr) [cite: 2026-03-04]</label>
+                                <label class="small font-weight-bold">Gramaj (gr) </label>
                                 <select name="PaperWeightId" id="paperWeightId" class="form-control">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var w in paperWeights)
@@ -183,7 +184,7 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label class="small font-weight-bold">En (cm) [cite: 2026-03-04]</label>
+                                <label class="small font-weight-bold">En (cm) </label>
                                 <select name="PaperWidthId" id="paperWidthId" class="form-control">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var w in paperWidths)
@@ -198,8 +199,15 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label class="small font-weight-bold">Birim</label>
-                                <input type="text" name="Unit" id="unit" class="form-control text-uppercase" value="ADET" />
+                                <label class="small font-weight-bold">Birim <span class="text-danger">*</span></label>
+                                @* GÜNCELLENDİ: Input Yerine Select *@
+                                <select name="UnitId" id="unitId" class="form-control" required>
+                                    <option value="">-- Birim Seçiniz --</option>
+                                    @foreach (var u in units)
+                                    {
+                                        <option value="@u.Value">@u.Text</option>
+                                    }
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -242,12 +250,13 @@
         function openAddModal() {
             $('#productId').val(0);
             $('#productGroupId').val('');
-            $('#supplierId').val(''); // Temizleme
+            $('#supplierId').val('');
             $('#productCode').val('');
             $('#productName').val('');
             $('#paperColorId').val('');
             $('#paperWeightId').val('');
             $('#paperWidthId').val('');
+            $('#unitId').val(''); // GÜNCELLENDİ
             $('#fscTypeId').val('');
             $('#paperTypeId').val('');
             $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Ürün Ekle');
@@ -259,13 +268,13 @@
                 if (data.success) {
                     $('#productId').val(data.id);
                     $('#productGroupId').val(data.productGroupId || '');
-                    $('#supplierId').val(data.supplierId || ''); // Yükleme
+                    $('#supplierId').val(data.supplierId || '');
                     $('#productCode').val(data.productCode);
                     $('#productName').val(data.productName);
                     $('#paperColorId').val(data.paperColorId || '');
                     $('#paperWeightId').val(data.paperWeightId || '');
                     $('#paperWidthId').val(data.paperWidthId || '');
-                    $('#unit').val(data.unit);
+                    $('#unitId').val(data.unitId || ''); // GÜNCELLENDİ: unit yerine unitId
                     $('#fscTypeId').val(data.fscTypeId || '');
                     $('#paperTypeId').val(data.paperTypeId || '');
                     $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Ürün Düzenle');

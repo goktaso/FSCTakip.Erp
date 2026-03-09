@@ -4,6 +4,7 @@ using FSCTakip.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FSCTakip.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260309185335_AddUnitsTable")]
+    partial class AddUnitsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,34 +24,6 @@ namespace FSCTakip.DataAccess.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("FSCTakip.Core.Entities.AuditPeriod", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AuditPeriods");
-                });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.BagType", b =>
                 {
@@ -547,8 +522,9 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<int?>("SupplierId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UnitId")
-                        .HasColumnType("int");
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -571,8 +547,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasIndex("ProductGroupId");
 
                     b.HasIndex("SupplierId");
-
-                    b.HasIndex("UnitId");
 
                     b.ToTable("Products");
                 });
@@ -1138,12 +1112,6 @@ namespace FSCTakip.DataAccess.Migrations
                         .WithMany()
                         .HasForeignKey("SupplierId");
 
-                    b.HasOne("FSCTakip.Core.Entities.Unit", "Unit")
-                        .WithMany()
-                        .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("FscType");
 
                     b.Navigation("PaperColor");
@@ -1157,8 +1125,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Navigation("ProductGroup");
 
                     b.Navigation("Supplier");
-
-                    b.Navigation("Unit");
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.ProductRecipe", b =>

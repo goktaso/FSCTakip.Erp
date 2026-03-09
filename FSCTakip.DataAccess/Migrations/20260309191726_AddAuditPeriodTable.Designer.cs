@@ -4,6 +4,7 @@ using FSCTakip.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FSCTakip.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260309191726_AddAuditPeriodTable")]
+    partial class AddAuditPeriodTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -547,8 +550,9 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<int?>("SupplierId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UnitId")
-                        .HasColumnType("int");
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -571,8 +575,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasIndex("ProductGroupId");
 
                     b.HasIndex("SupplierId");
-
-                    b.HasIndex("UnitId");
 
                     b.ToTable("Products");
                 });
@@ -1138,12 +1140,6 @@ namespace FSCTakip.DataAccess.Migrations
                         .WithMany()
                         .HasForeignKey("SupplierId");
 
-                    b.HasOne("FSCTakip.Core.Entities.Unit", "Unit")
-                        .WithMany()
-                        .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("FscType");
 
                     b.Navigation("PaperColor");
@@ -1157,8 +1153,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Navigation("ProductGroup");
 
                     b.Navigation("Supplier");
-
-                    b.Navigation("Unit");
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.ProductRecipe", b =>

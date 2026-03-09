@@ -9,11 +9,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+// ... Mevcut using satırları ...
+
 namespace FSC_ERP.Controllers
 {
     public class ProductsController : BaseController
     {
-        // Hata veren satırı bununla değiştir:
         public ProductsController(FSCTakip.DataAccess.Data.AppDbContext context) : base(context) { }
 
         public async Task<IActionResult> Index()
@@ -21,12 +22,13 @@ namespace FSC_ERP.Controllers
             await PopulateDropdowns(ViewData);
             var products = await _context.Products
                 .Include(p => p.ProductGroup)
-                .Include(p => p.Supplier) // YENİ: Tedarikçi ilişkisi eklendi
+                .Include(p => p.Supplier)
                 .Include(p => p.FscType)
                 .Include(p => p.PaperType)
                 .Include(p => p.PaperColor)
                 .Include(p => p.PaperWeight)
                 .Include(p => p.PaperWidth)
+                .Include(p => p.Unit) // YENİ: Birim ilişkisi eklendi
                 .OrderBy(p => p.ProductCode)
                 .ToListAsync();
             return View(products);
@@ -43,10 +45,10 @@ namespace FSC_ERP.Controllers
                 success = true,
                 id = product.Id,
                 productGroupId = product.ProductGroupId,
-                supplierId = product.SupplierId, // YENİ: Tedarikçi ID eklendi
+                supplierId = product.SupplierId,
                 productCode = product.ProductCode,
                 productName = product.ProductName,
-                unit = product.Unit,
+                unitId = product.UnitId, // GÜNCELLENDİ: Artık UnitId dönüyoruz
                 fscTypeId = product.FscTypeId,
                 paperTypeId = product.PaperTypeId,
                 paperColorId = product.PaperColorId,
@@ -74,17 +76,14 @@ namespace FSC_ERP.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                // --- OTOMATİK KOD ÜRETME ---
+                // --- OTOMATİK KOD ÜRETME --- (Mevcut mantık korunmuştur)
                 var lastProduct = await _context.Products
                     .Where(p => p.ProductGroupId == model.ProductGroupId)
                     .OrderByDescending(p => p.ProductCode)
                     .FirstOrDefaultAsync();
 
                 string newCode;
-                if (lastProduct == null)
-                {
-                    newCode = group.RangeStart.ToString();
-                }
+                if (lastProduct == null) { newCode = group.RangeStart.ToString(); }
                 else
                 {
                     if (long.TryParse(lastProduct.ProductCode, out long lastCodeInt))
@@ -97,15 +96,10 @@ namespace FSC_ERP.Controllers
                         }
                         newCode = nextCode.ToString();
                     }
-                    else
-                    {
-                        newCode = group.RangeStart.ToString();
-                    }
+                    else { newCode = group.RangeStart.ToString(); }
                 }
 
                 model.ProductCode = newCode;
-                model.SupplierId = model.SupplierId; // Tedarikçi ataması
-                model.Unit = model.Unit ?? "ADET";
                 model.CreatedDate = DateTime.Now;
                 model.CreatedBy = "SYSTEM";
                 model.IsActive = true;
@@ -118,8 +112,8 @@ namespace FSC_ERP.Controllers
                 {
                     existing.ProductName = model.ProductName;
                     existing.ProductGroupId = model.ProductGroupId;
-                    existing.SupplierId = model.SupplierId; // YENİ: Tedarikçi güncelleme
-                    existing.Unit = model.Unit ?? "ADET";
+                    existing.SupplierId = model.SupplierId;
+                    existing.UnitId = model.UnitId; // GÜNCELLENDİ: UnitId ataması
                     existing.FscTypeId = model.FscTypeId;
                     existing.PaperTypeId = model.PaperTypeId;
                     existing.PaperColorId = model.PaperColorId;
@@ -134,29 +128,16 @@ namespace FSC_ERP.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        [HttpPost]
-        public async Task<IActionResult> ToggleStatus(int id)
-        {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null) return Json(new { success = false, message = "ÜRÜN BULUNAMADI." });
-
-            product.IsActive = !product.IsActive;
-            product.UpdatedDate = DateTime.Now;
-            product.UpdatedBy = "SYSTEM";
-            await _context.SaveChangesAsync();
-
-            return Json(new { success = true, isActive = product.IsActive });
-        }
-
         private async Task PopulateDropdowns(ViewDataDictionary viewData)
         {
             viewData["ProductGroups"] = new SelectList(await _context.ProductGroups.Where(g => g.IsActive).OrderBy(g => g.GroupName).ToListAsync(), "Id", "GroupName");
             viewData["FscTypes"] = new SelectList(await _context.FscTypes.Where(f => f.IsActive).ToListAsync(), "Id", "Name");
             viewData["PaperTypes"] = new SelectList(await _context.PaperTypes.Where(p => p.IsActive).ToListAsync(), "Id", "Name");
             viewData["PaperColors"] = new SelectList(await _context.PaperColors.Where(c => c.IsActive).ToListAsync(), "Id", "Name");
-
-            // YENİ: Tedarikçi Listesi [cite: 2026-03-04]
             viewData["Suppliers"] = new SelectList(await _context.Suppliers.OrderBy(s => s.Name).ToListAsync(), "Id", "Name");
+
+            // YENİ: Birim Listesi Dropdown için eklendi
+            viewData["Units"] = new SelectList(await _context.Units.Where(u => u.IsActive).OrderBy(u => u.Name).ToListAsync(), "Id", "Name");
 
             // PaperWeight ve PaperWidth listeleri
             var weights = await _context.PaperWeights.Where(w => w.IsActive).OrderBy(w => w.Value).ToListAsync();
@@ -170,7 +151,8 @@ namespace FSC_ERP.Controllers
         {
             var data = await _context.Products
                 .Include(p => p.ProductGroup)
-                .Include(p => p.Supplier) // Excel'e tedarikçi eklendi
+                .Include(p => p.Supplier)
+                .Include(p => p.Unit) // Excel için birim adı
                 .Include(p => p.PaperWeight)
                 .Include(p => p.PaperWidth)
                 .OrderBy(p => p.ProductCode)
@@ -179,7 +161,7 @@ namespace FSC_ERP.Controllers
                     p.ProductName,
                     Tedarikci = p.Supplier.Name ?? "-",
                     Grup = p.ProductGroup.GroupName,
-                    p.Unit,
+                    Birim = p.Unit.Name ?? "-", // GÜNCELLENDİ
                     Gramaj = p.PaperWeight != null ? $"{p.PaperWeight.Value} {p.PaperWeight.Unit}" : "-",
                     En = p.PaperWidth != null ? $"{p.PaperWidth.Value} {p.PaperWidth.Unit}" : "-",
                     Durum = p.IsActive ? "AKTİF" : "PASİF"

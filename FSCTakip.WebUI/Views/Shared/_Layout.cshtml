@@ -250,6 +250,32 @@
 
                 <div class="menu-label">SİSTEM AYARLARI</div>
 
+
+                <div class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSettings">
+                        <i class="fas fa-cogs"></i> <span>Genel Tanımlar</span>
+                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
+                    </a>
+                    <div id="collapseSettings" class="collapse @(new[] { "AuditPeriod", "Units" }.Contains(ViewContext.RouteData.Values["Controller"]?.ToString()) ? "show" : "")">
+                        <div class="collapse-inner">
+                            @* Denetleme Periyodları *@
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AuditPeriod" ? "active" : "")"
+                               href="/AuditPeriod/Index">
+                                <i class="fas fa-calendar-check mr-2"></i> Denetleme Periyodları
+                            </a>
+
+                            @* Birim Tanımları *@
+                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Units" ? "active" : "")"
+                               href="/Units/Index">
+                                <i class="fas fa-layer-group mr-2"></i> Birim Tanımları
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+
+
+
                 <div class="nav-item">
                     <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTorba">
                         <i class="fas fa-shopping-bag"></i> <span>Torba Tanımları</span>

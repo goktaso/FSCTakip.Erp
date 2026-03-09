@@ -10,7 +10,10 @@ namespace FSCTakip.Core.Entities
 
         public string ProductCode { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
-        public string Unit { get; set; } = "ADET";
+        public int UnitId { get; set; } // Veritabanında ID tutacak
+
+        [ForeignKey("UnitId")]
+        public virtual Unit Unit { get; set; } // İlişkisel nesne (Name özelliğine buradan erişeceğiz)
 
         public int? FscTypeId { get; set; }
         public virtual FscType? FscType { get; set; }

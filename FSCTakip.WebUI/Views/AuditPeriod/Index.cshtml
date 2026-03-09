@@ -1,0 +1,199 @@
+﻿@model IEnumerable<FSCTakip.Core.Entities.AuditPeriod>
+@{
+    ViewData["Title"] = "Denetim Dönemleri";
+}
+
+@* 1. Filtre Paneli *@
+<div id="filterPanel" class="card mb-3 shadow-sm" style="display:none; border-left: 5px solid #f39c12;">
+    <div class="card-body text-center py-4">
+        <div class="d-flex justify-content-center gap-3">
+            <input type="number" id="yearSearch" class="form-control w-25" placeholder="Yıl Ara (Örn: 2026)">
+            <button class="btn btn-warning text-white px-4" onclick="filterTable()">Listele</button>
+        </div>
+    </div>
+</div>
+
+@* 2. Liste Tablosu *@
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3">
+        <h6 class="m-0 font-weight-bold text-secondary"><i class="fas fa-calendar-check mr-2"></i> Denetim Periyotları</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="mainTable">
+                <thead class="bg-light text-muted text-uppercase small">
+                    <tr>
+                        <th style="width: 70px;">ID</th>
+                        <th>YIL</th>
+                        <th>BAŞLANGIÇ</th>
+                        <th>BİTİŞ</th>
+                        <th>AÇIKLAMA</th>
+                        <th style="width: 150px;">DURUM</th>
+                        <th style="width: 120px;" class="text-center">İŞLEMLER</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="text-danger small font-weight-bold">#@item.Id</td>
+                            <td><span class="badge badge-primary px-3">@item.Year</span></td>
+                            <td>@item.StartDate.ToShortDateString()</td>
+                            <td>@item.EndDate.ToShortDateString()</td>
+                            <td class="text-muted small">@item.Description</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="custom-control custom-switch mr-2">
+                                        <input type="checkbox" class="custom-control-input" id="switch_@item.Id"
+                                               @(item.IsActive ? "checked" : "") onchange="toggleStatus(@item.Id)">
+                                        <label class="custom-control-label" for="switch_@item.Id"></label>
+                                    </div>
+                                    <span id="badge_@item.Id" class="badge @(item.IsActive ? "badge-success" : "badge-danger") px-2">
+                                        @(item.IsActive ? "Aktif" : "Pasif")
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary mr-1" onclick="editPeriod(@item.Id)"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deletePeriod(@item.Id)"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* 3. Kayıt/Düzenleme Modalı *@
+<div class="modal fade" id="periodModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title font-weight-bold">Denetim Dönemi Tanımı</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form asp-action="Save" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="periodId" value="0" />
+                    <div class="row">
+                        <div class="col-md-12 form-group">
+                            <label class="small font-weight-bold text-uppercase">Denetim Yılı</label>
+                            <input type="number" name="Year" id="periodYear" class="form-control" required value="@DateTime.Now.Year">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold text-uppercase">Başlangıç Tarihi</label>
+                            <input type="date" name="StartDate" id="periodStartDate" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold text-uppercase">Bitiş Tarihi</label>
+                            <input type="date" name="EndDate" id="periodEndDate" class="form-control" required>
+                        </div>
+                        <div class="col-md-12 form-group">
+                            <label class="small font-weight-bold text-uppercase">Açıklama</label>
+                            <textarea name="Description" id="periodDescription" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary shadow-sm" data-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-success shadow-sm px-4"><i class="fas fa-save mr-1"></i> Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Layout "Yeni Ekle" Buton Bağlantısı
+            $(".btn-add").off("click").removeAttr("onclick").on("click", function() { openNewModal(); });
+            $(".btn-filter-toggle").on("click", function() { $('#filterPanel').slideToggle(); });
+        });
+
+        function openNewModal() {
+            $('#periodId').val(0);
+            $('#periodDescription').val('');
+            $('#periodModal').modal('show');
+        }
+
+        function editPeriod(id) {
+            $.get("/AuditPeriod/GetPeriod/" + id, function(res) {
+                if(res.success) {
+                    $('#periodId').val(res.id);
+                    $('#periodYear').val(res.year);
+                    $('#periodStartDate').val(res.startDate);
+                    $('#periodEndDate').val(res.endDate);
+                    $('#periodDescription').val(res.description);
+                    $('#periodModal').modal('show');
+                }
+            });
+        }
+
+        function toggleStatus(id) {
+            $.post("/AuditPeriod/ToggleStatus/" + id, function(res) {
+                if(res.success) {
+                    var badge = $("#badge_" + id);
+                    if(res.isActive) {
+                        badge.text("Aktif").removeClass("badge-danger").addClass("badge-success");
+                    } else {
+                        badge.text("Pasif").removeClass("badge-success").addClass("badge-danger");
+                    }
+                }
+            });
+        }
+
+        function deletePeriod(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu denetim dönemi kalıcı olarak silinecektir!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Evet, Sil!',
+                cancelButtonText: 'Vazgeç',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post("/AuditPeriod/Delete/" + id, function (res) {
+                        if (res.success) {
+                            Swal.fire({ title: 'Silindi!', icon: 'success', timer: 1000, showConfirmButton: false }).then(() => { location.reload(); });
+                        }
+                    });
+                }
+            });
+        }
+
+        function filterTable() {
+            var val = $("#yearSearch").val().toUpperCase();
+            $("#mainTable tbody tr").each(function() {
+                $(this).toggle($(this).text().toUpperCase().indexOf(val) > -1);
+            });
+        }
+    </script>
+
+    <style>
+        .custom-switch .custom-control-label::before {
+            height: 1.5rem;
+            width: 2.5rem;
+            border-radius: 1rem;
+        }
+
+        .custom-switch .custom-control-label::after {
+            width: calc(1.5rem - 4px);
+            height: calc(1.5rem - 4px);
+            border-radius: 1rem;
+            top: calc(0.25rem + 2px);
+        }
+
+        .custom-switch .custom-control-input:checked ~ .custom-control-label::after {
+            transform: translateX(1rem);
+        }
+
+        .gap-3 {
+            gap: 1rem;
+        }
+    </style>
+}
