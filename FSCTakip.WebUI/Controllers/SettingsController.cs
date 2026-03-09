@@ -1,62 +1,86 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using FSCTakip.DataAccess.Data; // AppDbContext'in bulunduğu namespace (Kendi projene göre kontrol et)
+using FSCTakip.Core.Entities;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore; // AnyAsync ve SaveChangesAsync için gerekli
 
 namespace FSC_ERP.Controllers
 {
     public class SettingsController : Controller
     {
-        // --- ÜRETİM TANIMLARI ---
+        // 1. ADIM: DbContext Tanımlama
+        private readonly AppDbContext _context;
 
-        public IActionResult Machines()
+        public SettingsController(AppDbContext context)
         {
-            ViewData["Title"] = "Makine Tanımlamaları";
-            return View();
+            _context = context;
         }
 
-        public IActionResult ProductGroups()
-        {
-            ViewData["Title"] = "Ürün Grupları";
-            return View();
-        }
+        // --- View Actionları ---
+        public IActionResult Machines() { ViewData["Title"] = "Makine Tanımlamaları"; return View(); }
+        public IActionResult ProductGroups() { ViewData["Title"] = "Ürün Grupları"; return View(); }
+        public IActionResult BagTypes() { ViewData["Title"] = "Torba Tipleri"; return View(); }
+        public IActionResult PaperTypes() { ViewData["Title"] = "Kağıt Tipleri"; return View(); }
+        public IActionResult PaperColors() { ViewData["Title"] = "Kağıt Renkleri"; return View(); }
+        public IActionResult FscTypes() { ViewData["Title"] = "FSC Sertifika Tipleri"; return View(); }
+        public IActionResult BobinEnleri() { ViewData["Title"] = "Bobin En Tanımları"; return View(); }
+        public IActionResult Grammages() { ViewData["Title"] = "Gramaj Tanımları"; return View(); }
 
-        public IActionResult BagTypes()
-        {
-            ViewData["Title"] = "Torba Tipleri";
-            return View();
-        }
 
-        // --- KAĞIT VE SERTİFİKA AYARLARI ---
-
-        public IActionResult PaperTypes()
+        // 2. ADIM: Dinamik QuickSave Metodu
+        [HttpPost]
+        public async Task<IActionResult> QuickSave(string name, string type)
         {
-            ViewData["Title"] = "Kağıt Tipleri";
-            return View();
-        }
+            try
+            {
+                if (string.IsNullOrEmpty(name))
+                    return Json(new { success = false, message = "Ad alanı boş olamaz." });
 
-        public IActionResult PaperColors()
-        {
-            ViewData["Title"] = "Kağıt Renkleri";
-            return View();
-        }
+                name = name.Trim().ToUpper();
+                object? entity = null;
 
-        // YENİ: FSC Sertifika Tipleri (100%, Mix, vb.)
-        public IActionResult FscTypes()
-        {
-            ViewData["Title"] = "FSC Sertifika Tipleri";
-            return View();
-        }
+                // Gelen 'type' parametresine göre ilgili tabloya kayıt atıyoruz
+                switch (type)
+                {
+                    case "PaperColor":
+                        if (await _context.PaperColors.AnyAsync(x => x.Name == name))
+                            return Json(new { success = false, message = "Bu renk zaten mevcut." });
+                        entity = new PaperColor { Name = name, IsActive = true };
+                        _context.PaperColors.Add((PaperColor)entity);
+                        break;
 
-        // YENİ: Bobin En Tanımları (mm bazlı)
-        public IActionResult BobinEnleri()
-        {
-            ViewData["Title"] = "Bobin En Tanımları";
-            return View();
-        }
+                    case "PaperType":
+                        entity = new PaperType { Name = name, IsActive = true };
+                        _context.PaperTypes.Add((PaperType)entity);
+                        break;
 
-        // YENİ: Gramaj Tanımları
-        public IActionResult Grammages()
-        {
-            ViewData["Title"] = "Gramaj Tanımları";
-            return View();
+                    case "Unit":
+                        entity = new Unit { Name = name, IsActive = true };
+                        _context.Units.Add((Unit)entity);
+                        break;
+
+                    case "ProductGroup":
+                        entity = new ProductGroup { GroupName = name, IsActive = true };
+                        _context.ProductGroups.Add((ProductGroup)entity);
+                        break;
+
+                    // İhtiyacın olan diğer caseleri buraya ekleyebilirsin (Supplier, FscType vb.)
+
+                    default:
+                        return Json(new { success = false, message = "Geçersiz tip: " + type });
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Reflection kullanarak eklenen entity'nin ID'sini alıyoruz
+                var idProperty = entity.GetType().GetProperty("Id");
+                int newId = (int)(idProperty?.GetValue(entity) ?? 0);
+
+                return Json(new { success = true, id = newId });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
     }
 }

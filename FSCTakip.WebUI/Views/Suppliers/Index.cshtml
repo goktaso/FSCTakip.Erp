@@ -1,36 +1,35 @@
 @model IEnumerable<FSCTakip.Core.Entities.Supplier>
 @{
-    ViewData["Title"] = "Tedarikçi Yönetimi";
+    ViewData["Title"] = "Tedarikçi Tanımları";
 }
 
-@* --- ÜST PANEL --- *@
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-truck mr-2 text-primary"></i>Tedarikçi Listesi</h5>
-    <div>
-        <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
-            <i class="fas fa-filter"></i> Filtrele
+@* Üst Aksiyon Çubuğu *@
+<div class="row mb-3 align-items-center">
+    <div class="col-md-6">
+        <h4 class="mb-0 font-weight-bold text-primary text-uppercase">Tedarikçi Listesi</h4>
+    </div>
+    <div class="col-md-6 text-right">
+        <button class="btn btn-outline-secondary btn-sm" onclick="$('#filterPanel').slideToggle()">
+            <i class="fas fa-filter mr-1"></i> Filtrele
         </button>
-        <button class="btn btn-sm btn-outline-success" onclick="location.href='@Url.Action("ExportSuppliers", "Suppliers")'">
-            <i class="fas fa-file-excel"></i> Excel
+        <button class="btn btn-outline-success btn-sm ml-1" onclick="exportToExcel()">
+            <i class="fas fa-file-excel mr-1"></i> Excel
         </button>
-        <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
-            <i class="fas fa-print"></i> Yazdır
-        </button>
-        <button class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
-            <i class="fas fa-plus"></i> Yeni Tedarikçi Ekle
+        <button class="btn btn-primary btn-sm ml-1" onclick="openAddModal()">
+            <i class="fas fa-plus mr-1"></i> Yeni Tedarikçi
         </button>
     </div>
 </div>
 
-@* --- FİLTRELEME PANELİ --- *@
+@* Filtre Paneli *@
 <div id="filterPanel" class="card mb-3 shadow-sm border-left-primary" style="display:none;">
     <div class="card-body py-3">
         <div class="row align-items-end">
-            <div class="col-md-9">
+            <div class="col-md-4">
                 <label class="small font-weight-bold text-uppercase">Tedarikçi Ara</label>
-                <input type="text" id="supplierSearch" class="form-control form-control-sm" placeholder="İsim, Kod veya FSC No ile arayın...">
+                <input type="text" id="supplierSearch" class="form-control form-control-sm" placeholder="İsim veya kod yazın...">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <button class="btn btn-primary btn-sm btn-block" onclick="filterSuppliers()">
                     <i class="fas fa-search mr-1"></i> Sorgula
                 </button>
@@ -39,54 +38,40 @@
     </div>
 </div>
 
-@* --- TABLO ALANI --- *@
+@* Tablo *@
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="suppliersTable">
                 <thead class="bg-light text-dark text-uppercase small font-weight-bold">
                     <tr>
+                        <th>Tedarikçi Kodu</th>
                         <th>Tedarikçi Adı</th>
-                        <th>Kod</th>
-                        <th>İletişim (Yetkili / Tel / Mail)</th> @* Başlık güncellendi *@
-                        <th>FSC No / Geçerlilik</th>
-                        <th class="text-center">Durum</th>
-                        <th class="text-right" style="width: 130px;">İşlemler</th>
+                        <th>Yetkili</th>
+                        <th>Telefon</th>
+                        <th>FSC Kodu</th>
+                        <th style="width: 100px;">Durum</th>
+                        <th class="text-right" style="width: 80px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model)
                     {
                         <tr>
-                            <td><strong class="text-primary text-uppercase">@item.Name</strong></td>
-                            <td><small class="badge badge-light border">@item.SupplierCode</small></td>
+                            <td><span class="badge badge-light border">@item.SupplierCode</span></td>
+                            <td class="font-weight-bold">@item.Name</td>
+                            <td>@item.ContactPerson</td>
+                            <td>@item.Phone</td>
+                            <td><small class="text-muted">@item.FscCode</small></td>
                             <td>
-                                <small class="font-weight-bold">@item.ContactPerson</small><br />
-                                <small class="text-muted">@item.Phone</small><br />
-                                @* Mail adresi eklendi ve küçük harf zorunluluğu getirildi *@
-                                <small class="text-info" style="text-transform: lowercase !important;">@(item.Email ?? "-")</small>
-                            </td>
-                            <td>
-                                <span class="badge badge-info">@item.FscCode</span> <br />
-                                <small class="text-muted">@item.FscExpiryDate?.ToString("dd.MM.yyyy")</small>
-                            </td>
-                            <td class="text-center">
                                 <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="status_@item.Id"
-                                           @(item.IsActive ? "checked" : "") onchange="toggleSupplierStatus(@item.Id)">
-                                    <label class="custom-control-label" for="status_@item.Id">
-                                        <span id="badge_@item.Id" class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
-                                            @(item.IsActive ? "Aktif" : "Pasif")
-                                        </span>
-                                    </label>
+                                    <input type="checkbox" class="custom-control-input" id="sw_@item.Id" @(item.IsActive ? "checked" : "") onclick="toggleStatus(@item.Id)">
+                                    <label class="custom-control-label" for="sw_@item.Id">@(item.IsActive ? "Aktif" : "Pasif")</label>
                                 </div>
                             </td>
                             <td class="text-right">
-                                <button class="btn btn-sm btn-outline-primary mr-1" onclick="editSupplier(@item.Id)">
+                                <button class="btn btn-sm btn-outline-primary" onclick="editSupplier(@item.Id)">
                                     <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteSupplier(@item.Id)">
-                                    <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
@@ -97,56 +82,69 @@
     </div>
 </div>
 
-@* --- MODAL --- *@
+@* TEDARİKÇİ MODALI *@
 <div class="modal fade" id="supplierModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-secondary text-white">
+            <div class="modal-header bg-secondary text-white py-2">
                 <h6 class="modal-title font-weight-bold"><i class="fas fa-truck mr-2"></i>Tedarikçi Formu</h6>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
             <form asp-controller="Suppliers" asp-action="Save" method="post">
                 <div class="modal-body">
-                    <input type="hidden" name="Id" id="suppId" value="0" />
+                    <input type="hidden" name="Id" id="supplierId" value="0" />
+
                     <div class="row">
-                        <div class="col-md-8 form-group">
-                            <label class="small font-weight-bold text-uppercase">Tedarikçi Ünvanı <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control text-uppercase" name="Name" id="suppName" required>
-                        </div>
-                        <div class="col-md-4 form-group">
-                            <label class="small font-weight-bold text-uppercase">Tedarikçi Kodu</label>
-                            <input type="text" class="form-control" name="SupplierCode" id="suppCode" readonly placeholder="Otomatik">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Tedarikçi Adı <span class="text-danger">*</span></label>
+                                <input type="text" name="Name" id="supplierName" class="form-control text-uppercase" required />
+                            </div>
                         </div>
                     </div>
+
                     <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold text-uppercase">Yetkili Kişi <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="ContactPerson" id="suppContact" required>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Yetkili Kişi</label>
+                                <input type="text" name="ContactPerson" id="contactPerson" class="form-control" />
+                            </div>
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold text-uppercase">Telefon <span class="text-danger">*</span></label>
-                            <input type="tel" class="form-control" name="Phone" id="suppPhone" placeholder="Sadece Rakam" required>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Telefon</label>
+                                <input type="text" name="Phone" id="phone" class="form-control" />
+                            </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="small font-weight-bold text-uppercase">E-Posta</label>
-                        @* style="text-transform: lowercase;" ile görsel kontrol sağlandı *@
-                        <input type="text" class="form-control" name="Email" id="suppEmail" placeholder="orn@mail.com" style="text-transform: lowercase;">
-                    </div>
-                    <div class="row bg-light p-2 mt-2 border-radius">
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold text-uppercase">FSC Sertifika No</label>
-                            <input type="text" class="form-control" name="FscCode" id="suppFsc">
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">E-Posta</label>
+                                <input type="email" name="Email" id="email" class="form-control" />
+                            </div>
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold text-uppercase">Sertifika Bitiş Tarihi</label>
-                            <input type="date" class="form-control" name="FscExpiryDate" id="suppDate">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">FSC Sertifika No</label>
+                                <input type="text" name="FscCode" id="fscCode" class="form-control text-uppercase" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">FSC Geçerlilik Tarihi</label>
+                                <input type="date" name="FscExpiryDate" id="fscExpiryDate" class="form-control" />
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-light p-2">
-                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
-                    <button type="submit" class="btn btn-secondary btn-sm px-4 text-white">Kaydet</button>
+                <div class="modal-footer bg-light py-2 text-right">
+                    <button type="button" class="btn btn-link btn-sm text-dark" data-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -155,68 +153,46 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function () {
-            // E-posta: Türkçe karakter düzeltme ve otomatik küçültme [cite: 2026-03-04]
-            $('#suppEmail').on('input blur', function () {
-                let val = $(this).val()
-                    .replace(/İ/g, 'i')
-                    .replace(/I/g, 'ı')
-                    .replace(/\s/g, '') // Boşlukları siler
-                    .toLowerCase();
-                $(this).val(val);
-            });
-
-            // Telefon: Sadece rakama izin ver (Maks 11 hane)
-            $('#suppPhone').on('input', function () {
-                this.value = this.value.replace(/\D/g, '').slice(0, 11);
-            });
-        });
-
-        function filterSuppliers() {
-            var value = $("#supplierSearch").val().toLowerCase();
-            $("#suppliersTable tbody tr").filter(function () {
-                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
-            });
-        }
-
         function openAddModal() {
-            $('#suppId').val(0);
-            $('#suppName').val('');
-            $('#suppCode').val('');
-            $('#suppContact').val('');
-            $('#suppPhone').val('');
-            $('#suppEmail').val('');
-            $('#suppFsc').val('');
-            $('#suppDate').val('');
+            $('#supplierId').val(0);
+            $('form')[0].reset();
             $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Tedarikçi Ekle');
             $('#supplierModal').modal('show');
         }
 
         function editSupplier(id) {
-            $.get('/Suppliers/GetSupplier/' + id, function (res) {
-                if (res.success) {
-                    $('#suppId').val(res.data.id);
-                    $('#suppName').val(res.data.name);
-                    $('#suppCode').val(res.data.supplierCode);
-                    $('#suppContact').val(res.data.contactPerson);
-                    $('#suppPhone').val(res.data.phone);
-                    $('#suppEmail').val(res.data.email);
-                    $('#suppFsc').val(res.data.fscCode);
-                    if (res.data.fscExpiryDate) $('#suppDate').val(res.data.fscExpiryDate.split('T')[0]);
+            $.get('/Suppliers/GetSupplier', { id: id }, function(data) {
+                if (data.success) {
+                    $('#supplierId').val(data.id);
+                    $('#supplierName').val(data.name);
+                    $('#contactPerson').val(data.contactPerson);
+                    $('#phone').val(data.phone);
+                    $('#email').val(data.email);
+                    $('#fscCode').val(data.fscCode);
+                    $('#fscExpiryDate').val(data.fscExpiryDate);
+
                     $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Tedarikçi Düzenle');
                     $('#supplierModal').modal('show');
                 }
             });
         }
 
-        function toggleSupplierStatus(id) {
-            $.post('/Suppliers/ToggleStatus', { id: id }, function (res) {
+        function toggleStatus(id) {
+            $.post('/Suppliers/ToggleStatus', { id: id }, function(res) {
                 if (res.success) {
-                    const badge = $(`#badge_${id}`);
-                    res.isActive ? badge.removeClass('badge-secondary').addClass('badge-success').text('Aktif')
-                                 : badge.removeClass('badge-success').addClass('badge-secondary').text('Pasif');
+                    const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1000 });
+                    toast.fire({ icon: 'success', title: 'Güncellendi' });
                 }
             });
         }
+
+        function filterSuppliers() {
+            var val = $("#supplierSearch").val().toLowerCase();
+            $("#suppliersTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1);
+            });
+        }
+
+        function exportToExcel() { window.location.href = '/Suppliers/ExportExcel'; }
     </script>
 }

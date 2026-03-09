@@ -16,20 +16,28 @@ namespace FSC_ERP.Controllers
         {
             var item = await _context.Suppliers.FindAsync(id);
             if (item == null) return Json(new { success = false });
-            return Json(new { success = true, data = item });
+
+            // View tarafındaki JS doğrudan 'data.id' beklediği için nesneyi düzeltiyoruz
+            return Json(new
+            {
+                success = true,
+                id = item.Id,
+                name = item.Name,
+                contactPerson = item.ContactPerson,
+                phone = item.Phone,
+                email = item.Email,
+                fscCode = item.FscCode,
+                fscExpiryDate = item.FscExpiryDate?.ToString("yyyy-MM-dd") // HTML date input uyumu
+            });
         }
 
         [HttpPost]
         public async Task<IActionResult> Save(Supplier model)
         {
-            // --- Veri Temizleme ve Formatlama ---
             if (!string.IsNullOrEmpty(model.Email))
                 model.Email = model.Email.Trim().ToLowerInvariant();
 
-            if (!string.IsNullOrEmpty(model.Phone))
-                model.Phone = new string(model.Phone.Where(char.IsDigit).ToArray());
-
-            if (model.Id == 0) // Yeni Kayıt
+            if (model.Id == 0)
             {
                 var count = await _context.Suppliers.CountAsync();
                 model.SupplierCode = $"TED-{(count + 1):D3}";
@@ -37,7 +45,7 @@ namespace FSC_ERP.Controllers
                 model.IsActive = true;
                 _context.Suppliers.Add(model);
             }
-            else // Güncelleme
+            else
             {
                 var existing = await _context.Suppliers.FindAsync(model.Id);
                 if (existing != null)

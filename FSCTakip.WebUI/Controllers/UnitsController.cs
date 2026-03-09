@@ -92,5 +92,21 @@ namespace FSC_ERP.Controllers
 
             return ExportToExcel(data, "BirimListesi");
         }
+
+        [HttpPost]
+        public async Task<IActionResult> QuickSave(string name)
+        {
+            try
+            {
+                var entity = new Unit { Name = name.ToUpper(), IsActive = true }; // Unit yerine ilgili sınıf
+                _context.Units.Add(entity);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, id = entity.Id });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

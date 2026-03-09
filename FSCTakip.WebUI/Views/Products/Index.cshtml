@@ -5,15 +5,14 @@
     var fscTypes = ViewData["FscTypes"] as SelectList ?? new SelectList(new List<SelectListItem>());
     var paperTypes = ViewData["PaperTypes"] as SelectList ?? new SelectList(new List<SelectListItem>());
     var paperColors = ViewData["PaperColors"] as SelectList ?? new SelectList(new List<SelectListItem>());
-
-    // GÜNCELLENDİ: Birim Listesi ve Diğerleri
     var units = ViewData["Units"] as SelectList ?? new SelectList(new List<SelectListItem>());
     var paperWeights = ViewData["PaperWeights"] as SelectList ?? new SelectList(new List<SelectListItem>());
     var paperWidths = ViewData["PaperWidths"] as SelectList ?? new SelectList(new List<SelectListItem>());
     var suppliers = ViewData["Suppliers"] as SelectList ?? new SelectList(new List<SelectListItem>());
+    var bagTypes = ViewData["BagTypes"] as SelectList ?? new SelectList(new List<SelectListItem>());
 }
 
-@* Üst Aksiyon Çubuğu *@
+@* Üst Aksiyon Çubuğu - Standart Format *@
 <div class="row mb-3 align-items-center">
     <div class="col-md-6">
         <h4 class="mb-0 font-weight-bold text-primary text-uppercase">Ürün Listesi</h4>
@@ -62,7 +61,7 @@
                         <th>Renk</th>
                         <th>Gr.</th>
                         <th>En</th>
-                        <th>Birim</th> @* GÜNCELLENDİ *@
+                        <th>Birim</th>
                         <th>FSC Tipi</th>
                         <th style="width: 100px;">Durum</th>
                         <th class="text-right" style="width: 80px;">İşlemler</th>
@@ -81,7 +80,7 @@
                                 <td>@(item.PaperColor?.Name ?? "-")</td>
                                 <td>@(item.PaperWeight != null ? $"{item.PaperWeight.Value} {item.PaperWeight.Unit}" : "-")</td>
                                 <td>@(item.PaperWidth != null ? $"{item.PaperWidth.Value} {item.PaperWidth.Unit}" : "-")</td>
-                                <td><span class="badge badge-info py-1 px-2">@(item.Unit?.Name ?? "-")</span></td> @* GÜNCELLENDİ: İlişkisel Birim *@
+                                <td><span class="badge badge-info py-1 px-2">@(item.Unit?.Name ?? "-")</span></td>
                                 <td><small>@(item.FscType?.Name ?? "-")</small></td>
                                 <td>
                                     <div class="custom-control custom-switch">
@@ -90,7 +89,7 @@
                                     </div>
                                 </td>
                                 <td class="text-right">
-                                    <button class="btn btn-sm btn-outline-primary" onclick="editProduct(@item.Id)" title="Düzenle">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editProduct(@item.Id)">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                 </td>
@@ -103,12 +102,12 @@
     </div>
 </div>
 
-@* Ürün Form Modalı *@
+@* ANA ÜRÜN MODALI (image_e86318.png tabanlı) *@
 <div class="modal fade" id="productModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title font-weight-bold"><i class="fas fa-box mr-2"></i>Ürün Formu</h5>
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-plus mr-2"></i>Yeni Ürün Ekle</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
             <form asp-controller="Products" asp-action="Save" method="post">
@@ -119,25 +118,38 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="small font-weight-bold">Ürün Grubu <span class="text-danger">*</span></label>
-                                <select name="ProductGroupId" id="productGroupId" class="form-control" required>
-                                    <option value="">-- Seçiniz --</option>
-                                    @foreach (var g in productGroups)
-                                    {
-                                        <option value="@g.Value">@g.Text</option>
-                                    }
-                                </select>
+                                <div class="input-group">
+                                    <select name="ProductGroupId" id="productGroupId" class="form-control" required>
+                                        <option value="">-- Seçiniz --</option>
+                                        @foreach (var g in productGroups)
+                                        {
+                                            <option value="@g.Value">@g.Text</option>
+                                        }
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-primary" type="button" onclick="openProductGroupModal()"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="small font-weight-bold">Tedarikçi</label>
-                                <select name="SupplierId" id="supplierId" class="form-control">
-                                    <option value="">-- Tedarikçi Seçiniz --</option>
-                                    @foreach (var s in suppliers)
-                                    {
-                                        <option value="@s.Value">@s.Text</option>
-                                    }
-                                </select>
+
+                                <div class="input-group">
+                                    <select name="SupplierId" id="supplierId" class="form-control">
+                                        <option value="">-- Tedarikçi Seçiniz --</option>
+                                        @foreach (var s in suppliers)
+                                        {
+                                            <option value="@s.Value">@s.Text</option>
+                                        }
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-primary" type="button" onclick="openQuickSupplierModal()">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -161,37 +173,52 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label class="small font-weight-bold">Kağıt Rengi</label>
-                                <select name="PaperColorId" id="paperColorId" class="form-control">
-                                    <option value="">-- Seçiniz --</option>
-                                    @foreach (var c in paperColors)
-                                    {
-                                        <option value="@c.Value">@c.Text</option>
-                                    }
-                                </select>
+                                <div class="input-group">
+                                    <select name="PaperColorId" id="paperColorId" class="form-control">
+                                        <option value="">-- Seçiniz --</option>
+                                        @foreach (var c in paperColors)
+                                        {
+                                            <option value="@c.Value">@c.Text</option>
+                                        }
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-primary" type="button" onclick="quickAdd('PaperColor', 'Kağıt Rengi')"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label class="small font-weight-bold">Gramaj (gr) </label>
-                                <select name="PaperWeightId" id="paperWeightId" class="form-control">
-                                    <option value="">-- Seçiniz --</option>
-                                    @foreach (var w in paperWeights)
-                                    {
-                                        <option value="@w.Value">@w.Text</option>
-                                    }
-                                </select>
+                                <label class="small font-weight-bold">Gramaj (gr)</label>
+                                <div class="input-group">
+                                    <select name="PaperWeightId" id="paperWeightId" class="form-control">
+                                        <option value="">-- Seçiniz --</option>
+                                        @foreach (var w in paperWeights)
+                                        {
+                                            <option value="@w.Value">@w.Text</option>
+                                        }
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-primary" type="button" onclick="quickAdd('PaperWeight', 'Gramaj')"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label class="small font-weight-bold">En (cm) </label>
-                                <select name="PaperWidthId" id="paperWidthId" class="form-control">
-                                    <option value="">-- Seçiniz --</option>
-                                    @foreach (var w in paperWidths)
-                                    {
-                                        <option value="@w.Value">@w.Text</option>
-                                    }
-                                </select>
+                                <label class="small font-weight-bold">En (cm)</label>
+                                <div class="input-group">
+                                    <select name="PaperWidthId" id="paperWidthId" class="form-control">
+                                        <option value="">-- Seçiniz --</option>
+                                        @foreach (var w in paperWidths)
+                                        {
+                                            <option value="@w.Value">@w.Text</option>
+                                        }
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-primary" type="button" onclick="openPaperWidthModal()"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -200,67 +227,442 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label class="small font-weight-bold">Birim <span class="text-danger">*</span></label>
-                                @* GÜNCELLENDİ: Input Yerine Select *@
-                                <select name="UnitId" id="unitId" class="form-control" required>
-                                    <option value="">-- Birim Seçiniz --</option>
-                                    @foreach (var u in units)
-                                    {
-                                        <option value="@u.Value">@u.Text</option>
-                                    }
-                                </select>
+                                <div class="input-group">
+                                    <select name="UnitId" id="unitId" class="form-control" required>
+                                        <option value="">-- Birim Seçiniz --</option>
+                                        @foreach (var u in units)
+                                        {
+                                            <option value="@u.Value">@u.Text</option>
+                                        }
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-primary" type="button" onclick="quickAdd('Unit', 'Birim')"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label class="small font-weight-bold">FSC Tipi</label>
-                                <select name="FscTypeId" id="fscTypeId" class="form-control">
-                                    <option value="">-- Seçiniz --</option>
-                                    @foreach (var f in fscTypes)
-                                    {
-                                        <option value="@f.Value">@f.Text</option>
-                                    }
-                                </select>
+                                <div class="input-group">
+                                    <select name="FscTypeId" id="fscTypeId" class="form-control">
+                                        <option value="">-- Seçiniz --</option>
+                                        @foreach (var f in fscTypes)
+                                        {
+                                            <option value="@f.Value">@f.Text</option>
+                                        }
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-primary" type="button" onclick="quickAdd('FscType', 'FSC Tipi')"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label class="small font-weight-bold">Kağıt Tipi</label>
-                                <select name="PaperTypeId" id="paperTypeId" class="form-control">
-                                    <option value="">-- Seçiniz --</option>
-                                    @foreach (var p in paperTypes)
-                                    {
-                                        <option value="@p.Value">@p.Text</option>
-                                    }
-                                </select>
+                                <div class="input-group">
+                                    <select name="PaperTypeId" id="paperTypeId" class="form-control">
+                                        <option value="">-- Seçiniz --</option>
+                                        @foreach (var p in paperTypes)
+                                        {
+                                            <option value="@p.Value">@p.Text</option>
+                                        }
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-primary" type="button" onclick="$('#quickAddPaperTypeModal').modal('show')">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Mamul Seçilirse Açılan Alan *@
+                    <div class="row" id="bagTypeContainer" style="display:none;">
+                        <div class="col-md-12 mt-2">
+                            <div class="form-group border border-primary p-2 rounded">
+                                <label class="small font-weight-bold text-primary">Torba Tipi <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <select name="BagTypeId" id="bagTypeId" class="form-control">
+                                        <option value="">-- Torba Tipi Seçiniz --</option>
+                                        @foreach (var bt in bagTypes)
+                                        {
+                                            <option value="@bt.Value">@bt.Text</option>
+                                        }
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-primary" type="button" onclick="quickAdd('BagType', 'Torba Tipi')"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Vazgeç</button>
-                    <button type="submit" class="btn btn-primary btn-sm px-4">Kaydet</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-primary px-4">Kaydet</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+@* ÜRÜN GRUBU ÖZEL MODALI (image_e7eeef.png tabanlı) *@
+<div class="modal fade" id="quickAddProductGroupModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-secondary text-white py-2">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-plus mr-2"></i>Yeni Ürün Grubu</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="small font-weight-bold">Grup Adı <span class="text-danger">*</span></label>
+                    <input type="text" id="qpgName" class="form-control text-uppercase" placeholder="Örn: SAPLI KAĞIT ÇANTA" />
+                </div>
+                <div class="form-group">
+                    <label class="small font-weight-bold">Grup Kodu (Sıralama)</label>
+                    <input type="number" id="qpgCode" class="form-control" value="1" />
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="small font-weight-bold">Aralık Başlangıç</label>
+                            <input type="text" id="qpgStart" class="form-control" value="10000" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="small font-weight-bold">Aralık Bitiş</label>
+                            <input type="text" id="qpgEnd" class="form-control" value="19999" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer py-2 bg-light text-right">
+                <button type="button" class="btn btn-link btn-sm text-dark" data-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-secondary btn-sm px-4" onclick="saveQuickProductGroup()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ÜRÜN SAYFASI İÇİNDE ÇALIŞACAK HIZLI TEDARİKÇİ EKLEME MODALI *@
+<div class="modal fade" id="quickAddSupplierModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-secondary text-white py-2">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-truck mr-2"></i>Yeni Tedarikçi Tanımla</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="quickSupplierForm">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Tedarikçi Adı <span class="text-danger">*</span></label>
+                                <input type="text" name="Name" id="qs_Name" class="form-control text-uppercase" required />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Yetkili Kişi</label>
+                                <input type="text" name="ContactPerson" id="qs_Contact" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">Telefon</label>
+                                <input type="text" name="Phone" id="qs_Phone" class="form-control" placeholder="0xxx xxx xx xx" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">E-Posta</label>
+                                <input type="email" name="Email" id="qs_Email" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="small font-weight-bold">FSC No</label>
+                                <input type="text" name="FscCode" id="qs_Fsc" class="form-control text-uppercase" />
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-link btn-sm text-dark" data-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" onclick="saveQuickSupplierFromProduct()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+@* HIZLI KAĞIT TİPİ EKLEME MODALI *@
+<div class="modal fade" id="quickAddPaperTypeModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-secondary text-white py-2">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-scroll mr-2"></i>Yeni Kağıt Tipi</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="quickPaperTypeForm">
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Kağıt Tipi Adı <span class="text-danger">*</span></label>
+                        <input type="text" name="Name" id="qpt_Name" class="form-control text-uppercase" placeholder="Örn: Testliner" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Kısa Kod (ERP Kodu)</label>
+                        <input type="text" name="Code" id="qpt_Code" class="form-control text-uppercase" placeholder="Örn: TST" />
+                    </div>
+                    <div class="custom-control custom-switch mt-3">
+                        <input type="checkbox" class="custom-control-input" id="qpt_IsActive" name="IsActive" checked>
+                        <label class="custom-control-label font-weight-bold" for="qpt_IsActive">Aktif</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-link btn-sm text-dark" data-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" onclick="saveQuickPaperType()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+@* KAĞIT ENİ ÖZEL MODALI (image_e80158.png tabanlı) *@
+<div class="modal fade" id="quickAddPaperWidthModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-secondary text-white py-2">
+                <h6 class="modal-title font-weight-bold">Yeni En Tanımla</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="small font-weight-bold">Genişlik Değeri</label>
+                    <input type="number" id="qwValue" class="form-control" step="0.01" />
+                </div>
+                <div class="form-group">
+                    <label class="small font-weight-bold">Birim</label>
+                    <input type="text" id="qwUnit" class="form-control bg-light" value="mm" readonly />
+                </div>
+                <div class="form-group">
+                    <label class="small font-weight-bold">Kod</label>
+                    <input type="text" id="qwCode" class="form-control text-uppercase" />
+                </div>
+                <div class="custom-control custom-switch mt-2">
+                    <input type="checkbox" class="custom-control-input" id="qwActive" checked>
+                    <label class="custom-control-label small font-weight-bold" for="qwActive">Aktif</label>
+                </div>
+            </div>
+            <div class="modal-footer py-1 text-right">
+                <button type="button" class="btn btn-link btn-sm text-dark" data-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="saveQuickPaperWidth()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+@* HIZLI RENK EKLEME MODALI *@
+<div class="modal fade" id="quickAddColorModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-secondary text-white py-2">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-plus mr-2"></i>Yeni Renk Tanımla</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="quickColorForm">
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Renk Adı <span class="text-danger">*</span></label>
+                        <input type="text" name="Name" id="qc_Name" class="form-control text-uppercase" placeholder="Örn: Beyaz" required />
+                    </div>
+                    <div class="custom-control custom-switch mt-3">
+                        <input type="checkbox" class="custom-control-input" id="qc_IsActive" name="IsActive" checked>
+                        <label class="custom-control-label font-weight-bold" for="qc_IsActive">Aktif</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-link btn-sm text-dark" data-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" onclick="saveQuickColor()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* STANDART KÜÇÜK MODAL (Diğerleri için) *@
+<div class="modal fade" id="quickAddModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-info text-white py-2">
+                <h6 class="modal-title font-weight-bold" id="quickAddTitle">Yeni Ekle</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="quickAddType" />
+                <div class="form-group mb-0">
+                    <label class="small font-weight-bold">Tanım Adı</label>
+                    <input type="text" id="quickAddValue" class="form-control form-control-sm text-uppercase" autocomplete="off" />
+                </div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-info btn-sm" onclick="saveQuickAdd()">Ekle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
+        $(document).ready(function () {
+            $('#productGroupId').change(function () { checkBagTypeVisibility(); });
+        });
+
+        function checkBagTypeVisibility() {
+            var selectedText = $("#productGroupId option:selected").text().toUpperCase();
+            if (selectedText.includes("MAMUL")) {
+                $('#bagTypeContainer').slideDown();
+                $('#bagTypeId').attr('required', true);
+            } else {
+                $('#bagTypeContainer').slideUp();
+                $('#bagTypeId').val('').removeAttr('required');
+            }
+        }
+
+                function saveQuickPaperType() {
+            var name = $('#qpt_Name').val();
+            if (!name) {
+                Swal.fire('Hata', 'Kağıt Tipi Adı boş bırakılamaz.', 'warning');
+                return;
+            }
+
+            var formData = {
+                Name: name,
+                Code: $('#qpt_Code').val(),
+                IsActive: $('#qpt_IsActive').is(':checked'),
+                Type: 'PaperType' // Backend'deki Generic kaydetme metodunuz için
+            };
+
+            $.post('/Settings/QuickSave', formData, function (res) {
+                if (res.success) {
+                    // Yeni eklenen öğeyi dropdown'a ekle ve seçili yap
+                    $('#paperTypeId').append(new Option(name.toUpperCase(), res.id, true, true));
+                    $('#quickAddPaperTypeModal').modal('hide');
+                    $('#quickPaperTypeForm')[0].reset();
+                    Swal.fire({ icon: 'success', title: 'Kağıt Tipi Eklendi', timer: 1000, showConfirmButton: false });
+                } else {
+                    Swal.fire('Hata', 'Kayıt sırasında bir problem oluştu.', 'error');
+                }
+            });
+        }
+
         function openAddModal() {
             $('#productId').val(0);
-            $('#productGroupId').val('');
-            $('#supplierId').val('');
+            $('form')[0].reset();
             $('#productCode').val('');
-            $('#productName').val('');
-            $('#paperColorId').val('');
-            $('#paperWeightId').val('');
-            $('#paperWidthId').val('');
-            $('#unitId').val(''); // GÜNCELLENDİ
-            $('#fscTypeId').val('');
-            $('#paperTypeId').val('');
-            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Ürün Ekle');
+            $('#bagTypeContainer').hide();
+            $('.modal-title').first().html('<i class="fas fa-plus mr-2"></i>Yeni Ürün Ekle');
             $('#productModal').modal('show');
+        }
+
+        function openProductGroupModal() {
+            $('#qpgName').val('');
+            $('#qpgCode').val('1');
+            $('#qpgStart').val('10000');
+            $('#qpgEnd').val('19999');
+            $('#quickAddProductGroupModal').modal('show');
+        }
+
+        function saveQuickProductGroup() {
+            var data = {
+                GroupName: $('#qpgName').val(),
+                GroupCode: $('#qpgCode').val(),
+                RangeStart: $('#qpgStart').val(),
+                RangeEnd: $('#qpgEnd').val()
+            };
+
+            if (!data.GroupName) { Swal.fire('Hata', 'Grup adı zorunludur.', 'warning'); return; }
+
+            $.post('/Settings/QuickSaveProductGroup', data, function (res) {
+                if (res.success) {
+                    $('#productGroupId').append(new Option(data.GroupName.toUpperCase(), res.id, true, true));
+                    $('#quickAddProductGroupModal').modal('hide');
+                    checkBagTypeVisibility();
+                    Swal.fire({ icon: 'success', title: 'Eklendi', timer: 1000, showConfirmButton: false });
+                }
+            });
+        }
+
+        function openPaperWidthModal() { $('#qwValue, #qwCode').val(''); $('#quickAddPaperWidthModal').modal('show'); }
+
+        function saveQuickPaperWidth() {
+            var data = { value: $('#qwValue').val(), unit: $('#qwUnit').val(), code: $('#qwCode').val(), isActive: $('#qwActive').is(':checked') };
+            $.post('/Settings/QuickSavePaperWidth', data, function(res) {
+                if (res.success) {
+                    $('#paperWidthId').append(new Option(data.value + " " + data.unit, res.id, true, true));
+                    $('#quickAddPaperWidthModal').modal('hide');
+                }
+            });
+        }
+
+        function quickAdd(type, label) {
+            $('#quickAddType').val(type);
+            $('#quickAddValue').val('');
+            $('#quickAddTitle').text('Yeni ' + label + ' Ekle');
+            $('#quickAddModal').modal('show');
+        }
+
+        function saveQuickAdd() {
+            var name = $('#quickAddValue').val();
+            var type = $('#quickAddType').val();
+            $.post('/Settings/QuickSave', { name: name, type: type }, function (res) {
+                if (res.success) {
+                    var dropdownId = '#' + type.charAt(0).toLowerCase() + type.slice(1) + 'Id';
+                    $(dropdownId).append(new Option(name.toUpperCase(), res.id, true, true));
+                    $('#quickAddModal').modal('hide');
+                }
+            });
+        }
+
+                // Ürün modalındaki + butonuna basıldığında çalışır
+        // Not: Mevcut kodunuzdaki onclick="quickAdd('Supplier', 'Tedarikçi')" yerine
+        // Tedarikçi için özel olarak bu fonksiyonu tetiklemenizi öneririm:
+        function openQuickSupplierModal() {
+            $('#quickSupplierForm')[0].reset();
+            $('#quickAddSupplierModal').modal('show');
+        }
+
+        function saveQuickSupplierFromProduct() {
+            var name = $('#qs_Name').val();
+            if (!name) { Swal.fire('Uyarı', 'Tedarikçi adı boş olamaz.', 'warning'); return; }
+
+            var formData = $('#quickSupplierForm').serialize();
+
+            $.post('/Suppliers/Save', formData, function (res) {
+                // Suppliers/Save metodu RedirectToAction(Index) döndüğü için
+                // buraya genellikle HTML döner. Başarıyı kontrol etmek için:
+
+                $('#quickAddSupplierModal').modal('hide');
+
+                // Dropdown'ı güncellemek için sayfayı yenilemek en güvenli yoldur
+                // veya AJAX ile sadece dropdown listesini çekebilirsiniz.
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Tedarikçi Eklendi',
+                    text: 'Listeyi güncellemek için sayfa yenileniyor...',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            });
         }
 
         function editProduct(id) {
@@ -274,31 +676,22 @@
                     $('#paperColorId').val(data.paperColorId || '');
                     $('#paperWeightId').val(data.paperWeightId || '');
                     $('#paperWidthId').val(data.paperWidthId || '');
-                    $('#unitId').val(data.unitId || ''); // GÜNCELLENDİ: unit yerine unitId
+                    $('#unitId').val(data.unitId || '');
                     $('#fscTypeId').val(data.fscTypeId || '');
                     $('#paperTypeId').val(data.paperTypeId || '');
-                    $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Ürün Düzenle');
+                    $('#bagTypeId').val(data.bagTypeId || '');
+                    checkBagTypeVisibility();
+                    $('.modal-title').first().html('<i class="fas fa-edit mr-2"></i>Ürün Düzenle');
                     $('#productModal').modal('show');
                 }
             });
         }
 
-        function toggleProduct(id) {
-            $.post('/Products/ToggleStatus', { id: id }, function(res) {
-                if (res.success) {
-                    const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
-                    toast.fire({ icon: 'success', title: 'Güncellendi' });
-                }
-            });
-        }
-
+        function toggleStatus(id) { $.post('/Products/ToggleStatus', { id: id }); }
         function filterProducts() {
             var val = $("#productSearch").val().toLowerCase();
-            $("#productsTable tbody tr").filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1);
-            });
+            $("#productsTable tbody tr").filter(function() { $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1); });
         }
-
         function exportToExcel() { window.location.href = '/Products/ExportIndex'; }
     </script>
 }
