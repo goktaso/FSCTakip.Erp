@@ -493,9 +493,15 @@
         </div>
 
         <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Stock"?"active":"")" href="/Stock/Index">
+            <a class="nav-link-item @(ctrl=="Stock"&&action=="Index"?"active":"")" href="/Stock/Index">
                 <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
                 <span class="nav-label">Stok Durumu</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Stock"&&action=="Movements"?"active":"")" href="/Stock/Movements">
+                <span class="nav-icon"><i class="fas fa-exchange-alt"></i></span>
+                <span class="nav-label">Stok Hareketleri</span>
             </a>
         </div>
 

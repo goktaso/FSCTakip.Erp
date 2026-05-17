@@ -437,16 +437,20 @@
                 <span class="toc-num">15.</span> Sevkiyat / Kalemler
                 <span class="toc-badge done">✓</span>
             </a>
+            <a class="toc-item" href="#stok" onclick="scrollTo('stok')">
+                <span class="toc-num">16.</span> Stok Durumu
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#stok-hareketleri" onclick="scrollTo('stok-hareketleri')">
+                <span class="toc-num">17.</span> Stok Hareketleri
+                <span class="toc-badge done">✓</span>
+            </a>
 
             <div style="border-top:1px solid var(--border);margin:6px 0;"></div>
             <div style="padding:6px 16px;font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Yakında</div>
 
             <a class="toc-item" style="opacity:.5;pointer-events:none;">
-                <span class="toc-num">16.</span> Stok Durumu
-                <span class="toc-badge plan">—</span>
-            </a>
-            <a class="toc-item" style="opacity:.5;pointer-events:none;">
-                <span class="toc-num">17.</span> FSC Raporlar
+                <span class="toc-num">18.</span> FSC Raporlar
                 <span class="toc-badge plan">—</span>
             </a>
         </div>
@@ -462,7 +466,7 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>15 bölüm (Hammadde + Üretim + Satış dahil)</span>
+                <span>17 bölüm (Hammadde + Üretim + Satış + Stok dahil)</span>
             </div>
             <div class="guide-status-item">
                 <span class="toc-badge plan" style="float:none;">— Planlandı</span>
@@ -509,7 +513,9 @@
             'Üretim Detayı — Hammadde Tüketimi': 'uretim-detail',
             'Fire Raporu': 'fire',
             'Satış Siparişleri': 'satis',
-            'Satış Detayı — Kalem ve Sevkiyat': 'satis-detail'
+            'Satış Detayı — Kalem ve Sevkiyat': 'satis-detail',
+            'Stok Durumu': 'stok',
+            'Stok Hareketleri': 'stok-hareketleri'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {
@@ -924,6 +930,77 @@
           <tr><td class="gm-muted" style="font-size:11px;">PRD-003</td><td><strong style="font-size:12px;">KRAFT ÇUVALI 25KG</strong></td><td style="font-size:11px;">Kraft Torba</td><td style="font-size:11px;">KRAFT BROWN</td><td class="gm-muted">70g</td><td class="gm-muted">920mm</td><td style="font-size:11px;">V Kesim</td><td><span class="gm-badge green" style="font-size:9.5px;">FSC-MIX</span></td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+</div>`,
+
+        'stok': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary" style="background:linear-gradient(135deg,#0369a1,#0284c7);"><i class="fas fa-exchange-alt"></i> Depo Transferi</button>
+    <span class="gm-title">Stok Durumu</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(5,1fr);">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-boxes"></i></div><div><div class="gm-stat-val">12</div><div class="gm-stat-lbl">Ürün Çeşidi</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="gm-stat-val">9</div><div class="gm-stat-lbl">Stokta Var</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon red"><i class="fas fa-exclamation-triangle"></i></div><div><div class="gm-stat-val">3</div><div class="gm-stat-lbl">Stok Yok</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-arrow-down"></i></div><div><div class="gm-stat-val">142.500</div><div class="gm-stat-lbl">Toplam Giriş</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon purple"><i class="fas fa-arrow-up"></i></div><div><div class="gm-stat-val">98.200</div><div class="gm-stat-lbl">Toplam Çıkış</div></div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;gap:8px;align-items:center;">
+      <select class="gm-input" style="flex:1;"><option>— Ürün Grubu —</option></select>
+      <select class="gm-input" style="flex:2;"><option>— Ürün —</option></select>
+      <button class="gm-btn-primary" style="padding:4px 12px;font-size:11.5px;"><i class="fas fa-filter"></i> Filtrele</button>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>KOD</th><th>ÜRÜN ADI</th><th>GRUP</th><th style="text-align:right;">GİRİŞ</th><th style="text-align:right;">ÇIKIŞ</th><th style="text-align:right;">NET STOK</th><th>BİRİM</th><th>SON HAREKET</th><th>DURUM</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted" style="font-size:11px;">PRD-001</td><td><strong style="font-size:12px;">KRAFT ÇUVALI 50KG</strong></td><td style="font-size:11px;">Kraft Torba</td><td style="text-align:right;color:#16a34a;font-weight:600;">45.000</td><td style="text-align:right;color:#dc2626;font-weight:600;">28.500</td><td style="text-align:right;font-weight:700;">16.500</td><td class="gm-muted">Adet</td><td class="gm-muted">17.05.2026</td><td><span class="gm-badge green">Var</span></td></tr>
+          <tr><td class="gm-muted" style="font-size:11px;">PRD-002</td><td><strong style="font-size:12px;">VENTIL TORBA 25KG</strong></td><td style="font-size:11px;">Ventil Torba</td><td style="text-align:right;color:#16a34a;font-weight:600;">30.000</td><td style="text-align:right;color:#dc2626;font-weight:600;">22.000</td><td style="text-align:right;font-weight:700;">8.000</td><td class="gm-muted">Adet</td><td class="gm-muted">15.05.2026</td><td><span class="gm-badge green">Var</span></td></tr>
+          <tr><td class="gm-muted" style="font-size:11px;">PRD-005</td><td><strong style="font-size:12px;">KRAFT TORBA 10KG</strong></td><td style="font-size:11px;">Kraft Torba</td><td style="text-align:right;color:#16a34a;font-weight:600;">10.000</td><td style="text-align:right;color:#dc2626;font-weight:600;">10.000</td><td style="text-align:right;font-weight:700;color:#dc2626;">0</td><td class="gm-muted">Adet</td><td class="gm-muted">10.05.2026</td><td><span class="gm-badge" style="background:#fee2e2;color:#991b1b;">Yok</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'stok-hareketleri': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Stok Hareketleri</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <select class="gm-input" style="flex:2;min-width:120px;"><option>— Ürün —</option></select>
+      <select class="gm-input" style="flex:1;min-width:120px;"><option>— Hareket Tipi —</option></select>
+      <input class="gm-input" type="date" value="2026-05-01" style="flex:1;min-width:110px;" />
+      <input class="gm-input" type="date" value="2026-05-17" style="flex:1;min-width:110px;" />
+      <button class="gm-btn-primary" style="padding:4px 12px;font-size:11.5px;"><i class="fas fa-filter"></i> Filtrele</button>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>TARİH</th><th>BELGE NO</th><th>TİP</th><th>ÜRÜN</th><th style="text-align:right;">MİKTAR</th><th>BİRİM</th><th>MÜŞTERİ / AÇIKLAMA</th><th>İŞ EMRİ</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted">17.05.2026</td><td style="font-size:11.5px;font-weight:600;">SIP2026-047</td><td><span class="gm-badge" style="background:#fee2e2;color:#991b1b;">Satış</span></td><td style="font-size:11.5px;"><strong>KRAFT ÇUVALI 50KG</strong></td><td style="text-align:right;color:#dc2626;font-weight:600;">−5.000</td><td class="gm-muted">Adet</td><td style="font-size:11px;">CEMENT FACTORY A.Ş.</td><td><a style="color:#1d4ed8;font-size:11px;cursor:default;"><i class="fas fa-link"></i> IE-012</a></td></tr>
+          <tr><td class="gm-muted">15.05.2026</td><td style="font-size:11.5px;font-weight:600;">IE2026-012</td><td><span class="gm-badge" style="background:#dbeafe;color:#1e40af;">Üretim</span></td><td style="font-size:11.5px;"><strong>KRAFT ÇUVALI 50KG</strong></td><td style="text-align:right;color:#16a34a;font-weight:600;">+20.000</td><td class="gm-muted">Adet</td><td style="font-size:11px;">Üretimden depoya giriş</td><td><a style="color:#1d4ed8;font-size:11px;cursor:default;"><i class="fas fa-link"></i> IE-012</a></td></tr>
+          <tr><td class="gm-muted">10.05.2026</td><td style="font-size:11.5px;font-weight:600;">L2026-008</td><td><span class="gm-badge" style="background:#e0f2fe;color:#0369a1;">Satın Alma</span></td><td style="font-size:11.5px;"><strong>KRAFT KAĞIT 80GR</strong></td><td style="text-align:right;color:#16a34a;font-weight:600;">+50.000</td><td class="gm-muted">Kg</td><td style="font-size:11px;">ÖRNEK KAĞIT A.Ş.</td><td><span class="gm-muted">—</span></td></tr>
+          <tr><td class="gm-muted">08.05.2026</td><td style="font-size:11.5px;font-weight:600;">TRF2026-003</td><td><span class="gm-badge" style="background:#fef9c3;color:#854d0e;">Transfer</span></td><td style="font-size:11.5px;"><strong>VENTIL TORBA 25KG</strong></td><td style="text-align:right;font-weight:600;">2.500</td><td class="gm-muted">Adet</td><td style="font-size:11px;">Dep-01 → Dep-02</td><td><span class="gm-muted">—</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="border-top:1px solid #e5e7eb;padding:8px 14px;display:flex;justify-content:space-between;font-size:11.5px;color:#6b7280;">
+      <span>4 kayıt</span>
+      <span>Toplam Giriş: <strong style="color:#16a34a;">70.000</strong> &nbsp;|&nbsp; Toplam Çıkış: <strong style="color:#dc2626;">5.000</strong></span>
     </div>
   </div>
 </div>`,

@@ -1,8 +1,217 @@
+@model List<FSCTakip.WebUI.Controllers.StockSummaryRow>
+@using FSCTakip.Core.Entities
 @{
-    ViewData["Title"] = "Stok Yönetimi";
+    ViewData["Title"] = "Stok Durumu";
+    var groups     = ViewBag.ProductGroups as List<ProductGroup> ?? new();
+    var products   = ViewBag.Products      as List<Product>      ?? new();
+    var warehouses = ViewBag.Warehouses    as List<Warehouse>    ?? new();
+    int? selGroup  = ViewBag.ProductGroupId;
+    int? selProd   = ViewBag.ProductId;
 }
-<div class="card shadow-sm border-0 p-5 text-center">
-    <i class="fas fa-warehouse fa-4x text-muted mb-3"></i>
-    <h4 class="text-dark">Stok Yönetimi</h4>
-    <p class="text-muted">Bu modül yakında aktif olacaktır.</p>
+
+@section TopbarPrimary {
+    <button class="btn-topbar-add" data-bs-toggle="modal" data-bs-target="#transferModal">
+        <span class="btn-add-icon"><i class="fas fa-exchange-alt"></i></span>
+        Depo Transferi
+    </button>
+}
+
+<div class="page-header">
+    <h4 class="page-title"><i class="fas fa-warehouse me-2 text-primary"></i>Stok Durumu</h4>
 </div>
+
+<!-- Stat Cards -->
+<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-boxes"></i></div>
+        <div class="stat-info"><div class="stat-value">@Model.Count</div><div class="stat-label">Ürün Çeşidi</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info"><div class="stat-value">@ViewBag.InStock</div><div class="stat-label">Stokta Var</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="stat-info"><div class="stat-value">@ViewBag.ZeroStock</div><div class="stat-label">Stok Yok</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fas fa-arrow-down"></i></div>
+        <div class="stat-info"><div class="stat-value">@(((decimal)ViewBag.TotalIn).ToString("N0"))</div><div class="stat-label">Toplam Giriş</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-arrow-up"></i></div>
+        <div class="stat-info"><div class="stat-value">@(((decimal)ViewBag.TotalOut).ToString("N0"))</div><div class="stat-label">Toplam Çıkış</div></div>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="filter-card">
+    <form method="get" action="/Stock/Index" class="filter-form">
+        <select name="productGroupId" class="form-control form-control-sm">
+            <option value="">— Ürün Grubu —</option>
+            @foreach (var g in groups)
+            {
+                <option value="@g.Id" selected="@(selGroup == g.Id ? "selected" : null)">@g.GroupName</option>
+            }
+        </select>
+        <select name="productId" class="form-control form-control-sm">
+            <option value="">— Ürün —</option>
+            @foreach (var p in products)
+            {
+                <option value="@p.Id" selected="@(selProd == p.Id ? "selected" : null)">@p.ProductName</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Filtrele</button>
+        <a href="/Stock/Index" class="btn btn-outline-secondary btn-sm">Temizle</a>
+        <div class="ms-auto">
+            <a href="/Stock/ExportStock" class="btn btn-success btn-sm"><i class="fas fa-file-excel me-1"></i>Excel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ÜRÜN KODU</th>
+                    <th>ÜRÜN ADI</th>
+                    <th>GRUP</th>
+                    <th class="text-end">GİRİŞ</th>
+                    <th class="text-end">ÇIKIŞ</th>
+                    <th class="text-end">NET STOK</th>
+                    <th>BİRİM</th>
+                    <th>SON HAREKET</th>
+                    <th>DURUM</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="9" class="text-center text-muted py-4">Henüz stok hareketi bulunmuyor</td></tr>
+                }
+                @foreach (var row in Model)
+                {
+                    var net = row.NetAdet;
+                    string statusClass = net > 0 ? "badge-success" : "badge-danger";
+                    string statusText  = net > 0 ? "Var" : "Yok";
+                    <tr>
+                        <td class="text-muted small">@row.Product.ProductCode</td>
+                        <td><strong>@row.Product.ProductName</strong></td>
+                        <td class="small text-muted">@(row.Product.ProductGroup?.GroupName ?? "—")</td>
+                        <td class="text-end text-success fw-semibold">@row.GirisAdet.ToString("N0")</td>
+                        <td class="text-end text-danger fw-semibold">@row.CikisAdet.ToString("N0")</td>
+                        <td class="text-end fw-bold @(net <= 0 ? "text-danger" : "")">@net.ToString("N0")</td>
+                        <td class="small text-muted">@row.Product.Unit</td>
+                        <td class="small text-muted">@(row.LastMovementDate?.ToString("dd.MM.yyyy") ?? "—")</td>
+                        <td><span class="badge @statusClass">@statusText</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Transfer Modal -->
+<div class="modal fade" id="transferModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-exchange-alt me-2"></i>Depo Transferi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Ürün <span class="text-danger">*</span></label>
+                    <select id="tProductId" class="form-control">
+                        <option value="">— Seçiniz —</option>
+                        @foreach (var p in products)
+                        {
+                            <option value="@p.Id">@p.ProductName</option>
+                        }
+                    </select>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Çıkış Deposu</label>
+                        <select id="tFromWarehouse" class="form-control">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var w in warehouses)
+                            {
+                                <option value="@w.Id">@w.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Giriş Deposu</label>
+                        <select id="tToWarehouse" class="form-control">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var w in warehouses)
+                            {
+                                <option value="@w.Id">@w.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Miktar <span class="text-danger">*</span></label>
+                        <input type="number" id="tQuantity" class="form-control" min="0.001" step="any" placeholder="0" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Birim</label>
+                        <input type="text" id="tUnit" class="form-control" value="Adet" />
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Belge No</label>
+                        <input type="text" id="tDocNo" class="form-control" placeholder="Otomatik" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Tarih <span class="text-danger">*</span></label>
+                        <input type="date" id="tDate" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notlar</label>
+                    <textarea id="tNotes" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="saveTransfer()">
+                    <i class="fas fa-save me-1"></i>Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    async function saveTransfer() {
+        const productId = document.getElementById('tProductId').value;
+        const quantity  = document.getElementById('tQuantity').value;
+        const date      = document.getElementById('tDate').value;
+        if (!productId || !quantity || !date) {
+            alert('Ürün, miktar ve tarih zorunludur.'); return;
+        }
+        const fd = new FormData();
+        fd.append('productId',       productId);
+        fd.append('fromWarehouseId', document.getElementById('tFromWarehouse').value || '0');
+        fd.append('toWarehouseId',   document.getElementById('tToWarehouse').value   || '0');
+        fd.append('quantity',        quantity);
+        fd.append('unit',            document.getElementById('tUnit').value);
+        fd.append('documentNo',      document.getElementById('tDocNo').value);
+        fd.append('documentDate',    date);
+        fd.append('notes',           document.getElementById('tNotes').value);
+
+        const res  = await fetch('/Stock/SaveTransfer', { method: 'POST', body: fd });
+        const json = await res.json();
+        if (json.success) { location.reload(); }
+        else { alert(json.message); }
+    }
+</script>
+}

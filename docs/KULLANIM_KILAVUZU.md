@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 1.3 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 1.4 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -22,6 +22,8 @@
 13. [Fire Raporu](#fire)
 14. [Satış Siparişleri](#satis)
 15. [Satış Detayı — Kalem ve Sevkiyat](#satis-detail)
+16. [Stok Durumu](#stok)
+17. [Stok Hareketleri](#stok-hareketleri)
 
 ---
 
@@ -714,6 +716,94 @@ Sipariş hazır olduğunda **Sevk Et** (yeşil buton) ile teslimatı kaydedin:
 
 ---
 
+## 16. Stok Durumu {#stok}
+
+**Menü Yolu:** Operasyonel → Stok Durumu
+
+**Sayfa:** `/Stock/Index`
+
+### Ekran Düzeni
+
+```
+[≡] [⇄ Depo Transferi]   Stok Durumu   [Excel] [👤]
+┌──────────────────────────────────────────────────────────────┐
+│  📦 Ürün Çeşidi   ✅ Stokta Var   ⚠️ Stok Yok   ↓ Giriş   ↑ Çıkış │
+├──────────────────────────────────────────────────────────────┤
+│  Ürün Grubu ▼   Ürün ▼   [Filtrele]   [Temizle]   [Excel]   │
+├──────────────────────────────────────────────────────────────┤
+│ Kod │ Ürün Adı │ Grup │ Giriş │ Çıkış │ Net Stok │ Birim │ Son H. │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Net Stok Hesabı
+
+Her ürün için stok **Giriş − Çıkış** formülüyle hesaplanır:
+
+| Hareket Tipi | Etkisi |
+|-------------|--------|
+| Üretim Girişi | + Giriş |
+| Satın Alma Girişi | + Giriş |
+| Satış Çıkışı | − Çıkış |
+| Depo Transferi | Nötr (net etkilemez) |
+
+### Durum Renkleri
+
+- 🟢 **Var** — Net stok 0'dan büyük
+- 🔴 **Yok** — Net stok 0 veya negatif (üretim yapılmış ancak henüz stok hareketi girilmemiş olabilir)
+
+### Depo Transferi
+
+Sol üstteki **⇄ Depo Transferi** butonu ile depo içi/depo arası ürün hareketini kaydedin:
+
+1. Ürün seçin
+2. Çıkış ve giriş deposunu belirtin
+3. Miktar ve tarihi doldurun
+4. Kaydet — hareket `TRF2026-001` formatında otomatik numaralanır
+
+> Depo transferleri net stoğu değiştirmez, yalnızca depo bazlı izlenebilirlik için kaydedilir.
+
+---
+
+## 17. Stok Hareketleri {#stok-hareketleri}
+
+**Menü Yolu:** Operasyonel → Stok Hareketleri
+
+**Sayfa:** `/Stock/Movements`
+
+### Ekran Düzeni
+
+```
+[≡]   Stok Hareketleri   [Excel] [👤]
+┌──────────────────────────────────────────────────────────────┐
+│  Ürün ▼   Hareket Tipi ▼   Başlangıç   Bitiş   [Filtrele]   │
+├──────────────────────────────────────────────────────────────┤
+│ Tarih │ Belge No │ Tip │ Ürün │ Miktar │ Birim │ Müşteri │ Plaka │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Hareket Tipleri ve Renk Kodları
+
+| Renk | Tip | Kaynak |
+|------|-----|--------|
+| 🔵 Mavi | Satın Alma Girişi | Hammadde modülü |
+| 🟦 Koyu Mavi | Üretim Girişi | Üretim modülü |
+| 🔴 Kırmızı | Satış Çıkışı | Satış → Sevk Et |
+| 🟡 Sarı | Depo Transferi | Stok → Depo Transferi |
+
+### Miktar Gösterimi
+
+- **+ değerler** yeşil: stoka giren miktar
+- **− değerler** kırmızı: stoktan çıkan miktar
+- Satır altında toplam giriş ve çıkış özeti gösterilir
+
+### Filtreleme
+
+Ürün, hareket tipi ve tarih aralığını kombine ederek belirli bir ürünün tüm geçmişini veya belirli bir tarih dilimindeki satış çıkışlarını görüntüleyebilirsiniz.
+
+> **FSC İzlenebilirlik:** Satış çıkışı olan hareketlerin "İş Emri" sütununda bağlı iş emri kodu görünür. Bu link FSC CoC zincirini kanıtlar.
+
+---
+
 ## 📋 Modül Durumu
 
 | Modül | Durum | Kılavuz Bölümü |
@@ -726,7 +816,7 @@ Sipariş hazır olduğunda **Sevk Et** (yeşil buton) ile teslimatı kaydedin:
 | Hammadde Girişi | ✅ Tamamlandı | Bölüm 8–9 |
 | Üretim / İş Emirleri | ✅ Tamamlandı | Bölüm 11–13 |
 | Satış / Sevkiyat | ✅ Tamamlandı | Bölüm 14–15 |
-| Stok Durumu | ⏳ Planlandı | — |
+| Stok Durumu | ✅ Tamamlandı | Bölüm 16–17 |
 | FSC Raporlar | ⏳ Planlandı | — |
 | ERP Entegrasyon | ⏳ Planlandı | — |
 

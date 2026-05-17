@@ -1,13 +1,177 @@
+using ClosedXML.Excel;
+using FSCTakip.Core.Entities;
+using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace FSCTakip.WebUI.Controllers
 {
-    public class StockController : Controller
+    public class StockController : BaseController
     {
-        public IActionResult Index()
+        public StockController(AppDbContext context) : base(context) { }
+
+        // GET /Stock/Index — ürün bazlı net stok özeti
+        public async Task<IActionResult> Index(int? productGroupId, int? productId)
         {
-            ViewData["Title"] = "Stok Yönetimi";
-            return View();
+            var movements = await _context.StockMovements
+                .Include(m => m.Product).ThenInclude(p => p!.ProductGroup)
+                .ToListAsync();
+
+            var grouped = movements
+                .GroupBy(m => m.ProductId)
+                .Select(g => new StockSummaryRow
+                {
+                    ProductId   = g.Key,
+                    Product     = g.First().Product!,
+                    GirisAdet   = g.Where(m => m.Type == MovementType.ProductionEntry || m.Type == MovementType.PurchaseEntry).Sum(m => m.Quantity),
+                    CikisAdet   = g.Where(m => m.Type == MovementType.SalesDispatch).Sum(m => m.Quantity),
+                    TransferAdet = g.Where(m => m.Type == MovementType.WarehouseTransfer).Sum(m => m.Quantity),
+                    LastMovementDate = g.Max(m => m.DocumentDate)
+                })
+                .ToList();
+
+            if (productGroupId.HasValue)
+                grouped = grouped.Where(r => r.Product.ProductGroupId == productGroupId).ToList();
+            if (productId.HasValue)
+                grouped = grouped.Where(r => r.ProductId == productId).ToList();
+
+            ViewBag.ProductGroups = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
+            ViewBag.Products      = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
+            ViewBag.Warehouses    = await _context.Warehouses.Where(w => w.IsActive).OrderBy(w => w.Name).ToListAsync();
+            ViewBag.ProductGroupId = productGroupId;
+            ViewBag.ProductId     = productId;
+
+            ViewBag.TotalProducts  = grouped.Count;
+            ViewBag.InStock        = grouped.Count(r => r.NetAdet > 0);
+            ViewBag.ZeroStock      = grouped.Count(r => r.NetAdet <= 0);
+            ViewBag.TotalIn        = grouped.Sum(r => r.GirisAdet);
+            ViewBag.TotalOut       = grouped.Sum(r => r.CikisAdet);
+
+            return View(grouped.OrderBy(r => r.Product.ProductName).ToList());
         }
+
+        // GET /Stock/Movements — tüm hareket geçmişi
+        public async Task<IActionResult> Movements(
+            int? productId, MovementType? type,
+            DateTime? startDate, DateTime? endDate)
+        {
+            var query = _context.StockMovements
+                .Include(m => m.Product)
+                .Include(m => m.Customer)
+                .Include(m => m.WorkOrder)
+                .AsQueryable();
+
+            if (productId.HasValue) query = query.Where(m => m.ProductId == productId.Value);
+            if (type.HasValue)      query = query.Where(m => m.Type == type.Value);
+            if (startDate.HasValue) query = query.Where(m => m.DocumentDate >= startDate.Value);
+            if (endDate.HasValue)   query = query.Where(m => m.DocumentDate <= endDate.Value.AddDays(1));
+
+            ViewBag.Products  = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
+            ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
+            ViewBag.EndDate   = endDate?.ToString("yyyy-MM-dd");
+
+            return View(await query.OrderByDescending(m => m.DocumentDate).ThenByDescending(m => m.Id).ToListAsync());
+        }
+
+        // POST /Stock/SaveTransfer
+        [HttpPost]
+        public async Task<IActionResult> SaveTransfer(
+            int productId, int? fromWarehouseId, int? toWarehouseId,
+            decimal quantity, string unit,
+            string? documentNo, DateTime documentDate, string? notes)
+        {
+            if (quantity <= 0)
+                return Json(new { success = false, message = "Miktar 0'dan büyük olmalıdır" });
+
+            var docNo = string.IsNullOrWhiteSpace(documentNo)
+                ? $"TRF{documentDate.Year}-{(await _context.StockMovements.CountAsync(m => m.Type == MovementType.WarehouseTransfer)) + 1:D3}"
+                : documentNo;
+
+            _context.StockMovements.Add(new StockMovement
+            {
+                Type             = MovementType.WarehouseTransfer,
+                DocumentNo       = docNo,
+                DocumentDate     = documentDate,
+                ProductId        = productId,
+                Quantity         = quantity,
+                Unit             = string.IsNullOrWhiteSpace(unit) ? "Adet" : unit,
+                FromWarehouseId  = fromWarehouseId == 0 ? null : fromWarehouseId,
+                ToWarehouseId    = toWarehouseId == 0   ? null : toWarehouseId,
+                Description      = notes
+            });
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = $"Transfer kaydedildi: {docNo}" });
+        }
+
+        // GET /Stock/ExportStock
+        public async Task<IActionResult> ExportStock()
+        {
+            var movements = await _context.StockMovements
+                .Include(m => m.Product).ThenInclude(p => p!.ProductGroup)
+                .ToListAsync();
+
+            var rows = movements
+                .GroupBy(m => m.ProductId)
+                .Select(g =>
+                {
+                    var p = g.First().Product!;
+                    var giris = g.Where(m => m.Type == MovementType.ProductionEntry || m.Type == MovementType.PurchaseEntry).Sum(m => m.Quantity);
+                    var cikis = g.Where(m => m.Type == MovementType.SalesDispatch).Sum(m => m.Quantity);
+                    return new
+                    {
+                        UrunKodu  = p.ProductCode,
+                        UrunAdi   = p.ProductName,
+                        Grup      = p.ProductGroup != null ? p.ProductGroup.GroupName : "",
+                        Birim     = p.Unit,
+                        Giris     = giris,
+                        Cikis     = cikis,
+                        NetStok   = giris - cikis,
+                        SonHareket = g.Max(m => m.DocumentDate).ToString("dd.MM.yyyy")
+                    };
+                })
+                .OrderBy(r => r.UrunAdi)
+                .ToList();
+
+            return ExportToExcel(rows, "StokDurumu");
+        }
+
+        // GET /Stock/ExportMovements
+        public async Task<IActionResult> ExportMovements()
+        {
+            var rows = await _context.StockMovements
+                .Include(m => m.Product)
+                .Include(m => m.Customer)
+                .OrderByDescending(m => m.DocumentDate)
+                .Select(m => new
+                {
+                    Tarih       = m.DocumentDate.ToString("dd.MM.yyyy"),
+                    BelgeNo     = m.DocumentNo ?? "",
+                    Tip         = m.Type == MovementType.ProductionEntry  ? "Üretim Girişi"
+                                : m.Type == MovementType.PurchaseEntry    ? "Satın Alma Girişi"
+                                : m.Type == MovementType.SalesDispatch    ? "Satış Çıkışı"
+                                : "Depo Transferi",
+                    Urun        = m.Product != null ? m.Product.ProductName : "",
+                    Miktar      = m.Quantity,
+                    Birim       = m.Unit,
+                    Musteri     = m.Customer != null ? m.Customer.Name : "",
+                    Plaka       = m.PlateNumber ?? "",
+                    Aciklama    = m.Description ?? ""
+                })
+                .ToListAsync();
+
+            return ExportToExcel(rows, "StokHareketleri");
+        }
+    }
+
+    public class StockSummaryRow
+    {
+        public int ProductId  { get; set; }
+        public Product Product { get; set; } = null!;
+        public decimal GirisAdet  { get; set; }
+        public decimal CikisAdet  { get; set; }
+        public decimal TransferAdet { get; set; }
+        public decimal NetAdet => GirisAdet - CikisAdet;
+        public DateTime? LastMovementDate { get; set; }
     }
 }
