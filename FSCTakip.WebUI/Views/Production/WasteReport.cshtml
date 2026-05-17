@@ -1,0 +1,132 @@
+@model IEnumerable<FSCTakip.Core.Entities.ProductionDetail>
+@{
+    ViewData["Title"] = "Fire Raporu";
+    var toplamFire     = Model.Sum(d => d.WasteWeight);
+    var toplamTuketim  = Model.Sum(d => d.ConsumedWeight);
+    var fireOran       = toplamTuketim > 0 ? toplamFire / toplamTuketim * 100 : 0;
+}
+
+@section TopbarActions {
+    <button class="topbar-btn btn-filter" onclick="toggleFilter()">
+        <i class="fas fa-filter"></i> Filtrele
+    </button>
+    <a href="/Production/Index" class="topbar-btn">
+        <i class="fas fa-arrow-left"></i> İş Emirleri
+    </a>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-burn"></i></div>
+            <div>
+                <div class="stat-value">@toplamFire.ToString("N2")</div>
+                <div class="stat-label">Toplam Fire (kg)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-weight-hanging"></i></div>
+            <div>
+                <div class="stat-value">@toplamTuketim.ToString("N2")</div>
+                <div class="stat-label">Toplam Tüketim (kg)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon @(fireOran < 3 ? "green" : fireOran < 6 ? "amber" : "red")">
+                <i class="fas fa-percent"></i>
+            </div>
+            <div>
+                <div class="stat-value">%@fireOran.ToString("N2")</div>
+                <div class="stat-label">Genel Fire Oranı</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon amber"><i class="fas fa-list-alt"></i></div>
+            <div>
+                <div class="stat-value">@Model.Count()</div>
+                <div class="stat-label">Kayıt Sayısı</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="filterPanel" class="filter-panel mb-3" style="display:none;">
+    <form method="get" action="/Production/WasteReport">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Başlangıç Tarihi</label>
+                <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Bitiş Tarihi</label>
+                <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control">
+            </div>
+            <div class="col-md-6 d-flex gap-2 align-items-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-1"></i> Sorgula
+                </button>
+                <a href="/Production/WasteReport" class="btn btn-outline-secondary">Temizle</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Tarih</th>
+                <th>İş Emri</th>
+                <th>Ürün</th>
+                <th>Bobin</th>
+                <th>Lot / Tedarikçi</th>
+                <th>Makine</th>
+                <th class="text-end">Tüketim (kg)</th>
+                <th class="text-end">Fire (kg)</th>
+                <th class="text-end">Fire %</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Any())
+            {
+                <tr><td colspan="9"><div class="empty-state"><i class="fas fa-check-circle" style="color:#16a34a;"></i><p>Bu dönemde fire kaydı bulunmuyor.</p></div></td></tr>
+            }
+            @foreach (var d in Model)
+            {
+                var fr = d.ConsumedWeight > 0 ? d.WasteWeight / d.ConsumedWeight * 100 : 0;
+                <tr>
+                    <td class="text-muted">@d.ProductionDate.ToString("dd.MM.yyyy")</td>
+                    <td>
+                        <a href="/Production/Detail/@d.WorkOrderId" class="table-link fw-semibold">
+                            @d.WorkOrder?.WorkOrderNo
+                        </a>
+                    </td>
+                    <td style="font-size:13px;">@d.WorkOrder?.Product?.ProductName</td>
+                    <td>
+                        <a href="/Purchase/Detail/@d.FscSerial?.LotId" class="table-link">
+                            @d.FscSerial?.SerialNo
+                        </a>
+                    </td>
+                    <td>
+                        <div style="font-size:12px;">@d.FscSerial?.Lot?.LotNo</div>
+                        <div class="text-muted" style="font-size:11px;">@d.FscSerial?.Lot?.Supplier?.Name</div>
+                    </td>
+                    <td class="text-muted">@d.Machine?.Name</td>
+                    <td class="text-end fw-semibold">@d.ConsumedWeight.ToString("N2")</td>
+                    <td class="text-end"><span class="badge badge-red">@d.WasteWeight.ToString("N2")</span></td>
+                    <td class="text-end">
+                        <span class="badge @(fr < 3 ? "badge-green" : fr < 6 ? "badge-amber" : "badge-red")">
+                            %@fr.ToString("N1")
+                        </span>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

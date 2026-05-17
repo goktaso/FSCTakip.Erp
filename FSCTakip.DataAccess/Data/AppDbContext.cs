@@ -93,6 +93,18 @@ namespace FSCTakip.DataAccess.Data
             modelBuilder.Entity<Product>().HasOne(p => p.ProductGroup).WithMany().HasForeignKey(p => p.ProductGroupId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<Product>().HasOne(p => p.FscType).WithMany().HasForeignKey(p => p.FscTypeId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<Product>().HasOne(p => p.PaperType).WithMany().HasForeignKey(p => p.PaperTypeId).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<WorkOrder>()
+                .HasOne(w => w.Product).WithMany().HasForeignKey(w => w.ProductId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<WorkOrder>()
+                .HasOne(w => w.Machine).WithMany().HasForeignKey(w => w.MachineId).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ProductionDetail>()
+                .HasOne(d => d.WorkOrder).WithMany(w => w.ProductionDetails).HasForeignKey(d => d.WorkOrderId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ProductionDetail>()
+                .HasOne(d => d.FscSerial).WithMany(s => s.ProductionDetails).HasForeignKey(d => d.FscSerialId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ProductionDetail>()
+                .HasOne(d => d.Machine).WithMany().HasForeignKey(d => d.MachineId).OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

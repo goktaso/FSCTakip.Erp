@@ -1,0 +1,480 @@
+@model FSCTakip.Core.Entities.WorkOrder
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = $"İş Emri — {Model.WorkOrderNo}";
+    var serials  = ViewBag.AvailableSerials as List<FscSerial> ?? new();
+    var machines = ViewBag.Machines as List<Machine> ?? new();
+
+    var toplamTuketim  = Model.ProductionDetails.Sum(d => d.ConsumedWeight);
+    var toplamFire     = Model.ProductionDetails.Sum(d => d.WasteWeight);
+    var toplamUretim   = Model.ProductionDetails.Sum(d => d.ProducedQuantity);
+    var fireOran       = toplamTuketim > 0 ? toplamFire / toplamTuketim * 100 : 0;
+
+    var (statusClass, statusLabel) = Model.Status switch {
+        WorkOrderStatus.Taslak     => ("badge-gray",  "Taslak"),
+        WorkOrderStatus.Uretimde   => ("badge-amber", "Üretimde"),
+        WorkOrderStatus.Tamamlandi => ("badge-green", "Tamamlandı"),
+        WorkOrderStatus.Iptal      => ("badge-red",   "İptal"),
+        _ => ("badge-gray", "—")
+    };
+}
+
+@section TopbarActions {
+    <a href="/Production/Index" class="topbar-btn">
+        <i class="fas fa-arrow-left"></i> Listeye Dön
+    </a>
+    @if (Model.Status == WorkOrderStatus.Uretimde || Model.Status == WorkOrderStatus.Taslak)
+    {
+        <button class="topbar-btn btn-primary-custom" onclick="openAddDetailFn()">
+            <i class="fas fa-plus"></i> Tüketim Gir
+        </button>
+    }
+    @if (Model.Status == WorkOrderStatus.Uretimde)
+    {
+        <button class="topbar-btn" style="background:#f0fdf4;color:#166534;border-color:#bbf7d0;"
+                onclick="completeWO(@Model.Id, '@Model.WorkOrderNo')">
+            <i class="fas fa-check-circle"></i> Tamamla
+        </button>
+    }
+}
+
+<div class="row g-3">
+
+    <!-- Sol panel: iş emri bilgileri -->
+    <div class="col-lg-4">
+
+        <!-- Bilgi kartı -->
+        <div class="card mb-3">
+            <div class="card-header-accent">
+                <i class="fas fa-industry"></i>
+                <span>İş Emri Bilgileri</span>
+                <span class="badge @statusClass ms-auto">@statusLabel</span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0" style="font-size:13px;">
+                    <tr>
+                        <td class="text-muted ps-3" style="width:45%;padding:9px 0 9px 16px;">İş Emri No</td>
+                        <td class="fw-semibold pe-3">@Model.WorkOrderNo</td>
+                    </tr>
+                    <tr style="background:#fafafa;">
+                        <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Ürün</td>
+                        <td class="fw-semibold pe-3">
+                            <div>@Model.Product?.ProductName</div>
+                            <div class="text-muted" style="font-size:11px;">@Model.Product?.ProductCode</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Makine</td>
+                        <td class="pe-3">@Model.Machine?.Name</td>
+                    </tr>
+                    <tr style="background:#fafafa;">
+                        <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Plan Tarihi</td>
+                        <td class="pe-3">@Model.PlannedDate.ToString("dd.MM.yyyy")</td>
+                    </tr>
+                    @if (Model.CompletedDate.HasValue)
+                    {
+                        <tr>
+                            <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Bitiş Tarihi</td>
+                            <td class="pe-3 text-success fw-semibold">@Model.CompletedDate.Value.ToString("dd.MM.yyyy")</td>
+                        </tr>
+                    }
+                    <tr style="background:#fafafa;">
+                        <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Plan Adet</td>
+                        <td class="fw-semibold pe-3">@Model.PlannedQuantity.ToString("N0")</td>
+                    </tr>
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <tr>
+                            <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Notlar</td>
+                            <td class="pe-3 text-muted" style="font-size:12px;">@Model.Notes</td>
+                        </tr>
+                    }
+                </table>
+            </div>
+        </div>
+
+        <!-- Üretim özet kartları -->
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <div class="stat-card p-3">
+                    <div class="stat-icon navy" style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="font-size:18px;">@toplamUretim.ToString("N0")</div>
+                        <div class="stat-label">Üretilen (adet)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-card p-3">
+                    <div class="stat-icon blue" style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                        <i class="fas fa-weight-hanging"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="font-size:18px;">@toplamTuketim.ToString("N0")</div>
+                        <div class="stat-label">Tüketim (kg)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-card p-3">
+                    <div class="stat-icon red" style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                        <i class="fas fa-burn"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="font-size:18px;">@toplamFire.ToString("N0")</div>
+                        <div class="stat-label">Fire (kg)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-card p-3">
+                    <div class="stat-icon @(fireOran < 3 ? "green" : fireOran < 6 ? "amber" : "red")"
+                         style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                        <i class="fas fa-percent"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="font-size:18px;">%@fireOran.ToString("N1")</div>
+                        <div class="stat-label">Fire Oranı</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- İlerleme -->
+        @if (Model.PlannedQuantity > 0)
+        {
+            var pct = (double)(toplamUretim / Model.PlannedQuantity * 100);
+            if (pct > 100) pct = 100;
+            <div class="card mb-3">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between mb-2" style="font-size:12.5px;">
+                        <span class="text-muted fw-semibold">Üretim İlerlemesi</span>
+                        <span class="fw-bold">%@pct.ToString("N0")</span>
+                    </div>
+                    <div class="progress" style="height:10px;">
+                        <div class="progress-bar @(pct >= 100 ? "bg-success" : pct >= 50 ? "bg-primary" : "bg-warning")"
+                             style="width:@pct.ToString("N0")%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2" style="font-size:11px;color:var(--text-muted);">
+                        <span>@toplamUretim.ToString("N0") adet</span>
+                        <span>Hedef: @Model.PlannedQuantity.ToString("N0") adet</span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Sağ panel: tüketim kayıtları -->
+    <div class="col-lg-8">
+        <div class="table-card">
+            <div style="background:var(--table-header-bg);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;">
+                <div style="color:#fff;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-list-ul"></i> Tüketim Kayıtları
+                    <span class="badge" style="background:rgba(255,255,255,.15);color:#fff;font-size:11px;">
+                        @Model.ProductionDetails.Count kayıt
+                    </span>
+                </div>
+                @if (Model.Status != WorkOrderStatus.Tamamlandi && Model.Status != WorkOrderStatus.Iptal)
+                {
+                    <button onclick="openAddDetailFn()"
+                            style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-plus"></i> Tüketim Gir
+                    </button>
+                }
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Bobin (Seri No)</th>
+                        <th>Lot / Tedarikçi</th>
+                        <th class="text-end">Tüketim (kg)</th>
+                        <th class="text-end">Fire (kg)</th>
+                        <th class="text-end">Üretim (adet)</th>
+                        <th>Notlar</th>
+                        @if (Model.Status != WorkOrderStatus.Tamamlandi)
+                        {
+                            <th class="text-center">İşlem</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.ProductionDetails.Any())
+                    {
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <i class="fas fa-database"></i>
+                                    <p>Henüz tüketim kaydı yok. <strong>Tüketim Gir</strong> butonunu kullanın.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var d in Model.ProductionDetails.OrderByDescending(x => x.ProductionDate))
+                    {
+                        var fireOranRow = d.ConsumedWeight > 0 ? d.WasteWeight / d.ConsumedWeight * 100 : 0;
+                        <tr>
+                            <td class="text-muted">@d.ProductionDate.ToString("dd.MM.yyyy")</td>
+                            <td>
+                                <a href="/Purchase/Detail/@d.FscSerial?.LotId" class="table-link fw-semibold">
+                                    @d.FscSerial?.SerialNo
+                                </a>
+                            </td>
+                            <td>
+                                <div style="font-size:12px;">@d.FscSerial?.Lot?.LotNo</div>
+                                <div class="text-muted" style="font-size:11px;">@d.FscSerial?.Lot?.Supplier?.Name</div>
+                            </td>
+                            <td class="text-end fw-semibold">@d.ConsumedWeight.ToString("N2")</td>
+                            <td class="text-end">
+                                @if (d.WasteWeight > 0)
+                                {
+                                    <span class="badge badge-red" title="Fire oranı: %@fireOranRow.ToString("N1")">
+                                        @d.WasteWeight.ToString("N2")
+                                    </span>
+                                }
+                                else { <span class="text-muted">—</span> }
+                            </td>
+                            <td class="text-end">
+                                <span class="badge badge-blue">@d.ProducedQuantity.ToString("N0")</span>
+                            </td>
+                            <td class="text-muted" style="font-size:12px;">@(d.Notes ?? "—")</td>
+                            @if (Model.Status != WorkOrderStatus.Tamamlandi)
+                            {
+                                <td class="text-center">
+                                    <div class="d-flex gap-1 justify-content-center">
+                                        <button onclick="editDetail(@d.Id)"
+                                                class="btn btn-sm" style="padding:3px 8px;border-radius:5px;background:#f9fafb;color:#374151;border:1px solid #e5e7eb;">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="deleteDetail(@d.Id)"
+                                                class="btn btn-sm" style="padding:3px 8px;border-radius:5px;background:#fff5f5;color:#dc2626;border:1px solid #fecaca;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.ProductionDetails.Any())
+                {
+                    <tfoot>
+                        <tr style="background:#f8fafc;font-weight:600;font-size:13px;">
+                            <td colspan="3" class="ps-3 text-muted">Toplam</td>
+                            <td class="text-end">@toplamTuketim.ToString("N2") kg</td>
+                            <td class="text-end" style="color:#dc2626;">@toplamFire.ToString("N2") kg</td>
+                            <td class="text-end">@toplamUretim.ToString("N0") adet</td>
+                            <td colspan="@(Model.Status != WorkOrderStatus.Tamamlandi ? 2 : 1)"></td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Tüketim Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-weight-hanging" style="font-size:13px;color:#fff;"></i>
+                    </div>
+                    <h5 class="modal-title fw-semibold mb-0" id="detailModalTitle">Tüketim Kaydı</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="detailId">
+                <input type="hidden" id="detailWoId" value="@Model.Id">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Bobin (Hammadde Serisi) <span class="text-danger">*</span></label>
+                        <select id="detailSerialId" class="form-select" onchange="updateSerialInfo()">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var s in serials)
+                            {
+                                <option value="@s.Id"
+                                        data-kalan="@s.CurrentWeight"
+                                        data-lotno="@s.Lot?.LotNo"
+                                        data-supplier="@s.Lot?.Supplier?.Name">
+                                    @s.SerialNo — Kalan: @s.CurrentWeight.ToString("N2") kg
+                                </option>
+                            }
+                        </select>
+                        <div id="serialInfo" class="mt-1 px-2 py-1 rounded small" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Makine <span class="text-danger">*</span></label>
+                        <select id="detailMachineId" class="form-select">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var m in machines)
+                            {
+                                <option value="@m.Id" selected="@(m.Id == Model.MachineId)">@m.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Üretim Tarihi <span class="text-danger">*</span></label>
+                        <input type="date" id="detailDate" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tüketilen Hammadde (kg) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" id="detailConsumed" class="form-control" step="0.01" min="0.01" placeholder="0.00">
+                            <span class="input-group-text">kg</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Fire / Atık (kg)</label>
+                        <div class="input-group">
+                            <input type="number" id="detailWaste" class="form-control" step="0.01" min="0" placeholder="0.00" value="0">
+                            <span class="input-group-text">kg</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Üretilen Miktar (adet) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" id="detailQty" class="form-control" step="1" min="1" placeholder="0">
+                            <span class="input-group-text">adet</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Notlar</label>
+                        <input type="text" id="detailNotes" class="form-control" placeholder="Opsiyonel...">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-primary px-4" onclick="saveDetail()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+window.openAddDetailFn = function() {
+    document.getElementById('detailId').value = '';
+    document.getElementById('detailSerialId').value = '';
+    document.getElementById('detailDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('detailConsumed').value = '';
+    document.getElementById('detailWaste').value = '0';
+    document.getElementById('detailQty').value = '';
+    document.getElementById('detailNotes').value = '';
+    document.getElementById('serialInfo').style.display = 'none';
+    document.getElementById('detailModalTitle').textContent = 'Tüketim Kaydı Ekle';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal')).show();
+};
+
+function updateSerialInfo() {
+    const sel = document.getElementById('detailSerialId');
+    const opt = sel.options[sel.selectedIndex];
+    const info = document.getElementById('serialInfo');
+    if (!opt.value) { info.style.display = 'none'; return; }
+    info.style.display = 'block';
+    info.innerHTML = `<i class="fas fa-info-circle me-1"></i>
+        <strong>${opt.dataset.lotno}</strong> · ${opt.dataset.supplier} ·
+        Kalan: <strong>${parseFloat(opt.dataset.kalan).toLocaleString('tr-TR', {minimumFractionDigits:2})} kg</strong>`;
+}
+
+function editDetail(id) {
+    fetch(`/Production/GetDetail/${id}`)
+        .then(r => r.json()).then(res => {
+            if (!res.success) return;
+            const d = res.data;
+            document.getElementById('detailId').value        = d.id;
+            document.getElementById('detailSerialId').value  = d.fscSerialId;
+            document.getElementById('detailMachineId').value = d.machineId;
+            document.getElementById('detailDate').value      = d.productionDate;
+            document.getElementById('detailConsumed').value  = d.consumedWeight;
+            document.getElementById('detailWaste').value     = d.wasteWeight;
+            document.getElementById('detailQty').value       = d.producedQuantity;
+            document.getElementById('detailNotes').value     = d.notes || '';
+            document.getElementById('detailModalTitle').textContent = 'Tüketim Kaydını Düzenle';
+            updateSerialInfo();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal')).show();
+        });
+}
+
+function saveDetail() {
+    if (!document.getElementById('detailSerialId').value ||
+        !document.getElementById('detailMachineId').value ||
+        !document.getElementById('detailDate').value ||
+        !document.getElementById('detailConsumed').value ||
+        !document.getElementById('detailQty').value) {
+        showToast('Bobin, Makine, Tarih, Tüketim ve Üretim Miktarı zorunludur.', 'warning');
+        return;
+    }
+    const fd = new FormData();
+    const id = document.getElementById('detailId').value;
+    if (id) fd.append('Id', id);
+    fd.append('WorkOrderId',    document.getElementById('detailWoId').value);
+    fd.append('FscSerialId',    document.getElementById('detailSerialId').value);
+    fd.append('MachineId',      document.getElementById('detailMachineId').value);
+    fd.append('ProductionDate', document.getElementById('detailDate').value);
+    fd.append('ConsumedWeight', document.getElementById('detailConsumed').value);
+    fd.append('WasteWeight',    document.getElementById('detailWaste').value || '0');
+    fd.append('ProducedQuantity', document.getElementById('detailQty').value);
+    fd.append('Notes',          document.getElementById('detailNotes').value);
+
+    fetch('/Production/SaveDetail', { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('detailModal'))?.hide();
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                showToast(res.message, 'error');
+            }
+        });
+}
+
+function deleteDetail(id) {
+    Swal.fire({
+        title: 'Tüketim Kaydını Sil',
+        text: 'Bu kayıt silinince bobin ağırlığı geri iade edilecek. Devam edilsin mi?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Sil',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#dc2626'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        const fd = new FormData(); fd.append('id', id);
+        fetch('/Production/DeleteDetail', { method: 'POST', body: fd })
+            .then(r => r.json()).then(res => {
+                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1200); }
+                else showToast(res.message, 'error');
+            });
+    });
+}
+
+function completeWO(id, no) {
+    Swal.fire({
+        title: 'İş Emrini Tamamla',
+        text: `${no} iş emri tamamlandı olarak işaretlensin mi?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Tamamla',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#16a34a'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        const fd = new FormData(); fd.append('id', id);
+        fetch('/Production/CompleteWorkOrder', { method: 'POST', body: fd })
+            .then(r => r.json()).then(res => {
+                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1200); }
+                else showToast(res.message, 'error');
+            });
+    });
+}
+</script>
+}

@@ -1,0 +1,404 @@
+@model IEnumerable<FSCTakip.Core.Entities.WorkOrder>
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "İş Emirleri";
+    var products = ViewBag.Products as List<Product> ?? new();
+    var machines = ViewBag.Machines as List<Machine> ?? new();
+
+    var total      = Model.Count();
+    var taslak     = Model.Count(w => w.Status == WorkOrderStatus.Taslak);
+    var uretimde   = Model.Count(w => w.Status == WorkOrderStatus.Uretimde);
+    var tamamlandi = Model.Count(w => w.Status == WorkOrderStatus.Tamamlandi);
+    var toplamUretim = Model.Sum(w => w.ActualQuantity);
+}
+
+@section TopbarActions {
+    <button class="topbar-btn btn-filter" onclick="toggleFilter()">
+        <i class="fas fa-filter"></i> Filtrele
+    </button>
+    <a href="/Production/ExportIndex" class="topbar-btn btn-excel">
+        <i class="fas fa-file-excel"></i> Excel
+    </a>
+    <button class="topbar-btn btn-primary-custom" onclick="openAddModalFn()">
+        <i class="fas fa-plus"></i> Yeni İş Emri
+    </button>
+}
+
+<!-- Stat Kartları -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-clipboard-list"></i></div>
+            <div>
+                <div class="stat-value">@total</div>
+                <div class="stat-label">Toplam İş Emri</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon amber"><i class="fas fa-spinner"></i></div>
+            <div>
+                <div class="stat-value">@uretimde</div>
+                <div class="stat-label">Üretimde</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div class="stat-value">@tamamlandi</div>
+                <div class="stat-label">Tamamlandı</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="fas fa-boxes"></i></div>
+            <div>
+                <div class="stat-value">@toplamUretim.ToString("N0")</div>
+                <div class="stat-label">Toplam Üretim (adet)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtre Paneli -->
+<div id="filterPanel" class="filter-panel mb-3" style="display:none;">
+    <form method="get" action="/Production/Index">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Başlangıç Tarihi</label>
+                <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Bitiş Tarihi</label>
+                <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Ürün</label>
+                <select name="productId" class="form-select">
+                    <option value="">— Tümü —</option>
+                    @foreach (var p in products)
+                    {
+                        <option value="@p.Id">@p.ProductName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Durum</label>
+                <select name="status" class="form-select">
+                    <option value="">— Tümü —</option>
+                    <option value="1">Taslak</option>
+                    <option value="2">Üretimde</option>
+                    <option value="3">Tamamlandı</option>
+                    <option value="4">İptal</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-1"></i> Sorgula
+                </button>
+                <a href="/Production/Index" class="btn btn-outline-secondary w-100">Temizle</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tablo -->
+<div class="table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>İş Emri No</th>
+                <th>Ürün</th>
+                <th>Makine</th>
+                <th>Plan Tarihi</th>
+                <th class="text-center">Plan (adet)</th>
+                <th class="text-center">Gerçek (adet)</th>
+                <th class="text-center">Tüketim (kg)</th>
+                <th class="text-center">Fire (kg)</th>
+                <th class="text-center">Durum</th>
+                <th class="text-center">İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Any())
+            {
+                <tr>
+                    <td colspan="10">
+                        <div class="empty-state">
+                            <i class="fas fa-industry"></i>
+                            <p>Henüz iş emri yok. <strong>Yeni İş Emri</strong> butonunu kullanın.</p>
+                        </div>
+                    </td>
+                </tr>
+            }
+            @foreach (var wo in Model)
+            {
+                var tuketim = wo.ProductionDetails.Sum(d => d.ConsumedWeight);
+                var fire    = wo.ProductionDetails.Sum(d => d.WasteWeight);
+
+                var (statusClass, statusLabel, statusIcon) = wo.Status switch {
+                    WorkOrderStatus.Taslak     => ("badge-gray",   "Taslak",      "fas fa-file-alt"),
+                    WorkOrderStatus.Uretimde   => ("badge-amber",  "Üretimde",    "fas fa-spinner"),
+                    WorkOrderStatus.Tamamlandi => ("badge-green",  "Tamamlandı",  "fas fa-check-circle"),
+                    WorkOrderStatus.Iptal      => ("badge-red",    "İptal",       "fas fa-times-circle"),
+                    _ => ("badge-gray", "—", "fas fa-circle")
+                };
+
+                <tr>
+                    <td>
+                        <a href="/Production/Detail/@wo.Id" class="table-link fw-semibold">
+                            @wo.WorkOrderNo
+                        </a>
+                    </td>
+                    <td>
+                        <div class="fw-semibold" style="font-size:13px;">@wo.Product?.ProductName</div>
+                        <div class="text-muted" style="font-size:11px;">@wo.Product?.ProductCode</div>
+                    </td>
+                    <td class="text-muted">@wo.Machine?.Name</td>
+                    <td class="text-muted">@wo.PlannedDate.ToString("dd.MM.yyyy")</td>
+                    <td class="text-center fw-semibold">@wo.PlannedQuantity.ToString("N0")</td>
+                    <td class="text-center">
+                        @if (wo.ActualQuantity > 0)
+                        {
+                            var pct = wo.PlannedQuantity > 0 ? wo.ActualQuantity / wo.PlannedQuantity * 100 : 0;
+                            <span class="badge @(pct >= 100 ? "badge-green" : "badge-blue")">
+                                @wo.ActualQuantity.ToString("N0")
+                            </span>
+                        }
+                        else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="text-center">
+                        @if (tuketim > 0)
+                        {
+                            <span class="badge badge-navy">@tuketim.ToString("N2") kg</span>
+                        }
+                        else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="text-center">
+                        @if (fire > 0)
+                        {
+                            <span class="badge badge-red">@fire.ToString("N2") kg</span>
+                        }
+                        else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="text-center">
+                        <span class="badge @statusClass">
+                            <i class="@statusIcon me-1"></i>@statusLabel
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex gap-1 justify-content-center">
+                            <a href="/Production/Detail/@wo.Id"
+                               class="btn btn-sm" style="padding:4px 9px;border-radius:6px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
+                               title="Detay / Tüketim Gir">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            @if (wo.Status != WorkOrderStatus.Tamamlandi && wo.Status != WorkOrderStatus.Iptal)
+                            {
+                                <button onclick="editWorkOrder(@wo.Id)"
+                                        class="btn btn-sm" style="padding:4px 9px;border-radius:6px;background:#f9fafb;color:#374151;border:1px solid #e5e7eb;"
+                                        title="Düzenle">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                @if (wo.Status == WorkOrderStatus.Uretimde)
+                                {
+                                    <button onclick="completeWorkOrder(@wo.Id, '@wo.WorkOrderNo')"
+                                            class="btn btn-sm" style="padding:4px 9px;border-radius:6px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;"
+                                            title="Tamamlandı Olarak İşaretle">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                }
+                                <button onclick="deleteWorkOrder(@wo.Id, '@wo.WorkOrderNo')"
+                                        class="btn btn-sm" style="padding:4px 9px;border-radius:6px;background:#fff5f5;color:#dc2626;border:1px solid #fecaca;"
+                                        title="Sil">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- İş Emri Modal -->
+<div class="modal fade" id="workOrderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-industry" style="font-size:13px;color:#fff;"></i>
+                    </div>
+                    <h5 class="modal-title fw-semibold mb-0" id="woModalTitle">Yeni İş Emri</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="woId">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">İş Emri No <span class="text-muted fw-normal">(boş=otomatik)</span></label>
+                        <input type="text" id="woNo" class="form-control" placeholder="IE2026-001">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Plan Tarihi <span class="text-danger">*</span></label>
+                        <input type="date" id="woDate" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Durum</label>
+                        <select id="woStatus" class="form-select">
+                            <option value="1">Taslak</option>
+                            <option value="2">Üretimde</option>
+                            <option value="3">Tamamlandı</option>
+                            <option value="4">İptal</option>
+                        </select>
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label">Ürün <span class="text-danger">*</span></label>
+                        <select id="woProductId" class="form-select">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var p in products)
+                            {
+                                <option value="@p.Id">@p.ProductCode — @p.ProductName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Makine <span class="text-danger">*</span></label>
+                        <select id="woMachineId" class="form-select">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var m in machines)
+                            {
+                                <option value="@m.Id">@m.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Planlanan Miktar (adet) <span class="text-danger">*</span></label>
+                        <input type="number" id="woQty" class="form-control" step="1" min="1" placeholder="0">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Notlar</label>
+                        <input type="text" id="woNotes" class="form-control" placeholder="Opsiyonel açıklama...">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-primary px-4" onclick="saveWorkOrder()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+window.openAddModalFn = function() {
+    ['woId','woNo','woNotes'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('woDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('woProductId').value = '';
+    document.getElementById('woMachineId').value = '';
+    document.getElementById('woQty').value = '';
+    document.getElementById('woStatus').value = '1';
+    document.getElementById('woModalTitle').textContent = 'Yeni İş Emri';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('workOrderModal')).show();
+};
+
+function editWorkOrder(id) {
+    fetch(`/Production/GetWorkOrder/${id}`)
+        .then(r => r.json()).then(res => {
+            if (!res.success) return;
+            const d = res.data;
+            document.getElementById('woId').value        = d.id;
+            document.getElementById('woNo').value        = d.workOrderNo;
+            document.getElementById('woDate').value      = d.plannedDate;
+            document.getElementById('woProductId').value = d.productId;
+            document.getElementById('woMachineId').value = d.machineId;
+            document.getElementById('woQty').value       = d.plannedQuantity;
+            document.getElementById('woStatus').value    = d.status;
+            document.getElementById('woNotes').value     = d.notes || '';
+            document.getElementById('woModalTitle').textContent = 'İş Emri Düzenle — ' + d.workOrderNo;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('workOrderModal')).show();
+        });
+}
+
+function saveWorkOrder() {
+    if (!document.getElementById('woProductId').value ||
+        !document.getElementById('woMachineId').value ||
+        !document.getElementById('woDate').value ||
+        !document.getElementById('woQty').value) {
+        showToast('Ürün, Makine, Tarih ve Miktar zorunludur.', 'warning');
+        return;
+    }
+    const fd = new FormData();
+    const id = document.getElementById('woId').value;
+    if (id) fd.append('Id', id);
+    fd.append('WorkOrderNo',     document.getElementById('woNo').value);
+    fd.append('ProductId',       document.getElementById('woProductId').value);
+    fd.append('MachineId',       document.getElementById('woMachineId').value);
+    fd.append('PlannedDate',     document.getElementById('woDate').value);
+    fd.append('PlannedQuantity', document.getElementById('woQty').value);
+    fd.append('Status',          document.getElementById('woStatus').value);
+    fd.append('Notes',           document.getElementById('woNotes').value);
+
+    fetch('/Production/SaveWorkOrder', { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('workOrderModal'))?.hide();
+                showToast(res.message + ' (' + res.workOrderNo + ')', 'success');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                showToast(res.message, 'error');
+            }
+        });
+}
+
+function completeWorkOrder(id, no) {
+    Swal.fire({
+        title: 'İş Emrini Tamamla',
+        text: `${no} iş emri tamamlandı olarak işaretlensin mi?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Tamamla',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#16a34a'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        const fd = new FormData(); fd.append('id', id);
+        fetch('/Production/CompleteWorkOrder', { method: 'POST', body: fd })
+            .then(r => r.json()).then(res => {
+                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1200); }
+                else showToast(res.message, 'error');
+            });
+    });
+}
+
+function deleteWorkOrder(id, no) {
+    Swal.fire({
+        title: 'İş Emrini Sil',
+        text: `${no} iş emri silinecek. Devam edilsin mi?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Sil',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#dc2626'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        const fd = new FormData(); fd.append('id', id);
+        fetch('/Production/DeleteWorkOrder', { method: 'POST', body: fd })
+            .then(r => r.json()).then(res => {
+                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1200); }
+                else showToast(res.message, 'error');
+            });
+    });
+}
+</script>
+}

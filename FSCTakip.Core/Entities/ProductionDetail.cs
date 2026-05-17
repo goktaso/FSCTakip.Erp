@@ -1,35 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-
 namespace FSCTakip.Core.Entities
 {
-    // Enum'u namespace içinde ama sınıfın dışında tanımlıyoruz
-    public enum ConsumptionArea
-    {
-        TorbaGovde = 1,
-        Sap = 2,
-        Etiket = 3,
-        Yapiskan = 4
-    }
-
     public class ProductionDetail : BaseEntity
     {
         public int WorkOrderId { get; set; }
+        public virtual WorkOrder WorkOrder { get; set; } = null!;
+
         public int FscSerialId { get; set; }
-        public DateTime ProductionDate { get; set; }
+        public virtual FscSerial FscSerial { get; set; } = null!;
 
-        // Artık burası hata vermeyecektir
         public int MachineId { get; set; }
-        public virtual Machine Machine { get; set; }
+        public virtual Machine Machine { get; set; } = null!;
 
-        public ConsumptionArea UsedIn { get; set; }
+        public DateTime ProductionDate { get; set; } = DateTime.Today;
 
         public decimal ConsumedWeight { get; set; }
-        public decimal WasteWeight { get; set; } // Eklediğimiz fire alanı
+        public decimal WasteWeight { get; set; }
         public decimal ProducedQuantity { get; set; }
-        public decimal ConversionRate { get; set; }
 
-        public virtual WorkOrder WorkOrder { get; set; }
-        public virtual FscSerial FscSerial { get; set; }
+        public string? Notes { get; set; }
     }
 }

@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 1.0 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 1.1 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -17,6 +17,9 @@
 8. [Hammadde Girişi — FSC Lot](#hammadde)
 9. [Hammadde Detayı — Bobin / Seri Takibi](#detail)
 10. [Sık Sorulan Sorular](#sss)
+11. [Üretim — İş Emirleri](#uretim)
+12. [Üretim Detayı — Hammadde Tüketimi](#uretim-detail)
+13. [Fire Raporu](#fire)
 
 ---
 
@@ -433,6 +436,166 @@ A: Giriş sayfasında **Şirket Veritabanı** alanından farklı firma veritaban
 
 ---
 
+## 11. Üretim — İş Emirleri {#uretim}
+
+**Sayfa:** `/Production/Index`  
+**Menü Yolu:** FSC İşlemleri → Üretim → İş Emirleri
+
+Üretim planı bu modülde yönetilir. Her üretim çalışması bir **İş Emri** olarak oluşturulur.
+
+### Kavramlar
+
+```
+İŞ EMRİ (Work Order)
+├── Ürün: KRAFT ÇUVALI 50KG
+├── Makine: MAKİNE-1
+├── Plan: 10.000 adet
+└── TÜKETİM KAYITLARI
+    ├── Bobin L2026-001-B01 → 1.250 kg tüketildi → 4.200 adet üretildi
+    ├── Bobin L2026-001-B02 → 1.180 kg tüketildi → 3.900 adet üretildi
+    └── ...
+```
+
+### İş Emri Durumları
+
+| Durum | Renk | Açıklama |
+|-------|------|----------|
+| **Taslak** | Gri | Oluşturuldu, henüz üretime başlanmadı |
+| **Üretimde** | Sarı | İlk tüketim kaydı girildiğinde otomatik geçer |
+| **Tamamlandı** | Yeşil | Manuel olarak tamamlandı işaretlenince |
+| **İptal** | Kırmızı | İptal edilmiş iş emri |
+
+### Özet Kartları
+
+```
+┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+│    23    │  │    5     │  │    17    │  │  48.200  │
+│  Toplam  │  │ Üretimde │  │Tamamlandı│  │  Üretim  │
+│ İş Emri │  │          │  │          │  │  (adet)  │
+└──────────┘  └──────────┘  └──────────┘  └──────────┘
+```
+
+### Yeni İş Emri Oluşturma
+
+1. **+ Yeni İş Emri** butonuna tıklayın
+2. Formu doldurun:
+
+```
+┌─ Yeni İş Emri ───────────────────────────────────────┐
+│                                                         │
+│  İş Emri No           Plan Tarihi        Durum        │
+│  [IE2026-001     ]   [17.05.2026   ]   [Taslak ▼]    │
+│  (boş=otomatik)                                        │
+│                                                         │
+│  Ürün *                                                 │
+│  [PRD-001 — KRAFT ÇUVALI 50KG                   ▼]    │
+│                                                         │
+│  Makine *                  Planlanan Miktar *          │
+│  [MAKİNE-1          ▼]    [10000              adet]   │
+│                                                         │
+│  Notlar                                                 │
+│  [                                               ]     │
+│                                                         │
+│                    [Vazgeç] [💾 Kaydet]                │
+└─────────────────────────────────────────────────────────┘
+```
+
+3. Sistem otomatik olarak `IE2026-001`, `IE2026-002`... numarası atar
+
+### İş Emrini Tamamlama
+
+İş emri tamamlandığında listede ✅ butonuna tıklayın veya detay sayfasında **Tamamla** butonunu kullanın.
+
+> **ℹ️ Not:** Tamamlanmış iş emirlerine yeni tüketim kaydı eklenemez.
+
+---
+
+## 12. Üretim Detayı — Hammadde Tüketimi {#uretim-detail}
+
+**Sayfa:** `/Production/Detail/{id}`  
+**Erişim:** İş emirleri listesinde İş Emri No linkine tıklayın
+
+### Sayfa Düzeni
+
+```
+┌──────────────────┬────────────────────────────────────────┐
+│  İŞ EMRİ BİLGİSİ│       TÜKETİM KAYITLARI               │
+│                  │                                          │
+│  IE2026-047      │  Tarih    Bobin       Tük.  Fire  Ür.  │
+│  KRAFT ÇUVAL     │  17.05.26 L047-B01  1250   25   4200  │
+│  MAKİNE-1        │  17.05.26 L047-B02  1180   18   3900  │
+│  Taslak → Üretimde│                                        │
+│                  │  [+ Tüketim Gir]                        │
+│  ÖZET            │                                          │
+│  Üretilen: 8.100 │                                          │
+│  Tüketim: 2.430kg│                                          │
+│  Fire: 43 kg     │                                          │
+│  Fire %: 1.8%    │                                          │
+│                  │                                          │
+│  [====▓▓▓▓▓▓   ]│                                          │
+│  %81 tamamlandı  │                                          │
+└──────────────────┴────────────────────────────────────────┘
+```
+
+### Tüketim Kaydı Girme
+
+1. **+ Tüketim Gir** butonuna tıklayın
+2. Açılan formda:
+
+```
+┌─ Tüketim Kaydı ──────────────────────────────────────┐
+│                                                         │
+│  Bobin (Hammadde Serisi) *                             │
+│  [L2026-047-B01 — Kalan: 1.250,00 kg            ▼]   │
+│  ℹ️ L2026-047 · BOSNA HERSEK · Kalan: 1.250,00 kg    │
+│                                                         │
+│  Makine *                                               │
+│  [MAKİNE-1                                      ▼]    │
+│                                                         │
+│  Üretim Tarihi *    Tüketilen (kg) *   Fire (kg)       │
+│  [17.05.2026   ]   [1250.00     kg]   [25.00   kg]    │
+│                                                         │
+│  Üretilen (adet) *  Notlar                             │
+│  [4200      adet]   [                          ]       │
+│                                                         │
+│                    [Vazgeç] [💾 Kaydet]                │
+└─────────────────────────────────────────────────────────┘
+```
+
+3. **Bobin seçilince** altında lot/tedarikçi/kalan bilgisi otomatik gösterilir
+4. **Kaydet** butonuna tıklayın
+
+> **⚠️ Stok Kontrolü:** Girilen tüketim miktarı bobinin kalan ağırlığını aşarsa sistem hata verir ve kaydetmez.
+>
+> **ℹ️ Otomatik Durum:** İlk tüketim kaydı girildiğinde iş emri "Taslak" → "Üretimde" durumuna otomatik geçer.
+
+### Tüketim Kaydını Silme
+
+Kayıt satırındaki 🗑️ butonuna tıklayın.
+
+> **ℹ️ Not:** Kayıt silindiğinde, tüketilen ağırlık bobine geri iade edilir (stok geri artar).
+
+---
+
+## 13. Fire Raporu {#fire}
+
+**Sayfa:** `/Production/WasteReport`  
+**Menü Yolu:** FSC İşlemleri → Üretim → Fire Raporu
+
+Belirli tarih aralığında gerçekleşen hammadde fire/atıklarını gösterir.
+
+### Fire Oranı Renk Kodu
+- 🟢 **Yeşil:** %3 altı — Normal
+- 🟡 **Sarı:** %3–6 arası — Takip et
+- 🔴 **Kırmızı:** %6 üzeri — Dikkat!
+
+### Filtreleme
+Başlangıç / Bitiş tarihi seçip **Sorgula** butonuyla istediğiniz dönemi filtreleyin.
+
+---
+
+---
+
 ## 📋 Modül Durumu
 
 | Modül | Durum | Kılavuz Bölümü |
@@ -443,7 +606,7 @@ A: Giriş sayfasında **Şirket Veritabanı** alanından farklı firma veritaban
 | Ürünler | ✅ Tamamlandı | Bölüm 6 |
 | Tanımlamalar | ✅ Tamamlandı | Bölüm 7 |
 | Hammadde Girişi | ✅ Tamamlandı | Bölüm 8–9 |
-| Üretim / İş Emirleri | 🔄 Geliştiriliyor | — |
+| Üretim / İş Emirleri | ✅ Tamamlandı | Bölüm 11–13 |
 | Satış / Sevkiyat | ⏳ Planlandı | — |
 | Stok Durumu | ⏳ Planlandı | — |
 | FSC Raporlar | ⏳ Planlandı | — |
