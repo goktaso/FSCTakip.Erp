@@ -1,9 +1,9 @@
-using FSCTakip.Core.Entities;
+﻿using FSCTakip.Core.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ClosedXML.Excel;
 using FSCTakip.DataAccess.Data;
-namespace FSC_ERP.Controllers
+namespace FSCTakip.WebUI.Controllers
 {
     public class PaperController : BaseController
     {

@@ -1,0 +1,428 @@
+@model IEnumerable<FSCTakip.Core.Entities.FscLot>
+@{
+    ViewData["Title"] = "Hammadde Girişleri";
+    var suppliers = ViewBag.Suppliers as List<FSCTakip.Core.Entities.Supplier> ?? new();
+    var fscTypes  = ViewBag.FscTypes  as List<FSCTakip.Core.Entities.FscType>  ?? new();
+    var products  = ViewBag.Products  as List<FSCTakip.Core.Entities.Product>  ?? new();
+
+    var totalLot   = Model.Count();
+    var totalKg    = Model.Sum(l => l.Serials.Sum(s => s.InitialWeight));
+    var kalanKg    = Model.Sum(l => l.Serials.Sum(s => s.CurrentWeight));
+    var totalBobin = Model.Sum(l => l.Serials.Count);
+    var fscUyari   = suppliers.Count(s => s.IsFscActive && s.FscExpiryDate.HasValue && s.FscExpiryDate.Value <= DateTime.Today.AddDays(90));
+}
+
+@section TopbarActions {
+    <button class="topbar-btn btn-filter" onclick="toggleFilter()">
+        <i class="fas fa-filter"></i> Filtrele
+    </button>
+    <a href="/Purchase/ExportIndex" class="topbar-btn btn-excel">
+        <i class="fas fa-file-excel"></i> Excel
+    </a>
+    <button class="topbar-btn btn-primary-custom" onclick="openAddModalFn()">
+        <i class="fas fa-plus"></i> Yeni Lot Ekle
+    </button>
+}
+
+<!-- Stat Kartları -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-boxes"></i></div>
+            <div>
+                <div class="stat-value">@totalLot</div>
+                <div class="stat-label">Toplam Lot</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-weight-hanging"></i></div>
+            <div>
+                <div class="stat-value">@totalKg.ToString("N0")</div>
+                <div class="stat-label">Toplam Giriş (kg)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="fas fa-scroll"></i></div>
+            <div>
+                <div class="stat-value">@totalBobin</div>
+                <div class="stat-label">Toplam Bobin</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon @(kalanKg > 0 ? "amber" : "red")">
+                <i class="fas fa-battery-half"></i>
+            </div>
+            <div>
+                <div class="stat-value">@kalanKg.ToString("N0")</div>
+                <div class="stat-label">Kalan Hammadde (kg)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (fscUyari > 0)
+{
+    <div class="alert d-flex align-items-center gap-2 mb-4"
+         style="background:#fffbeb;border:1px solid #fde68a;border-left:4px solid #f59e0b;border-radius:10px;padding:12px 16px;">
+        <i class="fas fa-exclamation-triangle text-warning"></i>
+        <span><strong>@fscUyari tedarikçinin</strong> FSC sertifikası 90 gün içinde dolacak.
+            <a href="/Reports/SupplierFsc" class="fw-semibold" style="color:#92400e;">İncele →</a>
+        </span>
+    </div>
+}
+
+<!-- Filtre Paneli -->
+<div id="filterPanel" class="filter-panel mb-3" style="display:none;">
+    <form method="get" action="/Purchase/Index">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Başlangıç Tarihi</label>
+                <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Bitiş Tarihi</label>
+                <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Tedarikçi</label>
+                <select name="supplierId" class="form-select">
+                    <option value="">— Tümü —</option>
+                    @foreach (var s in suppliers)
+                    {
+                        <option value="@s.Id">@s.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">FSC Tipi</label>
+                <select name="fscTypeId" class="form-select">
+                    <option value="">— Tümü —</option>
+                    @foreach (var f in fscTypes)
+                    {
+                        <option value="@f.Id">@f.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fas fa-search me-1"></i> Sorgula
+                </button>
+                <a href="/Purchase/Index" class="btn btn-outline-secondary w-100">Temizle</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tablo -->
+<div class="table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Lot No</th>
+                <th>Tedarikçi</th>
+                <th>FSC Tipi</th>
+                <th>Geliş Tarihi</th>
+                <th>İrsaliye No</th>
+                <th class="text-center">Bobin</th>
+                <th class="text-end">Giriş (kg)</th>
+                <th class="text-end">Kalan (kg)</th>
+                <th class="text-center">Belgeler</th>
+                <th class="text-center">İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Any())
+            {
+                <tr>
+                    <td colspan="10">
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>Henüz kayıt yok. <strong>Yeni Lot Ekle</strong> butonunu kullanın.</p>
+                        </div>
+                    </td>
+                </tr>
+            }
+            @foreach (var lot in Model)
+            {
+                var gKg    = lot.Serials.Sum(s => s.InitialWeight);
+                var kKg    = lot.Serials.Sum(s => s.CurrentWeight);
+                var oran   = gKg > 0 ? kKg / gKg * 100 : 0;
+                var fscOk  = lot.Supplier?.IsFscActive == true && (lot.Supplier.FscExpiryDate == null || lot.Supplier.FscExpiryDate >= DateTime.Today);
+                <tr>
+                    <td>
+                        <a href="/Purchase/Detail/@lot.Id" class="table-link fw-semibold">
+                            @lot.LotNo
+                        </a>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-1">
+                            @lot.Supplier?.Name
+                            @if (!fscOk)
+                            {
+                                <span class="badge badge-amber ms-1"><i class="fas fa-exclamation-triangle me-1"></i>FSC!</span>
+                            }
+                        </div>
+                    </td>
+                    <td><span class="badge badge-green">@lot.FscType?.Name</span></td>
+                    <td class="text-muted">@lot.ArrivalDate.ToString("dd.MM.yyyy")</td>
+                    <td class="text-muted">@(lot.DispatchNo ?? "—")</td>
+                    <td class="text-center">
+                        <span class="badge badge-blue">@lot.Serials.Count</span>
+                    </td>
+                    <td class="text-end fw-semibold">@gKg.ToString("N2")</td>
+                    <td class="text-end">
+                        @{
+                            var cls = oran > 50 ? "badge-green" : (oran > 20 ? "badge-amber" : "badge-red");
+                        }
+                        <div class="d-flex align-items-center justify-content-end gap-2">
+                            <div class="progress flex-grow-1" style="height:5px;max-width:60px;">
+                                <div class="progress-bar @(oran>50?"bg-success":oran>20?"bg-warning":"bg-danger")"
+                                     style="width:@oran.ToString("N0")%"></div>
+                            </div>
+                            <span class="badge @cls">@kKg.ToString("N2")</span>
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        @if (!string.IsNullOrEmpty(lot.DispatchPdfPath))
+                        {
+                            <a href="/Purchase/ViewDocument?path=@lot.DispatchPdfPath" target="_blank"
+                               class="btn btn-sm" style="padding:3px 8px;border-radius:6px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;"
+                               title="İrsaliye">
+                                <i class="fas fa-file-pdf"></i>
+                            </a>
+                        }
+                        @if (!string.IsNullOrEmpty(lot.InvoicePdfPath))
+                        {
+                            <a href="/Purchase/ViewDocument?path=@lot.InvoicePdfPath" target="_blank"
+                               class="btn btn-sm ms-1" style="padding:3px 8px;border-radius:6px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;"
+                               title="Fatura">
+                                <i class="fas fa-file-invoice"></i>
+                            </a>
+                        }
+                        @if (string.IsNullOrEmpty(lot.DispatchPdfPath) && string.IsNullOrEmpty(lot.InvoicePdfPath))
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex gap-1 justify-content-center">
+                            <a href="/Purchase/Detail/@lot.Id"
+                               class="btn btn-sm" style="padding:4px 10px;border-radius:6px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
+                               title="Detay">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button onclick="editLot(@lot.Id)"
+                                    class="btn btn-sm" style="padding:4px 10px;border-radius:6px;background:#f9fafb;color:#374151;border:1px solid #e5e7eb;"
+                                    title="Düzenle">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Lot Modal -->
+<div class="modal fade" id="lotModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-truck-loading" style="font-size:13px;color:#fff;"></i>
+                    </div>
+                    <h5 class="modal-title fw-semibold mb-0" id="lotModalTitle">Yeni Hammadde Girişi</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="lotId">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Lot No <span class="text-muted fw-normal">(boş=otomatik)</span></label>
+                        <input type="text" id="lotNo" class="form-control" placeholder="L2026-001">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Geliş Tarihi <span class="text-danger">*</span></label>
+                        <input type="date" id="arrivalDate" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Araç Plakası</label>
+                        <input type="text" id="truckPlate" class="form-control" placeholder="34 ABC 123">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Tedarikçi <span class="text-danger">*</span></label>
+                        <select id="supplierId" class="form-select">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var s in suppliers)
+                            {
+                                <option value="@s.Id" data-fsc="@s.IsFscActive.ToString().ToLower()"
+                                        data-expiry="@s.FscExpiryDate?.ToString("dd.MM.yyyy")">
+                                    @s.Name
+                                </option>
+                            }
+                        </select>
+                        <div id="supplierFscWarning" class="mt-1 px-2 py-1 rounded small"
+                             style="display:none;background:#fffbeb;border:1px solid #fde68a;color:#92400e;">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Bu tedarikçinin FSC sertifikası geçersiz!
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">FSC Tipi <span class="text-danger">*</span></label>
+                        <select id="fscTypeId" class="form-select">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var f in fscTypes)
+                            {
+                                <option value="@f.Id">@f.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Hammadde Ürünü</label>
+                        <select id="productId" class="form-select">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var p in products)
+                            {
+                                <option value="@p.Id">@p.ProductCode — @p.ProductName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-12"><hr class="my-1" style="border-color:var(--border);"></div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">İrsaliye No</label>
+                        <input type="text" id="dispatchNo" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Fatura No</label>
+                        <input type="text" id="invoiceNo" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Tutar</label>
+                        <input type="number" id="invoiceAmount" class="form-control" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Para Birimi</label>
+                        <select id="currency" class="form-select">
+                            <option>TRY</option><option>USD</option><option>EUR</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="fas fa-file-pdf text-danger me-1"></i>İrsaliye PDF</label>
+                        <input type="file" id="dispatchFile" class="form-control" accept=".pdf">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="fas fa-file-invoice text-warning me-1"></i>Fatura PDF</label>
+                        <input type="file" id="invoiceFile" class="form-control" accept=".pdf">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Notlar</label>
+                        <textarea id="lotNotes" class="form-control" rows="2" placeholder="Opsiyonel açıklama..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-success px-4" onclick="saveLot()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+window.openAddModalFn = function() {
+    ['lotId','lotNo','truckPlate','dispatchNo','invoiceNo','invoiceAmount','lotNotes'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    document.getElementById('arrivalDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('supplierId').value = '';
+    document.getElementById('fscTypeId').value = '';
+    document.getElementById('productId').value = '';
+    document.getElementById('currency').value = 'TRY';
+    document.getElementById('supplierFscWarning').style.display = 'none';
+    document.getElementById('lotModalTitle').textContent = 'Yeni Hammadde Girişi';
+    new bootstrap.Modal(document.getElementById('lotModal')).show();
+};
+
+function editLot(id) {
+    fetch(`/Purchase/GetLot/${id}`)
+        .then(r => r.json()).then(res => {
+            if (!res.success) return;
+            const d = res.data;
+            document.getElementById('lotId').value = d.id;
+            document.getElementById('lotNo').value = d.lotNo;
+            document.getElementById('arrivalDate').value = d.arrivalDate;
+            document.getElementById('supplierId').value = d.supplierId;
+            document.getElementById('fscTypeId').value = d.fscTypeId;
+            document.getElementById('productId').value = d.productId || '';
+            document.getElementById('truckPlate').value = d.truckPlate || '';
+            document.getElementById('dispatchNo').value = d.dispatchNo || '';
+            document.getElementById('invoiceNo').value = d.invoiceNo || '';
+            document.getElementById('invoiceAmount').value = d.invoiceAmount || '';
+            document.getElementById('currency').value = d.currency || 'TRY';
+            document.getElementById('lotNotes').value = d.notes || '';
+            document.getElementById('lotModalTitle').textContent = 'Lot Düzenle — ' + d.lotNo;
+            new bootstrap.Modal(document.getElementById('lotModal')).show();
+        });
+}
+
+document.getElementById('supplierId').addEventListener('change', function() {
+    const fscOk = this.options[this.selectedIndex]?.dataset.fsc === 'true';
+    document.getElementById('supplierFscWarning').style.display = fscOk ? 'none' : 'block';
+});
+
+function saveLot() {
+    if (!document.getElementById('supplierId').value ||
+        !document.getElementById('fscTypeId').value ||
+        !document.getElementById('arrivalDate').value) {
+        showToast('Tedarikçi, FSC Tipi ve Geliş Tarihi zorunludur.', 'warning');
+        return;
+    }
+    const fd = new FormData();
+    const id = document.getElementById('lotId').value;
+    if (id) fd.append('Id', id);
+    fd.append('LotNo',         document.getElementById('lotNo').value);
+    fd.append('SupplierId',    document.getElementById('supplierId').value);
+    fd.append('FscTypeId',     document.getElementById('fscTypeId').value);
+    fd.append('ArrivalDate',   document.getElementById('arrivalDate').value);
+    const pid = document.getElementById('productId').value;
+    if (pid) fd.append('ProductId', pid);
+    fd.append('TruckPlate',    document.getElementById('truckPlate').value);
+    fd.append('DispatchNo',    document.getElementById('dispatchNo').value);
+    fd.append('InvoiceNo',     document.getElementById('invoiceNo').value);
+    const amt = document.getElementById('invoiceAmount').value;
+    if (amt) fd.append('InvoiceAmount', amt);
+    fd.append('Currency',  document.getElementById('currency').value);
+    fd.append('Notes',     document.getElementById('lotNotes').value);
+    const df = document.getElementById('dispatchFile').files[0];
+    const inf = document.getElementById('invoiceFile').files[0];
+    if (df)  fd.append('dispatchFile', df);
+    if (inf) fd.append('invoiceFile',  inf);
+
+    fetch('/Purchase/SaveLot', { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('lotModal'))?.hide();
+                showToast(res.message + ' (' + res.lotNo + ')', 'success');
+                if (res.fscUyari) showToast(res.fscUyari, 'warning');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                showToast(res.message, 'error');
+            }
+        });
+}
+</script>
+}

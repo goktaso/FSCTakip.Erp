@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace FSC_ERP.Controllers
+namespace FSCTakip.WebUI.Controllers
 {
     public class StockController : Controller
     {

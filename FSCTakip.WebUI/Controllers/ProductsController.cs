@@ -1,4 +1,4 @@
-using FSCTakip.Core.Entities;
+﻿using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace FSC_ERP.Controllers
+namespace FSCTakip.WebUI.Controllers
 {
     public class ProductsController : BaseController
     {

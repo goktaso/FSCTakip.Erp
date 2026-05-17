@@ -2,343 +2,716 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>@ViewData["Title"] - FSC ERP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"] - FSC Takip ERP</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css">
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css">
 
     <style>
+        :root {
+            --sidebar-bg:      #1a2744;
+            --sidebar-hover:   rgba(255,255,255,.07);
+            --sidebar-active:  rgba(25,118,210,.22);
+            --accent:          #1976d2;
+            --accent-dark:     #1565c0;
+            --accent-light:    #e3f2fd;
+            --topbar-h:        56px;
+            --sidebar-w:       250px;
+            --sidebar-w-col:   64px;
+            --card-radius:     10px;
+            --shadow-sm:       0 1px 4px rgba(0,0,0,.08);
+            --shadow-md:       0 4px 16px rgba(0,0,0,.12);
+            --text-muted:      #6b7280;
+            --border:          #e5e7eb;
+            --bg-page:         #f0f2f5;
+            --table-header-bg: #1a2744;
+            --table-header-color: #fff;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
         body {
             margin: 0;
-            background: #f4f7f6;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            font-size: 14px;
+            background: var(--bg-page);
+            color: #111827;
             overflow-x: hidden;
         }
 
-        .main-wrapper {
-            display: flex;
-            height: 100vh;
-            position: relative;
-        }
-
-        /* --- SIDEBAR - Yapı korundu, renkler FSC yeşili yapıldı --- */
+        /* ── SIDEBAR ───────────────────────────────────── */
         .sidebar {
-            width: 260px;
-            min-width: 260px;
-            background: #1e3d14; /* Mavi-gri yerine Koyu Orman Yeşili */
-            color: white;
-            display: flex;
-            flex-direction: column;
-            transition: all 0.3s;
+            position: fixed; top: 0; left: 0;
+            width: var(--sidebar-w);
+            height: 100vh;
+            background: var(--sidebar-bg);
+            display: flex; flex-direction: column;
+            transition: width .25s cubic-bezier(.4,0,.2,1);
             z-index: 1050;
-        }
-
-            .sidebar.collapsed {
-                width: 70px;
-                min-width: 70px;
-            }
-
-                .sidebar.collapsed .sidebar-header h4, .sidebar.collapsed .menu-label, .sidebar.collapsed .nav-link span, .sidebar.collapsed .nav-link .float-right {
-                    display: none !important;
-                }
-
-                .sidebar.collapsed .collapse {
-                    display: none !important;
-                }
-
-        .sidebar-header {
-            padding: 20px;
-            background: #142a0d; /* Başlık alanı daha koyu yeşil */
-            text-align: center;
-        }
-
-        .menu-label {
-            padding: 15px 20px 5px 20px;
-            font-size: 0.7rem;
-            color: #8da386; /* Yazılar yeşilimsi gri */
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .nav-link {
-            color: #bdc3c7;
-            padding: 12px 20px;
-            display: block;
-            text-decoration: none !important;
-            transition: 0.2s;
-            cursor: pointer;
-        }
-
-            .nav-link:hover {
-                background: #2c5e1a; /* Hover yeşili */
-                color: #ffffff;
-            }
-
-            .nav-link.active {
-                background: #4ca637; /* Aktif sayfa yeşili */
-                color: white !important;
-            }
-
-            .nav-link i {
-                width: 25px;
-                color: #4ca637; /* İkonlar açık yeşil */
-            }
-
-            .nav-link.active i {
-                color: white !important;
-            }
-
-        .collapse-inner {
-            background: #142a0d;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .collapse-item {
-            padding: 10px 20px 10px 50px;
-            color: #bdc3c7 !important;
-            font-size: 0.85rem;
-            text-decoration: none !important;
-            display: block;
-        }
-
-            .collapse-item:hover {
-                background: #243342;
-                color: #4ca637 !important;
-            }
-
-            .collapse-item.active {
-                color: white !important;
-                font-weight: bold;
-                background: #4ca637;
-            }
-
-        /* --- CONTENT AREA & BUTONLAR - Senin orijinal renklerin korundu --- */
-        .content-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            width: 100%;
             overflow: hidden;
         }
+        .sidebar.collapsed { width: var(--sidebar-w-col); }
 
-        .page-header {
-            background: white;
-            padding: 10px 20px;
-            border-bottom: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        .sidebar-logo {
+            display: flex; align-items: center; gap: 10px;
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            white-space: nowrap; overflow: hidden;
+            text-decoration: none;
+            background: rgba(0,0,0,.15);
         }
+        .sidebar-logo .logo-icon {
+            width: 34px; height: 34px; border-radius: 8px;
+            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 15px; color: #fff;
+        }
+        .sidebar-logo .logo-text { color: #fff; font-weight: 700; font-size: 15px; line-height: 1.2; }
+        .sidebar-logo .logo-sub  { color: rgba(255,255,255,.45); font-size: 10px; font-weight: 400; letter-spacing:.03em; }
+        .sidebar.collapsed .logo-text,
+        .sidebar.collapsed .logo-sub { display: none; }
 
-        .header-top {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 10px;
-        }
+        .sidebar-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px 0; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
 
-        #hamburgerBtn {
-            background: #1e3d14; /* Hamburger butonu sidebar ile uyumlu yeşil */
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
+        .nav-section {
+            padding: 14px 16px 4px;
+            font-size: 10px; font-weight: 600; letter-spacing: .1em;
+            color: rgba(255,255,255,.28); text-transform: uppercase;
+            white-space: nowrap; overflow: hidden;
         }
+        .sidebar.collapsed .nav-section { opacity: 0; height: 0; padding: 0; }
 
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 5px;
-            scrollbar-width: none;
+        .nav-item { margin: 1px 6px; }
+        .nav-link-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 10px; border-radius: 7px;
+            color: rgba(255,255,255,.65); font-size: 13.5px; font-weight: 500;
+            text-decoration: none; white-space: nowrap; overflow: hidden;
+            transition: background .15s, color .15s;
+            cursor: pointer; border: none; background: none; width: 100%; text-align: left;
         }
+        .nav-link-item:hover { background: var(--sidebar-hover); color: #fff; }
+        .nav-link-item.active {
+            background: var(--sidebar-active);
+            color: #fff;
+            box-shadow: inset 3px 0 0 var(--accent);
+        }
+        .nav-link-item .nav-icon {
+            width: 22px; text-align: center; font-size: 14px; flex-shrink: 0;
+            color: rgba(255,255,255,.45);
+        }
+        .nav-link-item.active .nav-icon,
+        .nav-link-item:hover .nav-icon { color: #60a5fa; }
+        .nav-link-item .nav-label { flex: 1; }
+        .nav-link-item .nav-arrow {
+            font-size: 10px; transition: transform .2s;
+            color: rgba(255,255,255,.3);
+        }
+        .nav-link-item[aria-expanded="true"] .nav-arrow { transform: rotate(90deg); }
+        .sidebar.collapsed .nav-label,
+        .sidebar.collapsed .nav-arrow { display: none; }
 
-        /* Senin orijinal buton renklerin (Turuncu, Yeşil, Mavi, Mor) dokunulmadı */
-        .btn-filter {
-            background-color: #f39c12;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
+        .nav-sub { padding-left: 12px; }
+        .nav-sub .nav-item { margin: 1px 0; }
+        .nav-sub .nav-link-item {
+            font-size: 13px; font-weight: 400;
+            padding: 7px 10px;
+            color: rgba(255,255,255,.5);
         }
+        .nav-sub .nav-link-item::before {
+            content: ''; width: 5px; height: 5px; border-radius: 50%;
+            background: rgba(255,255,255,.2); flex-shrink: 0;
+        }
+        .nav-sub .nav-link-item.active::before,
+        .nav-sub .nav-link-item:hover::before { background: #60a5fa; }
+        .sidebar.collapsed .nav-sub { display: none; }
 
-        .btn-excel {
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
+        .sidebar-footer {
+            padding: 10px 12px;
+            border-top: 1px solid rgba(255,255,255,.08);
+            white-space: nowrap; overflow: hidden;
+            background: rgba(0,0,0,.15);
         }
+        .sidebar-user {
+            display: flex; align-items: center; gap: 10px;
+            color: rgba(255,255,255,.6); font-size: 12px;
+        }
+        .sidebar-user .avatar {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; color: #fff; font-weight: 700; flex-shrink: 0;
+        }
+        .sidebar.collapsed .sidebar-user span { display: none; }
 
-        .btn-print {
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
+        /* ── TOPBAR ────────────────────────────────────── */
+        .topbar {
+            position: fixed; top: 0;
+            left: var(--sidebar-w); right: 0;
+            height: var(--topbar-h);
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center;
+            padding: 0 18px; gap: 10px;
+            transition: left .25s cubic-bezier(.4,0,.2,1);
+            z-index: 1000; box-shadow: 0 1px 6px rgba(0,0,0,.07);
         }
+        .sidebar.collapsed ~ .page-shell .topbar { left: var(--sidebar-w-col); }
 
-        .btn-add {
-            background-color: #8e44ad;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
+        .topbar-toggle {
+            width: 34px; height: 34px; border-radius: 7px;
+            border: 1px solid var(--border); background: transparent;
+            display: flex; align-items: center; justify-content: center;
+            color: #374151; cursor: pointer; flex-shrink: 0;
+            transition: background .15s;
         }
+        .topbar-toggle:hover { background: var(--accent-light); color: var(--accent); }
+
+        .topbar-title { font-size: 15px; font-weight: 600; color: #111827; }
+        .topbar-breadcrumb { font-size: 11.5px; color: var(--text-muted); }
+
+        .topbar-user {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 10px; border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #fafafa;
+        }
+        .topbar-user .user-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; color: #fff;
+        }
+        .topbar-user .user-name { font-size: 12.5px; font-weight: 600; color: #111827; }
+        .topbar-user .user-role { font-size: 11px; color: var(--text-muted); }
+
+        .topbar-actions { display: flex; align-items: center; gap: 6px; }
+        .topbar-btn {
+            height: 32px; padding: 0 13px; border-radius: 7px; font-size: 12.5px;
+            font-weight: 500; display: inline-flex; align-items: center; gap: 6px;
+            border: 1px solid var(--border); background: #fff; color: #374151;
+            cursor: pointer; text-decoration: none; transition: all .15s;
+        }
+        .topbar-btn:hover { background: var(--bg-page); color: #111827; }
+        .topbar-btn.btn-primary-custom {
+            background: var(--accent); border-color: var(--accent); color: #fff;
+        }
+        .topbar-btn.btn-primary-custom:hover { background: var(--accent-dark); color: #fff; }
+        .topbar-btn.btn-excel { color: #166534; border-color: #bbf7d0; background: #f0fdf4; }
+        .topbar-btn.btn-excel:hover { background: #dcfce7; color: #166534; }
+        .topbar-btn.btn-pdf { color: #991b1b; border-color: #fecaca; background: #fff5f5; }
+        .topbar-btn.btn-pdf:hover { background: #fee2e2; color: #991b1b; }
+        .topbar-btn.btn-filter { color: #92400e; border-color: #fde68a; background: #fffbeb; }
+        .topbar-btn.btn-filter:hover { background: #fef3c7; color: #92400e; }
+        .btn-logout {
+            width: 32px; height: 32px; border-radius: 7px; padding: 0;
+            border: 1px solid #fecaca; background: #fff5f5; color: #dc2626;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all .15s; font-size: 13px;
+        }
+        .btn-logout:hover { background: #fee2e2; }
+
+        /* ── PAGE SHELL ────────────────────────────────── */
+        .page-shell {
+            margin-left: var(--sidebar-w);
+            transition: margin-left .25s cubic-bezier(.4,0,.2,1);
+        }
+        .sidebar.collapsed ~ .page-shell { margin-left: var(--sidebar-w-col); }
 
         .page-body {
-            padding: 20px;
-            overflow-y: auto;
-            flex: 1;
+            padding: 20px 22px 32px;
+            margin-top: var(--topbar-h);
+            min-height: calc(100vh - var(--topbar-h));
         }
 
-        .overlay {
-            display: none;
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1040;
+        /* ── CARDS ─────────────────────────────────────── */
+        .card {
+            border: 1px solid var(--border) !important;
+            border-radius: var(--card-radius) !important;
+            box-shadow: var(--shadow-sm);
+        }
+        .card-header-accent, .card-header-blue {
+            background: linear-gradient(135deg, #1a2744 0%, #243566 100%);
+            color: #fff; padding: 13px 18px;
+            border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+            font-weight: 600; font-size: 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .card-header-green {
+            background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+            color: #fff; padding: 13px 18px;
+            border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+            font-weight: 600; font-size: 14px;
+            display: flex; align-items: center; gap: 8px;
         }
 
-            .overlay.active {
-                display: block;
-            }
+        /* ── STAT CARDS ────────────────────────────────── */
+        .stat-card {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 16px 18px;
+            display: flex; align-items: center; gap: 14px;
+            box-shadow: var(--shadow-sm); transition: box-shadow .2s, transform .2s;
+        }
+        .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+        .stat-icon {
+            width: 44px; height: 44px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 17px; flex-shrink: 0;
+        }
+        .stat-icon.blue   { background: #dbeafe; color: #1d4ed8; }
+        .stat-icon.green  { background: #dcfce7; color: #166534; }
+        .stat-icon.amber  { background: #fef3c7; color: #92400e; }
+        .stat-icon.red    { background: #fee2e2; color: #991b1b; }
+        .stat-icon.purple { background: #ede9fe; color: #5b21b6; }
+        .stat-icon.navy   { background: #e0e7ff; color: #3730a3; }
+        .stat-value { font-size: 22px; font-weight: 700; color: #111827; line-height: 1; }
+        .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+        .stat-trend { font-size: 11px; font-weight: 500; }
+        .stat-trend.up   { color: #16a34a; }
+        .stat-trend.down { color: #dc2626; }
 
-        @@media (max-width: 992px) {
-            .sidebar {
-                position: fixed;
-                left: -260px;
-                height: 100%;
-            }
+        /* ── TABLE ─────────────────────────────────────── */
+        .table-card { border-radius: var(--card-radius); overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+        .table { margin: 0; }
+        .table thead th {
+            background: var(--table-header-bg); color: var(--table-header-color);
+            font-size: 11.5px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: .05em; padding: 11px 14px;
+            border-bottom: none; white-space: nowrap; border-color: rgba(255,255,255,.1);
+        }
+        .table thead th:first-child { border-radius: 0; }
+        .table-filter-row th {
+            background: #f1f5f9 !important; color: #374151 !important;
+            padding: 6px 8px !important; border-bottom: 1px solid var(--border) !important;
+            font-size: 11px !important; text-transform: none !important; letter-spacing: 0 !important;
+        }
+        .table-filter-row th select,
+        .table-filter-row th input {
+            width: 100%; font-size: 11px; padding: 3px 6px;
+            border: 1px solid #d1d5db; border-radius: 4px; background: #fff;
+        }
+        .table tbody tr { transition: background .1s; }
+        .table tbody tr:hover { background: #f8faff; }
+        .table tbody td { padding: 10px 14px; border-color: #f1f5f9; vertical-align: middle; }
+        .table tbody tr:last-child td { border-bottom: none; }
+        .table-link { color: var(--accent); text-decoration: none; font-weight: 500; }
+        .table-link:hover { color: var(--accent-dark); text-decoration: underline; }
 
-                .sidebar.active {
-                    left: 0;
-                }
+        /* ── BADGES ────────────────────────────────────── */
+        .badge { font-weight: 500; font-size: 11px; padding: 3px 9px; border-radius: 20px; }
+        .badge-green  { background: #dcfce7; color: #166534; }
+        .badge-red    { background: #fee2e2; color: #991b1b; }
+        .badge-amber  { background: #fef3c7; color: #92400e; }
+        .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+        .badge-gray   { background: #f3f4f6; color: #374151; }
+        .badge-purple { background: #ede9fe; color: #5b21b6; }
+        .badge-navy   { background: #e0e7ff; color: #3730a3; }
+
+        /* ── FILTER PANEL ──────────────────────────────── */
+        .filter-panel {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 14px 18px;
+            margin-bottom: 14px; box-shadow: var(--shadow-sm);
+            border-left: 3px solid var(--accent);
+        }
+
+        /* ── MODAL ─────────────────────────────────────── */
+        .modal-content { border: none !important; border-radius: 12px !important; box-shadow: 0 20px 60px rgba(0,0,0,.18) !important; overflow: hidden; }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border) !important; }
+        .modal-header.dark { background: var(--sidebar-bg); color: #fff; }
+        .modal-header.dark .btn-close { filter: invert(1) opacity(.7); }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--border) !important; }
+
+        .form-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+        .form-control, .form-select {
+            border-radius: 7px; border: 1px solid #d1d5db;
+            font-size: 13.5px; padding: 7px 11px;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent); box-shadow: 0 0 0 3px rgba(25,118,210,.15);
+        }
+        .input-group-text {
+            background: #f9fafb; border-color: #d1d5db;
+            color: var(--text-muted); font-size: 13px;
+        }
+
+        /* ── BUTTONS ───────────────────────────────────── */
+        .btn { border-radius: 7px; font-size: 13.5px; font-weight: 500; }
+        .btn-primary { background: var(--accent); border-color: var(--accent); }
+        .btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+        .btn-success { background: #16a34a; border-color: #16a34a; }
+        .btn-success:hover { background: #15803d; border-color: #15803d; }
+        .btn-sm { border-radius: 6px; font-size: 12px; }
+
+        /* ── PROGRESS ──────────────────────────────────── */
+        .progress { border-radius: 20px; background: #e9ecef; height: 6px; }
+        .progress-bar { border-radius: 20px; transition: width .4s ease; }
+
+        /* ── MOBILE ────────────────────────────────────── */
+        @@media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: var(--sidebar-w) !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .page-shell { margin-left: 0 !important; }
+            .topbar { left: 0 !important; }
+            .page-body { padding: 14px; }
+            .topbar-user { display: none; }
+        }
+
+        /* ── OVERLAY ───────────────────────────────────── */
+        .sidebar-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.45); z-index: 1049;
+        }
+        .sidebar-overlay.active { display: block; }
+
+        /* ── SCROLLBAR ─────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c1c8d4; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* ── ANIMATIONS ────────────────────────────────── */
+        .fade-in { animation: fadeIn .3s ease; }
+        @@keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+
+        /* ── EMPTY STATE ───────────────────────────────── */
+        .empty-state { padding: 60px 20px; text-align: center; }
+        .empty-state i { font-size: 40px; color: #d1d5db; margin-bottom: 12px; display: block; }
+        .empty-state p { color: var(--text-muted); margin: 0; }
+
+        /* ── TOAST ─────────────────────────────────────── */
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; }
+
+        /* ── PAGE TITLE BAR ────────────────────────────── */
+        .page-title-bar {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 12px 18px;
+            margin-bottom: 16px; box-shadow: var(--shadow-sm);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .page-title-bar .ptb-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: var(--accent-light); color: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+        }
+        .page-title-bar .ptb-title { font-size: 15px; font-weight: 700; color: #111827; }
+        .page-title-bar .ptb-sub { font-size: 12px; color: var(--text-muted); }
+        .page-title-bar .ptb-badge {
+            background: var(--accent); color: #fff;
+            font-size: 11px; font-weight: 600; padding: 2px 9px;
+            border-radius: 20px;
         }
     </style>
 </head>
 <body>
 
-    <div class="overlay" id="sidebarOverlay"></div>
+@{
+    var ctrl   = ViewContext.RouteData.Values["Controller"]?.ToString() ?? "";
+    var action = ViewContext.RouteData.Values["Action"]?.ToString() ?? "";
+}
 
-    <div class="main-wrapper">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <h4 class="mb-0 text-white border-bottom pb-2">FSC ERP</h4>
-                <small class="text-info font-weight-bold">LOCAL SERVER | 2026</small>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ── SIDEBAR ─────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+
+    <a class="sidebar-logo" href="/Home/Index">
+        <div class="logo-icon"><i class="fas fa-leaf"></i></div>
+        <div>
+            <div class="logo-text">FSC Takip ERP</div>
+            <div class="logo-sub">Kraft Kağıt İzlenebilirlik</div>
+        </div>
+    </a>
+
+    <nav class="sidebar-nav">
+
+        <div class="nav-section">Genel</div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Home"?"active":"")" href="/Home/Index">
+                <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+        </div>
+
+        <div class="nav-section">FSC İşlemleri</div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Purchase"?"active":"")" href="/Purchase/Index">
+                <span class="nav-icon"><i class="fas fa-truck-loading"></i></span>
+                <span class="nav-label">Hammadde Girişi</span>
+            </a>
+        </div>
+
+        <div class="nav-item">
+            <button class="nav-link-item @(ctrl=="Production"?"active":"")"
+                    data-bs-toggle="collapse" data-bs-target="#navProduction"
+                    aria-expanded="@(ctrl=="Production"?"true":"false")">
+                <span class="nav-icon"><i class="fas fa-industry"></i></span>
+                <span class="nav-label">Üretim</span>
+                <i class="fas fa-chevron-right nav-arrow"></i>
+            </button>
+            <div class="collapse nav-sub @(ctrl=="Production"?"show":"")" id="navProduction">
+                <div class="nav-item">
+                    <a class="nav-link-item @(ctrl=="Production"&&action=="Index"?"active":"")" href="/Production/Index">
+                        <span class="nav-label">İş Emirleri</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link-item @(ctrl=="Production"&&action=="WasteReport"?"active":"")" href="/Production/WasteReport">
+                        <span class="nav-label">Fire Raporu</span>
+                    </a>
+                </div>
             </div>
+        </div>
 
-            <nav class="sidebar-menu overflow-auto">
-                <div class="menu-label">GENEL</div>
-                <a href="/Home/Index" class="nav-link"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Sales"?"active":"")" href="/Sales/Index">
+                <span class="nav-icon"><i class="fas fa-shipping-fast"></i></span>
+                <span class="nav-label">Satış / Sevkiyat</span>
+            </a>
+        </div>
 
-                <div class="menu-label">OPERASYONEL</div>
-                <a href="/Planning/Index" class="nav-link"><i class="fas fa-calendar-alt"></i> <span>Üretim Planlama</span></a>
-                <a href="/Stock/Index" class="nav-link"><i class="fas fa-warehouse"></i> <span>Stok Yönetimi</span></a>
-                <a href="/Shipping/Index" class="nav-link"><i class="fas fa-shipping-fast"></i> <span>Sevkiyat Paneli</span></a>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Stock"?"active":"")" href="/Stock/Index">
+                <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
+                <span class="nav-label">Stok Durumu</span>
+            </a>
+        </div>
 
-                <div class="menu-label">TİCARİ</div>
-                <a href="/Customers/Index" class="nav-link"><i class="fas fa-user-tie"></i> <span>Müşteriler</span></a>
-                <a href="/Suppliers/Index" class="nav-link"><i class="fas fa-truck"></i> <span>Tedarikçiler</span></a>
-                <a href="/Products/Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Products" ? "active" : "")"><i class="fas fa-box"></i> <span>Ürünler</span></a>
+        <div class="nav-section">Ticari</div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Customers"?"active":"")" href="/Customers/Index">
+                <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+                <span class="nav-label">Müşteriler</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Suppliers"?"active":"")" href="/Suppliers/Index">
+                <span class="nav-icon"><i class="fas fa-truck"></i></span>
+                <span class="nav-label">Tedarikçiler</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Products"?"active":"")" href="/Products/Index">
+                <span class="nav-icon"><i class="fas fa-box-open"></i></span>
+                <span class="nav-label">Ürünler</span>
+            </a>
+        </div>
 
-                <div class="menu-label">SİSTEM AYARLARI</div>
-
+        <div class="nav-section">FSC Raporlar</div>
+        <div class="nav-item">
+            <button class="nav-link-item @(ctrl=="Reports"?"active":"")"
+                    data-bs-toggle="collapse" data-bs-target="#navReports"
+                    aria-expanded="@(ctrl=="Reports"?"true":"false")">
+                <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+                <span class="nav-label">Raporlar</span>
+                <i class="fas fa-chevron-right nav-arrow"></i>
+            </button>
+            <div class="collapse nav-sub @(ctrl=="Reports"?"show":"")" id="navReports">
                 <div class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTorba">
-                        <i class="fas fa-shopping-bag"></i> <span>Torba Tanımları</span>
-                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
+                    <a class="nav-link-item @(ctrl=="Reports"&&action=="ChainOfCustody"?"active":"")" href="/Reports/ChainOfCustody">
+                        <span class="nav-label">Chain of Custody</span>
                     </a>
-                    <div id="collapseTorba" class="collapse @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Product" ? "show" : "")">
-                        <div class="collapse-inner">
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "BagTypes" ? "active" : "")" href="/Product/BagTypes">Torba Tipleri</a>
-                            <a class="collapse-item" href="/Product/Groups">Ürün Grupları</a>
-                        </div>
-                    </div>
                 </div>
-
                 <div class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#paperSet">
-                        <i class="fas fa-scroll"></i> <span>Kağıt Ayarları</span>
-                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
+                    <a class="nav-link-item @(ctrl=="Reports"&&action=="WasteSummary"?"active":"")" href="/Reports/WasteSummary">
+                        <span class="nav-label">Fire Özeti</span>
                     </a>
-                    <div id="paperSet" class="collapse @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Paper" ? "show" : "")">
-                        <div class="collapse-inner">
-                            <a class="collapse-item" href="/Paper/Types">Kağıt Tipleri</a>
-                            <a class="collapse-item" href="/Paper/Colors">Kağıt Renkleri</a>
-                            <a class="collapse-item" href="/Paper/Weights">Gramajlar</a>
-                            <a class="collapse-item" href="/Paper/Widths">Kağıt Enleri</a>
-                            <a class="collapse-item" href="/Paper/FscTypes">FSC Tipleri</a>
-                        </div>
-                    </div>
                 </div>
-
-                <a href="/Machine/Machines" class="nav-link"><i class="fas fa-industry"></i> <span>Makineler</span></a>
-
-            </nav>
-        </aside>
-
-        <main class="content-area">
-            <header class="page-header">
-                <div class="header-top">
-                    <button id="hamburgerBtn" type="button"><i class="fas fa-bars"></i></button>
-                    <h2 class="h5 mb-0 font-weight-bold text-dark">@ViewData["Title"]</h2>
+                <div class="nav-item">
+                    <a class="nav-link-item @(ctrl=="Reports"&&action=="SupplierFsc"?"active":"")" href="/Reports/SupplierFsc">
+                        <span class="nav-label">Tedarikçi FSC</span>
+                    </a>
                 </div>
+            </div>
+        </div>
 
-                <div class="action-buttons">
-                    <button class="btn-filter" onclick="toggleFilter()"><i class="fas fa-filter"></i> Filtrele</button>
-                    <button class="btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
-                    <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Yazdır</button>
-                    <button class="btn-add" id="globalAddBtn"><i class="fas fa-plus-circle"></i> Yeni Ekle</button>
+        <div class="nav-section">Sistem</div>
+        <div class="nav-item">
+            <button class="nav-link-item"
+                    data-bs-toggle="collapse" data-bs-target="#navSettings"
+                    aria-expanded="@((ctrl=="Product"||ctrl=="Paper"||ctrl=="Machine")?"true":"false")">
+                <span class="nav-icon"><i class="fas fa-sliders-h"></i></span>
+                <span class="nav-label">Tanımlamalar</span>
+                <i class="fas fa-chevron-right nav-arrow"></i>
+            </button>
+            <div class="collapse nav-sub @((ctrl=="Product"||ctrl=="Paper"||ctrl=="Machine")?"show":"")" id="navSettings">
+                <div class="nav-item">
+                    <a class="nav-link-item @(ctrl=="Product"&&action=="BagTypes"?"active":"")" href="/Product/BagTypes">
+                        <span class="nav-label">Torba Tipleri</span>
+                    </a>
                 </div>
-            </header>
+                <div class="nav-item">
+                    <a class="nav-link-item @(ctrl=="Product"&&action=="Groups"?"active":"")" href="/Product/Groups">
+                        <span class="nav-label">Ürün Grupları</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link-item @(ctrl=="Paper"&&action=="Types"?"active":"")" href="/Paper/Types">
+                        <span class="nav-label">Kağıt Tipleri</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link-item @(ctrl=="Paper"&&action=="Colors"?"active":"")" href="/Paper/Colors">
+                        <span class="nav-label">Kağıt Renkleri</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link-item @(ctrl=="Paper"&&action=="Weights"?"active":"")" href="/Paper/Weights">
+                        <span class="nav-label">Gramajlar</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link-item @(ctrl=="Paper"&&action=="Widths"?"active":"")" href="/Paper/Widths">
+                        <span class="nav-label">Kağıt Enleri</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link-item @(ctrl=="Paper"&&action=="FscTypes"?"active":"")" href="/Paper/FscTypes">
+                        <span class="nav-label">FSC Tipleri</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link-item @(ctrl=="Machine"?"active":"")" href="/Machine/Machines">
+                        <span class="nav-label">Makineler</span>
+                    </a>
+                </div>
+            </div>
+        </div>
 
-            <section class="page-body">
-                @RenderBody()
-            </section>
-        </main>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Etl"?"active":"")" href="/Etl/Index">
+                <span class="nav-icon"><i class="fas fa-sync-alt"></i></span>
+                <span class="nav-label">ERP Entegrasyon</span>
+            </a>
+        </div>
+
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <div class="avatar">Ö</div>
+            <div>
+                <div style="color:#fff;font-size:12.5px;font-weight:600;">Özay Göktaş</div>
+                <div style="font-size:10.5px;color:rgba(255,255,255,.4);">Admin</div>
+            </div>
+        </div>
     </div>
+</aside>
 
-    <script src="~/lib/jquery/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- ── PAGE SHELL ───────────────────────────────────────── -->
+<div class="page-shell" id="pageShell">
 
-    <script>
-        $(document).ready(function() {
-            // Sidebar Toggle
-            $('#hamburgerBtn').click(function() {
-                if ($(window).width() > 992) { $('#sidebar').toggleClass('collapsed'); }
-                else { $('#sidebar').toggleClass('active'); $('#sidebarOverlay').toggleClass('active'); }
-            });
+    <!-- TOPBAR -->
+    <header class="topbar" id="topbar">
+        <button class="topbar-toggle" id="sidebarToggle" title="Menüyü aç/kapat">
+            <i class="fas fa-bars" style="font-size:13px;"></i>
+        </button>
 
-            $('#sidebarOverlay').click(function() { $('#sidebar').removeClass('active'); $(this).removeClass('active'); });
+        <div class="flex-fill">
+            <div class="topbar-title">@ViewData["Title"]</div>
+        </div>
 
-            // Global Yeni Ekle
-            $('#globalAddBtn').click(function() {
-                if (typeof openAddModal === "function") { openAddModal(); }
-                else { Swal.fire('Bilgi', 'Bu sayfa için ekleme fonksiyonu henüz tanımlanmadı.', 'info'); }
-            });
-        });
+        <!-- Sayfa bazlı aksiyonlar -->
+        <div class="topbar-actions" id="topbarActions">
+            @await RenderSectionAsync("TopbarActions", required: false)
+        </div>
 
-        function toggleFilter() {
-            let panel = $('#filterPanel');
-            if(panel.length > 0) panel.slideToggle('fast');
-            else Swal.fire({ icon: 'info', title: 'Filtre', text: 'Bu sayfada aktif bir filtre paneli bulunamadı.', timer: 2000 });
+        <!-- Kullanıcı bilgisi -->
+        <div class="topbar-user ms-2">
+            <div class="user-avatar">Ö</div>
+            <div class="d-none d-md-block">
+                <div class="user-name">Özay Göktaş</div>
+                <div class="user-role">Admin / Yönetici</div>
+            </div>
+        </div>
+
+        <button class="btn-logout ms-1" title="Çıkış Yap">
+            <i class="fas fa-power-off"></i>
+        </button>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main class="page-body fade-in">
+        @RenderBody()
+    </main>
+
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="~/lib/jquery/jquery.min.js"></script>
+<script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+(function () {
+    const sidebar  = document.getElementById('sidebar');
+    const overlay  = document.getElementById('sidebarOverlay');
+    const toggle   = document.getElementById('sidebarToggle');
+    const isMobile = () => window.innerWidth <= 768;
+
+    toggle.addEventListener('click', () => {
+        if (isMobile()) {
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('active');
+        } else {
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         }
+    });
 
-        function exportToExcel() {
-            let action = '@ViewContext.RouteData.Values["Action"]';
-            let controller = '@ViewContext.RouteData.Values["Controller"]';
-            window.location.href = `/${controller}/Export${action}`;
-        }
-    </script>
+    overlay.addEventListener('click', () => {
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('active');
+    });
 
-    @await RenderSectionAsync("Scripts", required: false)
+    if (!isMobile() && localStorage.getItem('sidebarCollapsed') === 'true') {
+        sidebar.classList.add('collapsed');
+    }
+})();
+
+function showToast(msg, type = 'success') {
+    const icons  = { success:'check-circle', error:'times-circle', warning:'exclamation-triangle', info:'info-circle' };
+    const colors = { success:'#166534', error:'#991b1b', warning:'#92400e', info:'#1d4ed8' };
+    const bg     = { success:'#f0fdf4', error:'#fef2f2', warning:'#fffbeb', info:'#eff6ff' };
+    const id = 'toast-' + Date.now();
+    const el = document.createElement('div');
+    el.id = id;
+    el.style.cssText = `background:${bg[type]};border:1px solid ${colors[type]}33;border-left:4px solid ${colors[type]};
+        border-radius:10px;padding:11px 15px;margin-top:7px;display:flex;align-items:center;gap:10px;
+        min-width:280px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeIn .25s ease;font-size:13.5px;`;
+    el.innerHTML = `<i class="fas fa-${icons[type]}" style="color:${colors[type]};font-size:15px;"></i>
+        <span style="color:#111827;flex:1;">${msg}</span>
+        <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:15px;">×</button>`;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => el.remove(), 4500);
+}
+
+function toggleFilter() {
+    const p = document.getElementById('filterPanel');
+    if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+function openAddModal() {
+    const fn = window.openAddModalFn;
+    if (typeof fn === 'function') fn();
+    else showToast('Bu sayfa için ekleme formu tanımlanmadı.', 'info');
+}
+function exportToExcel() {
+    const ctrl   = '@ViewContext.RouteData.Values["Controller"]';
+    const action = '@ViewContext.RouteData.Values["Action"]';
+    window.location.href = `/${ctrl}/Export${action}`;
+}
+</script>
+
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

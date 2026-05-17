@@ -3,13 +3,13 @@
     public class FscSerial : BaseEntity
     {
         public int LotId { get; set; }
-        public string SerialNo { get; set; } // Örn: S2026-001-01
-        public decimal InitialWeight { get; set; } // Giriş Kilogramı
-        public decimal CurrentWeight { get; set; } // Kalan Kilogram
-
-        // Geçen yıldan mı devretti? (Denetim karşılaştırması için)
+        public string SerialNo { get; set; } = string.Empty;
+        public decimal InitialWeight { get; set; }
+        public decimal CurrentWeight { get; set; }
         public bool IsOpeningStock { get; set; }
+        public string? Notes { get; set; }
 
-        public virtual FscLot Lot { get; set; }
+        public virtual FscLot Lot { get; set; } = null!;
+        public virtual ICollection<ProductionDetail> ProductionDetails { get; set; } = new List<ProductionDetail>();
     }
 }
