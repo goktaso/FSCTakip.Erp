@@ -163,6 +163,50 @@ dotnet ef migrations add MigrationName --startup-project ../FSCTakip.WebUI
 dotnet ef database update --startup-project ../FSCTakip.WebUI
 ```
 
+## Kullanım Kılavuzu Güncelleme Kuralı
+
+**Her yeni sayfa veya modül tamamlandığında** `docs/KULLANIM_KILAVUZU.md` dosyası mutlaka güncellenmeli ve `FSCTakip.WebUI/Views/Guide/Index.cshtml` sayfasındaki TOC + heading haritası senkronize edilmelidir.
+
+### Güncelleme Adımları (her modül bitiminde otomatik yap)
+
+1. **`docs/KULLANIM_KILAVUZU.md`** — yeni bölüm ekle:
+   - Bölüm başlığı: `## N. Sayfa Adı {#anchor-id}`
+   - Sayfa URL'i ve menü yolu
+   - ASCII topbar diyagramı (buton konumları dahil)
+   - Özet kartlar (varsa)
+   - İşlem adımları (yeni kayıt, düzenleme, silme, filtre, Excel)
+   - Uyarı/ipucu kutuları (`> **⚠️**` veya `> **ℹ️**`)
+   - Tablolar (alan açıklamaları gerekiyorsa)
+   - İçindekiler tablosuna yeni satır ekle
+   - Modül Durumu tablosunu güncelle
+   - Versiyon numarasını artır (1.2 → 1.3 vb.)
+
+2. **`FSCTakip.WebUI/Views/Guide/Index.cshtml`** — şunları güncelle:
+   - TOC listesine yeni `<a class="toc-item">` satırı ekle (`toc-badge done` ile)
+   - `map` nesnesine heading → anchor ID eşleşmesini ekle
+   - Status bar sayısını güncelle
+
+### Topbar ASCII Şablonu
+
+Her sayfa için standart topbar diyagramı:
+```
+[≡] [+ Yeni Kayıt Ekle]   Sayfa Başlığı   [Filtrele] [Excel] [👤]
+```
+- Birincil aksiyon butonu (mavi gradient) sol üstte, hamburgerin hemen yanında
+- Filtrele + Excel sağda
+
+### Kılavuz Dosya Yapısı
+
+```
+docs/KULLANIM_KILAVUZU.md    ← Markdown içerik (v1.2+)
+FSCTakip.WebUI/
+  Views/Guide/
+    Index.cshtml              ← TOC + heading haritası
+  wwwroot/docs/               ← İndirme için kopyalanmış .md (opsiyonel)
+```
+
+---
+
 ## Önemli Notlar
 
 - `AppDbContext.SaveChangesAsync()` içindeki string uppercase kodu tüm entity stringleri otomatik büyük harfe çevirir (tr-TR). Email alanlarında bu sorun çıkarır, o alanları SaveChanges içinde exclude etmek gerekir.
