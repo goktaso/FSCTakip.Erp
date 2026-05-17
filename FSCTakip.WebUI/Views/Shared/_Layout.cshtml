@@ -450,25 +450,16 @@
         </div>
 
         <div class="nav-item">
-            <button class="nav-link-item @(ctrl=="Production"?"active":"")"
-                    data-bs-toggle="collapse" data-bs-target="#navProduction"
-                    aria-expanded="@(ctrl=="Production"?"true":"false")">
+            <a class="nav-link-item @(ctrl=="Production"&&action=="Index"?"active":"")" href="/Production/Index">
                 <span class="nav-icon"><i class="fas fa-industry"></i></span>
-                <span class="nav-label">Üretim</span>
-                <i class="fas fa-chevron-right nav-arrow"></i>
-            </button>
-            <div class="collapse nav-sub @(ctrl=="Production"?"show":"")" id="navProduction">
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Production"&&action=="Index"?"active":"")" href="/Production/Index">
-                        <span class="nav-label">İş Emirleri</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Production"&&action=="WasteReport"?"active":"")" href="/Production/WasteReport">
-                        <span class="nav-label">Fire Raporu</span>
-                    </a>
-                </div>
-            </div>
+                <span class="nav-label">İş Emirleri</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Production"&&action=="WasteReport"?"active":"")" href="/Production/WasteReport">
+                <span class="nav-icon"><i class="fas fa-burn"></i></span>
+                <span class="nav-label">Fire Raporu</span>
+            </a>
         </div>
 
         <div class="nav-item">
@@ -507,83 +498,72 @@
 
         <div class="nav-section">FSC Raporlar</div>
         <div class="nav-item">
-            <button class="nav-link-item @(ctrl=="Reports"?"active":"")"
-                    data-bs-toggle="collapse" data-bs-target="#navReports"
-                    aria-expanded="@(ctrl=="Reports"?"true":"false")">
+            <a class="nav-link-item @(ctrl=="Reports"&&action=="ChainOfCustody"?"active":"")" href="/Reports/ChainOfCustody">
+                <span class="nav-icon"><i class="fas fa-link"></i></span>
+                <span class="nav-label">Chain of Custody</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Reports"&&action=="WasteSummary"?"active":"")" href="/Reports/WasteSummary">
                 <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
-                <span class="nav-label">Raporlar</span>
-                <i class="fas fa-chevron-right nav-arrow"></i>
-            </button>
-            <div class="collapse nav-sub @(ctrl=="Reports"?"show":"")" id="navReports">
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Reports"&&action=="ChainOfCustody"?"active":"")" href="/Reports/ChainOfCustody">
-                        <span class="nav-label">Chain of Custody</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Reports"&&action=="WasteSummary"?"active":"")" href="/Reports/WasteSummary">
-                        <span class="nav-label">Fire Özeti</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Reports"&&action=="SupplierFsc"?"active":"")" href="/Reports/SupplierFsc">
-                        <span class="nav-label">Tedarikçi FSC</span>
-                    </a>
-                </div>
-            </div>
+                <span class="nav-label">Fire Özeti</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Reports"&&action=="SupplierFsc"?"active":"")" href="/Reports/SupplierFsc">
+                <span class="nav-icon"><i class="fas fa-certificate"></i></span>
+                <span class="nav-label">Tedarikçi FSC</span>
+            </a>
         </div>
 
-        <div class="nav-section">Sistem</div>
+        <div class="nav-section">Tanımlamalar</div>
         <div class="nav-item">
-            <button class="nav-link-item"
-                    data-bs-toggle="collapse" data-bs-target="#navSettings"
-                    aria-expanded="@((ctrl=="Product"||ctrl=="Paper"||ctrl=="Machine")?"true":"false")">
-                <span class="nav-icon"><i class="fas fa-sliders-h"></i></span>
-                <span class="nav-label">Tanımlamalar</span>
-                <i class="fas fa-chevron-right nav-arrow"></i>
-            </button>
-            <div class="collapse nav-sub @((ctrl=="Product"||ctrl=="Paper"||ctrl=="Machine")?"show":"")" id="navSettings">
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Product"&&action=="BagTypes"?"active":"")" href="/Product/BagTypes">
-                        <span class="nav-label">Torba Tipleri</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Product"&&action=="Groups"?"active":"")" href="/Product/Groups">
-                        <span class="nav-label">Ürün Grupları</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Paper"&&action=="Types"?"active":"")" href="/Paper/Types">
-                        <span class="nav-label">Kağıt Tipleri</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Paper"&&action=="Colors"?"active":"")" href="/Paper/Colors">
-                        <span class="nav-label">Kağıt Renkleri</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Paper"&&action=="Weights"?"active":"")" href="/Paper/Weights">
-                        <span class="nav-label">Gramajlar</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Paper"&&action=="Widths"?"active":"")" href="/Paper/Widths">
-                        <span class="nav-label">Kağıt Enleri</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Paper"&&action=="FscTypes"?"active":"")" href="/Paper/FscTypes">
-                        <span class="nav-label">FSC Tipleri</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link-item @(ctrl=="Machine"?"active":"")" href="/Machine/Machines">
-                        <span class="nav-label">Makineler</span>
-                    </a>
-                </div>
-            </div>
+            <a class="nav-link-item @(ctrl=="Product"&&action=="BagTypes"?"active":"")" href="/Product/BagTypes">
+                <span class="nav-icon"><i class="fas fa-shopping-bag"></i></span>
+                <span class="nav-label">Torba Tipleri</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Product"&&action=="Groups"?"active":"")" href="/Product/Groups">
+                <span class="nav-icon"><i class="fas fa-layer-group"></i></span>
+                <span class="nav-label">Ürün Grupları</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Paper"&&action=="Types"?"active":"")" href="/Paper/Types">
+                <span class="nav-icon"><i class="fas fa-scroll"></i></span>
+                <span class="nav-label">Kağıt Tipleri</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Paper"&&action=="Colors"?"active":"")" href="/Paper/Colors">
+                <span class="nav-icon"><i class="fas fa-palette"></i></span>
+                <span class="nav-label">Kağıt Renkleri</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Paper"&&action=="Weights"?"active":"")" href="/Paper/Weights">
+                <span class="nav-icon"><i class="fas fa-balance-scale"></i></span>
+                <span class="nav-label">Gramajlar</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Paper"&&action=="Widths"?"active":"")" href="/Paper/Widths">
+                <span class="nav-icon"><i class="fas fa-ruler-horizontal"></i></span>
+                <span class="nav-label">Kağıt Enleri</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Paper"&&action=="FscTypes"?"active":"")" href="/Paper/FscTypes">
+                <span class="nav-icon"><i class="fas fa-leaf"></i></span>
+                <span class="nav-label">FSC Tipleri</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Machine"?"active":"")" href="/Machine/Machines">
+                <span class="nav-icon"><i class="fas fa-cogs"></i></span>
+                <span class="nav-label">Makineler</span>
+            </a>
         </div>
 
         <div class="nav-item">
