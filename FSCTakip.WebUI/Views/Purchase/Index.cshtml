@@ -354,7 +354,7 @@ window.openAddModalFn = function() {
     document.getElementById('currency').value = 'TRY';
     document.getElementById('supplierFscWarning').style.display = 'none';
     document.getElementById('lotModalTitle').textContent = 'Yeni Hammadde Girişi';
-    new bootstrap.Modal(document.getElementById('lotModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('lotModal')).show();
 };
 
 function editLot(id) {
@@ -375,7 +375,7 @@ function editLot(id) {
             document.getElementById('currency').value = d.currency || 'TRY';
             document.getElementById('lotNotes').value = d.notes || '';
             document.getElementById('lotModalTitle').textContent = 'Lot Düzenle — ' + d.lotNo;
-            new bootstrap.Modal(document.getElementById('lotModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('lotModal')).show();
         });
 }
 

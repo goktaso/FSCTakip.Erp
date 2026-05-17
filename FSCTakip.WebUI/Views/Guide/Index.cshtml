@@ -1,0 +1,403 @@
+@{
+    ViewData["Title"] = "Kullanım Kılavuzu";
+    var mdContent = ViewBag.MarkdownContent as string ?? "";
+}
+
+<style>
+    /* ── GUIDE LAYOUT ──────────────────────────────── */
+    .guide-shell {
+        display: flex;
+        gap: 0;
+        min-height: calc(100vh - 56px - 40px);
+        position: relative;
+    }
+
+    /* TOC sidebar */
+    .guide-toc {
+        width: 260px;
+        flex-shrink: 0;
+        position: sticky;
+        top: 20px;
+        align-self: flex-start;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--card-radius);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+    }
+    .guide-toc-header {
+        background: var(--table-header-bg);
+        color: #fff;
+        padding: 12px 16px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .guide-toc-list {
+        padding: 8px 0;
+        max-height: calc(100vh - 160px);
+        overflow-y: auto;
+    }
+    .guide-toc-list::-webkit-scrollbar { width: 3px; }
+    .guide-toc-list::-webkit-scrollbar-thumb { background: #d1d5db; }
+
+    .toc-item {
+        display: block;
+        padding: 7px 16px;
+        font-size: 13px;
+        color: #374151;
+        text-decoration: none;
+        border-left: 3px solid transparent;
+        transition: all .15s;
+        cursor: pointer;
+    }
+    .toc-item:hover { background: #f8faff; color: var(--accent); border-left-color: #bfdbfe; }
+    .toc-item.active { background: var(--accent-light); color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+    .toc-item .toc-num { color: var(--text-muted); font-size: 11px; margin-right: 6px; }
+
+    /* Status badges in TOC */
+    .toc-badge {
+        float: right;
+        font-size: 10px;
+        padding: 1px 6px;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+    .toc-badge.done { background: #dcfce7; color: #166534; }
+    .toc-badge.wip  { background: #fef3c7; color: #92400e; }
+    .toc-badge.plan { background: #f3f4f6; color: #6b7280; }
+
+    /* Content area */
+    .guide-content {
+        flex: 1;
+        min-width: 0;
+        padding-left: 24px;
+    }
+
+    /* Markdown rendered content */
+    .md-body {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--card-radius);
+        padding: 36px 40px;
+        box-shadow: var(--shadow-sm);
+        font-size: 14.5px;
+        line-height: 1.7;
+        color: #1f2937;
+    }
+
+    .md-body h1 {
+        font-size: 24px; font-weight: 700; color: #111827;
+        border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-bottom: 24px;
+    }
+    .md-body h2 {
+        font-size: 18px; font-weight: 700; color: var(--table-header-bg);
+        margin-top: 40px; margin-bottom: 16px;
+        padding: 10px 16px;
+        background: #f0f4f8;
+        border-left: 4px solid var(--accent);
+        border-radius: 0 8px 8px 0;
+    }
+    .md-body h3 {
+        font-size: 15px; font-weight: 700; color: #374151;
+        margin-top: 28px; margin-bottom: 10px;
+    }
+    .md-body h4 {
+        font-size: 13.5px; font-weight: 600; color: #374151;
+        margin-top: 20px; margin-bottom: 8px;
+    }
+
+    .md-body p { margin-bottom: 12px; }
+
+    .md-body pre {
+        background: #0f1621;
+        color: #e2e8f0;
+        border-radius: 10px;
+        padding: 18px 20px;
+        font-family: 'Cascadia Code', 'Consolas', monospace;
+        font-size: 12.5px;
+        line-height: 1.6;
+        overflow-x: auto;
+        margin: 16px 0;
+    }
+    .md-body code {
+        background: #f1f5f9;
+        color: #1e40af;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12.5px;
+        font-family: 'Cascadia Code', 'Consolas', monospace;
+    }
+    .md-body pre code { background: none; color: inherit; padding: 0; }
+
+    .md-body table {
+        width: 100%; border-collapse: collapse;
+        margin: 16px 0; font-size: 13.5px;
+    }
+    .md-body table thead th {
+        background: var(--table-header-bg) !important;
+        color: #fff !important;
+        padding: 10px 14px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 12px;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+    .md-body table tbody td {
+        padding: 9px 14px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+    }
+    .md-body table tbody tr:hover { background: #f8faff; }
+    .md-body table tbody tr:last-child td { border-bottom: none; }
+
+    .md-body ul, .md-body ol {
+        padding-left: 22px;
+        margin-bottom: 12px;
+    }
+    .md-body li { margin-bottom: 5px; }
+    .md-body li > ul { margin-top: 5px; }
+
+    .md-body blockquote {
+        border-left: 4px solid var(--accent);
+        background: var(--accent-light);
+        padding: 12px 16px;
+        border-radius: 0 8px 8px 0;
+        margin: 16px 0;
+        font-size: 13.5px;
+        color: #1e40af;
+    }
+    .md-body blockquote p { margin: 0; }
+
+    .md-body a { color: var(--accent); text-decoration: none; }
+    .md-body a:hover { text-decoration: underline; }
+
+    .md-body hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 32px 0;
+    }
+
+    /* Section anchor highlight */
+    .md-body h2[id], .md-body h3[id] { scroll-margin-top: 80px; }
+
+    /* Status indicator at bottom */
+    .guide-status-bar {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 14px 20px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--card-radius);
+        margin-top: 20px;
+        font-size: 12px;
+    }
+    .guide-status-item { display: flex; align-items: center; gap: 6px; }
+
+    /* Print button area */
+    .guide-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    @@media print {
+        .guide-toc, .guide-toolbar, #sidebar, #topbar { display: none !important; }
+        .guide-content { padding: 0; }
+        .md-body { border: none; box-shadow: none; padding: 0; }
+    }
+</style>
+
+<!-- Toolbar -->
+<div class="guide-toolbar">
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge-blue badge px-3 py-2" style="font-size:13px;">
+            <i class="fas fa-book-open me-1"></i> Kullanım Kılavuzu
+        </span>
+        <span class="text-muted" style="font-size:12px;">FSC Takip ERP · Tüm Modüller</span>
+    </div>
+    <div class="d-flex gap-2">
+        <button onclick="window.print()" class="topbar-btn">
+            <i class="fas fa-print"></i> Yazdır
+        </button>
+        <a href="/docs/KULLANIM_KILAVUZU.md" download class="topbar-btn btn-excel">
+            <i class="fas fa-download"></i> .md İndir
+        </a>
+    </div>
+</div>
+
+<div class="guide-shell">
+
+    <!-- TOC -->
+    <div class="guide-toc">
+        <div class="guide-toc-header">
+            <i class="fas fa-list-ul"></i> İçindekiler
+        </div>
+        <div class="guide-toc-list">
+            <a class="toc-item" href="#giris" onclick="scrollTo('giris')">
+                <span class="toc-num">1.</span> Sisteme Giriş
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#dashboard" onclick="scrollTo('dashboard')">
+                <span class="toc-num">2.</span> Dashboard
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#menu" onclick="scrollTo('menu')">
+                <span class="toc-num">3.</span> Sol Menü
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#tedarikciler" onclick="scrollTo('tedarikciler')">
+                <span class="toc-num">4.</span> Tedarikçiler
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#musteriler" onclick="scrollTo('musteriler')">
+                <span class="toc-num">5.</span> Müşteriler
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#urunler" onclick="scrollTo('urunler')">
+                <span class="toc-num">6.</span> Ürünler
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#tanimlamalar" onclick="scrollTo('tanimlamalar')">
+                <span class="toc-num">7.</span> Tanımlamalar
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#hammadde" onclick="scrollTo('hammadde')">
+                <span class="toc-num">8.</span> Hammadde Girişi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#detail" onclick="scrollTo('detail')">
+                <span class="toc-num">9.</span> Bobin Takibi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#sss" onclick="scrollTo('sss')">
+                <span class="toc-num">10.</span> Sık Sorulan Sorular
+                <span class="toc-badge done">✓</span>
+            </a>
+
+            <div style="border-top:1px solid var(--border);margin:6px 0;"></div>
+            <div style="padding:6px 16px;font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Yakında</div>
+
+            <a class="toc-item" style="opacity:.5;pointer-events:none;">
+                <span class="toc-num">11.</span> Üretim / İş Emirleri
+                <span class="toc-badge wip">↺</span>
+            </a>
+            <a class="toc-item" style="opacity:.5;pointer-events:none;">
+                <span class="toc-num">12.</span> Satış / Sevkiyat
+                <span class="toc-badge plan">—</span>
+            </a>
+            <a class="toc-item" style="opacity:.5;pointer-events:none;">
+                <span class="toc-num">13.</span> Stok Durumu
+                <span class="toc-badge plan">—</span>
+            </a>
+            <a class="toc-item" style="opacity:.5;pointer-events:none;">
+                <span class="toc-num">14.</span> FSC Raporlar
+                <span class="toc-badge plan">—</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="guide-content">
+        <div class="md-body" id="mdBody">
+            <!-- Markdown will be rendered here by marked.js -->
+        </div>
+
+        <!-- Status bar -->
+        <div class="guide-status-bar">
+            <div class="guide-status-item">
+                <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
+                <span>8 modül</span>
+            </div>
+            <div class="guide-status-item">
+                <span class="toc-badge wip" style="float:none;">↺ Geliştiriliyor</span>
+                <span>Üretim modülü</span>
+            </div>
+            <div class="guide-status-item">
+                <span class="toc-badge plan" style="float:none;">— Planlandı</span>
+                <span>Satış, Stok, Raporlar</span>
+            </div>
+            <div class="ms-auto text-muted" style="font-size:11px;">
+                <i class="fas fa-sync-alt me-1"></i> Her modül tamamlandıktan sonra güncellenir
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    // Render markdown
+    const raw = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mdContent));
+
+    // Configure marked
+    marked.setOptions({
+        breaks: true,
+        gfm: true
+    });
+
+    document.getElementById('mdBody').innerHTML = marked.parse(raw);
+
+    // Add IDs to headings for anchor navigation
+    document.querySelectorAll('.md-body h2, .md-body h3').forEach(h => {
+        const text = h.textContent.trim();
+        // Map heading text to anchor IDs
+        const map = {
+            'Sisteme Giriş': 'giris',
+            'Ana Ekran (Dashboard)': 'dashboard',
+            'Sol Menü Yapısı': 'menu',
+            'Tedarikçi Yönetimi': 'tedarikciler',
+            'Müşteri Yönetimi': 'musteriler',
+            'Ürün Yönetimi': 'urunler',
+            'Sistem Tanımlamaları': 'tanimlamalar',
+            'Hammadde Girişi — FSC Lot': 'hammadde',
+            'Hammadde Detayı — Bobin / Seri Takibi': 'detail',
+            'Sık Sorulan Sorular': 'sss'
+        };
+        for (const [key, id] of Object.entries(map)) {
+            if (text.includes(key.substring(0, 15))) {
+                h.id = id;
+                break;
+            }
+        }
+    });
+
+    // TOC active state on scroll
+    const tocLinks = document.querySelectorAll('.toc-item[href]');
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                tocLinks.forEach(l => l.classList.remove('active'));
+                const link = document.querySelector(`.toc-item[href="#${e.target.id}"]`);
+                if (link) link.classList.add('active');
+            }
+        });
+    }, { rootMargin: '-20% 0% -70% 0%', threshold: 0 });
+
+    document.querySelectorAll('.md-body h2[id]').forEach(el => observer.observe(el));
+
+    // Scroll to section
+    function scrollTo(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    // Hash navigation on load
+    if (window.location.hash) {
+        setTimeout(() => {
+            const id = window.location.hash.substring(1);
+            scrollTo(id);
+        }, 300);
+    }
+</script>
+}
