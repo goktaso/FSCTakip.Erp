@@ -603,9 +603,15 @@
         </div>
 
         <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Guide"?"active":"")" href="/Guide/Index">
+            <a class="nav-link-item @(ctrl=="Guide"&&action=="Index"?"active":"")" href="/Guide/Index">
                 <span class="nav-icon"><i class="fas fa-book-open"></i></span>
                 <span class="nav-label">Kullanım Kılavuzu</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link-item @(ctrl=="Guide"&&action=="TestScenario"?"active":"")" href="/Guide/TestScenario">
+                <span class="nav-icon"><i class="fas fa-flask"></i></span>
+                <span class="nav-label">Test Senaryosu</span>
             </a>
         </div>
 

@@ -11,6 +11,12 @@ namespace FSCTakip.WebUI.Controllers
             _env = env;
         }
 
+        public IActionResult TestScenario()
+        {
+            ViewData["Title"] = "Test Senaryosu";
+            return View();
+        }
+
         public IActionResult Index(string? section)
         {
             ViewData["Title"] = "Kullanım Kılavuzu";

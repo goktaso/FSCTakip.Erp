@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using FSCTakip.DataAccess.Data;
+using FSCTakip.WebUI.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,5 +43,8 @@ app.UseSession();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Demo veri yükle (DB boşsa)
+await DbSeeder.SeedAsync(app.Services);
 
 app.Run();

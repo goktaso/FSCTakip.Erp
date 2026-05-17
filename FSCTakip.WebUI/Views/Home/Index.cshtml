@@ -1,111 +1,251 @@
-﻿@{
-    ViewData["Title"] = "Ürün Listesi";
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "Dashboard";
+    var expSuppliers = ViewBag.ExpiringSuppliers as List<Supplier> ?? new();
+    var expCustomers = ViewBag.ExpiringCustomers as List<Customer> ?? new();
+    var recentMov    = ViewBag.RecentMovements   as List<StockMovement> ?? new();
+    DateTime today   = ViewBag.Today ?? DateTime.Today;
+    bool hasWarnings = expSuppliers.Any() || expCustomers.Any();
 }
 
-<div class="product-container">
-    <div id="filterPanel" class="filter-card" style="display:none;">
-        <div class="row">
-            <div class="col-md-3">
-                <label>Ürün Grubu</label>
-                <select class="form-control" id="groupFilter">
-                    <option value="">Hepsi</option>
-                    <option value="1">1-Hammadde</option>
-                    <option value="6">6-Mamül</option>
-                </select>
+<div class="page-header">
+    <h4 class="page-title"><i class="fas fa-tachometer-alt me-2 text-primary"></i>Dashboard</h4>
+    <span class="text-muted small">@today.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))</span>
+</div>
+
+@if (hasWarnings)
+{
+    <div class="alert alert-warning d-flex align-items-start gap-3 mb-3" style="border-left:4px solid #f59e0b;">
+        <i class="fas fa-exclamation-triangle text-warning mt-1" style="font-size:18px;flex-shrink:0;"></i>
+        <div class="flex-grow-1">
+            <strong>FSC Sertifika Uyarısı</strong>
+            <div class="mt-1 small">
+                @foreach (var s in expSuppliers)
+                {
+                    var days = (int)(s.FscExpiryDate!.Value - today).TotalDays;
+                    var cls  = days <= 0 ? "text-danger fw-bold" : days <= 30 ? "text-warning fw-bold" : "";
+                    <span class="me-3">
+                        <i class="fas fa-truck me-1"></i>
+                        <a href="/Suppliers/Index" class="@cls">@s.Name</a>
+                        — <span class="@cls">@(days <= 0 ? "Süresi geçti!" : $"{days} gün kaldı")</span>
+                        (@s.FscExpiryDate.Value.ToString("dd.MM.yyyy"))
+                    </span>
+                }
+                @foreach (var c in expCustomers)
+                {
+                    var days = (int)(c.FscExpiryDate!.Value - today).TotalDays;
+                    var cls  = days <= 0 ? "text-danger fw-bold" : days <= 30 ? "text-warning fw-bold" : "";
+                    <span class="me-3">
+                        <i class="fas fa-user-tie me-1"></i>
+                        <a href="/Customers/Index" class="@cls">@c.Name</a>
+                        — <span class="@cls">@(days <= 0 ? "Süresi geçti!" : $"{days} gün kaldı")</span>
+                        (@c.FscExpiryDate.Value.ToString("dd.MM.yyyy"))
+                    </span>
+                }
             </div>
-            <div class="col-md-3">
-                <label>FSC Tipi</label>
-                <select class="form-control" id="fscFilter">
-                    <option value="">Hepsi</option>
-                </select>
+        </div>
+    </div>
+}
+
+<!-- Ana Stat Kartları -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+    <div class="stat-card" onclick="location.href='/Purchase/Index'" style="cursor:pointer;">
+        <div class="stat-icon amber"><i class="fas fa-layer-group"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.TotalLots</div>
+            <div class="stat-label">FSC Lot Girişi</div>
+        </div>
+    </div>
+    <div class="stat-card" onclick="location.href='/Production/Index'" style="cursor:pointer;">
+        <div class="stat-icon @(ViewBag.PendingWorkOrders > 0 ? "amber" : "green")">
+            <i class="fas fa-industry"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.PendingWorkOrders</div>
+            <div class="stat-label">Üretimde</div>
+            <div style="font-size:10px;color:#6b7280;">@ViewBag.CompletedWorkOrders tamamlandı</div>
+        </div>
+    </div>
+    <div class="stat-card" onclick="location.href='/Sales/Index'" style="cursor:pointer;">
+        <div class="stat-icon @(ViewBag.DraftSales > 0 ? "blue" : "green")">
+            <i class="fas fa-file-invoice"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.DraftSales</div>
+            <div class="stat-label">Bekleyen Sipariş</div>
+            <div style="font-size:10px;color:#6b7280;">@ViewBag.DeliveredSales teslim edildi</div>
+        </div>
+    </div>
+    <div class="stat-card" onclick="location.href='/Stock/Index'" style="cursor:pointer;">
+        <div class="stat-icon green"><i class="fas fa-warehouse"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.InStock</div>
+            <div class="stat-label">Stokta Ürün</div>
+            <div style="font-size:10px;color:#6b7280;">@ViewBag.StockItems çeşit takipte</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Sol kolon: Son Hareketler -->
+    <div class="col-lg-7">
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-exchange-alt text-primary"></i>
+                    <strong class="small">Son Stok Hareketleri</strong>
+                </div>
+                <a href="/Stock/Movements" class="btn btn-outline-secondary btn-sm" style="font-size:11px;">Tümü</a>
             </div>
-            <div class="col-md-3">
-                <label>Hızlı Ara</label>
-                <input type="text" class="form-control" placeholder="Kod veya Ad...">
+            <div class="table-responsive">
+                <table class="data-table" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th>TARİH</th>
+                            <th>TİP</th>
+                            <th>ÜRÜN</th>
+                            <th class="text-end">MİKTAR</th>
+                            <th>MÜŞTERİ / AÇIKLAMA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!recentMov.Any())
+                        {
+                            <tr><td colspan="5" class="text-center text-muted py-3">Henüz hareket yok</td></tr>
+                        }
+                        @foreach (var m in recentMov)
+                        {
+                            string tipClass = m.Type switch {
+                                MovementType.PurchaseEntry     => "badge-info",
+                                MovementType.ProductionEntry   => "badge-primary",
+                                MovementType.SalesDispatch     => "badge-danger",
+                                MovementType.WarehouseTransfer => "badge-warning",
+                                _ => "badge-secondary"
+                            };
+                            string tipText = m.Type switch {
+                                MovementType.PurchaseEntry     => "Satın Alma",
+                                MovementType.ProductionEntry   => "Üretim",
+                                MovementType.SalesDispatch     => "Satış",
+                                MovementType.WarehouseTransfer => "Transfer",
+                                _ => ""
+                            };
+                            bool isIn = m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry;
+                            <tr>
+                                <td class="text-muted">@m.DocumentDate.ToString("dd.MM.yy")</td>
+                                <td><span class="badge @tipClass" style="font-size:10px;">@tipText</span></td>
+                                <td><strong>@(m.Product?.ProductName ?? "—")</strong></td>
+                                <td class="text-end @(isIn ? "text-success" : m.Type == MovementType.SalesDispatch ? "text-danger" : "") fw-semibold">
+                                    @(isIn ? "+" : m.Type == MovementType.SalesDispatch ? "-" : "")@m.Quantity.ToString("N0")
+                                </td>
+                                <td class="text-muted" style="font-size:11px;">
+                                    @(m.Customer?.Name ?? m.Description ?? "—")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <div class="table-responsive shadow-sm rounded bg-white">
-        <table class="table table-hover mb-0">
-            <thead class="thead-light">
-                <tr>
-                    <th>Stok Kodu</th>
-                    <th>Ürün Adı</th>
-                    <th>Grup</th>
-                    <th>Gramaj</th>
-                    <th>Teknik Detay (Bobin/Ölçü)</th>
-                    <th>FSC Tipi</th>
-                    <th class="text-right">İşlemler</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><strong>10001</strong></td>
-                    <td>Esmer Kraft Bobin</td>
-                    <td><span class="badge badge-info">1-Hammadde</span></td>
-                    <td>80 gr</td>
-                    <td><span class="text-primary font-weight-bold">Bobin: 70 cm</span></td>
-                    <td>FSC Mix</td>
-                    <td class="text-right">
-                        <button class="btn btn-sm btn-outline-secondary" title="Düzenle">📝</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>60001</strong></td>
-                    <td>Bakkal Torbası</td>
-                    <td><span class="badge badge-success">6-Mamül</span></td>
-                    <td>80 gr</td>
-                    <td><span class="text-success font-weight-bold">24 x 30 x 12 cm</span></td>
-                    <td><span class="text-danger">FSC-SIZ</span></td>
-                    <td class="text-right">
-                        <button class="btn btn-sm btn-outline-secondary" title="Düzenle">📝</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Sağ kolon: Hızlı Erişim + İstatistikler -->
+    <div class="col-lg-5">
+        <!-- FSC Zinciri Durumu -->
+        <div class="table-card mb-3">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fas fa-link text-success"></i>
+                <strong class="small">FSC Zinciri Durumu</strong>
+            </div>
+            <div class="p-3">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="text-center">
+                        <div style="font-size:26px;font-weight:700;color:#1d4ed8;">@ViewBag.TotalLots</div>
+                        <div style="font-size:11px;color:#6b7280;">FSC Lot</div>
+                    </div>
+                    <i class="fas fa-arrow-right text-muted"></i>
+                    <div class="text-center">
+                        <div style="font-size:26px;font-weight:700;color:#7c3aed;">@ViewBag.CompletedWorkOrders</div>
+                        <div style="font-size:11px;color:#6b7280;">Tamamlanan Üretim</div>
+                    </div>
+                    <i class="fas fa-arrow-right text-muted"></i>
+                    <div class="text-center">
+                        <div style="font-size:26px;font-weight:700;color:#16a34a;">@ViewBag.DeliveredSales</div>
+                        <div style="font-size:11px;color:#6b7280;">Teslim Edilen</div>
+                    </div>
+                </div>
+                <a href="/Reports/ChainOfCustody" class="btn btn-success btn-sm w-100">
+                    <i class="fas fa-link me-1"></i>FSC CoC Raporu
+                </a>
+            </div>
+        </div>
+
+        <!-- Hızlı Erişim -->
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fas fa-bolt text-warning"></i>
+                <strong class="small">Hızlı Erişim</strong>
+            </div>
+            <div class="p-3" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <a href="/Purchase/Index" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#eff6ff;border-color:#bfdbfe!important;font-size:12px;">
+                        <i class="fas fa-plus-circle text-blue" style="color:#1d4ed8;"></i>
+                        <span>Yeni Lot Ekle</span>
+                    </div>
+                </a>
+                <a href="/Production/Index" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#f0fdf4;border-color:#bbf7d0!important;font-size:12px;">
+                        <i class="fas fa-cogs" style="color:#16a34a;"></i>
+                        <span>İş Emri Oluştur</span>
+                    </div>
+                </a>
+                <a href="/Sales/Index" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#fdf4ff;border-color:#e9d5ff!important;font-size:12px;">
+                        <i class="fas fa-file-invoice" style="color:#7c3aed;"></i>
+                        <span>Satış Siparişi</span>
+                    </div>
+                </a>
+                <a href="/Reports/LotTrace" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#fffbeb;border-color:#fde68a!important;font-size:12px;">
+                        <i class="fas fa-search" style="color:#d97706;"></i>
+                        <span>Lot Takip</span>
+                    </div>
+                </a>
+                <a href="/Stock/Index" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#f0fdf4;border-color:#bbf7d0!important;font-size:12px;">
+                        <i class="fas fa-warehouse" style="color:#16a34a;"></i>
+                        <span>Stok Durumu</span>
+                    </div>
+                </a>
+                <a href="/Reports/SupplierFsc" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#fef2f2;border-color:#fecaca!important;font-size:12px;">
+                        <i class="fas fa-certificate" style="color:#dc2626;"></i>
+                        <span>Tedarikçi FSC</span>
+                    </div>
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
-@section Scripts {
-    <script>
-        // Layout'taki "Filtrele" butonuna tıklandığında paneli aç/kapat
-        function toggleFilter() {
-            var panel = document.getElementById("filterPanel");
-            if (panel.style.display === "none") {
-                panel.style.display = "block";
-            } else {
-                panel.style.display = "none";
+<!-- Alt stat satırı -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-top:16px;">
+    <div class="stat-card" onclick="location.href='/Customers/Index'" style="cursor:pointer;">
+        <div class="stat-icon blue"><i class="fas fa-user-tie"></i></div>
+        <div class="stat-info"><div class="stat-value">@ViewBag.ActiveCustomers</div><div class="stat-label">Aktif Müşteri</div></div>
+    </div>
+    <div class="stat-card" onclick="location.href='/Suppliers/Index'" style="cursor:pointer;">
+        <div class="stat-icon green"><i class="fas fa-truck"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.ActiveSuppliers</div>
+            <div class="stat-label">Aktif Tedarikçi</div>
+            @if (expSuppliers.Any())
+            {
+                <div style="font-size:10px;color:#f59e0b;">⚠ @expSuppliers.Count FSC bitiyor</div>
             }
-        }
-
-        // Layout'taki butonlarla eşleştirme yapıyoruz
-        document.querySelector('.btn-filter').onclick = toggleFilter;
-
-        // Excel ve Yazdır fonksiyonları buraya gelecek
-        function exportToExcel() { alert("Excel'e aktarma işlemi başlatılıyor..."); }
-        function windowPrint() { window.print(); }
-    </script>
-}
-
-<style>
-    .filter-card {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        border-left: 5px solid #f39c12;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .table thead th {
-        border-top: none;
-        text-transform: uppercase;
-        font-size: 12px;
-        letter-spacing: 0.5px;
-    }
-
-    .badge {
-        padding: 8px 12px;
-    }
-</style>
+        </div>
+    </div>
+    <div class="stat-card" onclick="location.href='/Products/Index'" style="cursor:pointer;">
+        <div class="stat-icon purple"><i class="fas fa-box-open"></i></div>
+        <div class="stat-info"><div class="stat-value">@ViewBag.ActiveProducts</div><div class="stat-label">Aktif Ürün</div></div>
+    </div>
+</div>
