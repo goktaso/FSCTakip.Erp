@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 1.1 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 1.2 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -124,9 +124,9 @@ Hammadde aldığınız tedarikçi firmalar bu bölümde tanımlanır.
 ### Ekran Düzeni
 
 ```
-┌─[Yeni Tedarikçi]──[Excel]──[PDF]─────────────────────┐
-│                                                         │
-│ Filtre Paneli (Tedarikçi Adı, FSC Durumu, Ülke)       │
+[≡] [+ Yeni Tedarikçi]   Tedarikçiler   [Filtrele] [Excel] [👤]
+┌──────────────────────────────────────────────────────────┐
+│ Filtre Paneli (Tedarikçi Adı, FSC Durumu, Ülke)         │
 │                                                         │
 │ ┌─────┬──────────┬──────────┬────────┬────────┬──────┐ │
 │ │ KOD │   ADI    │ FSC KODU │ DURUM  │ SON TRH│ İŞLEM│ │
@@ -140,7 +140,7 @@ Hammadde aldığınız tedarikçi firmalar bu bölümde tanımlanır.
 
 ### Yeni Tedarikçi Ekleme
 
-1. Sağ üst köşedeki **+ Yeni Tedarikçi** butonuna tıklayın
+1. Sol üstte menünün hemen yanındaki **+ Yeni Tedarikçi** butonuna tıklayın
 2. Açılan formda doldurun:
    - **Tedarikçi Adı** *(zorunlu)* — firma tam adı
    - **Ülke** — menşei ülke
@@ -271,9 +271,18 @@ LOT (Sevkiyat)
 - **Bobin/Seri:** Lot içindeki her bir kağıt bobini
 - **Kalan Kg:** Üretimde henüz kullanılmayan ağırlık
 
-### Özet Kartları (Ekran Üstü)
+### Ekran Üstü — Topbar
 
-Sayfanın üst kısmında 4 özet kart bulunur:
+```
+[≡] [+ Yeni Lot Ekle]   Hammadde Girişleri   [Filtrele] [Excel] [👤]
+```
+
+Mavi gradient **+ Yeni Lot Ekle** butonu sol üstte, menü hamburgerin hemen yanındadır.  
+Sağda **Filtrele** ve **Excel** butonları yer alır.
+
+### Özet Kartları
+
+Topbar altında 4 özet kart bulunur:
 
 ```
 ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
@@ -285,7 +294,7 @@ Sayfanın üst kısmında 4 özet kart bulunur:
 
 ### Yeni Lot Kaydı
 
-1. **+ Yeni Lot Ekle** butonuna tıklayın
+1. Sol üstteki mavi **+ Yeni Lot Ekle** butonuna tıklayın
 2. Formu doldurun:
 
 ```
@@ -465,6 +474,14 @@ A: Giriş sayfasında **Şirket Veritabanı** alanından farklı firma veritaban
 | **Tamamlandı** | Yeşil | Manuel olarak tamamlandı işaretlenince |
 | **İptal** | Kırmızı | İptal edilmiş iş emri |
 
+### Ekran Üstü — Topbar
+
+```
+[≡] [+ Yeni İş Emri]   İş Emirleri   [Filtrele] [Excel] [👤]
+```
+
+Mavi gradient **+ Yeni İş Emri** butonu sol üstte, menü hamburgerin hemen yanındadır.
+
 ### Özet Kartları
 
 ```
@@ -477,7 +494,7 @@ A: Giriş sayfasında **Şirket Veritabanı** alanından farklı firma veritaban
 
 ### Yeni İş Emri Oluşturma
 
-1. **+ Yeni İş Emri** butonuna tıklayın
+1. Sol üstteki mavi **+ Yeni İş Emri** butonuna tıklayın
 2. Formu doldurun:
 
 ```
