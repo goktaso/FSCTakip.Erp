@@ -1,0 +1,99 @@
+@model List<FSCTakip.Core.Entities.Supplier>
+@{
+    ViewData["Title"] = "Tedarikçi FSC Sertifika Durumu";
+    DateTime today = ViewBag.Today;
+}
+
+<div class="page-header">
+    <h4 class="page-title"><i class="fas fa-certificate me-2 text-warning"></i>Tedarikçi FSC Sertifika Durumu</h4>
+</div>
+
+<!-- Stat Cards -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-shield-alt"></i></div>
+        <div class="stat-info"><div class="stat-value">@ViewBag.Valid</div><div class="stat-label">Geçerli Sertifika</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="stat-info"><div class="stat-value">@ViewBag.Expiring</div><div class="stat-label">30 Gün İçinde Bitiyor</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-times-circle"></i></div>
+        <div class="stat-info"><div class="stat-value">@ViewBag.Expired</div><div class="stat-label">Süresi Geçmiş / Pasif</div></div>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>TEDARİKÇİ KODU</th>
+                    <th>TEDARİKÇİ ADI</th>
+                    <th>FSC KODU</th>
+                    <th>SON GEÇERLİLİK</th>
+                    <th>KALAN GÜN</th>
+                    <th>DURUM</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Model)
+                {
+                    int? daysLeft = s.FscExpiryDate.HasValue ? (int)(s.FscExpiryDate.Value - today).TotalDays : null;
+                    string statusClass, statusText;
+
+                    if (!s.IsFscActive || (daysLeft.HasValue && daysLeft <= 0))
+                    {
+                        statusClass = "badge-danger"; statusText = "Geçersiz";
+                    }
+                    else if (daysLeft.HasValue && daysLeft <= 30)
+                    {
+                        statusClass = "badge-warning"; statusText = "Yakında Bitiyor";
+                    }
+                    else
+                    {
+                        statusClass = "badge-success"; statusText = "Geçerli";
+                    }
+
+                    <tr class="@(statusText == "Yakında Bitiyor" ? "table-warning" : statusText == "Geçersiz" ? "table-danger" : "")">
+                        <td class="text-muted small">@s.SupplierCode</td>
+                        <td><strong>@s.Name</strong></td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(s.FscCode))
+                            {
+                                <span class="badge badge-primary">@s.FscCode</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">—</span>
+                            }
+                        </td>
+                        <td class="small">
+                            @if (s.FscExpiryDate.HasValue)
+                            {
+                                @s.FscExpiryDate.Value.ToString("dd.MM.yyyy")
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="small fw-semibold @(daysLeft.HasValue && daysLeft <= 30 ? "text-danger" : "text-muted")">
+                            @if (daysLeft.HasValue)
+                            {
+                                if (daysLeft <= 0) { <span>Süresi Geçti</span> }
+                                else { <span>@daysLeft gün</span> }
+                            }
+                            else { <span class="text-muted">—</span> }
+                        </td>
+                        <td><span class="badge @statusClass">@statusText</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+> **Uyarı:** FSC sertifikası sona eren tedarikçiden alınan hammadde ile üretim yapılması FSC CoC zincirini kırar. Denetimde bu tablonun tüm satırları **Geçerli** olmalıdır.

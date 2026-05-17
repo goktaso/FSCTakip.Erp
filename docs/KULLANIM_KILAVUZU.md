@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 1.4 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 1.5 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -24,6 +24,9 @@
 15. [Satış Detayı — Kalem ve Sevkiyat](#satis-detail)
 16. [Stok Durumu](#stok)
 17. [Stok Hareketleri](#stok-hareketleri)
+18. [FSC Chain of Custody Raporu](#coc)
+19. [Lot Takip Raporu](#lot-takip)
+20. [Tedarikçi FSC Sertifika Durumu](#tedarikci-fsc)
 
 ---
 
@@ -804,6 +807,75 @@ Sol üstteki **⇄ Depo Transferi** butonu ile depo içi/depo arası ürün hare
 
 ---
 
+## 18. FSC Chain of Custody Raporu {#coc}
+
+**Menü Yolu:** FSC Raporlar → Chain of Custody
+
+**Sayfa:** `/Reports/ChainOfCustody`
+
+Bu rapor, **FSC denetiminin en kritik belgesidir.** Her satış sevkiyatının tedarikçiye kadar izlenebilirliğini tek ekranda gösterir.
+
+### Zincir Mantığı
+
+```
+Tedarikçi (FSC Kodu) → FscLot → FscSerial → Üretim (İş Emri) → Satış → Müşteri
+```
+
+| Durum | Anlam |
+|-------|-------|
+| ✅ **Tam** | Satış kalemi bir iş emrine, o iş emri en az bir FSC lot/serisine bağlı |
+| ❌ **Eksik** | İş emri bağlantısı yok veya lot/seri kaydı eksik |
+
+### Denetim Kullanımı
+
+1. Müşteri filtresiyle ilgili müşterinin tüm alımlarını listeleyin
+2. Tüm satırların **Tam** statüsünde olduğunu doğrulayın
+3. **Excel** butonu ile dışa aktarıp denetçiye sunun
+
+> **Önemli:** Denetçi her satış kalemi için tedarikçi FSC sertifika kopyası isteyebilir. Tedarikçi FSC kodunu bu rapordan alarak Tedarikçi modülündeki belgelerle eşleştirin.
+
+---
+
+## 19. Lot Takip Raporu {#lot-takip}
+
+**Menü Yolu:** FSC Raporlar → Lot Takip
+
+**Sayfa:** `/Reports/LotTrace`
+
+Bir hammadde lotunun giriş → seri → üretim → satış yolculuğunu adım adım gösterir.
+
+### Kullanım
+
+1. Üstteki açılır listeden takip edilecek lotu seçin
+2. **Takip Et** butonuna tıklayın
+
+### Sayfa Bölümleri
+
+- **Lot Bilgileri Kartı** — Tedarikçi, geliş tarihi, FSC sertifika kodu, irsaliye/fatura referansı
+- **FSC Zinciri Özeti** — 4 adımlı görsel zincir (Tedarikçi → Lot → Üretim → Satış)
+- **Seri Listesi** — Her bobinin başlangıç/kalan ağırlığı, tüketim yüzdesi, kullanıldığı iş emirleri
+- **İlgili Satışlar** — Bu lottan üretilen ürünlerin gittiği müşteriler ve siparişler
+
+> **İpucu:** Şikayet veya geri çağırma durumunda etkilenen müşterileri hızla tespit etmek için bu raporu kullanın.
+
+---
+
+## 20. Tedarikçi FSC Sertifika Durumu {#tedarikci-fsc}
+
+**Menü Yolu:** FSC Raporlar → Tedarikçi FSC
+
+**Sayfa:** `/Reports/SupplierFsc`
+
+| Renk | Anlam |
+|------|-------|
+| 🟢 Geçerli | Sertifika aktif, 30 günden fazla var |
+| 🟡 Yakında Bitiyor | 30 gün veya daha az kalmış |
+| 🔴 Geçersiz | Süresi geçmiş veya pasif olarak işaretlenmiş |
+
+> **Öneri:** Her ay bu sayfayı kontrol ederek sarı veya kırmızı tedarikçilerle sertifika yenileme sürecini başlatın. FSC denetiminde tedarikçinin sertifika geçerlilik tarihi kontrol edilir; süresi geçmiş tedarikçiden alınan hammadde FSC zincirini kırar.
+
+---
+
 ## 📋 Modül Durumu
 
 | Modül | Durum | Kılavuz Bölümü |
@@ -817,7 +889,7 @@ Sol üstteki **⇄ Depo Transferi** butonu ile depo içi/depo arası ürün hare
 | Üretim / İş Emirleri | ✅ Tamamlandı | Bölüm 11–13 |
 | Satış / Sevkiyat | ✅ Tamamlandı | Bölüm 14–15 |
 | Stok Durumu | ✅ Tamamlandı | Bölüm 16–17 |
-| FSC Raporlar | ⏳ Planlandı | — |
+| FSC Raporlar | ✅ Tamamlandı | Bölüm 18–20 |
 | ERP Entegrasyon | ⏳ Planlandı | — |
 
 ---
