@@ -12,6 +12,13 @@
     var fscUyari   = suppliers.Count(s => s.IsFscActive && s.FscExpiryDate.HasValue && s.FscExpiryDate.Value <= DateTime.Today.AddDays(90));
 }
 
+@section TopbarPrimary {
+    <button class="btn-topbar-add" data-bs-toggle="modal" data-bs-target="#lotModal">
+        <span class="btn-add-icon"><i class="fas fa-plus"></i></span>
+        Yeni Lot Ekle
+    </button>
+}
+
 @section TopbarActions {
     <button class="topbar-btn btn-filter" onclick="toggleFilter()">
         <i class="fas fa-filter"></i> Filtrele
@@ -19,9 +26,6 @@
     <a href="/Purchase/ExportIndex" class="topbar-btn btn-excel">
         <i class="fas fa-file-excel"></i> Excel
     </a>
-    <button class="topbar-btn btn-primary-custom" onclick="openAddModalFn()">
-        <i class="fas fa-plus"></i> Yeni Lot Ekle
-    </button>
 }
 
 <!-- Stat Kartları -->
@@ -342,25 +346,32 @@
 
 @section Scripts {
 <script>
-window.openAddModalFn = function() {
-    ['lotId','lotNo','truckPlate','dispatchNo','invoiceNo','invoiceAmount','lotNotes'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-    document.getElementById('arrivalDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('supplierId').value = '';
-    document.getElementById('fscTypeId').value = '';
-    document.getElementById('productId').value = '';
-    document.getElementById('currency').value = 'TRY';
-    document.getElementById('supplierFscWarning').style.display = 'none';
-    document.getElementById('lotModalTitle').textContent = 'Yeni Hammadde Girişi';
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('lotModal')).show();
-};
+// Flag: editLot programmatik açışta sıfırlamayı engeller
+let _lotEditMode = false;
+
+// Yeni lot formu sıfırlama — modal açılmadan önce tetiklenir
+document.getElementById('lotModal').addEventListener('show.bs.modal', function () {
+    if (!_lotEditMode) {
+        ['lotId','lotNo','truckPlate','dispatchNo','invoiceNo','invoiceAmount','lotNotes'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        document.getElementById('arrivalDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('supplierId').value = '';
+        document.getElementById('fscTypeId').value = '';
+        document.getElementById('productId').value = '';
+        document.getElementById('currency').value = 'TRY';
+        document.getElementById('supplierFscWarning').style.display = 'none';
+        document.getElementById('lotModalTitle').textContent = 'Yeni Hammadde Girişi';
+    }
+    _lotEditMode = false;
+});
 
 function editLot(id) {
+    _lotEditMode = true;
     fetch(`/Purchase/GetLot/${id}`)
         .then(r => r.json()).then(res => {
-            if (!res.success) return;
+            if (!res.success) { _lotEditMode = false; return; }
             const d = res.data;
             document.getElementById('lotId').value = d.id;
             document.getElementById('lotNo').value = d.lotNo;

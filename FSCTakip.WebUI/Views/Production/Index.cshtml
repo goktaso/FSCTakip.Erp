@@ -12,6 +12,13 @@
     var toplamUretim = Model.Sum(w => w.ActualQuantity);
 }
 
+@section TopbarPrimary {
+    <button class="btn-topbar-add" data-bs-toggle="modal" data-bs-target="#workOrderModal">
+        <span class="btn-add-icon"><i class="fas fa-plus"></i></span>
+        Yeni İş Emri
+    </button>
+}
+
 @section TopbarActions {
     <button class="topbar-btn btn-filter" onclick="toggleFilter()">
         <i class="fas fa-filter"></i> Filtrele
@@ -19,9 +26,6 @@
     <a href="/Production/ExportIndex" class="topbar-btn btn-excel">
         <i class="fas fa-file-excel"></i> Excel
     </a>
-    <button class="topbar-btn btn-primary-custom" onclick="openAddModalFn()">
-        <i class="fas fa-plus"></i> Yeni İş Emri
-    </button>
 }
 
 <!-- Stat Kartları -->
@@ -301,21 +305,26 @@
 
 @section Scripts {
 <script>
-window.openAddModalFn = function() {
-    ['woId','woNo','woNotes'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
-    document.getElementById('woDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('woProductId').value = '';
-    document.getElementById('woMachineId').value = '';
-    document.getElementById('woQty').value = '';
-    document.getElementById('woStatus').value = '1';
-    document.getElementById('woModalTitle').textContent = 'Yeni İş Emri';
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('workOrderModal')).show();
-};
+let _woEditMode = false;
+
+document.getElementById('workOrderModal').addEventListener('show.bs.modal', function () {
+    if (!_woEditMode) {
+        ['woId','woNo','woNotes'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+        document.getElementById('woDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('woProductId').value = '';
+        document.getElementById('woMachineId').value = '';
+        document.getElementById('woQty').value = '';
+        document.getElementById('woStatus').value = '1';
+        document.getElementById('woModalTitle').textContent = 'Yeni İş Emri';
+    }
+    _woEditMode = false;
+});
 
 function editWorkOrder(id) {
+    _woEditMode = true;
     fetch(`/Production/GetWorkOrder/${id}`)
         .then(r => r.json()).then(res => {
-            if (!res.success) return;
+            if (!res.success) { _woEditMode = false; return; }
             const d = res.data;
             document.getElementById('woId').value        = d.id;
             document.getElementById('woNo').value        = d.workOrderNo;
