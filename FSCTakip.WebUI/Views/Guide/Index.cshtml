@@ -213,6 +213,140 @@
         .guide-content { padding: 0; }
         .md-body { border: none; box-shadow: none; padding: 0; }
     }
+
+    /* ── UI MOCKUP KARTLARI ─────────────────────────────────── */
+    .guide-mockup {
+        border: 1px solid #d1d9e0;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,.10);
+        margin: 20px 0 28px;
+        font-size: 12.5px;
+        background: #fff;
+    }
+    .guide-mockup::before {
+        content: 'EKRAN ÖNİZLEME';
+        display: block;
+        background: #f0f4f8;
+        border-bottom: 1px solid #d1d9e0;
+        padding: 5px 14px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .1em;
+        color: #6b7280;
+    }
+    .gm-topbar {
+        background: #fff;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 8px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    }
+    .gm-hamburger {
+        width: 28px; height: 28px;
+        display: flex; align-items: center; justify-content: center;
+        background: #f3f4f6; border-radius: 6px;
+        color: #374151; font-size: 12px; cursor: default;
+        flex-shrink: 0;
+    }
+    .gm-title { font-weight: 600; color: #111827; font-size: 13px; white-space: nowrap; }
+    .gm-spacer { flex: 1; }
+    .gm-user { color: #6b7280; font-size: 11.5px; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
+    .gm-btn-primary {
+        padding: 5px 12px; border-radius: 7px; border: none; cursor: default;
+        background: linear-gradient(135deg,#1976d2,#1565c0);
+        color: #fff; font-size: 12px; font-weight: 600;
+        display: flex; align-items: center; gap: 5px; white-space: nowrap;
+        box-shadow: 0 2px 6px rgba(25,118,210,.3);
+    }
+    .gm-btn-secondary {
+        padding: 5px 10px; border-radius: 6px; cursor: default;
+        border: 1px solid #e5e7eb; background: #fff;
+        color: #374151; font-size: 11.5px;
+        display: flex; align-items: center; gap: 4px; white-space: nowrap;
+    }
+    .gm-btn-excel {
+        padding: 5px 10px; border-radius: 6px; cursor: default;
+        border: 1px solid #bbf7d0; background: #f0fdf4;
+        color: #166534; font-size: 11.5px;
+        display: flex; align-items: center; gap: 4px;
+    }
+    .gm-body { padding: 14px 16px; background: #f0f2f5; min-height: 80px; }
+    .gm-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .gm-stat {
+        background: #fff; border: 1px solid #e5e7eb;
+        border-radius: 10px; padding: 12px 14px;
+        display: flex; align-items: center; gap: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .gm-stat-icon {
+        width: 36px; height: 36px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px; flex-shrink: 0;
+    }
+    .gm-stat-icon.blue   { background:#dbeafe; color:#1d4ed8; }
+    .gm-stat-icon.green  { background:#dcfce7; color:#166534; }
+    .gm-stat-icon.amber  { background:#fef3c7; color:#92400e; }
+    .gm-stat-icon.red    { background:#fee2e2; color:#991b1b; }
+    .gm-stat-icon.purple { background:#ede9fe; color:#5b21b6; }
+    .gm-stat-val  { font-size: 18px; font-weight: 700; color: #111827; line-height: 1; }
+    .gm-stat-lbl  { font-size: 10.5px; color: #6b7280; margin-top: 2px; }
+    .gm-table-wrap { background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .gm-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 0; }
+    .gm-table thead th {
+        background: #1a2744; color: #fff;
+        padding: 8px 12px; text-align: left;
+        font-size: 10.5px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: .04em;
+        white-space: nowrap;
+    }
+    .gm-table tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .gm-table tbody tr:last-child td { border-bottom: none; }
+    .gm-table tbody tr:hover { background: #f8faff; }
+    .gm-link { color: #1976d2; text-decoration: none; font-weight: 500; cursor: default; }
+    .gm-muted { color: #6b7280; }
+    .gm-badge {
+        display: inline-flex; align-items: center;
+        padding: 2px 8px; border-radius: 20px;
+        font-size: 10.5px; font-weight: 600; white-space: nowrap;
+    }
+    .gm-badge.green  { background: #dcfce7; color: #166534; }
+    .gm-badge.red    { background: #fee2e2; color: #991b1b; }
+    .gm-badge.amber  { background: #fef3c7; color: #92400e; }
+    .gm-badge.blue   { background: #dbeafe; color: #1d4ed8; }
+    .gm-badge.gray   { background: #f3f4f6; color: #374151; }
+    .gm-prog { height: 4px; background: #f1f5f9; border-radius: 3px; margin-top: 3px; overflow: hidden; min-width: 60px; }
+    .gm-prog-bar { height: 100%; border-radius: 3px; }
+    .gm-icon-btn {
+        width: 24px; height: 24px; border-radius: 5px; border: 1px solid #e5e7eb;
+        background: #fff; color: #6b7280; cursor: default;
+        display: inline-flex; align-items: center; justify-content: center; font-size: 10.5px;
+    }
+    .gm-info-card {
+        background: #fff; border: 1px solid #e5e7eb;
+        border-radius: 10px; overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .gm-info-header {
+        background: linear-gradient(135deg,#1a2744,#243566);
+        color: #fff; padding: 9px 14px;
+        font-size: 12px; font-weight: 600;
+        display: flex; align-items: center;
+    }
+    .gm-info-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 6px 14px; border-bottom: 1px solid #f1f5f9;
+        font-size: 11.5px;
+    }
+    .gm-info-row:last-child { border-bottom: none; }
+    .gm-info-row span:first-child { color: #6b7280; }
 </style>
 
 <!-- Toolbar -->
@@ -376,6 +510,221 @@
                 break;
             }
         }
+    });
+
+    // ── UI MOCKUP ENJEKSIYONU ──────────────────────────────────
+    // Uygulamanın gerçek CSS sınıfları ile piksel-düzeyi önizleme kartları
+    const mockups = {
+
+        'hammadde': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni Lot Ekle</button>
+    <span class="gm-title">Hammadde Girişleri</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-filter"></i> Filtrele</button>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats">
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-boxes"></i></div><div><div class="gm-stat-val">47</div><div class="gm-stat-lbl">Toplam Lot</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-weight-hanging"></i></div><div><div class="gm-stat-val">382.450</div><div class="gm-stat-lbl">Toplam Giriş (kg)</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon purple"><i class="fas fa-scroll"></i></div><div><div class="gm-stat-val">215</div><div class="gm-stat-lbl">Toplam Bobin</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-battery-half"></i></div><div><div class="gm-stat-val">128.900</div><div class="gm-stat-lbl">Kalan Hammadde (kg)</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>LOT NO</th><th>TEDARİKÇİ</th><th>FSC TİPİ</th><th>GELİŞ TARİHİ</th><th>BOBİN</th><th>GİRİŞ (kg)</th><th>KALAN (kg)</th><th>İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td><a class="gm-link fw-semibold">L2026-047</a></td><td>BOSNA HERSEK LTD</td><td><span class="gm-badge green">FSC-100%</span></td><td class="gm-muted">17.05.2026</td><td><span class="gm-badge blue">3</span></td><td class="fw-semibold">3.730</td><td><span style="color:#16a34a;font-weight:600;">2.070</span><div class="gm-prog"><div class="gm-prog-bar" style="width:55%;background:#16a34a;"></div></div></td><td><button class="gm-icon-btn" title="Detay"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn" title="Düzenle"><i class="fas fa-pen"></i></button></td></tr>
+          <tr><td><a class="gm-link fw-semibold">L2026-046</a></td><td>SEGEZHA GROUP</td><td><span class="gm-badge green">FSC-MIX</span></td><td class="gm-muted">14.05.2026</td><td><span class="gm-badge blue">5</span></td><td class="fw-semibold">6.150</td><td><span style="color:#92400e;font-weight:600;">1.230</span><div class="gm-prog"><div class="gm-prog-bar" style="width:20%;background:#f59e0b;"></div></div></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn"><i class="fas fa-pen"></i></button></td></tr>
+          <tr><td><a class="gm-link fw-semibold">L2026-045</a></td><td>OYKA KAGIT</td><td><span class="gm-badge green">FSC-100%</span></td><td class="gm-muted">10.05.2026</td><td><span class="gm-badge blue">4</span></td><td class="fw-semibold">4.920</td><td><span style="color:#991b1b;font-weight:600;">420</span><div class="gm-prog"><div class="gm-prog-bar" style="width:8%;background:#ef4444;"></div></div></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn"><i class="fas fa-pen"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'detail': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Hammadde Lot Detayı</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-arrow-left"></i> Geri</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body" style="display:grid;grid-template-columns:280px 1fr;gap:16px;">
+    <div>
+      <div class="gm-info-card">
+        <div class="gm-info-header"><i class="fas fa-boxes me-2"></i>Lot Bilgisi</div>
+        <div class="gm-info-row"><span>Lot No</span><strong>L2026-047</strong></div>
+        <div class="gm-info-row"><span>Tedarikçi</span><strong>BOSNA HERSEK</strong></div>
+        <div class="gm-info-row"><span>FSC Tipi</span><span class="gm-badge green">FSC-100%</span></div>
+        <div class="gm-info-row"><span>Geliş Tarihi</span><strong>17.05.2026</strong></div>
+        <div class="gm-info-row"><span>İrsaliye No</span><strong>IRS-2026-45</strong></div>
+      </div>
+      <div class="gm-info-card" style="margin-top:12px;">
+        <div class="gm-info-header"><i class="fas fa-chart-pie me-2"></i>Özet</div>
+        <div class="gm-info-row"><span>Giriş</span><strong>3.730 kg</strong></div>
+        <div class="gm-info-row"><span>Kalan</span><strong style="color:#16a34a;">2.070 kg</strong></div>
+        <div class="gm-info-row"><span>Tüketim</span><strong style="color:#1d4ed8;">%44.5</strong></div>
+        <div style="margin-top:8px;background:#f1f5f9;border-radius:6px;height:8px;overflow:hidden;"><div style="width:44.5%;height:100%;background:linear-gradient(90deg,#1976d2,#0d47a1);border-radius:6px;"></div></div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <strong style="font-size:13px;">Bobin Listesi</strong>
+        <button class="gm-btn-primary" style="padding:5px 12px;font-size:12px;"><i class="fas fa-plus"></i> Bobin Ekle</button>
+      </div>
+      <div class="gm-table-wrap">
+        <table class="gm-table">
+          <thead><tr><th>SERİ NO</th><th>GİRİŞ (kg)</th><th>KALAN (kg)</th><th>TÜKETİM %</th><th>İŞLEM</th></tr></thead>
+          <tbody>
+            <tr><td><strong>L2026-047-B01</strong></td><td>1.250</td><td><span style="color:#16a34a;font-weight:600;">890</span></td><td><span class="gm-badge amber">28.8%</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn" style="color:#ef4444;"><i class="fas fa-trash"></i></button></td></tr>
+            <tr><td><strong>L2026-047-B02</strong></td><td>1.180</td><td><span style="color:#16a34a;font-weight:600;">1.180</span></td><td><span class="gm-badge green">0.0%</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn" style="color:#ef4444;"><i class="fas fa-trash"></i></button></td></tr>
+            <tr><td><strong>L2026-047-B03</strong></td><td>1.300</td><td><span style="color:#991b1b;font-weight:600;">0</span></td><td><span class="gm-badge red">100%</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+        'uretim': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni İş Emri</button>
+    <span class="gm-title">İş Emirleri</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-filter"></i> Filtrele</button>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-clipboard-list"></i></div><div><div class="gm-stat-val">23</div><div class="gm-stat-lbl">Toplam İş Emri</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-spinner"></i></div><div><div class="gm-stat-val">5</div><div class="gm-stat-lbl">Üretimde</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="gm-stat-val">17</div><div class="gm-stat-lbl">Tamamlandı</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon purple"><i class="fas fa-box"></i></div><div><div class="gm-stat-val">48.200</div><div class="gm-stat-lbl">Toplam Üretim (adet)</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>İŞ EMRİ NO</th><th>ÜRÜN</th><th>MAKİNE</th><th>PLAN TARİHİ</th><th>PLANLANAN</th><th>ÜRETILEN</th><th>DURUM</th><th>İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td><a class="gm-link fw-semibold">IE2026-023</a></td><td style="font-size:12px;">KRAFT ÇUVALI 50KG</td><td class="gm-muted">MAKİNE-1</td><td class="gm-muted">17.05.2026</td><td>10.000</td><td class="fw-semibold">8.100</td><td><span class="gm-badge amber">Üretimde</span></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn" style="color:#16a34a;" title="Tamamla"><i class="fas fa-check"></i></button></td></tr>
+          <tr><td><a class="gm-link fw-semibold">IE2026-022</a></td><td style="font-size:12px;">VENTIL TORBA 25KG</td><td class="gm-muted">MAKİNE-2</td><td class="gm-muted">15.05.2026</td><td>5.000</td><td class="fw-semibold">5.000</td><td><span class="gm-badge green">Tamamlandı</span></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn"><i class="fas fa-pen"></i></button></td></tr>
+          <tr><td><a class="gm-link fw-semibold">IE2026-021</a></td><td style="font-size:12px;">KRAFT ÇUVALI 25KG</td><td class="gm-muted">MAKİNE-1</td><td class="gm-muted">12.05.2026</td><td>8.000</td><td class="fw-semibold">0</td><td><span class="gm-badge gray">Taslak</span></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn"><i class="fas fa-pen"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'uretim-detail': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Üretim Detayı — IE2026-023</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary" style="color:#16a34a;border-color:#bbf7d0;background:#f0fdf4;"><i class="fas fa-check"></i> Tamamla</button>
+    <button class="gm-btn-secondary"><i class="fas fa-arrow-left"></i> İş Emirleri</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body" style="display:grid;grid-template-columns:280px 1fr;gap:16px;">
+    <div>
+      <div class="gm-info-card">
+        <div class="gm-info-header"><i class="fas fa-industry me-2"></i>İş Emri</div>
+        <div class="gm-info-row"><span>Numara</span><strong>IE2026-023</strong></div>
+        <div class="gm-info-row"><span>Ürün</span><strong style="font-size:11px;">KRAFT ÇUVALI 50KG</strong></div>
+        <div class="gm-info-row"><span>Makine</span><strong>MAKİNE-1</strong></div>
+        <div class="gm-info-row"><span>Durum</span><span class="gm-badge amber">Üretimde</span></div>
+        <div class="gm-info-row"><span>Plan</span><strong>10.000 adet</strong></div>
+      </div>
+      <div class="gm-info-card" style="margin-top:12px;">
+        <div class="gm-info-header"><i class="fas fa-chart-bar me-2"></i>Özet</div>
+        <div class="gm-info-row"><span>Üretilen</span><strong>8.100 adet</strong></div>
+        <div class="gm-info-row"><span>Tüketim</span><strong>2.430 kg</strong></div>
+        <div class="gm-info-row"><span>Fire</span><strong style="color:#991b1b;">43 kg</strong></div>
+        <div class="gm-info-row"><span>Fire %</span><span class="gm-badge green">%1.8</span></div>
+        <div style="margin-top:8px;">
+          <div style="font-size:11px;color:#6b7280;margin-bottom:4px;">%81 tamamlandı</div>
+          <div style="background:#f1f5f9;border-radius:6px;height:10px;overflow:hidden;"><div style="width:81%;height:100%;background:linear-gradient(90deg,#1976d2,#0d47a1);border-radius:6px;"></div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <strong style="font-size:13px;">Tüketim Kayıtları</strong>
+        <button class="gm-btn-primary" style="padding:5px 12px;font-size:12px;"><i class="fas fa-plus"></i> Tüketim Gir</button>
+      </div>
+      <div class="gm-table-wrap">
+        <table class="gm-table">
+          <thead><tr><th>TARİH</th><th>BOBİN</th><th>MAKİNE</th><th>TÜKETİM (kg)</th><th>FİRE (kg)</th><th>ÜRETİLEN (adet)</th><th>İŞLEM</th></tr></thead>
+          <tbody>
+            <tr><td class="gm-muted">17.05.2026</td><td><a class="gm-link">L2026-047-B01</a><div style="font-size:10px;color:#6b7280;">BOSNA HERSEK</div></td><td class="gm-muted">MAKİNE-1</td><td class="fw-semibold">1.250</td><td><span class="gm-badge red">25</span></td><td class="fw-semibold">4.200</td><td><button class="gm-icon-btn" style="color:#ef4444;"><i class="fas fa-trash"></i></button></td></tr>
+            <tr><td class="gm-muted">17.05.2026</td><td><a class="gm-link">L2026-047-B02</a><div style="font-size:10px;color:#6b7280;">BOSNA HERSEK</div></td><td class="gm-muted">MAKİNE-1</td><td class="fw-semibold">1.180</td><td><span class="gm-badge red">18</span></td><td class="fw-semibold">3.900</td><td><button class="gm-icon-btn" style="color:#ef4444;"><i class="fas fa-trash"></i></button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+        'fire': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Fire Raporu</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-filter"></i> Filtrele</button>
+    <button class="gm-btn-secondary"><i class="fas fa-arrow-left"></i> İş Emirleri</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats">
+      <div class="gm-stat"><div class="gm-stat-icon red"><i class="fas fa-burn"></i></div><div><div class="gm-stat-val">1.240</div><div class="gm-stat-lbl">Toplam Fire (kg)</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-weight-hanging"></i></div><div><div class="gm-stat-val">48.600</div><div class="gm-stat-lbl">Toplam Tüketim (kg)</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-percent"></i></div><div><div class="gm-stat-val">%2.55</div><div class="gm-stat-lbl">Genel Fire Oranı</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-list-alt"></i></div><div><div class="gm-stat-val">87</div><div class="gm-stat-lbl">Kayıt Sayısı</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>TARİH</th><th>İŞ EMRİ</th><th>ÜRÜN</th><th>BOBİN</th><th>LOT / TEDARİKÇİ</th><th>MAKİNE</th><th class="text-end">TÜKETİM (kg)</th><th class="text-end">FİRE (kg)</th><th class="text-end">FİRE %</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted">17.05.2026</td><td><a class="gm-link fw-semibold">IE2026-023</a></td><td style="font-size:12px;">KRAFT ÇUVALI 50KG</td><td><a class="gm-link">L047-B01</a></td><td><div style="font-size:11px;">L2026-047</div><div style="font-size:10px;color:#6b7280;">BOSNA HERSEK</div></td><td class="gm-muted">MAKİNE-1</td><td class="text-end fw-semibold">1.250</td><td class="text-end"><span class="gm-badge red">25</span></td><td class="text-end"><span class="gm-badge green">%2.0</span></td></tr>
+          <tr><td class="gm-muted">17.05.2026</td><td><a class="gm-link fw-semibold">IE2026-023</a></td><td style="font-size:12px;">KRAFT ÇUVALI 50KG</td><td><a class="gm-link">L047-B02</a></td><td><div style="font-size:11px;">L2026-047</div><div style="font-size:10px;color:#6b7280;">BOSNA HERSEK</div></td><td class="gm-muted">MAKİNE-1</td><td class="text-end fw-semibold">1.180</td><td class="text-end"><span class="gm-badge red">18</span></td><td class="text-end"><span class="gm-badge green">%1.5</span></td></tr>
+          <tr><td class="gm-muted">15.05.2026</td><td><a class="gm-link fw-semibold">IE2026-022</a></td><td style="font-size:12px;">VENTIL TORBA 25KG</td><td><a class="gm-link">L046-B03</a></td><td><div style="font-size:11px;">L2026-046</div><div style="font-size:10px;color:#6b7280;">SEGEZHA GROUP</div></td><td class="gm-muted">MAKİNE-2</td><td class="text-end fw-semibold">920</td><td class="text-end"><span class="gm-badge red">72</span></td><td class="text-end"><span class="gm-badge red">%7.8</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`
+    };
+
+    // Her bölüm başlığından sonra mockup'ı enjekte et
+    Object.entries(mockups).forEach(([id, html]) => {
+        const heading = document.getElementById(id);
+        if (!heading) return;
+        // code bloklarını (ASCII art) mockup ile değiştir
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html;
+        // İlk <pre> bloğunu bul ve mockup ile değiştir — bulamazsa başlığın hemen altına ekle
+        let inserted = false;
+        let next = heading.nextElementSibling;
+        while (next) {
+            if (next.tagName === 'PRE' || (next.tagName === 'DIV' && next.querySelector('pre'))) {
+                next.replaceWith(wrapper);
+                inserted = true;
+                break;
+            }
+            if (next.tagName === 'H2' || next.tagName === 'H3') break;
+            next = next.nextElementSibling;
+        }
+        if (!inserted) heading.insertAdjacentElement('afterend', wrapper);
     });
 
     // TOC active state on scroll
