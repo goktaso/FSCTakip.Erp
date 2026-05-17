@@ -429,19 +429,24 @@
                 <span class="toc-badge done">✓</span>
             </a>
 
+            <a class="toc-item" href="#satis" onclick="scrollTo('satis')">
+                <span class="toc-num">14.</span> Satış Siparişleri
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#satis-detail" onclick="scrollTo('satis-detail')">
+                <span class="toc-num">15.</span> Sevkiyat / Kalemler
+                <span class="toc-badge done">✓</span>
+            </a>
+
             <div style="border-top:1px solid var(--border);margin:6px 0;"></div>
             <div style="padding:6px 16px;font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Yakında</div>
 
             <a class="toc-item" style="opacity:.5;pointer-events:none;">
-                <span class="toc-num">14.</span> Satış / Sevkiyat
+                <span class="toc-num">16.</span> Stok Durumu
                 <span class="toc-badge plan">—</span>
             </a>
             <a class="toc-item" style="opacity:.5;pointer-events:none;">
-                <span class="toc-num">15.</span> Stok Durumu
-                <span class="toc-badge plan">—</span>
-            </a>
-            <a class="toc-item" style="opacity:.5;pointer-events:none;">
-                <span class="toc-num">16.</span> FSC Raporlar
+                <span class="toc-num">17.</span> FSC Raporlar
                 <span class="toc-badge plan">—</span>
             </a>
         </div>
@@ -457,11 +462,11 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>13 bölüm (Hammadde + Üretim + Fire dahil)</span>
+                <span>15 bölüm (Hammadde + Üretim + Satış dahil)</span>
             </div>
             <div class="guide-status-item">
                 <span class="toc-badge plan" style="float:none;">— Planlandı</span>
-                <span>Satış, Stok, Raporlar</span>
+                <span>Stok, Raporlar</span>
             </div>
             <div class="ms-auto text-muted" style="font-size:11px;">
                 <i class="fas fa-sync-alt me-1"></i> Her modül tamamlandıktan sonra güncellenir
@@ -502,7 +507,9 @@
             'Sık Sorulan Sorular': 'sss',
             'Üretim — İş Emirleri': 'uretim',
             'Üretim Detayı — Hammadde Tüketimi': 'uretim-detail',
-            'Fire Raporu': 'fire'
+            'Fire Raporu': 'fire',
+            'Satış Siparişleri': 'satis',
+            'Satış Detayı — Kalem ve Sevkiyat': 'satis-detail'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {
@@ -917,6 +924,95 @@
           <tr><td class="gm-muted" style="font-size:11px;">PRD-003</td><td><strong style="font-size:12px;">KRAFT ÇUVALI 25KG</strong></td><td style="font-size:11px;">Kraft Torba</td><td style="font-size:11px;">KRAFT BROWN</td><td class="gm-muted">70g</td><td class="gm-muted">920mm</td><td style="font-size:11px;">V Kesim</td><td><span class="gm-badge green" style="font-size:9.5px;">FSC-MIX</span></td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+</div>`,
+
+        'satis': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni Sipariş</button>
+    <span class="gm-title">Satış Siparişleri</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(4,1fr);">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-file-invoice"></i></div><div><div class="gm-stat-val">47</div><div class="gm-stat-lbl">Toplam Sipariş</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-clock"></i></div><div><div class="gm-stat-val">12</div><div class="gm-stat-lbl">Bekleyen</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-truck"></i></div><div><div class="gm-stat-val">31</div><div class="gm-stat-lbl">Teslim Edildi</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon purple"><i class="fas fa-lira-sign"></i></div><div><div class="gm-stat-val">1.24M ₺</div><div class="gm-stat-lbl">Toplam Tutar</div></div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <select class="gm-input" style="flex:1;min-width:120px;"><option>— Müşteri —</option></select>
+      <input class="gm-input" type="date" value="2026-05-01" style="flex:1;min-width:110px;" />
+      <input class="gm-input" type="date" value="2026-05-17" style="flex:1;min-width:110px;" />
+      <select class="gm-input" style="flex:1;min-width:100px;"><option>— Durum —</option></select>
+      <button class="gm-btn-primary" style="padding:4px 12px;font-size:11.5px;"><i class="fas fa-search"></i> Ara</button>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>#</th><th>SİPARİŞ NO</th><th>MÜŞTERİ</th><th>TARİH</th><th>TUTAR</th><th>KALEMLer</th><th>DURUM</th><th>İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted">47</td><td><a style="color:#1d4ed8;font-size:11.5px;font-weight:600;cursor:default;">SIP2026-047</a></td><td style="font-size:11.5px;">CEMENT FACTORY A.Ş.</td><td class="gm-muted">17.05.2026</td><td style="font-size:11.5px;font-weight:600;">48.500,00 ₺</td><td class="gm-muted" style="text-align:center;">3</td><td><span class="gm-badge" style="background:#fef3c7;color:#92400e;">Taslak</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          <tr><td class="gm-muted">46</td><td><a style="color:#1d4ed8;font-size:11.5px;font-weight:600;cursor:default;">SIP2026-046</a></td><td style="font-size:11.5px;">ÖRNEK TARIM LTD.</td><td class="gm-muted">15.05.2026</td><td style="font-size:11.5px;font-weight:600;">72.000,00 ₺</td><td class="gm-muted" style="text-align:center;">5</td><td><span class="gm-badge green">Teslim Edildi</span></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button></td></tr>
+          <tr><td class="gm-muted">45</td><td><a style="color:#1d4ed8;font-size:11.5px;font-weight:600;cursor:default;">SIP2026-045</a></td><td style="font-size:11.5px;"><span class="gm-badge green" style="font-size:9px;margin-right:4px;">FSC</span>KRAFT TEKSTİL A.Ş.</td><td class="gm-muted">14.05.2026</td><td style="font-size:11.5px;font-weight:600;">31.200,00 ₺</td><td class="gm-muted" style="text-align:center;">2</td><td><span class="gm-badge green">Teslim Edildi</span></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'satis-detail': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <a style="color:#9ca3af;font-size:11.5px;cursor:default;margin-right:4px;">Satış Siparişleri</a>
+    <span style="color:#9ca3af;font-size:11px;">›</span>
+    <span class="gm-title" style="font-size:13px;margin-left:6px;">SIP2026-047 Detayı</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-primary" style="background:linear-gradient(135deg,#16a34a,#15803d);"><i class="fas fa-truck"></i> Sevk Et</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body" style="display:grid;grid-template-columns:280px 1fr;gap:14px;">
+    <div>
+      <div class="gm-info-card" style="margin-bottom:10px;">
+        <div class="gm-info-header"><i class="fas fa-info-circle me-2"></i>Sipariş Bilgileri</div>
+        <div class="gm-info-row"><span>Sipariş No</span><span style="font-weight:600;font-size:11.5px;">SIP2026-047</span></div>
+        <div class="gm-info-row"><span>Müşteri</span><span style="font-size:11px;">CEMENT FACTORY A.Ş.</span></div>
+        <div class="gm-info-row"><span>Sipariş Tarihi</span><span>17.05.2026</span></div>
+        <div class="gm-info-row"><span>Durum</span><span class="gm-badge" style="background:#fef3c7;color:#92400e;font-size:10px;">Taslak</span></div>
+        <div class="gm-info-row"><span>Döviz</span><span>TRY</span></div>
+      </div>
+      <div class="gm-info-card" style="margin-bottom:10px;">
+        <div class="gm-info-header"><i class="fas fa-chart-bar me-2"></i>Özet</div>
+        <div class="gm-info-row"><span>Kalem Sayısı</span><span style="font-weight:600;">3</span></div>
+        <div class="gm-info-row"><span>Toplam Adet</span><span style="font-weight:600;">15.000</span></div>
+        <div class="gm-info-row"><span>Toplam Tutar</span><span style="font-weight:700;color:#1d4ed8;">48.500,00 ₺</span></div>
+      </div>
+      <div class="gm-info-card">
+        <div class="gm-info-header" style="background:linear-gradient(135deg,#166534,#14532d);"><i class="fas fa-link me-2"></i>FSC CoC Durumu</div>
+        <div style="padding:10px 14px;font-size:11px;color:#166534;background:#f0fdf4;display:flex;align-items:center;gap:6px;"><i class="fas fa-check-circle"></i> 2/3 kalem iş emrine bağlı — FSC zinciri aktif</div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12.5px;font-weight:600;color:#111827;">Sipariş Kalemleri</span>
+        <button class="gm-btn-primary" style="padding:4px 10px;font-size:11px;"><i class="fas fa-plus"></i> Kalem Ekle</button>
+      </div>
+      <div class="gm-table-wrap">
+        <table class="gm-table">
+          <thead><tr><th>#</th><th>ÜRÜN</th><th>İŞ EMRİ</th><th>MİKTAR</th><th>BİRİM FİYAT</th><th>TUTAR</th><th>İŞLEM</th></tr></thead>
+          <tbody>
+            <tr><td class="gm-muted">1</td><td style="font-size:11.5px;"><strong>KRAFT ÇUVALI 50KG</strong></td><td><span class="gm-badge green" style="font-size:9px;">🏆 IE-2026-012</span></td><td>5.000</td><td class="gm-muted">3,20 ₺</td><td style="font-weight:600;">16.000,00 ₺</td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+            <tr><td class="gm-muted">2</td><td style="font-size:11.5px;"><strong>VENTIL TORBA 25KG</strong></td><td><span class="gm-badge green" style="font-size:9px;">🏆 IE-2026-011</span></td><td>7.500</td><td class="gm-muted">2,90 ₺</td><td style="font-weight:600;">21.750,00 ₺</td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+            <tr><td class="gm-muted">3</td><td style="font-size:11.5px;"><strong>KRAFT ÇUVALI 25KG</strong></td><td><span class="gm-muted" style="font-size:10px;">—</span></td><td>2.500</td><td class="gm-muted">4,30 ₺</td><td style="font-weight:600;">10.750,00 ₺</td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          </tbody>
+          <tfoot><tr style="background:#f8faff;"><td colspan="5" style="text-align:right;font-size:12px;font-weight:600;padding:8px 14px;">Toplam</td><td style="font-weight:700;font-size:13px;color:#1d4ed8;padding:8px 10px;">48.500,00 ₺</td><td></td></tr></tfoot>
+        </table>
+      </div>
     </div>
   </div>
 </div>`,

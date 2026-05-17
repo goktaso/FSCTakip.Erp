@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 1.2 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 1.3 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -20,6 +20,8 @@
 11. [Üretim — İş Emirleri](#uretim)
 12. [Üretim Detayı — Hammadde Tüketimi](#uretim-detail)
 13. [Fire Raporu](#fire)
+14. [Satış Siparişleri](#satis)
+15. [Satış Detayı — Kalem ve Sevkiyat](#satis-detail)
 
 ---
 
@@ -613,6 +615,105 @@ Başlangıç / Bitiş tarihi seçip **Sorgula** butonuyla istediğiniz dönemi f
 
 ---
 
+## 14. Satış Siparişleri {#satis}
+
+**Menü Yolu:** Ticari → Satış
+
+**Sayfa:** `/Sales/Index`
+
+### Ekran Düzeni
+
+```
+[≡] [+ Yeni Sipariş]   Satış Siparişleri   [Excel] [👤]
+┌─────────────────────────────────────────────────────┐
+│  📦 Toplam   ⏳ Bekleyen   ✅ Teslim   💰 Toplam Tutar │
+├─────────────────────────────────────────────────────┤
+│  Müşteri ▼   Başlangıç   Bitiş   Durum ▼  [Ara]    │
+├─────────────────────────────────────────────────────┤
+│ # │ Sipariş No │ Müşteri │ Tarih │ Tutar │ Durum    │
+└─────────────────────────────────────────────────────┘
+```
+
+### Yeni Sipariş Oluşturma
+
+1. Sol üstteki mavi **+ Yeni Sipariş** butonuna tıklayın.
+2. Açılan formda şu alanları doldurun:
+   - **Müşteri** *(zorunlu)* — açılır listeden seçin; FSC lisanslı müşterilerde yeşil rozet görünür
+   - **Sipariş Tarihi** *(zorunlu)*
+   - **Döviz** — TRY, USD, EUR (varsayılan: TRY)
+   - **Durum** — Taslak (varsayılan), Teslim Edildi, İptal
+   - Fatura No, İrsaliye No, Plaka, Teslimat Adresi, Notlar *(isteğe bağlı)*
+3. **Kaydet** butonuyla sipariş oluşturulur; sistem otomatik olarak **SIP2026-001** formatında numara üretir.
+
+### Sipariş Durumları
+
+| Durum | Renk | Açıklama |
+|-------|------|----------|
+| Taslak | 🔵 Mavi | Hazırlanıyor, henüz sevk edilmedi |
+| Teslim Edildi | 🟢 Yeşil | Sevk yapıldı, stok hareketi oluşturuldu |
+| İptal | 🔴 Kırmızı | İptal edildi |
+
+> **Not:** Teslim edilmiş sipariş düzenlenemez ve silinemez.
+
+### Filtreleme ve Arama
+
+- **Müşteri**, **Tarih aralığı** ve **Durum** filtrelerini birlikte kullanabilirsiniz.
+- **Excel** butonu ile mevcut listeyi `.xlsx` formatında dışa aktarın.
+
+### Sipariş Silme
+
+- Yalnızca **Taslak** durumundaki siparişler silinebilir.
+- Silme işlemi önce onay ister, ardından sipariş ve tüm kalemleri kaldırılır.
+
+---
+
+## 15. Satış Detayı — Kalem ve Sevkiyat {#satis-detail}
+
+**Sayfa:** `/Sales/Detail/{id}`
+
+Sipariş listesinden sipariş numarasına tıklayarak detay sayfasına ulaşın.
+
+### Sayfa Bölümleri
+
+**Sol Panel — Sipariş Bilgileri**
+- Müşteri, tarih, irsaliye/fatura bilgileri
+- Kalem sayısı, toplam adet ve tutar özeti
+- **FSC CoC Durumu** göstergesi — siparişte en az bir iş emrine bağlı kalem varsa zincir sağlam kabul edilir
+
+**Sağ Panel — Sipariş Kalemleri**
+- Her kalemin ürün adı, miktar, birim fiyat ve tutarı
+- FSC iş emri bağlantısı olan kalemlerde 🏆 rozeti görünür
+- Kalem toplamı, satır sayısı ve genel tutar tablo altında gösterilir
+
+### Kalem Ekleme / Düzenleme
+
+1. **+ Kalem Ekle** butonuna tıklayın.
+2. Formda şu alanları doldurun:
+   - **Ürün** *(zorunlu)* — aktif ürünler listelenir
+   - **Miktar** ve **Birim Fiyat** *(zorunlu)*
+   - **Birim** — Adet (varsayılan), Kg, Ton, Rulo vb.
+   - **İş Emri (FSC CoC)** *(isteğe bağlı)* — tamamlanmış iş emirleri listelenir; seçildiğinde satışın hangi üretimden geldiği izlenebilir olur
+3. Kaydet.
+
+> **FSC Zinciri (Chain of Custody):** Bir satış kalemi iş emrine bağlandığında FSC sertifikası gereken müşteri teslimatlarında izlenebilirlik sağlanmış olur. Denetimde bu zinciri kullanın.
+
+### Sevkiyat (Sevk Et)
+
+Sipariş hazır olduğunda **Sevk Et** (yeşil buton) ile teslimatı kaydedin:
+
+1. **Sevk Et** butonuna tıklayın.
+2. Açılan formda **Sevk Tarihi**, **İrsaliye No** ve **Plaka** bilgilerini girin.
+3. **Sevkiyatı Onayla** butonuna tıklayın.
+
+**Sevk işlemi şunu yapar:**
+- Sipariş durumu → **Teslim Edildi**
+- Her kalem için otomatik **Stok Hareketi** (Tür: Satış Sevkiyatı) oluşturulur
+- Tarih, belge no, müşteri ve plaka stok hareketine işlenir
+
+> **Dikkat:** Sevk edilmiş siparişe kalem eklenemez, silinemez ve sipariş silinemez.
+
+---
+
 ## 📋 Modül Durumu
 
 | Modül | Durum | Kılavuz Bölümü |
@@ -624,7 +725,7 @@ Başlangıç / Bitiş tarihi seçip **Sorgula** butonuyla istediğiniz dönemi f
 | Tanımlamalar | ✅ Tamamlandı | Bölüm 7 |
 | Hammadde Girişi | ✅ Tamamlandı | Bölüm 8–9 |
 | Üretim / İş Emirleri | ✅ Tamamlandı | Bölüm 11–13 |
-| Satış / Sevkiyat | ⏳ Planlandı | — |
+| Satış / Sevkiyat | ✅ Tamamlandı | Bölüm 14–15 |
 | Stok Durumu | ⏳ Planlandı | — |
 | FSC Raporlar | ⏳ Planlandı | — |
 | ERP Entegrasyon | ⏳ Planlandı | — |

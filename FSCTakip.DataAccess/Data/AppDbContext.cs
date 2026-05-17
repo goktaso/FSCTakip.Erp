@@ -36,6 +36,8 @@ namespace FSCTakip.DataAccess.Data
         public DbSet<FscLot> FscLots { get; set; }
         public DbSet<FscSerial> FscSerials { get; set; }
         public DbSet<WasteManagement> WasteManagements { get; set; }
+        public DbSet<SalesOrder> SalesOrders { get; set; }
+        public DbSet<SalesOrderLine> SalesOrderLines { get; set; }
         #endregion
 
         // --- MERKEZİ BÜYÜK HARF DÖNÜŞTÜRME MANTIĞI ---
@@ -105,6 +107,16 @@ namespace FSCTakip.DataAccess.Data
                 .HasOne(d => d.FscSerial).WithMany(s => s.ProductionDetails).HasForeignKey(d => d.FscSerialId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<ProductionDetail>()
                 .HasOne(d => d.Machine).WithMany().HasForeignKey(d => d.MachineId).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SalesOrder>()
+                .HasOne(s => s.Customer).WithMany().HasForeignKey(s => s.CustomerId).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SalesOrderLine>()
+                .HasOne(l => l.SalesOrder).WithMany(s => s.Lines).HasForeignKey(l => l.SalesOrderId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<SalesOrderLine>()
+                .HasOne(l => l.Product).WithMany().HasForeignKey(l => l.ProductId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<SalesOrderLine>()
+                .HasOne(l => l.WorkOrder).WithMany().HasForeignKey(l => l.WorkOrderId).OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
