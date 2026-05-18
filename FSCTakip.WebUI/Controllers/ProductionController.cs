@@ -132,27 +132,49 @@ namespace FSCTakip.WebUI.Controllers
         public async Task<IActionResult> Detail(int id)
         {
             var wo = await _context.WorkOrders
-                .Include(w => w.Product)
+                .Include(w => w.Product).ThenInclude(p => p!.FscType)
                 .Include(w => w.Machine)
                 .Include(w => w.ProductionDetails)
                     .ThenInclude(d => d.FscSerial)
-                        .ThenInclude(s => s.Lot)
+                        .ThenInclude(s => s.Lot).ThenInclude(l => l.Supplier)
+                .Include(w => w.ProductionDetails)
+                    .ThenInclude(d => d.FscSerial)
+                        .ThenInclude(s => s.Lot).ThenInclude(l => l.FscType)
                 .Include(w => w.ProductionDetails)
                     .ThenInclude(d => d.Machine)
+                .Include(w => w.ProductionDetails)
+                    .ThenInclude(d => d.WorkOrderRecipe)
+                        .ThenInclude(r => r!.Product)
+                .Include(w => w.WorkOrderRecipes)
+                    .ThenInclude(r => r.Product).ThenInclude(p => p.FscType)
+                .Include(w => w.WorkOrderRecipes)
+                    .ThenInclude(r => r.FscSerial).ThenInclude(s => s!.Lot)
                 .FirstOrDefaultAsync(w => w.Id == id);
 
             if (wo == null) return NotFound();
 
             // Hammadde bobinleri (kalan > 0 olanlar)
             var availableSerials = await _context.FscSerials
-                .Include(s => s.Lot)
-                    .ThenInclude(l => l.Supplier)
+                .Include(s => s.Lot).ThenInclude(l => l.Supplier)
+                .Include(s => s.Lot).ThenInclude(l => l.FscType)
                 .Where(s => s.CurrentWeight > 0)
                 .OrderBy(s => s.SerialNo)
                 .ToListAsync();
 
-            ViewBag.AvailableSerials = availableSerials;
-            ViewBag.Machines = await _context.Machines.OrderBy(m => m.Name).ToListAsync();
+            // Ürünün tanımlı reçete bileşenleri (BOM dropdown için)
+            var recipeComponents = await _context.ProductRecipes
+                .Include(r => r.ChildProduct).ThenInclude(p => p.FscType)
+                .Where(r => r.ParentProductId == wo.ProductId && r.IsActive)
+                .OrderBy(r => r.ChildProduct.ProductName)
+                .ToListAsync();
+
+            // WorkOrderRecipes — mevcut reçete satırları (varsa)
+            var workOrderRecipes = wo.WorkOrderRecipes.OrderBy(r => r.Product?.ProductName).ToList();
+
+            ViewBag.AvailableSerials   = availableSerials;
+            ViewBag.Machines           = await _context.Machines.OrderBy(m => m.Name).ToListAsync();
+            ViewBag.RecipeComponents   = recipeComponents;
+            ViewBag.WorkOrderRecipes   = workOrderRecipes;
             ViewData["Title"] = $"İş Emri — {wo.WorkOrderNo}";
             return View(wo);
         }
@@ -199,6 +221,7 @@ namespace FSCTakip.WebUI.Controllers
             if (d == null) return Json(new { success = false });
             return Json(new { success = true, data = new {
                 d.Id, d.WorkOrderId, d.FscSerialId, d.MachineId,
+                workOrderRecipeId = d.WorkOrderRecipeId,
                 productionDate = d.ProductionDate.ToString("yyyy-MM-dd"),
                 d.ConsumedWeight, d.WasteWeight, d.ProducedQuantity, d.Notes
             }});
@@ -217,6 +240,9 @@ namespace FSCTakip.WebUI.Controllers
                 if (serial == null)
                     return Json(new { success = false, message = "Bobin bulunamadı." });
 
+                int? oldRecipeId = null;
+                decimal oldConsumed = 0, oldWaste = 0, oldQty = 0;
+
                 if (model.Id == 0)
                 {
                     // Yeni kayıt: stok düş
@@ -232,25 +258,62 @@ namespace FSCTakip.WebUI.Controllers
                     if (existing == null)
                         return Json(new { success = false, message = "Kayıt bulunamadı." });
 
+                    oldRecipeId = existing.WorkOrderRecipeId;
+                    oldConsumed = existing.ConsumedWeight;
+                    oldWaste    = existing.WasteWeight;
+                    oldQty      = existing.ProducedQuantity;
+
                     // Eski tüketimi iade et, yenisini düş
                     var diff = model.ConsumedWeight - existing.ConsumedWeight;
                     if (diff > serial.CurrentWeight)
                         return Json(new { success = false, message = $"Güncellenmiş tüketim bobinin kalan ağırlığını aşıyor." });
 
-                    serial.CurrentWeight      -= diff;
-                    existing.FscSerialId      = model.FscSerialId;
-                    existing.MachineId        = model.MachineId;
-                    existing.ProductionDate   = model.ProductionDate;
-                    existing.ConsumedWeight   = model.ConsumedWeight;
-                    existing.WasteWeight      = model.WasteWeight;
-                    existing.ProducedQuantity = model.ProducedQuantity;
-                    existing.Notes            = model.Notes;
+                    serial.CurrentWeight         -= diff;
+                    existing.FscSerialId         = model.FscSerialId;
+                    existing.MachineId           = model.MachineId;
+                    existing.ProductionDate      = model.ProductionDate;
+                    existing.ConsumedWeight      = model.ConsumedWeight;
+                    existing.WasteWeight         = model.WasteWeight;
+                    existing.ProducedQuantity    = model.ProducedQuantity;
+                    existing.Notes               = model.Notes;
+                    existing.WorkOrderRecipeId   = model.WorkOrderRecipeId;
                 }
 
                 // İş emrini "Üretimde" durumuna geçir
                 var wo = await _context.WorkOrders.FindAsync(model.WorkOrderId);
                 if (wo != null && wo.Status == WorkOrderStatus.Taslak)
                     wo.Status = WorkOrderStatus.Uretimde;
+
+                // ── WorkOrderRecipe güncelle (BOM bileşen bazlı toplamlar) ────────
+                // Eski reçete satırını güncelle (düzenleme durumu)
+                if (oldRecipeId.HasValue && oldRecipeId != model.WorkOrderRecipeId)
+                {
+                    var oldRecipe = await _context.WorkOrderRecipes.FindAsync(oldRecipeId.Value);
+                    if (oldRecipe != null)
+                    {
+                        oldRecipe.ActualConsumedQuantity = Math.Max(0, oldRecipe.ActualConsumedQuantity - oldConsumed);
+                        oldRecipe.WasteQuantity          = Math.Max(0, oldRecipe.WasteQuantity          - oldWaste);
+                        oldRecipe.ProducedQuantity       = Math.Max(0, oldRecipe.ProducedQuantity       - oldQty);
+                    }
+                }
+
+                // Yeni/güncel reçete satırını güncelle
+                if (model.WorkOrderRecipeId.HasValue)
+                {
+                    var recipe = await _context.WorkOrderRecipes.FindAsync(model.WorkOrderRecipeId.Value);
+                    if (recipe != null)
+                    {
+                        // Düzenleme: eski değerleri çıkar, yenileri ekle
+                        var prevConsumed = (model.Id > 0 && oldRecipeId == model.WorkOrderRecipeId) ? oldConsumed : 0;
+                        var prevWaste    = (model.Id > 0 && oldRecipeId == model.WorkOrderRecipeId) ? oldWaste    : 0;
+                        var prevQty      = (model.Id > 0 && oldRecipeId == model.WorkOrderRecipeId) ? oldQty      : 0;
+
+                        recipe.ActualConsumedQuantity += model.ConsumedWeight - prevConsumed;
+                        recipe.WasteQuantity          += model.WasteWeight    - prevWaste;
+                        recipe.ProducedQuantity       += model.ProducedQuantity - prevQty;
+                        recipe.FscSerialId             = model.FscSerialId; // son kullanılan bobin
+                    }
+                }
 
                 await _context.SaveChangesAsync();
                 return Json(new { success = true, message = "Tüketim kaydedildi.", kalanKg = serial.CurrentWeight });
@@ -277,9 +340,78 @@ namespace FSCTakip.WebUI.Controllers
                 // Tüketimi iade et
                 detail.FscSerial.CurrentWeight += detail.ConsumedWeight;
 
+                // WorkOrderRecipe toplamlılarını güncelle
+                if (detail.WorkOrderRecipeId.HasValue)
+                {
+                    var recipe = await _context.WorkOrderRecipes.FindAsync(detail.WorkOrderRecipeId.Value);
+                    if (recipe != null)
+                    {
+                        recipe.ActualConsumedQuantity = Math.Max(0, recipe.ActualConsumedQuantity - detail.ConsumedWeight);
+                        recipe.WasteQuantity          = Math.Max(0, recipe.WasteQuantity          - detail.WasteWeight);
+                        recipe.ProducedQuantity       = Math.Max(0, recipe.ProducedQuantity       - detail.ProducedQuantity);
+                    }
+                }
+
                 _context.ProductionDetails.Remove(detail);
                 await _context.SaveChangesAsync();
                 return Json(new { success = true, message = "Tüketim kaydı silindi." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // POST /Production/SaveWorkOrderRecipe — İş emrine reçete satırı ekle/güncelle
+        [HttpPost]
+        public async Task<IActionResult> SaveWorkOrderRecipe(int workOrderId, int productId, decimal plannedQuantity, int? existingId)
+        {
+            try
+            {
+                if (existingId.HasValue)
+                {
+                    var rec = await _context.WorkOrderRecipes.FindAsync(existingId.Value);
+                    if (rec == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+                    rec.PlannedQuantity = plannedQuantity;
+                    rec.ProductId       = productId;
+                }
+                else
+                {
+                    // Aynı iş emri + bileşen zaten var mı?
+                    var exists = await _context.WorkOrderRecipes.AnyAsync(r => r.WorkOrderId == workOrderId && r.ProductId == productId);
+                    if (exists)
+                        return Json(new { success = false, message = "Bu bileşen zaten bu iş emrinde mevcut." });
+
+                    _context.WorkOrderRecipes.Add(new WorkOrderRecipe {
+                        WorkOrderId       = workOrderId,
+                        ProductId         = productId,
+                        PlannedQuantity   = plannedQuantity,
+                        CreatedDate       = DateTime.Now,
+                        CreatedBy         = User.Identity?.Name ?? "System"
+                    });
+                }
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Reçete satırı kaydedildi." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // POST /Production/DeleteWorkOrderRecipe
+        [HttpPost]
+        public async Task<IActionResult> DeleteWorkOrderRecipe(int id)
+        {
+            try
+            {
+                var rec = await _context.WorkOrderRecipes.FindAsync(id);
+                if (rec == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+                if (rec.ActualConsumedQuantity > 0)
+                    return Json(new { success = false, message = "Bu bileşene bağlı tüketim kaydı var. Önce tüketim kayıtlarını silin." });
+                _context.WorkOrderRecipes.Remove(rec);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
             }
             catch (Exception ex)
             {

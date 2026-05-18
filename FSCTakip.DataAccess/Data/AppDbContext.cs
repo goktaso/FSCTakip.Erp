@@ -112,6 +112,21 @@ namespace FSCTakip.DataAccess.Data
                 .HasOne(d => d.FscSerial).WithMany(s => s.ProductionDetails).HasForeignKey(d => d.FscSerialId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<ProductionDetail>()
                 .HasOne(d => d.Machine).WithMany().HasForeignKey(d => d.MachineId).OnDelete(DeleteBehavior.Restrict);
+            // BOM bileşen bağlantısı — nullable, eski kayıtlar için SetNull
+            modelBuilder.Entity<ProductionDetail>()
+                .HasOne(d => d.WorkOrderRecipe).WithMany()
+                .HasForeignKey(d => d.WorkOrderRecipeId).OnDelete(DeleteBehavior.SetNull);
+
+            // WorkOrderRecipe ilişkileri
+            modelBuilder.Entity<WorkOrderRecipe>()
+                .HasOne(r => r.WorkOrder).WithMany(w => w.WorkOrderRecipes)
+                .HasForeignKey(r => r.WorkOrderId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<WorkOrderRecipe>()
+                .HasOne(r => r.Product).WithMany()
+                .HasForeignKey(r => r.ProductId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<WorkOrderRecipe>()
+                .HasOne(r => r.FscSerial).WithMany()
+                .HasForeignKey(r => r.FscSerialId).OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<SalesOrder>()
                 .HasOne(s => s.Customer).WithMany().HasForeignKey(s => s.CustomerId).OnDelete(DeleteBehavior.Restrict);

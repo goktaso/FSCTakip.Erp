@@ -11,6 +11,13 @@ namespace FSCTakip.Core.Entities
         public int MachineId { get; set; }
         public virtual Machine Machine { get; set; } = null!;
 
+        /// <summary>
+        /// Hangi reçete bileşeni için tüketildi? (nullable — eski kayıtlarda boş olabilir)
+        /// FSC CoC mass-balance için: gövde / sap / etiket vb. ayrımı
+        /// </summary>
+        public int? WorkOrderRecipeId { get; set; }
+        public virtual WorkOrderRecipe? WorkOrderRecipe { get; set; }
+
         public DateTime ProductionDate { get; set; } = DateTime.Today;
 
         public decimal ConsumedWeight { get; set; }

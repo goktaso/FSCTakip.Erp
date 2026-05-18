@@ -27,6 +27,7 @@ namespace FSCTakip.Core.Entities
         public WorkOrderStatus Status { get; set; } = WorkOrderStatus.Taslak;
         public string? Notes { get; set; }
 
-        public virtual ICollection<ProductionDetail> ProductionDetails { get; set; } = new List<ProductionDetail>();
+        public virtual ICollection<ProductionDetail>  ProductionDetails  { get; set; } = new List<ProductionDetail>();
+        public virtual ICollection<WorkOrderRecipe>   WorkOrderRecipes   { get; set; } = new List<WorkOrderRecipe>();
     }
 }
