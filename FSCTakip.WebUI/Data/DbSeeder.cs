@@ -155,6 +155,24 @@ namespace FSCTakip.WebUI.Data
                 }
             );
 
+            // ── 11b. Ürün Reçeteleri (BOM) ──────────────────────────────────────
+            ctx.ProductRecipes.AddRange(
+                // Kraft Çuvalı 50Kg → Kraft Kağıt 80gr Bobin (0.082 kg/adet)
+                new ProductRecipe
+                {
+                    Id = 1, ParentProductId = 3, ChildProductId = 1,
+                    StandardQuantity = 0.082m, Unit = "kg",
+                    IsActive = true, CreatedBy = sys, CreatedDate = now
+                },
+                // Ventil Torba 25Kg → Kraft Kağıt 90gr Bobin (0.065 kg/adet)
+                new ProductRecipe
+                {
+                    Id = 2, ParentProductId = 4, ChildProductId = 2,
+                    StandardQuantity = 0.065m, Unit = "kg",
+                    IsActive = true, CreatedBy = sys, CreatedDate = now
+                }
+            );
+
             await ctx.SaveChangesAsync();
 
             // ── 12. FSC Lotları ──────────────────────────────────────────────────
@@ -368,6 +386,42 @@ namespace FSCTakip.WebUI.Data
                     ProductId = 4, Quantity = 4800, Unit = "Adet",
                     CustomerId = 2, PlateNumber = "34 GHI 456", WorkOrderId = 2,
                     Description = "Sevkiyat: Tarim Urunleri Ltd.",
+                    CreatedBy = sys, CreatedDate = now
+                }
+            );
+
+            // ── 19. İmha Kayıtları ───────────────────────────────────────────────
+            ctx.WasteManagements.AddRange(
+                new WasteManagement
+                {
+                    Id = 1, WasteCode = "ATK2026-001", WorkOrderId = 1,
+                    Category = WasteCategory.KesimArtigi,
+                    Description = "Kenar kesim artiklari",
+                    Quantity = 85, Unit = "kg",
+                    DisposalDate = new DateTime(2026, 2, 25),
+                    DisposalMethod = "Geri Donusum", DisposedBy = "Depo Sorumlusu",
+                    Notes = "IE2026-001 kesim artigi",
+                    CreatedBy = sys, CreatedDate = now
+                },
+                new WasteManagement
+                {
+                    Id = 2, WasteCode = "ATK2026-002", WorkOrderId = 1,
+                    Category = WasteCategory.BaskiArtigi,
+                    Description = "Baski hatalari ve baski artigi",
+                    Quantity = 40, Unit = "kg",
+                    DisposalDate = new DateTime(2026, 2, 25),
+                    DisposalMethod = "Geri Donusum", DisposedBy = "Uretim Sorumlusu",
+                    CreatedBy = sys, CreatedDate = now
+                },
+                new WasteManagement
+                {
+                    Id = 3, WasteCode = "ATK2026-003", WorkOrderId = 2,
+                    Category = WasteCategory.MakineHatasi,
+                    Description = "Makine kalibrasyonu sirasinda cikan fire",
+                    Quantity = 75, Unit = "kg",
+                    DisposalDate = new DateTime(2026, 3, 12),
+                    DisposalMethod = "Geri Donusum", DisposedBy = "Makine Operatoru",
+                    Notes = "IE2026-002 makine hatasi",
                     CreatedBy = sys, CreatedDate = now
                 }
             );

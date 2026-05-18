@@ -462,6 +462,14 @@
                 <span class="toc-num">21.</span> Depo Tanımlamaları
                 <span class="toc-badge done">✓</span>
             </a>
+            <a class="toc-item" href="#recete" onclick="scrollTo('recete')">
+                <span class="toc-num">22.</span> Ürün Reçetesi — BOM
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#imha" onclick="scrollTo('imha')">
+                <span class="toc-num">23.</span> İmha Kayıtları
+                <span class="toc-badge done">✓</span>
+            </a>
         </div>
     </div>
 
@@ -475,7 +483,7 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>21 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → Depolar)</span>
+                <span>23 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → Depolar → Reçete → İmha)</span>
             </div>
             <div class="guide-status-item">
                 <span class="toc-badge plan" style="float:none;">— Planlandı</span>
@@ -528,7 +536,9 @@
             'FSC Chain of Custody Raporu': 'coc',
             'Lot Takip Raporu': 'lot-takip',
             'Tedarikçi FSC Sertifika Durumu': 'tedarikci-fsc',
-            'Depo Tanımlamaları': 'depolar'
+            'Depo Tanımlamaları': 'depolar',
+            'Ürün Reçetesi — BOM': 'recete',
+            'İmha Kayıtları': 'imha'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {
@@ -1310,6 +1320,64 @@
           <tr><td><code style="color:#1d4ed8;font-weight:600;font-size:11px;">DEP-01</code></td><td><strong>Hammadde Deposu</strong></td><td style="text-align:center;"><span class="gm-badge green">Aktif</span></td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-pause"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
           <tr><td><code style="color:#1d4ed8;font-weight:600;font-size:11px;">DEP-02</code></td><td><strong>Mamul Deposu</strong></td><td style="text-align:center;"><span class="gm-badge green">Aktif</span></td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-pause"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
           <tr><td><code style="color:#1d4ed8;font-weight:600;font-size:11px;">DEP-03</code></td><td><strong>Sevkiyat Bekleme Deposu</strong></td><td style="text-align:center;"><span class="gm-badge green">Aktif</span></td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-pause"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'recete': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Bileşen Ekle</button>
+    <span class="gm-title">Reçete — Kraft Çuvalı 50Kg</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-arrow-left"></i> Ürünler</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+      <div style="width:40px;height:40px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-box" style="color:#1d4ed8;"></i></div>
+      <div><div style="font-weight:600;font-size:13px;">KRAFT ÇUVALI 50KG</div><div style="font-size:11px;color:#6b7280;"><code>MM-001</code> · Mamul Ürün · Birim: Adet</div></div>
+      <div style="margin-left:auto;display:flex;gap:16px;text-align:center;">
+        <div><div style="font-weight:700;font-size:18px;color:#1d4ed8;">1</div><div style="font-size:10px;color:#6b7280;">Bileşen</div></div>
+        <div><div style="font-weight:700;font-size:18px;color:#16a34a;">1</div><div style="font-size:10px;color:#6b7280;">Aktif</div></div>
+      </div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>BİLEŞEN ÜRÜN</th><th>KOD</th><th>GRUP</th><th style="text-align:right;">STD MİKTAR</th><th>BİRİM</th><th style="text-align:center;">DURUM</th><th style="text-align:center;">İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Kraft Kağıt 80gr Bobin</strong></td><td><code style="font-size:10px;">HM-001</code></td><td style="color:#6b7280;font-size:11px;">Hammadde</td><td style="text-align:right;font-weight:600;">0,082</td><td style="color:#6b7280;">kg</td><td style="text-align:center;"><span class="gm-badge green">Aktif</span></td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-pause"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:#6b7280;padding:8px 10px;background:#fafafa;border-top:1px solid #e5e7eb;">
+      <i class="fas fa-info-circle me-1" style="color:#1d4ed8;"></i>
+      Pasif bileşenler <strong>Reçeteden Yükle</strong> ile otomatik uygulamaya dahil edilmez.
+    </div>
+  </div>
+</div>`,
+
+        'imha': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni İmha Kaydı</button>
+    <span class="gm-title">İmha Kayıtları</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-arrow-left"></i> Fire Raporu</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>İMHA KODU</th><th>KATEGORİ</th><th>AÇIKLAMA</th><th>İŞ EMRİ</th><th style="text-align:right;">MİKTAR</th><th>BİRİM</th><th>TARİH</th><th style="text-align:center;">İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td><code style="font-size:10px;color:#1d4ed8;">ATK2026-001</code></td><td><span class="gm-badge amber">Kesim Artığı</span></td><td style="font-size:11px;">Kenar kesim artıkları</td><td style="font-size:11px;color:#6b7280;">IE2026-001</td><td style="text-align:right;font-weight:600;">85,00</td><td style="color:#6b7280;">kg</td><td style="font-size:11px;">25.02.2026</td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          <tr><td><code style="font-size:10px;color:#1d4ed8;">ATK2026-002</code></td><td><span class="gm-badge amber">Baskı Artığı</span></td><td style="font-size:11px;">Baskı hataları</td><td style="font-size:11px;color:#6b7280;">IE2026-001</td><td style="text-align:right;font-weight:600;">40,00</td><td style="color:#6b7280;">kg</td><td style="font-size:11px;">25.02.2026</td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          <tr><td><code style="font-size:10px;color:#1d4ed8;">ATK2026-003</code></td><td><span class="gm-badge amber">Makine Hatası</span></td><td style="font-size:11px;">Kalibrasyon firesi</td><td style="font-size:11px;color:#6b7280;">IE2026-002</td><td style="text-align:right;font-weight:600;">75,00</td><td style="color:#6b7280;">kg</td><td style="font-size:11px;">12.03.2026</td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
         </tbody>
       </table>
     </div>

@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 1.6 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 1.7 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -28,6 +28,8 @@
 19. [Lot Takip Raporu](#lot-takip)
 20. [Tedarikçi FSC Sertifika Durumu](#tedarikci-fsc)
 21. [Depo Tanımlamaları](#depolar)
+22. [Ürün Reçetesi — BOM](#recete)
+23. [İmha Kayıtları](#imha)
 
 ---
 
@@ -899,6 +901,88 @@ Hammadde ve mamul depolarını tanımlamak için kullanılır. Stok transferleri
 
 ---
 
+## 22. Ürün Reçetesi — BOM {#recete}
+
+**Menü Yolu:** Ürünler → Ürün Listesi → Reçete butonu (yeşil liste ikonu)
+
+**Sayfa:** `/Products/Recipe/{id}`
+
+```
+[≡] [+ Bileşen Ekle]   Reçete — {Ürün Adı}   [← Ürünler] [👤]
+```
+
+Her mamul ürünün standart hammadde/bileşen tüketimini (BOM — Bill of Materials) tanımlamak için kullanılır. İş emri üretim sayfasında **Reçeteden Yükle** butonu ile otomatik uygulanır.
+
+### Ürün Bilgi Kartı
+
+Sayfanın üstünde ürünün kodu, adı, grubu ve birim bilgisi gösterilir. Sağ üstte toplam bileşen sayısı ve kaç adedinin aktif olduğu görünür.
+
+### Bileşen Ekleme / Düzenleme
+
+| Alan | Açıklama | Örnek |
+|------|----------|-------|
+| Bileşen Ürün | Hammadde veya yarı mamul (açılır liste) | Kraft Kağıt 80gr Bobin |
+| Standart Miktar | 1 birim mamul için gereken miktar | 0.082 |
+| Birim | kg, Adet, m², m, lt | kg |
+
+> **Not:** Aynı bileşen iki kez eklenemez — sistem uyarı verir.
+
+### İşlemler
+
+| Buton | Açıklama |
+|-------|----------|
+| Düzenle (kalem) | Miktarı veya birimi günceller |
+| Pause/Play | Bileşeni pasife/aktife alır; pasif bileşenler otomatik yüklemeye dahil edilmez |
+| Çöp kutusu | Bileşeni reçeteden kalıcı kaldırır |
+
+### Üretimde Kullanımı
+
+Üretim Detayı sayfasında tüketim girerken **Reçeteden Yükle** butonuna tıklandığında bu sayfadaki aktif bileşenler standart miktarlarıyla otomatik önerilir.
+
+---
+
+## 23. İmha Kayıtları {#imha}
+
+**Menü Yolu:** Üretim → İmha Kayıtları
+
+**Sayfa:** `/Production/WasteManagement`
+
+```
+[≡] [+ Yeni İmha Kaydı]   İmha Kayıtları   [← Fire Raporu] [👤]
+```
+
+Üretim sürecinde oluşan ve artık kullanılamaz hale gelen malzemelerin takibini sağlar. Her kayıt bir atık koduna (ATK-YYYY-NNN) bağlanır.
+
+### İmha Kategorileri
+
+| Kategori | Açıklama |
+|----------|----------|
+| Kesim Artığı | Kesim makinesinden çıkan kenar ve kırpıntılar |
+| Baskı Artığı | Hatalı baskı veya boya denemeleri |
+| Islanma/Hasarı | Su veya nem nedeniyle bozulan malzeme |
+| Nakliye Hasarı | Taşıma sırasında hasar gören ürün |
+| Makine Hatası | Makine arızası/kalibrasyonu sırasında çıkan fire |
+| Diğer | Yukarıdakilerin dışındaki imha kalemleri |
+
+### İmha Kaydı Alanları
+
+| Alan | Açıklama | Zorunlu |
+|------|----------|---------|
+| İmha Kodu | Otomatik üretilir (ATK2026-001) | — |
+| İş Emri | Hangi üretimle ilişkili olduğu | Hayır |
+| Kategori | Atık türü | Evet |
+| Açıklama | Serbest metin | Evet |
+| Miktar | Sayısal değer | Evet |
+| Birim | kg, Adet, m², m, lt | Evet |
+| İmha Tarihi | Gerçekleşme tarihi | Evet |
+| İmha Yöntemi | Geri Dönüşüm, Yakma, Çöp vb. | Hayır |
+| İmha Eden | Sorumlu kişi | Hayır |
+| Notlar | Ek açıklama | Hayır |
+
+> **İpucu:** Fire Raporu sayfasında görüntülenen fire miktarları üretim tüketiminden otomatik hesaplanır; İmha Kayıtları ise fiziksel imha belgesi niteliğindedir. Her ikisini birlikte kullanarak FSC denetiminde tam iz bırakabilirsiniz.
+
+---
+
 ## 📋 Modül Durumu
 
 | Modül | Durum | Kılavuz Bölümü |
@@ -909,6 +993,8 @@ Hammadde ve mamul depolarını tanımlamak için kullanılır. Stok transferleri
 | Ürünler | ✅ Tamamlandı | Bölüm 6 |
 | Tanımlamalar | ✅ Tamamlandı | Bölüm 7 |
 | Depolar | ✅ Tamamlandı | Bölüm 21 |
+| Ürün Reçetesi (BOM) | ✅ Tamamlandı | Bölüm 22 |
+| İmha Kayıtları | ✅ Tamamlandı | Bölüm 23 |
 | Hammadde Girişi | ✅ Tamamlandı | Bölüm 8–9 |
 | Üretim / İş Emirleri | ✅ Tamamlandı | Bölüm 11–13 |
 | Satış / Sevkiyat | ✅ Tamamlandı | Bölüm 14–15 |
