@@ -490,6 +490,10 @@
                 <span class="toc-num">28.</span> Tam İzlenebilirlik
                 <span class="toc-badge done">✓</span>
             </a>
+            <a class="toc-item" href="#bom-analizi" onclick="scrollTo('bom-analizi')">
+                <span class="toc-num">29.</span> BOM Bileşen Analizi
+                <span class="toc-badge done">✓</span>
+            </a>
         </div>
     </div>
 
@@ -503,11 +507,11 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>28 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis Sync → Denetim → İzlenebilirlik)</span>
+                <span>29 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis Sync → Denetim → İzlenebilirlik → BOM Analizi)</span>
             </div>
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓</span>
-                <span>v2.0 — Denetim Özeti + Tam İzlenebilirlik tamamlandı</span>
+                <span>v2.1 — BOM Bileşen Analizi raporu tamamlandı</span>
             </div>
             <div class="ms-auto text-muted" style="font-size:11px;">
                 <i class="fas fa-sync-alt me-1"></i> Her modül tamamlandıktan sonra güncellenir
@@ -563,7 +567,8 @@
             'Netsis Senkronizasyonu': 'netsis-sync',
             'Üretim Fişi — Lot Evrak Görüntüleyici': 'lot-evrak',
             'Denetim Özet Raporu': 'denetim-ozet',
-            'Tam İzlenebilirlik — Satış → Üretim → Lot': 'tam-izlenebilirlik'
+            'Tam İzlenebilirlik — Satış → Üretim → Lot': 'tam-izlenebilirlik',
+            'BOM Bileşen Analizi': 'bom-analizi'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {

@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 2.0 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 2.1 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -35,6 +35,7 @@
 26. [Üretim Fişi — Lot Evrak Görüntüleyici](#lot-evrak)
 27. [Denetim Özet Raporu](#denetim-ozet)
 28. [Tam İzlenebilirlik — Satış → Üretim → Lot](#tam-izlenebilirlik)
+29. [BOM Bileşen Analizi](#bom-analizi)
 
 ---
 
@@ -1313,6 +1314,75 @@ SATIŞ SİPARİŞİ (Müşteri, Tarih, Durum, FSC Lisans)
 6. **"Lot Detayına Git"** ile hammadde giriş sayfasına ulaşabilirsiniz
 
 > **⚠️ FSC CoC Uyarısı:** Denetçiler, her sevk edilen üründe bu zincirin eksiksiz olduğunu ve tüm tedarikçi FSC sertifikalarının sevkiyat tarihi itibarıyla geçerli olduğunu kontrol eder. "FSC Zinciri Eksik" uyarısı varsa ilgili satış kaleminin iş emri bağlantısını tamamlayın.
+
+---
+
+## 29. BOM Bileşen Analizi {#bom-analizi}
+
+**Menü Yolu:** Sol Menü → BOM Analizi  
+**Sayfa:** `/Reports/BomAnalysis`
+
+```
+[≡] [Excel]   BOM Bileşen Analizi   [Denetim Özeti] [👤]
+     [Başlangıç Tarihi] [Bitiş Tarihi] [İş Emri (Opsiyonel)] [Filtrele]
+```
+
+Seçilen dönemdeki tüm iş emirleri için **reçete bileşeni (BOM) bazlı hammadde tüketim ve fire analizini** gösterir. FSC CoC denetiminde "hangi bileşen için ne kadar hangi tip hammadde kullanıldı, ne kadar fire çıktı" sorusunu yanıtlar.
+
+### Ekran Yapısı
+
+Her iş emri için ayrı bir kart görünür:
+
+**Kart başlığı (koyu yeşil):** İş emri no (linke tıklanabilir), mamul adı, FSC tipi, durum, tarih, makine, toplam üretilen adet.
+
+**Özet çizgisi:** Plan, üretilen, toplam tüketim, toplam fire, fire %.
+
+**BOM tablosu — sütunlar:**
+
+| Sütun | Açıklama |
+|-------|----------|
+| Bileşen / Hammadde | Reçete bileşeninin adı ve kodu |
+| FSC Tipi | Bileşen ürün kartındaki FSC tipi + gerçek giriş malzemesinin FSC tipi |
+| Planlanan | WorkOrderRecipe'deki planlanan miktar (kg) |
+| Tüketilen | Gerçek tüketim (kg) + plana göre yüzde |
+| Fire | Fire miktarı (kg) |
+| Fire % | Fire yüzdesi (yeşil <3%, sarı 3-6%, kırmızı >6%) |
+| Üretilen | Bu bileşenden üretilen adet |
+| Mass-Balance | ✓ Dengeli / ⚠ Plan Aşıldı / devam ediyor |
+| Kaynaklar | Kullanılan lot no ve tedarikçi |
+
+### Renk Kodları
+
+| Renk | Anlam |
+|------|-------|
+| Normal arka plan | Bileşen planı dahilinde |
+| Kırmızı arka plan | Plan %110'dan fazla aşıldı |
+| Sarı arka plan (⚡ satır) | Reçete bileşenine bağlanmamış serbest tüketim |
+| Yeşil toplam satırı | İş emri toplamı |
+
+### Serbest Tüketim Uyarısı
+
+Tüketim girilirken "Reçete Bileşeni" seçilmemiş kayıtlar sarı "Serbest Tüketim" satırı olarak görünür. FSC CoC mass-balance analizi için **tüm tüketim kayıtlarının bir bileşene bağlı olması** gerekir.
+
+### Nasıl Kullanılır
+
+1. Sol Menü → **BOM Analizi** tıklayın
+2. Dönem filtresi girin (varsayılan: bu yılın başı — bugün)
+3. Belirli bir iş emrini incelemek için İş Emri açılır listesini kullanın
+4. İş emri başlığındaki linke tıklayarak Üretim Detayı'na geçebilirsiniz
+5. **Excel** ile tam raporu indirin — iş emri × bileşen bazında tüm satırlar dışa aktarılır
+6. Serbest tüketim varsa iş emri sayfasına gidip o tüketim kaydını düzenleyerek bileşene bağlayın
+
+### Excel İndirme
+
+Sütunlar: İş Emri No · Mamul · Durum · Plan Tarihi · Bileşen · Bileşen FSC Tipi · Planlanan (kg) · Gerçek Tüketim (kg) · Fire (kg) · Üretilen (adet) · Mass-Balance · Kullanılan Lotlar · Tedarikçiler
+
+> **ℹ️ BOM Tanımlama İpucu:** BOM bileşenleri iki yoldan eklenebilir:  
+> 1. **Ürün Reçetesi** sayfasından ürüne kalıcı standart reçete tanımlayın  
+> 2. **Üretim Detayı** sayfasındaki "Bileşen Ekle" butonu ile iş emri özelinde ekleyin  
+> Her iki yöntem de bu raporda görünür. BOM tanımlı olmayan iş emirleri sarı uyarı ile gösterilir.
+
+> **⚠️ FSC CoC Uyarısı:** Denetimde her mamul bileşeni için ayrı hammadde takibi istenebilir. Kraft torba üretiminde gövde, sap ve etiket bileşenlerinin her birinin ayrı lot ve FSC tipiyle eşleştirilmesi mass-balance hesabını kesinleştirir.
 
 ---
 
