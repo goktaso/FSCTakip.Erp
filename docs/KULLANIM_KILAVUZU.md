@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 1.5 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 1.6 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -27,6 +27,7 @@
 18. [FSC Chain of Custody Raporu](#coc)
 19. [Lot Takip Raporu](#lot-takip)
 20. [Tedarikçi FSC Sertifika Durumu](#tedarikci-fsc)
+21. [Depo Tanımlamaları](#depolar)
 
 ---
 
@@ -876,6 +877,28 @@ Bir hammadde lotunun giriş → seri → üretim → satış yolculuğunu adım 
 
 ---
 
+## 21. Depo Tanımlamaları {#depolar}
+
+**Menü Yolu:** Tanımlamalar → Depolar
+
+**Sayfa:** `/Warehouse/Index`
+
+```
+[≡] [+ Yeni Depo Ekle]   Depo Tanımlamaları   [Filtrele] [Excel] [👤]
+```
+
+Hammadde ve mamul depolarını tanımlamak için kullanılır. Stok transferlerinde kaynak/hedef depo olarak seçilir.
+
+| Alan | Açıklama | Örnek |
+|------|----------|-------|
+| Depo Kodu | Kısa kod | DEP-01 |
+| Depo Adı | Açıklayıcı isim | Hammadde Deposu |
+| Durum | Aktif / Pasif | Aktif |
+
+> **Dikkat:** Stok hareketinde kullanılmış bir depo silinemez. Önce pasife alın.
+
+---
+
 ## 📋 Modül Durumu
 
 | Modül | Durum | Kılavuz Bölümü |
@@ -885,6 +908,7 @@ Bir hammadde lotunun giriş → seri → üretim → satış yolculuğunu adım 
 | Müşteriler | ✅ Tamamlandı | Bölüm 5 |
 | Ürünler | ✅ Tamamlandı | Bölüm 6 |
 | Tanımlamalar | ✅ Tamamlandı | Bölüm 7 |
+| Depolar | ✅ Tamamlandı | Bölüm 21 |
 | Hammadde Girişi | ✅ Tamamlandı | Bölüm 8–9 |
 | Üretim / İş Emirleri | ✅ Tamamlandı | Bölüm 11–13 |
 | Satış / Sevkiyat | ✅ Tamamlandı | Bölüm 14–15 |

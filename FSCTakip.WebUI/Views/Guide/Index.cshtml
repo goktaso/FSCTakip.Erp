@@ -458,6 +458,10 @@
                 <span class="toc-num">20.</span> Tedarikçi FSC
                 <span class="toc-badge done">✓</span>
             </a>
+            <a class="toc-item" href="#depolar" onclick="scrollTo('depolar')">
+                <span class="toc-num">21.</span> Depo Tanımlamaları
+                <span class="toc-badge done">✓</span>
+            </a>
         </div>
     </div>
 
@@ -471,7 +475,7 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>20 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar)</span>
+                <span>21 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → Depolar)</span>
             </div>
             <div class="guide-status-item">
                 <span class="toc-badge plan" style="float:none;">— Planlandı</span>
@@ -523,7 +527,8 @@
             'Stok Hareketleri': 'stok-hareketleri',
             'FSC Chain of Custody Raporu': 'coc',
             'Lot Takip Raporu': 'lot-takip',
-            'Tedarikçi FSC Sertifika Durumu': 'tedarikci-fsc'
+            'Tedarikçi FSC Sertifika Durumu': 'tedarikci-fsc',
+            'Depo Tanımlamaları': 'depolar'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {
@@ -1275,6 +1280,36 @@
           <tr><td class="gm-muted">TT-001</td><td>V Kesim</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
           <tr><td class="gm-muted">TT-002</td><td>Kare Dip</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
           <tr><td class="gm-muted">TT-003</td><td>Körüklü Kare Dip</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'depolar': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni Depo Ekle</button>
+    <span class="gm-title">Depo Tanımlamaları</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-filter"></i> Filtrele</button>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(3,1fr); margin-bottom:10px;">
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-warehouse"></i></div><div><div class="gm-stat-val">3</div><div class="gm-stat-lbl">Toplam Depo</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-check-circle"></i></div><div><div class="gm-stat-val">3</div><div class="gm-stat-lbl">Aktif</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-pause-circle"></i></div><div><div class="gm-stat-val">0</div><div class="gm-stat-lbl">Pasif</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>KOD</th><th>DEPO ADI</th><th style="text-align:center;">DURUM</th><th style="text-align:center;">İŞLEMLER</th></tr></thead>
+        <tbody>
+          <tr><td><code style="color:#1d4ed8;font-weight:600;font-size:11px;">DEP-01</code></td><td><strong>Hammadde Deposu</strong></td><td style="text-align:center;"><span class="gm-badge green">Aktif</span></td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-pause"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          <tr><td><code style="color:#1d4ed8;font-weight:600;font-size:11px;">DEP-02</code></td><td><strong>Mamul Deposu</strong></td><td style="text-align:center;"><span class="gm-badge green">Aktif</span></td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-pause"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          <tr><td><code style="color:#1d4ed8;font-weight:600;font-size:11px;">DEP-03</code></td><td><strong>Sevkiyat Bekleme Deposu</strong></td><td style="text-align:center;"><span class="gm-badge green">Aktif</span></td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-pause"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
         </tbody>
       </table>
     </div>
