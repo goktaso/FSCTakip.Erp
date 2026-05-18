@@ -481,6 +481,237 @@ namespace FSCTakip.WebUI.Controllers
             return View(suppliers);
         }
 
+        // ── 6. BOM Bileşen Analizi ──────────────────────────────────────────────
+        // GET /Reports/BomAnalysis
+        public async Task<IActionResult> BomAnalysis(DateTime? startDate, DateTime? endDate, int? workOrderId)
+        {
+            var sd     = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
+            var ed     = endDate   ?? DateTime.Today;
+            var edNext = ed.AddDays(1);
+
+            var woQuery = _context.WorkOrders
+                .Include(w => w.Product).ThenInclude(p => p!.FscType)
+                .Include(w => w.Machine)
+                .Include(w => w.WorkOrderRecipes)
+                    .ThenInclude(r => r.Product).ThenInclude(p => p!.FscType)
+                .Include(w => w.ProductionDetails)
+                    .ThenInclude(pd => pd.WorkOrderRecipe)
+                        .ThenInclude(r => r!.Product)
+                .Include(w => w.ProductionDetails)
+                    .ThenInclude(pd => pd.FscSerial)
+                        .ThenInclude(s => s.Lot)
+                            .ThenInclude(l => l.FscType)
+                .Include(w => w.ProductionDetails)
+                    .ThenInclude(pd => pd.FscSerial)
+                        .ThenInclude(s => s.Lot)
+                            .ThenInclude(l => l.Supplier)
+                .Where(w => w.PlannedDate >= sd && w.PlannedDate < edNext
+                         && w.Status != WorkOrderStatus.Taslak)
+                .AsQueryable();
+
+            if (workOrderId.HasValue)
+                woQuery = woQuery.Where(w => w.Id == workOrderId.Value);
+
+            var workOrders = await woQuery.OrderByDescending(w => w.PlannedDate).ToListAsync();
+
+            var rows = workOrders.Select(w =>
+            {
+                var woRow = new BomWorkOrderRow
+                {
+                    WorkOrderId    = w.Id,
+                    WorkOrderNo    = w.WorkOrderNo,
+                    ProductName    = w.Product?.ProductName ?? "—",
+                    ProductCode    = w.Product?.ProductCode ?? "",
+                    FscTypeName    = w.Product?.FscType?.Name,
+                    MachineName    = w.Machine?.Name ?? "—",
+                    PlannedDate    = w.PlannedDate,
+                    Status         = w.Status,
+                    PlannedQty     = w.PlannedQuantity,
+                    TotalProducedQty = w.ProductionDetails.Sum(pd => pd.ProducedQuantity),
+                    TotalConsumedKg  = w.ProductionDetails.Sum(pd => pd.ConsumedWeight),
+                    TotalWasteKg     = w.ProductionDetails.Sum(pd => pd.WasteWeight)
+                };
+
+                // BOM bileşenleri: WorkOrderRecipe kayıtları
+                woRow.Components = w.WorkOrderRecipes.Select(wr =>
+                {
+                    // Bu bileşene bağlı üretim detayları
+                    var linked = w.ProductionDetails.Where(pd => pd.WorkOrderRecipeId == wr.Id).ToList();
+                    var serials   = linked.Select(pd => pd.FscSerial?.SerialNo ?? "").Where(s => s != "").Distinct().ToList();
+                    var lots      = linked.Select(pd => pd.FscSerial?.Lot?.LotNo ?? "").Where(s => s != "").Distinct().ToList();
+                    var suppliers = linked.Select(pd => pd.FscSerial?.Lot?.Supplier?.Name ?? "").Where(s => s != "").Distinct().ToList();
+                    var fscTypes  = linked.Select(pd => pd.FscSerial?.Lot?.FscType?.Name ?? "").Where(s => s != "").Distinct().ToList();
+
+                    return new BomComponentRow
+                    {
+                        ComponentName = wr.Product?.ProductName ?? "—",
+                        ComponentCode = wr.Product?.ProductCode ?? "",
+                        FscTypeName   = wr.Product?.FscType?.Name,
+                        FscTypeCode   = wr.Product?.FscType?.Code,
+                        PlannedKg     = wr.PlannedQuantity,
+                        ConsumedKg    = wr.ActualConsumedQuantity,
+                        WasteKg       = wr.WasteQuantity,
+                        ProducedQty   = wr.ProducedQuantity,
+                        SerialNos     = serials,
+                        LotNos        = lots,
+                        SupplierNames = suppliers,
+                        InputFscTypes = fscTypes,
+                        IsUnlinked    = false
+                    };
+                }).ToList();
+
+                // Bileşene bağlanmamış serbest tüketimler
+                var unlinked = w.ProductionDetails.Where(pd => pd.WorkOrderRecipeId == null).ToList();
+                if (unlinked.Any())
+                {
+                    woRow.UnlinkedComponents.Add(new BomComponentRow
+                    {
+                        ComponentName = "— Serbest Tüketim (Reçete Dışı) —",
+                        ComponentCode = "",
+                        FscTypeName   = null,
+                        PlannedKg     = 0,
+                        ConsumedKg    = unlinked.Sum(pd => pd.ConsumedWeight),
+                        WasteKg       = unlinked.Sum(pd => pd.WasteWeight),
+                        ProducedQty   = unlinked.Sum(pd => pd.ProducedQuantity),
+                        SerialNos     = unlinked.Select(pd => pd.FscSerial?.SerialNo ?? "").Where(s => s != "").Distinct().ToList(),
+                        LotNos        = unlinked.Select(pd => pd.FscSerial?.Lot?.LotNo ?? "").Where(s => s != "").Distinct().ToList(),
+                        SupplierNames = unlinked.Select(pd => pd.FscSerial?.Lot?.Supplier?.Name ?? "").Where(s => s != "").Distinct().ToList(),
+                        InputFscTypes = unlinked.Select(pd => pd.FscSerial?.Lot?.FscType?.Name ?? "").Where(s => s != "").Distinct().ToList(),
+                        IsUnlinked    = true
+                    });
+                }
+
+                return woRow;
+            }).ToList();
+
+            var model = new BomAnalysisModel
+            {
+                StartDate  = sd,
+                EndDate    = ed,
+                WorkOrders = rows
+            };
+
+            ViewBag.StartDate    = sd.ToString("yyyy-MM-dd");
+            ViewBag.EndDate      = ed.ToString("yyyy-MM-dd");
+            ViewBag.AllWorkOrders = await _context.WorkOrders
+                .Where(w => w.Status != WorkOrderStatus.Taslak)
+                .OrderByDescending(w => w.PlannedDate)
+                .Select(w => new { w.Id, w.WorkOrderNo })
+                .ToListAsync();
+            ViewData["Title"] = "BOM Bileşen Analizi";
+            return View(model);
+        }
+
+        // GET /Reports/ExportBomAnalysis
+        public async Task<IActionResult> ExportBomAnalysis(DateTime? startDate, DateTime? endDate)
+        {
+            var sd     = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
+            var ed     = endDate   ?? DateTime.Today;
+            var edNext = ed.AddDays(1);
+
+            var workOrders = await _context.WorkOrders
+                .Include(w => w.Product).ThenInclude(p => p!.FscType)
+                .Include(w => w.Machine)
+                .Include(w => w.WorkOrderRecipes)
+                    .ThenInclude(r => r.Product).ThenInclude(p => p!.FscType)
+                .Include(w => w.ProductionDetails)
+                    .ThenInclude(pd => pd.FscSerial)
+                        .ThenInclude(s => s.Lot)
+                            .ThenInclude(l => l.FscType)
+                .Include(w => w.ProductionDetails)
+                    .ThenInclude(pd => pd.FscSerial)
+                        .ThenInclude(s => s.Lot)
+                            .ThenInclude(l => l.Supplier)
+                .Where(w => w.PlannedDate >= sd && w.PlannedDate < edNext
+                         && w.Status != WorkOrderStatus.Taslak)
+                .OrderByDescending(w => w.PlannedDate)
+                .ToListAsync();
+
+            using var wb = new ClosedXML.Excel.XLWorkbook();
+            var headerBg = ClosedXML.Excel.XLColor.FromHtml("#1e3d14");
+            var ws = wb.AddWorksheet("BOM Analizi");
+
+            string[] headers = {
+                "İş Emri No", "Mamul", "Durum", "Plan Tarihi",
+                "Bileşen", "Bileşen FSC Tipi", "Planlanan (kg)",
+                "Gerçek Tüketim (kg)", "Fire (kg)", "Üretilen (adet)",
+                "Mass-Balance", "Kullanılan Lotlar", "Tedarikçiler"
+            };
+            for (int i = 0; i < headers.Length; i++)
+            {
+                ws.Cell(1, i + 1).Value = headers[i];
+                ws.Cell(1, i + 1).Style.Font.Bold = true;
+                ws.Cell(1, i + 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
+                ws.Cell(1, i + 1).Style.Fill.BackgroundColor = headerBg;
+            }
+
+            int row = 2;
+            foreach (var w in workOrders)
+            {
+                var statusLabel = w.Status switch {
+                    WorkOrderStatus.Uretimde   => "Üretimde",
+                    WorkOrderStatus.Tamamlandi => "Tamamlandı",
+                    WorkOrderStatus.Iptal      => "İptal",
+                    _                          => "—"
+                };
+
+                if (w.WorkOrderRecipes.Any())
+                {
+                    foreach (var wr in w.WorkOrderRecipes)
+                    {
+                        var linked = w.ProductionDetails.Where(pd => pd.WorkOrderRecipeId == wr.Id).ToList();
+                        var lots = linked.Select(pd => pd.FscSerial?.Lot?.LotNo ?? "").Where(s => s != "").Distinct();
+                        var suppliers = linked.Select(pd => pd.FscSerial?.Lot?.Supplier?.Name ?? "").Where(s => s != "").Distinct();
+                        var ok = wr.PlannedQuantity == 0 || wr.ActualConsumedQuantity <= wr.PlannedQuantity * 1.10m;
+
+                        ws.Cell(row, 1).Value  = w.WorkOrderNo;
+                        ws.Cell(row, 2).Value  = w.Product?.ProductName ?? "—";
+                        ws.Cell(row, 3).Value  = statusLabel;
+                        ws.Cell(row, 4).Value  = w.PlannedDate.ToString("dd.MM.yyyy");
+                        ws.Cell(row, 5).Value  = wr.Product?.ProductName ?? "—";
+                        ws.Cell(row, 6).Value  = wr.Product?.FscType?.Name ?? "—";
+                        ws.Cell(row, 7).Value  = (double)wr.PlannedQuantity;
+                        ws.Cell(row, 8).Value  = (double)wr.ActualConsumedQuantity;
+                        ws.Cell(row, 9).Value  = (double)wr.WasteQuantity;
+                        ws.Cell(row, 10).Value = (double)wr.ProducedQuantity;
+                        ws.Cell(row, 11).Value = ok ? "✓ OK" : "⚠ Aşım";
+                        ws.Cell(row, 11).Style.Font.FontColor = ok
+                            ? ClosedXML.Excel.XLColor.FromHtml("#166534")
+                            : ClosedXML.Excel.XLColor.FromHtml("#991b1b");
+                        ws.Cell(row, 12).Value = string.Join(", ", lots);
+                        ws.Cell(row, 13).Value = string.Join(", ", suppliers);
+                        row++;
+                    }
+                }
+                else
+                {
+                    // BOM tanımlı değil — sadece toplam
+                    var totalConsumed = w.ProductionDetails.Sum(pd => pd.ConsumedWeight);
+                    var totalWaste    = w.ProductionDetails.Sum(pd => pd.WasteWeight);
+                    var totalProduced = w.ProductionDetails.Sum(pd => pd.ProducedQuantity);
+                    ws.Cell(row, 1).Value  = w.WorkOrderNo;
+                    ws.Cell(row, 2).Value  = w.Product?.ProductName ?? "—";
+                    ws.Cell(row, 3).Value  = statusLabel;
+                    ws.Cell(row, 4).Value  = w.PlannedDate.ToString("dd.MM.yyyy");
+                    ws.Cell(row, 5).Value  = "(BOM tanımlı değil)";
+                    ws.Cell(row, 7).Value  = (double)w.PlannedQuantity;
+                    ws.Cell(row, 8).Value  = (double)totalConsumed;
+                    ws.Cell(row, 9).Value  = (double)totalWaste;
+                    ws.Cell(row, 10).Value = (double)totalProduced;
+                    ws.Cell(row, 11).Value = "—";
+                    row++;
+                }
+            }
+
+            ws.Columns().AdjustToContents();
+
+            using var ms = new System.IO.MemoryStream();
+            wb.SaveAs(ms);
+            return File(ms.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"BOM_Analizi_{sd:ddMMyyyy}_{ed:ddMMyyyy}.xlsx");
+        }
+
         // ── 5. Tam İzlenebilirlik — Satış → Üretim → Lot ───────────────────────
         // GET /Reports/Traceability/{id}
         public async Task<IActionResult> Traceability(int id)
@@ -709,5 +940,56 @@ namespace FSCTakip.WebUI.Controllers
         public decimal   WasteKg            { get; set; }
         public decimal   ProducedQty        { get; set; }
         public DateTime  ProductionDate     { get; set; }
+    }
+
+    // ── BOM Analizi View Modelleri ─────────────────────────────────────────────
+
+    public class BomAnalysisModel
+    {
+        public DateTime StartDate            { get; set; }
+        public DateTime EndDate              { get; set; }
+        public List<BomWorkOrderRow> WorkOrders { get; set; } = new();
+    }
+
+    public class BomWorkOrderRow
+    {
+        public int            WorkOrderId      { get; set; }
+        public string         WorkOrderNo      { get; set; } = "";
+        public string         ProductName      { get; set; } = "";
+        public string         ProductCode      { get; set; } = "";
+        public string?        FscTypeName      { get; set; }
+        public string         MachineName      { get; set; } = "";
+        public DateTime       PlannedDate      { get; set; }
+        public WorkOrderStatus Status          { get; set; }
+        public decimal        PlannedQty       { get; set; }
+        public decimal        TotalProducedQty { get; set; }
+        public decimal        TotalConsumedKg  { get; set; }
+        public decimal        TotalWasteKg     { get; set; }
+        public List<BomComponentRow> Components         { get; set; } = new();
+        public List<BomComponentRow> UnlinkedComponents { get; set; } = new();
+
+        public decimal FireRate => TotalConsumedKg > 0 ? TotalWasteKg / TotalConsumedKg * 100 : 0;
+        public bool HasBom     => Components.Any();
+    }
+
+    public class BomComponentRow
+    {
+        public string        ComponentName  { get; set; } = "";
+        public string        ComponentCode  { get; set; } = "";
+        public string?       FscTypeName    { get; set; }
+        public string?       FscTypeCode    { get; set; }
+        public decimal       PlannedKg      { get; set; }
+        public decimal       ConsumedKg     { get; set; }
+        public decimal       WasteKg        { get; set; }
+        public decimal       ProducedQty    { get; set; }
+        public bool          IsUnlinked     { get; set; }
+        public List<string>  SerialNos      { get; set; } = new();
+        public List<string>  LotNos         { get; set; } = new();
+        public List<string>  SupplierNames  { get; set; } = new();
+        public List<string>  InputFscTypes  { get; set; } = new();
+
+        public decimal FireRate      => ConsumedKg > 0 ? WasteKg / ConsumedKg * 100 : 0;
+        public bool    IsOverPlan    => PlannedKg > 0 && ConsumedKg > PlannedKg * 1.10m;
+        public bool    IsNearPlan    => PlannedKg > 0 && ConsumedKg >= PlannedKg * 0.90m;
     }
 }
