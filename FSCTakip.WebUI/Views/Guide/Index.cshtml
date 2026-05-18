@@ -470,6 +470,10 @@
                 <span class="toc-num">23.</span> İmha Kayıtları
                 <span class="toc-badge done">✓</span>
             </a>
+            <a class="toc-item" href="#etl" onclick="scrollTo('etl')">
+                <span class="toc-num">24.</span> ERP Entegrasyon — ETL
+                <span class="toc-badge done">✓</span>
+            </a>
         </div>
     </div>
 
@@ -483,7 +487,7 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>23 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → Depolar → Reçete → İmha)</span>
+                <span>24 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → Depolar → Reçete → İmha → ETL)</span>
             </div>
             <div class="guide-status-item">
                 <span class="toc-badge plan" style="float:none;">— Planlandı</span>
@@ -538,7 +542,8 @@
             'Tedarikçi FSC Sertifika Durumu': 'tedarikci-fsc',
             'Depo Tanımlamaları': 'depolar',
             'Ürün Reçetesi — BOM': 'recete',
-            'İmha Kayıtları': 'imha'
+            'İmha Kayıtları': 'imha',
+            'ERP Entegrasyonu — ETL': 'etl'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {
@@ -1356,6 +1361,41 @@
     <div style="font-size:11px;color:#6b7280;padding:8px 10px;background:#fafafa;border-top:1px solid #e5e7eb;">
       <i class="fas fa-info-circle me-1" style="color:#1d4ed8;"></i>
       Pasif bileşenler <strong>Reçeteden Yükle</strong> ile otomatik uygulamaya dahil edilmez.
+    </div>
+  </div>
+</div>`,
+
+        'etl': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-file-upload"></i> Excel Aktarımı</button>
+    <span class="gm-title">ERP Entegrasyonu</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-plug"></i> Bağlantılar</button>
+    <button class="gm-btn-secondary"><i class="fas fa-history"></i> Geçmiş</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(4,1fr); margin-bottom:12px;">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-plug"></i></div><div><div class="gm-stat-val">2</div><div class="gm-stat-lbl">Bağlantı Profili</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="gm-stat-val">2</div><div class="gm-stat-lbl">Aktif</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-exchange-alt"></i></div><div><div class="gm-stat-val">5</div><div class="gm-stat-lbl">Toplam Aktarım</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-thumbs-up"></i></div><div><div class="gm-stat-val">4</div><div class="gm-stat-lbl">Başarılı</div></div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+      <div style="padding:10px 14px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-history" style="color:#1d4ed8;font-size:12px;"></i>
+        <span style="font-weight:600;font-size:12px;">Son Aktarımlar</span>
+      </div>
+      <table class="gm-table" style="font-size:11.5px;">
+        <thead><tr><th>TÜR</th><th>KAYNAK</th><th>TOPLAM</th><th>EKLENDİ</th><th>GÜNCELLENDİ</th><th>HATA</th><th>DURUM</th><th>TARİH</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Ürün Aktarımı</strong></td><td class="gm-muted">Manuel Excel</td><td>25</td><td class="gm-muted" style="color:#16a34a;">20</td><td class="gm-muted" style="color:#1d4ed8;">5</td><td class="gm-muted">0</td><td><span class="gm-badge green">Tamamlandı</span></td><td class="gm-muted">15.05.2026</td></tr>
+          <tr><td><strong>Tedarikçi Aktarımı</strong></td><td class="gm-muted">Logo ERP</td><td>12</td><td class="gm-muted" style="color:#16a34a;">10</td><td class="gm-muted" style="color:#1d4ed8;">2</td><td class="gm-muted">0</td><td><span class="gm-badge green">Tamamlandı</span></td><td class="gm-muted">10.05.2026</td></tr>
+          <tr><td><strong>Müşteri Aktarımı</strong></td><td class="gm-muted">Manuel Excel</td><td>8</td><td class="gm-muted" style="color:#16a34a;">7</td><td class="gm-muted" style="color:#1d4ed8;">0</td><td class="gm-muted" style="color:#ef4444;">1</td><td><span class="gm-badge amber">Kısmi</span></td><td class="gm-muted">08.05.2026</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>`,

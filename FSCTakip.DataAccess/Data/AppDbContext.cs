@@ -40,6 +40,11 @@ namespace FSCTakip.DataAccess.Data
         public DbSet<SalesOrderLine> SalesOrderLines { get; set; }
         #endregion
 
+        #region ETL / ERP Entegrasyon
+        public DbSet<EtlConnection> EtlConnections { get; set; }
+        public DbSet<EtlJob> EtlJobs { get; set; }
+        #endregion
+
         // --- MERKEZİ BÜYÜK HARF DÖNÜŞTÜRME MANTIĞI ---
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

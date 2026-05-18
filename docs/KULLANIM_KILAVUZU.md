@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 1.7 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 1.8 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -30,6 +30,7 @@
 21. [Depo Tanımlamaları](#depolar)
 22. [Ürün Reçetesi — BOM](#recete)
 23. [İmha Kayıtları](#imha)
+24. [ERP Entegrasyonu — ETL](#etl)
 
 ---
 
@@ -1000,7 +1001,61 @@ Sayfanın üstünde ürünün kodu, adı, grubu ve birim bilgisi gösterilir. Sa
 | Satış / Sevkiyat | ✅ Tamamlandı | Bölüm 14–15 |
 | Stok Durumu | ✅ Tamamlandı | Bölüm 16–17 |
 | FSC Raporlar | ✅ Tamamlandı | Bölüm 18–20 |
-| ERP Entegrasyon | ⏳ Planlandı | — |
+| ERP Entegrasyon (ETL) | ✅ Tamamlandı | Bölüm 24 |
+
+---
+
+## 24. ERP Entegrasyonu — ETL {#etl}
+
+**Menü Yolu:** Sol Menü → ERP Entegrasyon
+
+**Sayfa:** `/Etl/Index`
+
+```
+[≡] [Excel Aktarımı]   ERP Entegrasyonu   [Bağlantılar] [Geçmiş] [👤]
+```
+
+ERP sistemlerinden veri aktarımını (ETL — Extract, Transform, Load) yönetir. Şu an Excel tabanlı manuel aktarım desteklenmektedir. Otomatik senkronizasyon sonraki fazda eklenecektir.
+
+### Alt Sayfalar
+
+| Sayfa | URL | Açıklama |
+|-------|-----|----------|
+| ETL Paneli | `/Etl/Index` | Dashboard — istatistikler ve son aktarımlar |
+| Excel Aktarımı | `/Etl/Import` | Dosya yükle → önizle → aktar |
+| Bağlantı Yönetimi | `/Etl/Connections` | ERP bağlantı profillerinin CRUD yönetimi |
+| Aktarım Geçmişi | `/Etl/History` | Tüm aktarım logları ve sonuçları |
+
+### Excel Aktarım Türleri
+
+| Tür | Kolonlar |
+|-----|---------|
+| Ürün Aktarımı | UrunKodu, UrunAdi, Birim, GrupAdi, IsActive |
+| Tedarikçi Aktarımı | TedarikciKodu, TedarikciAdi, FscKodu, ContactPerson, Telefon, Email |
+| Müşteri Aktarımı | MusteriKodu, MusteriAdi, VergiNo, VergiDairesi, Sehir, Telefon, Email |
+
+> **İpucu:** Önce **Şablon İndir** ile boş Excel şablonunu indirin. Mevcut ERP'nden verileri bu şablona kopyalayın, sonra yükleyin. Sistem kod bazlı upsert yapar — kod varsa günceller, yoksa ekler.
+
+### Aktarım Adımları
+
+1. **Aktarım Türü** seçin (Ürün / Tedarikçi / Müşteri)
+2. İsteğe bağlı olarak **Bağlantı Profili** seçin
+3. Excel dosyasını seçin
+4. **Önizle** butonuyla ilk 10 satırı kontrol edin
+5. **Aktarımı Başlat** — sonuç ekranda ve Aktarım Geçmişi'nde görünür
+
+### Bağlantı Profili Tipleri
+
+| Tip | Açıklama |
+|-----|---------|
+| Excel | Manuel dosya yükleme (şu an aktif) |
+| Logo | Logo ERP (gelecek faz) |
+| Mikro | Mikro ERP (gelecek faz) |
+| Netsis | Netsis (gelecek faz) |
+| Api | REST API bağlantısı (gelecek faz) |
+| SqlServer | Doğrudan SQL Server bağlantısı (gelecek faz) |
+
+> **Not:** Excel dışındaki bağlantı tipleri şu an sadece kayıt amaçlıdır; otomatik senkronizasyon sonraki geliştirme fazında aktif hale gelecektir.
 
 ---
 
