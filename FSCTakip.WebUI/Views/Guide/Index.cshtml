@@ -474,6 +474,14 @@
                 <span class="toc-num">24.</span> ERP Entegrasyon — ETL
                 <span class="toc-badge done">✓</span>
             </a>
+            <a class="toc-item" href="#netsis-sync" onclick="scrollTo('netsis-sync')">
+                <span class="toc-num">25.</span> Netsis Senkronizasyonu
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#lot-evrak" onclick="scrollTo('lot-evrak')">
+                <span class="toc-num">26.</span> Lot Evrak Görüntüleyici
+                <span class="toc-badge done">✓</span>
+            </a>
         </div>
     </div>
 
@@ -487,11 +495,11 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>24 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → Depolar → Reçete → İmha → ETL)</span>
+                <span>26 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis Sync → Lot Evrak)</span>
             </div>
             <div class="guide-status-item">
-                <span class="toc-badge plan" style="float:none;">— Planlandı</span>
-                <span>ERP Entegrasyon</span>
+                <span class="toc-badge done" style="float:none;">✓</span>
+                <span>v1.9 — Tüm operasyonel modüller tamamlandı</span>
             </div>
             <div class="ms-auto text-muted" style="font-size:11px;">
                 <i class="fas fa-sync-alt me-1"></i> Her modül tamamlandıktan sonra güncellenir
@@ -543,7 +551,9 @@
             'Depo Tanımlamaları': 'depolar',
             'Ürün Reçetesi — BOM': 'recete',
             'İmha Kayıtları': 'imha',
-            'ERP Entegrasyonu — ETL': 'etl'
+            'ERP Entegrasyonu — ETL': 'etl',
+            'Netsis Senkronizasyonu': 'netsis-sync',
+            'Üretim Fişi — Lot Evrak Görüntüleyici': 'lot-evrak'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {

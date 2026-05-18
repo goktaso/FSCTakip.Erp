@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 1.8 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 1.9 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -31,6 +31,8 @@
 22. [Ürün Reçetesi — BOM](#recete)
 23. [İmha Kayıtları](#imha)
 24. [ERP Entegrasyonu — ETL](#etl)
+25. [Netsis Senkronizasyonu](#netsis-sync)
+26. [Üretim Fişi — Lot Evrak Görüntüleyici](#lot-evrak)
 
 ---
 
@@ -1012,10 +1014,10 @@ Sayfanın üstünde ürünün kodu, adı, grubu ve birim bilgisi gösterilir. Sa
 **Sayfa:** `/Etl/Index`
 
 ```
-[≡] [Excel Aktarımı]   ERP Entegrasyonu   [Bağlantılar] [Geçmiş] [👤]
+[≡] [Excel Aktarımı]   ERP Entegrasyonu   [Netsis Sync] [Bağlantılar] [Geçmiş] [👤]
 ```
 
-ERP sistemlerinden veri aktarımını (ETL — Extract, Transform, Load) yönetir. Şu an Excel tabanlı manuel aktarım desteklenmektedir. Otomatik senkronizasyon sonraki fazda eklenecektir.
+ERP sistemlerinden veri aktarımını (ETL — Extract, Transform, Load) yönetir. İki yöntem desteklenmektedir: **Excel tabanlı manuel aktarım** ve **Netsis doğrudan senkronizasyonu**.
 
 ### Alt Sayfalar
 
@@ -1023,10 +1025,23 @@ ERP sistemlerinden veri aktarımını (ETL — Extract, Transform, Load) yöneti
 |-------|-----|----------|
 | ETL Paneli | `/Etl/Index` | Dashboard — istatistikler ve son aktarımlar |
 | Excel Aktarımı | `/Etl/Import` | Dosya yükle → önizle → aktar |
+| Netsis Sync | `/Etl/NetsisSync` | Netsis veritabanından doğrudan senkronizasyon |
 | Bağlantı Yönetimi | `/Etl/Connections` | ERP bağlantı profillerinin CRUD yönetimi |
 | Aktarım Geçmişi | `/Etl/History` | Tüm aktarım logları ve sonuçları |
 
 ### Excel Aktarım Türleri
+
+Aktarımlar iki grupta kategorize edilmiştir:
+
+#### FSC İşlem Kayıtları (Operasyonel)
+
+| Tür | Anahtar Alan | Kolonlar |
+|-----|-------------|---------|
+| 🟢 Hammadde Lot Girişi | LotNo | LotNo, TedarikciKodu, UrunKodu, FscTipi, SeriNo, Miktar, AlisIrsaliyeNo, AlisFaturaNo, GirisTarihi, Plaka, Notlar |
+| 🔵 Üretim Kaydı | UretimNo | UretimNo, Tarih, Makine, MamulKodu, UretimMiktari, LotNo, HammaddeKodu, KullanilanMiktar, Fire, Notlar |
+| 🟠 Satış / Sevkiyat | SatisNo | SatisNo, Tarih, MusteriKodu, UrunKodu, Miktar, BirimFiyat, IrsaliyeNo, FaturaNo, Notlar |
+
+#### Tanım Tabloları (Master Data)
 
 | Tür | Kolonlar |
 |-----|---------|
@@ -1034,28 +1049,178 @@ ERP sistemlerinden veri aktarımını (ETL — Extract, Transform, Load) yöneti
 | Tedarikçi Aktarımı | TedarikciKodu, TedarikciAdi, FscKodu, ContactPerson, Telefon, Email |
 | Müşteri Aktarımı | MusteriKodu, MusteriAdi, VergiNo, VergiDairesi, Sehir, Telefon, Email |
 
-> **İpucu:** Önce **Şablon İndir** ile boş Excel şablonunu indirin. Mevcut ERP'nden verileri bu şablona kopyalayın, sonra yükleyin. Sistem kod bazlı upsert yapar — kod varsa günceller, yoksa ekler.
+### Şablon Kuralları
+
+> **⚠️ Önemli:** Şablonlar DB'den gerçek geçerli değerleri içerecek şekilde üretilir. Boş sistemde şablonu indirdiyseniz önce Tedarikçi/Müşteri/Ürün/Makine tanımlamalarını yapın.
+
+İndirilen Excel şablonunda 3 sayfa bulunur:
+
+| Sayfa | İçerik |
+|-------|--------|
+| Veri Sayfası | Doldurulacak tablo (zorunlu `*` başlıklar koyu yeşil) |
+| OKUYUN | Sütun açıklamaları, tarih/ondalık kuralları, geçerli değer listesi |
+| _Referans | Gizli — dropdown kaynak listesi (silinmemeli) |
+
+**Önemli format kuralları:**
+
+| Alan | Kural | Örnek |
+|------|-------|-------|
+| Tarihler | gg.AA.yyyy (4 haneli yıl) | `15.05.2025` |
+| Ondalıklı sayılar | Nokta veya virgül | `1757.50` veya `1757,50` |
+| Kodlar | Sistemde kayıtlı olmalı | `TED-001`, `MHS-001` |
+| FSC Tipi | Dropdown listesinden seç | `FSC 100%`, `FSC_MIX` |
+
+### LotImport — Gruplama Mantığı
+
+Aynı LotNo birden fazla satırda tekrarlanabilir — her satır aynı lot'a ait **ayrı bir bobin/seri** anlamına gelir:
+
+```
+LotNo     | TedarikciKodu | FscTipi | SeriNo      | Miktar
+24H0537   | TED-001       | FSC_MIX | 24H0537-01  | 1757.50   ← Lot oluşturulur
+24H0537   | TED-001       | FSC_MIX | 24H0537-02  | 1820.00   ← Aynı lot'a 2. bobin
+24H0538   | TED-001       | FSC_MIX | 24H0538-01  | 1650.00   ← Yeni lot
+```
+
+Aynı mantık UretimImport (UretimNo) ve SatisImport (SatisNo) için de geçerlidir.
 
 ### Aktarım Adımları
 
-1. **Aktarım Türü** seçin (Ürün / Tedarikçi / Müşteri)
-2. İsteğe bağlı olarak **Bağlantı Profili** seçin
-3. Excel dosyasını seçin
-4. **Önizle** butonuyla ilk 10 satırı kontrol edin
-5. **Aktarımı Başlat** — sonuç ekranda ve Aktarım Geçmişi'nde görünür
+1. `/Etl/Import` sayfasını açın
+2. **Aktarım Türü** seçin (açılır listede iki grup var)
+3. **Şablon İndir** ile boş Excel şablonunu indirin (ilk kullanımda)
+4. Şablonu doldurun — OKUYUN sayfasındaki kurallara uyun
+5. Doldurulmuş dosyayı seçin, **Önizle** ile ilk 10 satırı kontrol edin
+6. **Aktarımı Başlat** — sonuç anında ekranda gösterilir
+7. Aktarım Geçmişi'nde (`/Etl/History`) detaylı log görüntülenir
 
 ### Bağlantı Profili Tipleri
 
 | Tip | Açıklama |
 |-----|---------|
-| Excel | Manuel dosya yükleme (şu an aktif) |
+| Excel | Manuel dosya yükleme (aktif) |
+| Netsis | Netsis ERP doğrudan SQL bağlantısı (aktif) |
 | Logo | Logo ERP (gelecek faz) |
 | Mikro | Mikro ERP (gelecek faz) |
-| Netsis | Netsis (gelecek faz) |
 | Api | REST API bağlantısı (gelecek faz) |
-| SqlServer | Doğrudan SQL Server bağlantısı (gelecek faz) |
 
-> **Not:** Excel dışındaki bağlantı tipleri şu an sadece kayıt amaçlıdır; otomatik senkronizasyon sonraki geliştirme fazında aktif hale gelecektir.
+---
+
+## 25. Netsis Senkronizasyonu {#netsis-sync}
+
+**Menü Yolu:** Sol Menü → ERP Entegrasyon → Netsis Sync
+
+**Sayfa:** `/Etl/NetsisSync`
+
+```
+[≡]   Netsis Senkronizasyonu   [ETL Paneli] [Geçmiş] [👤]
+```
+
+Netsis ERP veritabanına doğrudan SQL bağlantısı kurarak ürün, tedarikçi ve müşteri verilerini otomatik olarak FSC Takip sistemine çeker.
+
+### Senkronizasyon Türleri
+
+| Buton | Netsis Tablo | FSC Hedef | Filtre |
+|-------|-------------|-----------|--------|
+| Ürünleri Senkronize Et | `TBLSTSABIT` | Ürünler | Grup 10/20/30/40/50 |
+| Tedarikçileri Senkronize Et | `TBLCASABIT` | Tedarikçiler | TİP = S |
+| Müşterileri Senkronize Et | `TBLCASABIT` | Müşteriler | TİP = A |
+| **Tümünü Senkronize Et** | Hepsi | Hepsi | Ürün → Tedarikçi → Müşteri sırasıyla |
+
+### Bağlantı Kurulumu
+
+1. Sol panelde **Bağlantı Profili** açılır listesi görünür (Netsis tipi bağlantı tanımlıysa)
+2. Profil seçilmezse `appsettings.json`'daki `NetsisConnection` bağlantı dizesi kullanılır
+3. Varsayılan bağlantı: `Server=ARDA\ARDA; Database=ACOREFSC25; User=data`
+
+### Senkronizasyon Adımları
+
+1. `/Etl/NetsisSync` sayfasını açın
+2. Bağlantı profili seçin (veya varsayılan kullanın)
+3. Senkronize etmek istediğiniz türün butonuna tıklayın
+4. Onay sorusuna **Evet** yanıtı verin
+5. Sağ panelde yükleniyor göstergesi görünür
+6. Tamamlandığında: Eklendi / Güncellendi / Atlandı / Hata sayıları gösterilir
+
+> **ℹ️ Upsert Mantığı:** Senkronizasyon her çalıştığında mevcut kayıtları günceller, yeni olanları ekler. Yinelenen çalıştırma zararsızdır.
+
+> **⚠️ Hata Durumu:** Netsis bağlantısı kurulamazsa sağ panelde hata mesajı görünür. Bağlantı profilinin doğru yapılandırıldığını kontrol edin.
+
+---
+
+## 26. Üretim Fişi — Lot Evrak Görüntüleyici {#lot-evrak}
+
+**Sayfa:** `/Production/Detail/{id}` → Tüketim Tablosu → LotNo tıklama
+
+Bu özellik, bir üretim fişindeki hammadde tüketim satırlarından doğrudan o hammaddenin **giriş evraklarına** (fatura ve irsaliye PDF) erişim sağlar. Hammaddeden üretime, üretimden satışa kadar tam izlenebilirlik zincirinin kritik halkasıdır.
+
+### Nasıl Kullanılır
+
+1. `/Production/Detail/{id}` sayfasını açın
+2. Sağ panelde **Tüketim Kayıtları** tablosunu bulun
+3. **Lot / Tedarikçi** sütununda LotNo'nun yanındaki 📂 simgesiyle birlikte mavi linkli lot numarasına tıklayın
+4. Modal penceresi açılır ve şunları gösterir:
+
+### Modal İçeriği
+
+**Lot Bilgileri (üst bölüm):**
+
+| Alan | Açıklama |
+|------|----------|
+| Lot No | Tedarikçi tarafından verilen lot/parti numarası |
+| Tedarikçi | Tedarikçi adı ve kodu |
+| FSC Tipi | FSC sertifika tipi (yeşil badge ile) |
+| Hammadde | Ürün adı ve kodu |
+| Giriş Tarihi | Hammaddenin sisteme giriş tarihi |
+| Plaka | Varsa araç plakası |
+
+**Evrak Panelleri (alt bölüm):**
+
+| Panel | İçerik |
+|-------|--------|
+| Alış Faturası | Fatura No + fatura tutarı + **"Fatura PDF'ini Aç"** butonu |
+| Alış İrsaliyesi | İrsaliye No + **"İrsaliye PDF'ini Aç"** butonu |
+
+> **ℹ️ PDF Yüklenmemişse:** "PDF henüz yüklenmemiş" bilgisi gösterilir. PDF'leri yüklemek için `/Purchase/Detail/{lotId}` sayfasından Lot Detayı'nı açın.
+
+**Alt Butonlar:**
+- **Lot Detayına Git** → Hammadde giriş sayfasını açar (`/Purchase/Detail/{lotId}`)
+- **Kapat** → Modalı kapatır
+
+### FSC CoC Zinciri
+
+Bu özellik sayesinde herhangi bir üretim fişinde:
+- Hangi hammaddeden üretildi?
+- O hammadde hangi tedarikçiden geldi?
+- FSC sertifika tipi neydi?
+- Giriş faturası ve irsaliyesi hangileri?
+
+sorularının cevapları tek tıkla erişilebilir durumdadır.
+
+> **⚠️ İzlenebilirlik Notu:** FSC CoC denetimlerinde denetçiler bu belgeleri talep eder. PDF'lerin sisteme yüklü olması denetim sürecini önemli ölçüde hızlandırır.
+
+---
+
+### Modül Durumu
+
+| Modül | Durum | Versiyon |
+|-------|-------|---------|
+| Tedarikçiler | ✅ Tamamlandı | 1.0 |
+| Müşteriler | ✅ Tamamlandı | 1.0 |
+| Ürünler + Reçete | ✅ Tamamlandı | 1.1 |
+| Sistem Tanımlamaları | ✅ Tamamlandı | 1.1 |
+| Hammadde Girişi (Purchase) | ✅ Tamamlandı | 1.2 |
+| Üretim / İş Emirleri | ✅ Tamamlandı | 1.3 |
+| Fire Raporu | ✅ Tamamlandı | 1.4 |
+| Satış Siparişleri | ✅ Tamamlandı | 1.5 |
+| Stok Durumu + Hareketleri | ✅ Tamamlandı | 1.6 |
+| FSC CoC + Lot Takip Raporu | ✅ Tamamlandı | 1.6 |
+| İmha Kayıtları | ✅ Tamamlandı | 1.7 |
+| ERP Entegrasyon — Bağlantılar | ✅ Tamamlandı | 1.7 |
+| Excel Aktarımı (Tanım Tabloları) | ✅ Tamamlandı | 1.8 |
+| Excel Aktarımı (Lot/Üretim/Satış) | ✅ Tamamlandı | 1.9 |
+| Netsis Senkronizasyonu | ✅ Tamamlandı | 1.9 |
+| Lot Evrak Görüntüleyici | ✅ Tamamlandı | 1.9 |
+| Gelişmiş Excel Şablonları | ✅ Tamamlandı | 1.9 |
 
 ---
 
