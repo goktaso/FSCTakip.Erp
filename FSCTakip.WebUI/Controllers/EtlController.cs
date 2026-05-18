@@ -2,7 +2,9 @@ using ClosedXML.Excel;
 using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,7 +16,8 @@ namespace FSCTakip.WebUI.Controllers
 {
     public class EtlController : BaseController
     {
-        public EtlController(AppDbContext context) : base(context) { }
+        private readonly IConfiguration _cfg;
+        public EtlController(AppDbContext context, IConfiguration cfg) : base(context) { _cfg = cfg; }
 
         // ─── Index — Dashboard ────────────────────────────────────────────────
         public async Task<IActionResult> Index()
@@ -272,6 +275,335 @@ namespace FSCTakip.WebUI.Controllers
             wb.SaveAs(ms);
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"Sablon_{type}_{DateTime.Now:ddMMyyyy}.xlsx");
+        }
+
+        // ─── Netsis Senkronizasyon ────────────────────────────────────────────
+        public async Task<IActionResult> NetsisSync()
+        {
+            ViewData["Title"] = "Netsis Senkronizasyonu";
+            ViewBag.Connections = await _context.EtlConnections
+                .Where(c => c.IsActive && c.Type == "Netsis")
+                .OrderBy(c => c.Name)
+                .ToListAsync();
+            ViewBag.RecentJobs = await _context.EtlJobs
+                .Where(j => j.Source == "Netsis")
+                .Include(j => j.EtlConnection)
+                .OrderByDescending(j => j.StartedAt)
+                .Take(10)
+                .ToListAsync();
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> NetsisExecute(string syncType, int? connectionId)
+        {
+            var connStr = _cfg.GetConnectionString("NetsisConnection");
+
+            if (connectionId.HasValue)
+            {
+                var etlConn = await _context.EtlConnections.FindAsync(connectionId.Value);
+                if (etlConn?.Settings != null)
+                {
+                    try
+                    {
+                        var s = JsonSerializer.Deserialize<Dictionary<string, string>>(etlConn.Settings);
+                        if (s != null && s.ContainsKey("Server") && s.ContainsKey("Database"))
+                        {
+                            var b = new SqlConnectionStringBuilder
+                            {
+                                DataSource         = s.GetValueOrDefault("Server", ""),
+                                InitialCatalog     = s.GetValueOrDefault("Database", ""),
+                                UserID             = s.GetValueOrDefault("UserId", ""),
+                                Password           = s.GetValueOrDefault("Password", ""),
+                                TrustServerCertificate = true
+                            };
+                            connStr = b.ConnectionString;
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(connStr))
+                return Json(new { success = false, message = "Netsis bağlantı dizgisi tanımlı değil." });
+
+            var job = new EtlJob
+            {
+                EtlConnectionId = connectionId,
+                JobType         = syncType,
+                Source          = "Netsis",
+                Status          = "Running",
+                StartedAt       = DateTime.Now,
+                CreatedDate     = DateTime.Now,
+                CreatedBy       = "SYSTEM"
+            };
+            _context.EtlJobs.Add(job);
+            await _context.SaveChangesAsync();
+
+            int inserted = 0, updated = 0, skipped = 0;
+            var errors = new List<string>();
+
+            try
+            {
+                using var netsisCon = new SqlConnection(connStr);
+                await netsisCon.OpenAsync();
+
+                (inserted, updated, skipped, errors) = syncType switch
+                {
+                    "ProductImport"  => await SyncNetsisProducts(netsisCon),
+                    "SupplierImport" => await SyncNetsisSuppliers(netsisCon),
+                    "CustomerImport" => await SyncNetsisCustomers(netsisCon),
+                    _ => (0, 0, 0, new List<string> { "Bilinmeyen senkronizasyon türü." })
+                };
+
+                job.Status        = errors.Count == 0 ? "Completed" : (inserted + updated > 0 ? "Partial" : "Failed");
+                job.InsertedCount = inserted;
+                job.UpdatedCount  = updated;
+                job.SkippedCount  = skipped;
+                job.ErrorCount    = errors.Count;
+                job.CompletedAt   = DateTime.Now;
+                job.ErrorDetails  = errors.Count > 0 ? string.Join("\n", errors.Take(50)) : null;
+
+                if (connectionId.HasValue)
+                {
+                    var conn = await _context.EtlConnections.FindAsync(connectionId.Value);
+                    if (conn != null) { conn.LastSyncAt = DateTime.Now; conn.LastSyncStatus = job.Status; }
+                }
+
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, inserted, updated, skipped, errorCount = errors.Count, errors = errors.Take(20), jobId = job.Id });
+            }
+            catch (Exception ex)
+            {
+                job.Status       = "Failed";
+                job.ErrorDetails = ex.Message;
+                job.CompletedAt  = DateTime.Now;
+                await _context.SaveChangesAsync();
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // ─── Netsis veri çekme yardımcıları ──────────────────────────────────
+        private async Task<(int ins, int upd, int skp, List<string> errs)> SyncNetsisProducts(SqlConnection cn)
+        {
+            int ins = 0, upd = 0, skp = 0;
+            var errors = new List<string>();
+            var groups = await _context.ProductGroups.ToListAsync();
+
+            const string sql = @"
+                SELECT STOK_KODU, STOK_ADI, OLCU_BR1, GRUP_KODU, MAMULMU
+                FROM TBLSTSABIT
+                WHERE GRUP_KODU IN (10, 20, 30, 40, 50)
+                ORDER BY STOK_KODU";
+
+            using var cmd = new SqlCommand(sql, cn);
+            using var rdr = await cmd.ExecuteReaderAsync();
+
+            var rows = new List<(string Kod, string Adi, string Birim, int Grup, bool Mamul)>();
+            while (await rdr.ReadAsync())
+            {
+                rows.Add((
+                    rdr["STOK_KODU"]?.ToString()?.Trim() ?? "",
+                    rdr["STOK_ADI"]?.ToString()?.Trim() ?? "",
+                    rdr["OLCU_BR1"]?.ToString()?.Trim() ?? "AD",
+                    Convert.ToInt32(rdr["GRUP_KODU"]),
+                    rdr["MAMULMU"]?.ToString() == "1"
+                ));
+            }
+            rdr.Close();
+
+            foreach (var r in rows)
+            {
+                if (string.IsNullOrWhiteSpace(r.Kod) || string.IsNullOrWhiteSpace(r.Adi)) { skp++; continue; }
+                try
+                {
+                    var grupAdi = r.Grup switch { 10 => "Hammadde", 20 => "Sap", 30 => "Mamul", 40 => "Kimyasal", _ => "Sarf" };
+                    var group   = groups.FirstOrDefault(g => g.GroupName.Equals(grupAdi, StringComparison.OrdinalIgnoreCase));
+
+                    var existing = await _context.Products.FirstOrDefaultAsync(p => p.ProductCode == r.Kod);
+                    if (existing == null)
+                    {
+                        _context.Products.Add(new Product
+                        {
+                            ProductCode    = r.Kod,
+                            ProductName    = r.Adi,
+                            Unit           = r.Birim.ToUpperInvariant(),
+                            ProductGroupId = group?.Id,
+                            IsActive       = true,
+                            CreatedDate    = DateTime.Now,
+                            CreatedBy      = "NETSIS"
+                        });
+                        ins++;
+                    }
+                    else
+                    {
+                        existing.ProductName    = r.Adi;
+                        existing.Unit           = r.Birim.ToUpperInvariant();
+                        existing.ProductGroupId = group?.Id ?? existing.ProductGroupId;
+                        existing.UpdatedDate    = DateTime.Now;
+                        existing.UpdatedBy      = "NETSIS";
+                        upd++;
+                    }
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex) { errors.Add($"{r.Kod}: {ex.Message}"); }
+            }
+            return (ins, upd, skp, errors);
+        }
+
+        private async Task<(int ins, int upd, int skp, List<string> errs)> SyncNetsisSuppliers(SqlConnection cn)
+        {
+            int ins = 0, upd = 0, skp = 0;
+            var errors = new List<string>();
+            var count = await _context.Suppliers.CountAsync();
+
+            const string sql = @"
+                SELECT CARI_KOD, CARI_ISIM, CARI_TEL, EMAIL, VERGI_NUMARASI, VERGI_DAIRESI, CARI_IL
+                FROM TBLCASABIT
+                WHERE CARI_TIP = 'S'
+                ORDER BY CARI_KOD";
+
+            using var cmd = new SqlCommand(sql, cn);
+            using var rdr = await cmd.ExecuteReaderAsync();
+
+            var rows = new List<(string Kod, string Isim, string Tel, string Mail, string Vn, string Vd, string Il)>();
+            while (await rdr.ReadAsync())
+            {
+                rows.Add((
+                    rdr["CARI_KOD"]?.ToString()?.Trim() ?? "",
+                    rdr["CARI_ISIM"]?.ToString()?.Trim() ?? "",
+                    rdr["CARI_TEL"]?.ToString()?.Trim() ?? "",
+                    rdr["EMAIL"]?.ToString()?.Trim() ?? "",
+                    rdr["VERGI_NUMARASI"]?.ToString()?.Trim() ?? "",
+                    rdr["VERGI_DAIRESI"]?.ToString()?.Trim() ?? "",
+                    rdr["CARI_IL"]?.ToString()?.Trim() ?? ""
+                ));
+            }
+            rdr.Close();
+
+            foreach (var r in rows)
+            {
+                if (string.IsNullOrWhiteSpace(r.Isim)) { skp++; continue; }
+                try
+                {
+                    var existing = await _context.Suppliers
+                        .FirstOrDefaultAsync(s => s.SupplierCode == r.Kod || s.Name == r.Isim);
+
+                    var email = NormalizeEmail(r.Mail);
+
+                    if (existing == null)
+                    {
+                        count++;
+                        _context.Suppliers.Add(new Supplier
+                        {
+                            SupplierCode  = string.IsNullOrWhiteSpace(r.Kod) ? $"TED-{count:D3}" : r.Kod,
+                            Name          = r.Isim,
+                            Phone         = r.Tel,
+                            Email         = email,
+                            IsActive      = true,
+                            IsFscActive   = false,
+                            CreatedDate   = DateTime.Now,
+                            CreatedBy     = "NETSIS"
+                        });
+                        ins++;
+                    }
+                    else
+                    {
+                        existing.Name        = r.Isim;
+                        existing.Phone       = r.Tel;
+                        existing.Email       = email;
+                        existing.UpdatedDate = DateTime.Now;
+                        existing.UpdatedBy   = "NETSIS";
+                        upd++;
+                    }
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex) { errors.Add($"{r.Kod} - {r.Isim}: {ex.Message}"); }
+            }
+            return (ins, upd, skp, errors);
+        }
+
+        private async Task<(int ins, int upd, int skp, List<string> errs)> SyncNetsisCustomers(SqlConnection cn)
+        {
+            int ins = 0, upd = 0, skp = 0;
+            var errors = new List<string>();
+            var count = await _context.Customers.CountAsync();
+
+            const string sql = @"
+                SELECT CARI_KOD, CARI_ISIM, CARI_TEL, EMAIL, VERGI_NUMARASI, VERGI_DAIRESI, CARI_IL
+                FROM TBLCASABIT
+                WHERE CARI_TIP = 'A'
+                ORDER BY CARI_KOD";
+
+            using var cmd = new SqlCommand(sql, cn);
+            using var rdr = await cmd.ExecuteReaderAsync();
+
+            var rows = new List<(string Kod, string Isim, string Tel, string Mail, string Vn, string Vd, string Il)>();
+            while (await rdr.ReadAsync())
+            {
+                rows.Add((
+                    rdr["CARI_KOD"]?.ToString()?.Trim() ?? "",
+                    rdr["CARI_ISIM"]?.ToString()?.Trim() ?? "",
+                    rdr["CARI_TEL"]?.ToString()?.Trim() ?? "",
+                    rdr["EMAIL"]?.ToString()?.Trim() ?? "",
+                    rdr["VERGI_NUMARASI"]?.ToString()?.Trim() ?? "",
+                    rdr["VERGI_DAIRESI"]?.ToString()?.Trim() ?? "",
+                    rdr["CARI_IL"]?.ToString()?.Trim() ?? ""
+                ));
+            }
+            rdr.Close();
+
+            foreach (var r in rows)
+            {
+                if (string.IsNullOrWhiteSpace(r.Isim)) { skp++; continue; }
+                try
+                {
+                    var existing = await _context.Customers
+                        .FirstOrDefaultAsync(c => c.CustomerCode == r.Kod || c.Name == r.Isim);
+
+                    var email = NormalizeEmail(r.Mail);
+
+                    if (existing == null)
+                    {
+                        count++;
+                        _context.Customers.Add(new Customer
+                        {
+                            CustomerCode = string.IsNullOrWhiteSpace(r.Kod) ? $"MHS-{count:D3}" : r.Kod,
+                            Name         = r.Isim,
+                            Phone        = r.Tel,
+                            Email        = email,
+                            TaxNumber    = r.Vn,
+                            TaxOffice    = r.Vd,
+                            City         = r.Il,
+                            IsActive     = true,
+                            CreatedDate  = DateTime.Now,
+                            CreatedBy    = "NETSIS"
+                        });
+                        ins++;
+                    }
+                    else
+                    {
+                        existing.Name        = r.Isim;
+                        existing.Phone       = r.Tel;
+                        existing.Email       = email;
+                        existing.TaxNumber   = r.Vn;
+                        existing.TaxOffice   = r.Vd;
+                        existing.City        = r.Il;
+                        existing.UpdatedDate = DateTime.Now;
+                        existing.UpdatedBy   = "NETSIS";
+                        upd++;
+                    }
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex) { errors.Add($"{r.Kod} - {r.Isim}: {ex.Message}"); }
+            }
+            return (ins, upd, skp, errors);
+        }
+
+        private static string NormalizeEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return string.Empty;
+            return email.Replace("İ", "i").Replace("I", "ı").ToLowerInvariant();
         }
 
         // ─── Import yardımcıları ──────────────────────────────────────────────

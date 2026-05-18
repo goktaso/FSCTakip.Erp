@@ -10,6 +10,9 @@
     </a>
 }
 @section TopbarActions {
+    <a href="/Etl/NetsisSync" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-database me-1"></i> Netsis Sync
+    </a>
     <a href="/Etl/Connections" class="btn btn-outline-secondary btn-sm">
         <i class="fas fa-plug me-1"></i> Bağlantılar
     </a>
@@ -81,16 +84,18 @@
         </a>
     </div>
     <div class="col-md-4">
-        <div class="table-card p-4 h-100 d-flex align-items-start gap-3" style="opacity:.6;">
-            <div style="width:44px;height:44px;border-radius:10px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="fas fa-sync-alt" style="color:#9ca3af;font-size:18px;"></i>
+        <a href="/Etl/NetsisSync" class="text-decoration-none">
+            <div class="table-card p-4 h-100 d-flex align-items-start gap-3" style="cursor:pointer; transition:.2s;" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
+                <div style="width:44px;height:44px;border-radius:10px;background:#faf5ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-database" style="color:#7c3aed;font-size:18px;"></i>
+                </div>
+                <div>
+                    <div class="fw-semibold mb-1">Netsis Senkronizasyonu</div>
+                    <div class="text-muted small">Netsis ERP'den ürün, tedarikçi ve müşteri verilerini otomatik çekin.</div>
+                    <span class="badge badge-success mt-2">Aktif</span>
+                </div>
             </div>
-            <div>
-                <div class="fw-semibold mb-1">Otomatik Senkronizasyon</div>
-                <div class="text-muted small">Zamanlanmış görevlerle ERP verilerini otomatik olarak senkronize edin.</div>
-                <span class="badge badge-warning mt-2">Planlıyor</span>
-            </div>
-        </div>
+        </a>
     </div>
 </div>
 
