@@ -1,4 +1,4 @@
-@model IEnumerable<FSCTakip.Core.Entities.Supplier>
+﻿@model IEnumerable<FSCTakip.Core.Entities.Supplier>
 @{
     ViewData["Title"] = "Tedarikçi Yönetimi";
 }
@@ -103,7 +103,7 @@
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-secondary text-white">
                 <h6 class="modal-title font-weight-bold"><i class="fas fa-truck mr-2"></i>Tedarikçi Formu</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Suppliers" asp-action="Save" method="post">
                 <div class="modal-body">
@@ -145,7 +145,7 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light p-2">
-                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Kapat</button>
                     <button type="submit" class="btn btn-secondary btn-sm px-4 text-white">Kaydet</button>
                 </div>
             </form>
@@ -189,7 +189,7 @@
             $('#suppFsc').val('');
             $('#suppDate').val('');
             $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Tedarikçi Ekle');
-            $('#supplierModal').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('supplierModal')).show();
         }
 
         function editSupplier(id) {
@@ -204,7 +204,7 @@
                     $('#suppFsc').val(res.data.fscCode);
                     if (res.data.fscExpiryDate) $('#suppDate').val(res.data.fscExpiryDate.split('T')[0]);
                     $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Tedarikçi Düzenle');
-                    $('#supplierModal').modal('show');
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('supplierModal')).show();
                 }
             });
         }
