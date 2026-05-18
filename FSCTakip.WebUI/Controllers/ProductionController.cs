@@ -277,7 +277,7 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // GET /Production/WasteReport
-        public async Task<IActionResult> WasteReport(DateTime? startDate, DateTime? endDate)
+        public async Task<IActionResult> WasteReport(DateTime? startDate, DateTime? endDate, int? machineId, int? productId)
         {
             var query = _context.ProductionDetails
                 .Include(d => d.WorkOrder).ThenInclude(w => w.Product)
@@ -288,11 +288,189 @@ namespace FSCTakip.WebUI.Controllers
 
             if (startDate.HasValue) query = query.Where(d => d.ProductionDate >= startDate.Value);
             if (endDate.HasValue)   query = query.Where(d => d.ProductionDate <= endDate.Value.AddDays(1));
+            if (machineId.HasValue) query = query.Where(d => d.MachineId == machineId.Value);
+            if (productId.HasValue) query = query.Where(d => d.WorkOrder.ProductId == productId.Value);
 
-            ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
-            ViewBag.EndDate   = endDate?.ToString("yyyy-MM-dd");
-            ViewData["Title"] = "Fire Raporu";
-            return View(await query.OrderByDescending(d => d.ProductionDate).ToListAsync());
+            var details = await query.OrderByDescending(d => d.ProductionDate).ToListAsync();
+
+            // Makine bazlı özet
+            var byMachine = details
+                .GroupBy(d => new { d.MachineId, Name = d.Machine?.Name ?? "—" })
+                .Select(g => new WasteGroupRow {
+                    Label          = g.Key.Name,
+                    RecordCount    = g.Count(),
+                    TotalConsumed  = g.Sum(d => d.ConsumedWeight),
+                    TotalWaste     = g.Sum(d => d.WasteWeight)
+                })
+                .OrderByDescending(r => r.WasteRate)
+                .ToList();
+
+            // Ürün bazlı özet
+            var byProduct = details
+                .GroupBy(d => new { Id = d.WorkOrder?.ProductId, Name = d.WorkOrder?.Product?.ProductName ?? "—" })
+                .Select(g => new WasteGroupRow {
+                    Label         = g.Key.Name,
+                    RecordCount   = g.Count(),
+                    TotalConsumed = g.Sum(d => d.ConsumedWeight),
+                    TotalWaste    = g.Sum(d => d.WasteWeight)
+                })
+                .OrderByDescending(r => r.WasteRate)
+                .ToList();
+
+            // Aylık trend (son 6 ay)
+            var monthly = details
+                .GroupBy(d => new { d.ProductionDate.Year, d.ProductionDate.Month })
+                .Select(g => new {
+                    Label    = $"{g.Key.Year}/{g.Key.Month:D2}",
+                    Consumed = g.Sum(d => d.ConsumedWeight),
+                    Waste    = g.Sum(d => d.WasteWeight)
+                })
+                .OrderBy(r => r.Label)
+                .TakeLast(6)
+                .ToList();
+
+            ViewBag.ByMachine  = byMachine;
+            ViewBag.ByProduct  = byProduct;
+            ViewBag.MonthlyLabels  = monthly.Select(m => m.Label).ToList();
+            ViewBag.MonthlyWaste   = monthly.Select(m => m.Waste).ToList();
+            ViewBag.MonthlyRate    = monthly.Select(m => m.Consumed > 0 ? Math.Round(m.Waste / m.Consumed * 100, 2) : 0).ToList();
+            ViewBag.Machines   = await _context.Machines.OrderBy(m => m.Name).ToListAsync();
+            ViewBag.Products   = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
+            ViewBag.StartDate  = startDate?.ToString("yyyy-MM-dd");
+            ViewBag.EndDate    = endDate?.ToString("yyyy-MM-dd");
+            ViewBag.MachineId  = machineId;
+            ViewBag.ProductId  = productId;
+            ViewData["Title"]  = "Fire Raporu";
+            return View(details);
+        }
+
+        // GET /Production/ExportWasteReport
+        public async Task<IActionResult> ExportWasteReport(DateTime? startDate, DateTime? endDate, int? machineId, int? productId)
+        {
+            var query = _context.ProductionDetails
+                .Include(d => d.WorkOrder).ThenInclude(w => w.Product)
+                .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.Supplier)
+                .Include(d => d.Machine)
+                .Where(d => d.WasteWeight > 0)
+                .AsQueryable();
+
+            if (startDate.HasValue) query = query.Where(d => d.ProductionDate >= startDate.Value);
+            if (endDate.HasValue)   query = query.Where(d => d.ProductionDate <= endDate.Value.AddDays(1));
+            if (machineId.HasValue) query = query.Where(d => d.MachineId == machineId.Value);
+            if (productId.HasValue) query = query.Where(d => d.WorkOrder.ProductId == productId.Value);
+
+            var data = await query.OrderByDescending(d => d.ProductionDate).ToListAsync();
+            var rows = data.Select(d => {
+                var fr = d.ConsumedWeight > 0 ? Math.Round(d.WasteWeight / d.ConsumedWeight * 100, 2) : 0;
+                return new {
+                    Tarih        = d.ProductionDate.ToString("dd.MM.yyyy"),
+                    IsEmriNo     = d.WorkOrder?.WorkOrderNo,
+                    Urun         = d.WorkOrder?.Product?.ProductName,
+                    SerialNo     = d.FscSerial?.SerialNo,
+                    LotNo        = d.FscSerial?.Lot?.LotNo,
+                    Tedarikci    = d.FscSerial?.Lot?.Supplier?.Name,
+                    Makine       = d.Machine?.Name,
+                    TuketimKg    = d.ConsumedWeight,
+                    FireKg       = d.WasteWeight,
+                    FireOranPct  = fr,
+                    Notlar       = d.Notes
+                };
+            });
+            return ExportToExcel(rows, "FireRaporu");
+        }
+
+        // ─── WasteManagement (İmha Kayıtları) ───────────────────────────────
+
+        // GET /Production/WasteManagement
+        public async Task<IActionResult> WasteManagement()
+        {
+            ViewData["Title"] = "İmha / Atık Kayıtları";
+            var list = await _context.WasteManagements
+                .Include(w => w.WorkOrder).ThenInclude(wo => wo!.Product)
+                .OrderByDescending(w => w.DisposalDate)
+                .ToListAsync();
+
+            ViewBag.WorkOrders = await _context.WorkOrders
+                .Include(wo => wo.Product)
+                .OrderByDescending(wo => wo.Id)
+                .Take(50)
+                .ToListAsync();
+
+            return View(list);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetWaste(int id)
+        {
+            var item = await _context.WasteManagements.FindAsync(id);
+            if (item == null) return Json(new { success = false });
+            return Json(new { success = true, data = new {
+                item.Id, item.WasteCode, item.WorkOrderId, item.Category,
+                item.Description, item.Quantity, item.Unit,
+                disposalDate = item.DisposalDate.ToString("yyyy-MM-dd"),
+                item.DisposalMethod, item.DisposedBy, item.Notes
+            }});
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveWaste(FSCTakip.Core.Entities.WasteManagement model)
+        {
+            try
+            {
+                if (model.Id == 0)
+                {
+                    if (string.IsNullOrWhiteSpace(model.WasteCode))
+                    {
+                        var count = await _context.WasteManagements.CountAsync(w => w.CreatedDate.Year == DateTime.Now.Year);
+                        model.WasteCode = $"ATK{DateTime.Now.Year}-{count + 1:D3}";
+                    }
+                    model.CreatedDate = DateTime.Now;
+                    model.CreatedBy   = User.Identity?.Name ?? "System";
+                    _context.WasteManagements.Add(model);
+                }
+                else
+                {
+                    var existing = await _context.WasteManagements.FindAsync(model.Id);
+                    if (existing == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+                    existing.WorkOrderId    = model.WorkOrderId;
+                    existing.Category       = model.Category;
+                    existing.Description    = model.Description;
+                    existing.Quantity       = model.Quantity;
+                    existing.Unit           = model.Unit;
+                    existing.DisposalDate   = model.DisposalDate;
+                    existing.DisposalMethod = model.DisposalMethod;
+                    existing.DisposedBy     = model.DisposedBy;
+                    existing.Notes          = model.Notes;
+                    existing.UpdatedDate    = DateTime.Now;
+                    existing.UpdatedBy      = User.Identity?.Name ?? "System";
+                }
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Kayıt kaydedildi." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteWaste(int id)
+        {
+            var item = await _context.WasteManagements.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            _context.WasteManagements.Remove(item);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
         }
     }
+}
+
+public class WasteGroupRow
+{
+    public string Label         { get; set; } = "";
+    public int    RecordCount   { get; set; }
+    public decimal TotalConsumed { get; set; }
+    public decimal TotalWaste   { get; set; }
+    public decimal WasteRate    => TotalConsumed > 0 ? Math.Round(TotalWaste / TotalConsumed * 100, 2) : 0;
 }

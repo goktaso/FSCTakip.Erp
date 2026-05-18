@@ -117,6 +117,9 @@ namespace FSCTakip.DataAccess.Data
                 .HasOne(l => l.Product).WithMany().HasForeignKey(l => l.ProductId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<SalesOrderLine>()
                 .HasOne(l => l.WorkOrder).WithMany().HasForeignKey(l => l.WorkOrderId).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<WasteManagement>()
+                .HasOne(w => w.WorkOrder).WithMany().HasForeignKey(w => w.WorkOrderId).OnDelete(DeleteBehavior.SetNull);
         }
     }
 }
