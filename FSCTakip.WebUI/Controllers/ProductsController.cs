@@ -187,5 +187,130 @@ namespace FSCTakip.WebUI.Controllers
 
             return ExportToExcel(data, "UrunListesi");
         }
+
+        // ─── Ürün Reçetesi (BOM) ─────────────────────────────────────────────
+
+        // GET /Products/Recipe/{id}
+        public async Task<IActionResult> Recipe(int id)
+        {
+            var product = await _context.Products
+                .Include(p => p.ProductGroup)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (product == null) return NotFound();
+
+            var lines = await _context.ProductRecipes
+                .Include(r => r.ChildProduct).ThenInclude(c => c.ProductGroup)
+                .Where(r => r.ParentProductId == id)
+                .OrderBy(r => r.ChildProduct.ProductName)
+                .ToListAsync();
+
+            // Bileşen olarak eklenebilecek ürünler (kendisi hariç)
+            ViewBag.AvailableProducts = await _context.Products
+                .Where(p => p.IsActive && p.Id != id)
+                .OrderBy(p => p.ProductName)
+                .ToListAsync();
+
+            ViewData["Title"] = $"Reçete — {product.ProductName}";
+            ViewBag.Product = product;
+            return View(lines);
+        }
+
+        // POST /Products/SaveRecipeLine
+        [HttpPost]
+        public async Task<IActionResult> SaveRecipeLine(ProductRecipe model)
+        {
+            try
+            {
+                if (model.Id == 0)
+                {
+                    var exists = await _context.ProductRecipes.AnyAsync(r =>
+                        r.ParentProductId == model.ParentProductId &&
+                        r.ChildProductId  == model.ChildProductId);
+                    if (exists)
+                        return Json(new { success = false, message = "Bu bileşen zaten reçetede mevcut." });
+
+                    model.IsActive    = true;
+                    model.CreatedDate = DateTime.Now;
+                    model.CreatedBy   = User.Identity?.Name ?? "System";
+                    _context.ProductRecipes.Add(model);
+                }
+                else
+                {
+                    var existing = await _context.ProductRecipes.FindAsync(model.Id);
+                    if (existing == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+                    existing.ChildProductId    = model.ChildProductId;
+                    existing.StandardQuantity  = model.StandardQuantity;
+                    existing.Unit              = model.Unit;
+                    existing.UpdatedDate       = DateTime.Now;
+                    existing.UpdatedBy         = User.Identity?.Name ?? "System";
+                }
+
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Reçete satırı kaydedildi." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // GET /Products/GetRecipeLine
+        [HttpGet]
+        public async Task<IActionResult> GetRecipeLine(int id)
+        {
+            var item = await _context.ProductRecipes.FindAsync(id);
+            if (item == null) return Json(new { success = false });
+            return Json(new { success = true, data = new {
+                item.Id, item.ParentProductId, item.ChildProductId,
+                item.StandardQuantity, item.Unit, item.IsActive
+            }});
+        }
+
+        // POST /Products/DeleteRecipeLine
+        [HttpPost]
+        public async Task<IActionResult> DeleteRecipeLine(int id)
+        {
+            var item = await _context.ProductRecipes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            _context.ProductRecipes.Remove(item);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
+        }
+
+        // POST /Products/ToggleRecipeLine
+        [HttpPost]
+        public async Task<IActionResult> ToggleRecipeLine(int id)
+        {
+            var item = await _context.ProductRecipes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            item.IsActive    = !item.IsActive;
+            item.UpdatedDate = DateTime.Now;
+            item.UpdatedBy   = User.Identity?.Name ?? "System";
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, isActive = item.IsActive });
+        }
+
+        // GET /Products/GetRecipeForWorkOrder/{productId}  — üretim sayfasından çağrılır
+        [HttpGet]
+        public async Task<IActionResult> GetRecipeForWorkOrder(int productId)
+        {
+            var lines = await _context.ProductRecipes
+                .Include(r => r.ChildProduct)
+                .Where(r => r.ParentProductId == productId && r.IsActive)
+                .OrderBy(r => r.ChildProduct.ProductName)
+                .Select(r => new {
+                    r.Id,
+                    r.ChildProductId,
+                    childProductName = r.ChildProduct.ProductName,
+                    childProductCode = r.ChildProduct.ProductCode,
+                    r.StandardQuantity,
+                    r.Unit
+                })
+                .ToListAsync();
+
+            return Json(new { success = true, lines });
+        }
     }
 }

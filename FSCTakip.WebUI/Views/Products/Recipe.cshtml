@@ -1,0 +1,262 @@
+@model List<FSCTakip.Core.Entities.ProductRecipe>
+@using FSCTakip.Core.Entities
+@{
+    var product  = ViewBag.Product  as Product;
+    var avail    = ViewBag.AvailableProducts as List<Product> ?? new();
+    ViewData["Title"] = $"Reçete — {product?.ProductName}";
+    int parentId = product?.Id ?? 0;
+}
+
+@section TopbarPrimary {
+    <button class="btn btn-primary btn-sm px-3" onclick="openModal(0)">
+        <i class="fas fa-plus me-1"></i> Bileşen Ekle
+    </button>
+}
+@section TopbarActions {
+    <a href="/Products/Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Ürünler
+    </a>
+}
+
+<!-- Ürün Bilgi Kartı -->
+<div class="table-card p-3 mb-3">
+    <div class="d-flex align-items-center gap-3">
+        <div style="width:48px;height:48px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;">
+            <i class="fas fa-box" style="color:#1d4ed8;font-size:20px;"></i>
+        </div>
+        <div>
+            <div class="fw-semibold" style="font-size:15px;">@product?.ProductName</div>
+            <div class="text-muted small">
+                <code>@product?.ProductCode</code>
+                @if (product?.ProductGroup != null)
+                {
+                    <span class="ms-2">· @product.ProductGroup.GroupName</span>
+                }
+                <span class="ms-2">· Birim: @product?.Unit</span>
+            </div>
+        </div>
+        <div class="ms-auto d-flex gap-3 text-center">
+            <div>
+                <div class="fw-semibold" style="font-size:20px; color:#1d4ed8;">@Model.Count</div>
+                <div class="text-muted" style="font-size:11px;">Bileşen</div>
+            </div>
+            <div>
+                <div class="fw-semibold" style="font-size:20px; color:#16a34a;">@Model.Count(r => r.IsActive)</div>
+                <div class="text-muted" style="font-size:11px;">Aktif</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reçete Tablosu -->
+@if (!Model.Any())
+{
+    <div class="table-card p-5 text-center">
+        <div style="width:64px;height:64px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+            <i class="fas fa-list-ul" style="font-size:24px;color:#9ca3af;"></i>
+        </div>
+        <div class="fw-semibold mb-1">Henüz Reçete Tanımlanmamış</div>
+        <div class="text-muted small mb-3">Bu ürünün üretimi için gereken hammadde ve bileşenleri ekleyin.</div>
+        <button class="btn btn-primary btn-sm px-4" onclick="openModal(0)">
+            <i class="fas fa-plus me-1"></i> İlk Bileşeni Ekle
+        </button>
+    </div>
+}
+else
+{
+    <div class="table-card">
+        <div class="p-3 border-bottom d-flex align-items-center gap-2">
+            <i class="fas fa-list-ul text-primary"></i>
+            <strong class="small">Hammadde / Bileşen Listesi</strong>
+            <span class="text-muted small ms-auto">Standart miktarlar 1 birim üretim için</span>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>BILEŞEN ÜRÜN</th>
+                        <th>KOD</th>
+                        <th>GRUP</th>
+                        <th class="text-end">STANDART MİKTAR</th>
+                        <th>BİRİM</th>
+                        <th class="text-center" style="width:90px;">DURUM</th>
+                        <th class="text-center" style="width:110px;">İŞLEM</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in Model)
+                    {
+                        <tr style="@(!line.IsActive ? "opacity:.55;" : "")">
+                            <td>
+                                <strong>@line.ChildProduct?.ProductName</strong>
+                            </td>
+                            <td><code style="font-size:11px;">@line.ChildProduct?.ProductCode</code></td>
+                            <td class="text-muted" style="font-size:12px;">@line.ChildProduct?.ProductGroup?.GroupName</td>
+                            <td class="text-end fw-semibold">@line.StandardQuantity.ToString("N2")</td>
+                            <td class="text-muted">@line.Unit</td>
+                            <td class="text-center">
+                                <span id="badge_@line.Id" class="badge @(line.IsActive ? "badge-success" : "badge-warning")">
+                                    @(line.IsActive ? "Aktif" : "Pasif")
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-icon btn-outline-primary" title="Düzenle" onclick="openModal(@line.Id)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-icon @(line.IsActive ? "btn-outline-warning" : "btn-outline-success")"
+                                        id="toggleBtn_@line.Id"
+                                        title="@(line.IsActive ? "Pasife Al" : "Aktife Al")"
+                                        onclick="toggleLine(@line.Id)">
+                                    <i class="fas @(line.IsActive ? "fa-pause" : "fa-play")"></i>
+                                </button>
+                                <button class="btn btn-icon btn-outline-danger" title="Sil" onclick="deleteLine(@line.Id)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Özet bilgi -->
+        <div class="p-3 border-top" style="font-size:12px; color:#6b7280; background:#fafafa; border-radius:0 0 8px 8px;">
+            <i class="fas fa-info-circle me-1 text-primary"></i>
+            Bu reçete iş emri oluşturulurken <strong>Reçeteden Yükle</strong> butonu ile otomatik olarak uygulanabilir.
+            Pasif bileşenler otomatik yüklemeye dahil edilmez.
+        </div>
+    </div>
+}
+
+<!-- Modal -->
+<div class="modal fade" id="formModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold mb-0" id="modalTitle">
+                    <i class="fas fa-plus me-2 text-primary"></i>Bileşen Ekle
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="lineId">
+                <input type="hidden" id="parentId" value="@parentId">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label small fw-semibold">Bileşen Ürün <span class="text-danger">*</span></label>
+                        <select id="childProductId" class="form-select">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var p in avail)
+                            {
+                                <option value="@p.Id">[@p.ProductCode] @p.ProductName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Standart Miktar <span class="text-danger">*</span>
+                            <span class="text-muted fw-normal">(1 birim üretim için)</span>
+                        </label>
+                        <input type="number" id="standardQty" class="form-control" step="0.001" min="0.001" placeholder="0.00">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Birim <span class="text-danger">*</span></label>
+                        <select id="unit" class="form-select">
+                            <option value="kg">kg</option>
+                            <option value="Adet">Adet</option>
+                            <option value="m²">m²</option>
+                            <option value="m">m</option>
+                            <option value="lt">lt</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" onclick="saveLine()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let _modal;
+
+function openModal(id) {
+    document.getElementById('lineId').value          = id;
+    document.getElementById('childProductId').value  = '';
+    document.getElementById('standardQty').value     = '';
+    document.getElementById('unit').value            = 'kg';
+
+    document.getElementById('modalTitle').innerHTML = id === 0
+        ? '<i class="fas fa-plus me-2 text-primary"></i>Bileşen Ekle'
+        : '<i class="fas fa-edit me-2 text-primary"></i>Bileşen Düzenle';
+
+    if (id > 0) {
+        fetch(`/Products/GetRecipeLine?id=${id}`)
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) return;
+                document.getElementById('childProductId').value = res.data.childProductId;
+                document.getElementById('standardQty').value    = res.data.standardQuantity;
+                document.getElementById('unit').value           = res.data.unit;
+            });
+    }
+
+    _modal = new bootstrap.Modal(document.getElementById('formModal'));
+    _modal.show();
+}
+
+function saveLine() {
+    const childId = document.getElementById('childProductId').value;
+    const qty     = parseFloat(document.getElementById('standardQty').value);
+
+    if (!childId)        { alert('Bileşen ürün seçiniz.');         return; }
+    if (isNaN(qty) || qty <= 0) { alert('Geçerli bir miktar giriniz.'); return; }
+
+    const fd = new FormData();
+    fd.append('Id',               document.getElementById('lineId').value);
+    fd.append('ParentProductId',  document.getElementById('parentId').value);
+    fd.append('ChildProductId',   childId);
+    fd.append('StandardQuantity', qty);
+    fd.append('Unit',             document.getElementById('unit').value);
+
+    fetch('/Products/SaveRecipeLine', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) { _modal.hide(); location.reload(); }
+            else alert(res.message);
+        });
+}
+
+function toggleLine(id) {
+    fetch(`/Products/ToggleRecipeLine?id=${id}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success) { alert(res.message); return; }
+            const badge = document.getElementById(`badge_${id}`);
+            const btn   = document.getElementById(`toggleBtn_${id}`);
+            if (res.isActive) {
+                badge.className = 'badge badge-success'; badge.textContent = 'Aktif';
+                btn.className   = 'btn btn-icon btn-outline-warning'; btn.title = 'Pasife Al';
+                btn.innerHTML   = '<i class="fas fa-pause"></i>';
+            } else {
+                badge.className = 'badge badge-warning'; badge.textContent = 'Pasif';
+                btn.className   = 'btn btn-icon btn-outline-success'; btn.title = 'Aktife Al';
+                btn.innerHTML   = '<i class="fas fa-play"></i>';
+            }
+            // satır opaklığını güncelle
+            btn.closest('tr').style.opacity = res.isActive ? '1' : '0.55';
+        });
+}
+
+function deleteLine(id) {
+    if (!confirm('Bu bileşeni reçeteden kaldırmak istiyor musunuz?')) return;
+    fetch(`/Products/DeleteRecipeLine?id=${id}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(res => { if (res.success) location.reload(); else alert(res.message); });
+}
+</script>
+}

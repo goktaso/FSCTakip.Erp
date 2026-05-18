@@ -178,10 +178,17 @@
                 </div>
                 @if (Model.Status != WorkOrderStatus.Tamamlandi && Model.Status != WorkOrderStatus.Iptal)
                 {
-                    <button onclick="openAddDetailFn()"
-                            style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;">
-                        <i class="fas fa-plus"></i> Tüketim Gir
-                    </button>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="loadFromRecipe()"
+                                style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;"
+                                title="Ürün reçetesini yükle">
+                            <i class="fas fa-list-ul"></i> Reçeteden Yükle
+                        </button>
+                        <button onclick="openAddDetailFn()"
+                                style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-plus"></i> Tüketim Gir
+                        </button>
+                    </div>
                 }
             </div>
             <table class="table">
@@ -455,6 +462,34 @@ function deleteDetail(id) {
                 else showToast(res.message, 'error');
             });
     });
+}
+
+function loadFromRecipe() {
+    const productId = @Model.ProductId;
+    fetch(`/Products/GetRecipeForWorkOrder?productId=${productId}`)
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success || !res.lines.length) {
+                alert('Bu ürün için tanımlı aktif reçete bulunamadı.\nÖnce Ürünler → Reçete sayfasından bileşen tanımlayın.');
+                return;
+            }
+
+            let msg = 'Standart Reçete:\n\n';
+            res.lines.forEach(l => {
+                msg += `• ${l.childProductName} — ${l.standardQuantity} ${l.unit}\n`;
+            });
+            msg += '\nReçete bilgilerini tüketim formuna yüklemek istiyor musunuz?';
+
+            if (!confirm(msg)) return;
+
+            // İlk reçete satırını tüketim formuna prefill et
+            const first = res.lines[0];
+            openAddDetailFn();
+            // Notlar alanına reçete özetini yaz
+            const noteLines = res.lines.map(l => `${l.childProductName}: ${l.standardQuantity} ${l.unit}`).join(', ');
+            document.getElementById('detailNotes').value = `Reçete: ${noteLines}`;
+            showToast(`${res.lines.length} bileşen bulundu. Tüketim formunu doldurun.`, 'info');
+        });
 }
 
 function completeWO(id, no) {
