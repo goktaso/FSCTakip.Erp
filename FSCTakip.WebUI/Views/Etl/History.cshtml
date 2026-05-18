@@ -107,6 +107,9 @@
 
 @functions {
     string JobTypeLabel(string t) => t switch {
+        "LotImport"      => "Hammadde Lot",
+        "UretimImport"   => "Üretim Kaydı",
+        "SatisImport"    => "Satış Kaydı",
         "ProductImport"  => "Ürün Aktarımı",
         "SupplierImport" => "Tedarikçi Aktarımı",
         "CustomerImport" => "Müşteri Aktarımı",

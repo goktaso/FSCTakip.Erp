@@ -22,9 +22,16 @@
                 <label class="form-label small fw-semibold">Aktarım Türü <span class="text-danger">*</span></label>
                 <select id="jobType" class="form-select" onchange="onJobTypeChange()">
                     <option value="">— Seçiniz —</option>
-                    <option value="ProductImport">Ürün Aktarımı</option>
-                    <option value="SupplierImport">Tedarikçi Aktarımı</option>
-                    <option value="CustomerImport">Müşteri Aktarımı</option>
+                    <optgroup label="── FSC İşlem Kayıtları ──">
+                        <option value="LotImport">🟢 Hammadde Lot Girişi</option>
+                        <option value="UretimImport">🔵 Üretim Kaydı</option>
+                        <option value="SatisImport">🟠 Satış / Sevkiyat</option>
+                    </optgroup>
+                    <optgroup label="── Tanım Tabloları ──">
+                        <option value="ProductImport">Ürün Aktarımı</option>
+                        <option value="SupplierImport">Tedarikçi Aktarımı</option>
+                        <option value="CustomerImport">Müşteri Aktarımı</option>
+                    </optgroup>
                 </select>
             </div>
 
@@ -144,9 +151,12 @@
 @section Scripts {
 <script>
 const typeInfo = {
-    ProductImport:  { label: 'Ürün', cols: ['UrunKodu','UrunAdi','Birim','GrupAdi','IsActive'], hint: 'UrunKodu mevcut ise günceller, yoksa ekler. GrupAdi sistem ile eşleşmelidir.' },
-    SupplierImport: { label: 'Tedarikçi', cols: ['TedarikciKodu','TedarikciAdi','FscKodu','ContactPerson','Telefon','Email'], hint: 'TedarikciKodu mevcut ise günceller. Kod boş ise otomatik TED-NNN üretilir.' },
-    CustomerImport: { label: 'Müşteri', cols: ['MusteriKodu','MusteriAdi','VergiNo','VergiDairesi','Sehir','Telefon','Email'], hint: 'MusteriKodu mevcut ise günceller. Kod boş ise otomatik MHS-NNN üretilir.' }
+    LotImport:      { label: 'Hammadde Lot',  cols: ['LotNo','TedarikciKodu','UrunKodu','FscTipi','SeriNo','Miktar','AlisIrsaliyeNo','AlisFaturaNo','GirisTarihi','Plaka','Notlar'], hint: 'LotNo tekrarlanırsa aynı lot\'a birden fazla seri eklenir. FscTipi: FSC 100% / FSC_MIX / FSC RECYCLED vb.' },
+    UretimImport:   { label: 'Üretim',        cols: ['UretimNo','Tarih','Makine','MamulKodu','UretimMiktari','LotNo','HammaddeKodu','KullanilanMiktar','Fire','Notlar'], hint: 'UretimNo tekrarlanırsa aynı üretim fişine birden fazla hammadde tüketimi eklenir. LotNo sistemde kayıtlı olmalıdır.' },
+    SatisImport:    { label: 'Satış',         cols: ['SatisNo','Tarih','MusteriKodu','UrunKodu','Miktar','BirimFiyat','IrsaliyeNo','FaturaNo','Notlar'], hint: 'SatisNo tekrarlanırsa aynı satışa birden fazla ürün eklenir. MusteriKodu sistemde kayıtlı olmalıdır.' },
+    ProductImport:  { label: 'Ürün',          cols: ['UrunKodu','UrunAdi','Birim','GrupAdi','IsActive'], hint: 'UrunKodu mevcut ise günceller, yoksa ekler. GrupAdi sistem ile eşleşmelidir.' },
+    SupplierImport: { label: 'Tedarikçi',     cols: ['TedarikciKodu','TedarikciAdi','FscKodu','ContactPerson','Telefon','Email'], hint: 'TedarikciKodu mevcut ise günceller. Kod boş ise otomatik TED-NNN üretilir.' },
+    CustomerImport: { label: 'Müşteri',       cols: ['MusteriKodu','MusteriAdi','VergiNo','VergiDairesi','Sehir','Telefon','Email'], hint: 'MusteriKodu mevcut ise günceller. Kod boş ise otomatik MHS-NNN üretilir.' }
 };
 
 function onJobTypeChange() {
