@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 1.9 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 2.0 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -33,6 +33,8 @@
 24. [ERP Entegrasyonu — ETL](#etl)
 25. [Netsis Senkronizasyonu](#netsis-sync)
 26. [Üretim Fişi — Lot Evrak Görüntüleyici](#lot-evrak)
+27. [Denetim Özet Raporu](#denetim-ozet)
+28. [Tam İzlenebilirlik — Satış → Üretim → Lot](#tam-izlenebilirlik)
 
 ---
 
@@ -1003,6 +1005,8 @@ Sayfanın üstünde ürünün kodu, adı, grubu ve birim bilgisi gösterilir. Sa
 | Satış / Sevkiyat | ✅ Tamamlandı | Bölüm 14–15 |
 | Stok Durumu | ✅ Tamamlandı | Bölüm 16–17 |
 | FSC Raporlar | ✅ Tamamlandı | Bölüm 18–20 |
+| Denetim Özet Raporu | ✅ Tamamlandı | Bölüm 27 |
+| Tam İzlenebilirlik | ✅ Tamamlandı | Bölüm 28 |
 | ERP Entegrasyon (ETL) | ✅ Tamamlandı | Bölüm 24 |
 
 ---
@@ -1221,6 +1225,94 @@ sorularının cevapları tek tıkla erişilebilir durumdadır.
 | Netsis Senkronizasyonu | ✅ Tamamlandı | 1.9 |
 | Lot Evrak Görüntüleyici | ✅ Tamamlandı | 1.9 |
 | Gelişmiş Excel Şablonları | ✅ Tamamlandı | 1.9 |
+| Denetim Özet Raporu | ✅ Tamamlandı | 2.0 |
+| Tam İzlenebilirlik (Satış→Lot) | ✅ Tamamlandı | 2.0 |
+
+---
+
+## 27. Denetim Özet Raporu {#denetim-ozet}
+
+**Menü Yolu:** Sol Menü → FSC Raporlar → Denetim Özeti  
+**Sayfa:** `/Reports/AuditReport`
+
+```
+[≡]   Denetim Özet Raporu   [Excel İndir] [Yazdır] [👤]
+```
+
+FSC CoC denetimlerinde sorulacak tüm sorulara tek sayfada cevap veren kapsamlı denge ve izlenebilirlik raporu.
+
+### İçerik
+
+| Bölüm | Açıklama |
+|-------|----------|
+| **Dönem Filtresi** | Başlangıç–bitiş tarihi ile filtreleme |
+| **5 Özet Kart** | Giriş kg · Tüketim kg · Fire kg · Satış adet · Denge durumu |
+| **FSC Denge Özeti** | FSC tip bazında giriş / tüketim / fire / stok denge kontrolü |
+| **Hammadde Girişleri** | Lot ve bobin sayısı, tedarikçi, fatura/irsaliye bilgileri |
+| **Üretim Tüketimi** | İş emri bazında tüketim, fire, üretim miktarı |
+| **Satış Sevkiyatları** | Müşteri, ürün, iş emri bağlantısı, CoC durumu |
+
+### FSC Denge Formülü
+
+```
+Giriş(kg) ≥ Tüketim(kg) + Fire(kg)    → ✓ Dengeli
+Giriş(kg) < Tüketim(kg) + Fire(kg)    → ⚠ Kontrol Et
+```
+
+### Excel İndirme
+
+Rapor 4 ayrı sayfadan oluşan Excel dosyası olarak indirilir:
+1. Hammadde Girişleri
+2. Üretim Tüketimi
+3. Satış Sevkiyatları
+4. FSC Denge Özeti
+
+> **ℹ️ Denetim İpucu:** Bu raporu FSC denetim döneminin başlangıç ve bitiş tarihleriyle filtreleyin. "Denge Özeti" tablosundaki tüm satırlar ✓ Dengeli göstermelidir. Eksik satırlar varsa ilgili iş emirleri veya lot kayıtlarını kontrol edin.
+
+---
+
+## 28. Tam İzlenebilirlik — Satış → Üretim → Lot {#tam-izlenebilirlik}
+
+**Menü Yolu:** Sol Menü → Satış → Sipariş Detayı → Tam İzlenebilirlik butonu  
+**Sayfa:** `/Reports/Traceability/{siparisId}`
+
+```
+[≡] [← Sipariş Detayı] [Yazdır]   Tam İzlenebilirlik — SIS-001   [👤]
+```
+
+Seçilen satış siparişindeki her ürün kaleminin hammadde lot'larına kadar tam tedarik zincirini görsel olarak sunar.
+
+### Zincir Yapısı
+
+```
+SATIŞ SİPARİŞİ (Müşteri, Tarih, Durum, FSC Lisans)
+  └── ÜRÜN KALEMİ (Ürün, Miktar, Birim)
+        └── İŞ EMRİ (Makine, Plan Tarihi, Durum)
+              └── LOT (Lot No, FSC Tipi, Giriş Tarihi)
+                    ├── Tedarikçi Bilgisi + FSC Sertifika Durumu
+                    ├── Fatura / İrsaliye PDF Linkleri
+                    └── BOBİN TABLOSU (Seri No, Tüketim kg, Fire kg, Üretim Adet)
+```
+
+### Renk Kodları
+
+| Renk | Anlam |
+|------|-------|
+| 🟢 Yeşil sol çizgi (Lot) | Tedarikçi FSC sertifikası geçerli |
+| 🔴 Kırmızı sol çizgi (Lot) | FSC sertifikası geçersiz veya süresi dolmuş |
+| ✓ FSC Tam badge | Tüm lot grupları geçerli FSC sertifikasına sahip |
+| ⚠ Eksik badge | En az bir lot'ta sorun var |
+
+### Nasıl Kullanılır
+
+1. Sol Menü → **Satışlar** → ilgili siparişe tıklayın
+2. Sipariş Detayı sayfasında üst sağdaki **"Tam İzlenebilirlik"** butonuna tıklayın
+3. Açılan sayfada satıştan hammaddeye kadar tüm zinciri inceleyin
+4. Kart başlıklarına tıklayarak ilgili bölümü daraltabilir / genişletebilirsiniz
+5. **"Üretim Fişi"** butonu ile ilgili iş emri detayına geçebilirsiniz
+6. **"Lot Detayına Git"** ile hammadde giriş sayfasına ulaşabilirsiniz
+
+> **⚠️ FSC CoC Uyarısı:** Denetçiler, her sevk edilen üründe bu zincirin eksiksiz olduğunu ve tüm tedarikçi FSC sertifikalarının sevkiyat tarihi itibarıyla geçerli olduğunu kontrol eder. "FSC Zinciri Eksik" uyarısı varsa ilgili satış kaleminin iş emri bağlantısını tamamlayın.
 
 ---
 

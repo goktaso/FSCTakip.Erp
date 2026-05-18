@@ -480,6 +480,104 @@ namespace FSCTakip.WebUI.Controllers
 
             return View(suppliers);
         }
+
+        // ── 5. Tam İzlenebilirlik — Satış → Üretim → Lot ───────────────────────
+        // GET /Reports/Traceability/{id}
+        public async Task<IActionResult> Traceability(int id)
+        {
+            var order = await _context.SalesOrders
+                .Include(o => o.Customer)
+                .Include(o => o.Lines)
+                    .ThenInclude(l => l.Product)
+                .Include(o => o.Lines)
+                    .ThenInclude(l => l.WorkOrder)
+                        .ThenInclude(w => w!.Product)
+                .Include(o => o.Lines)
+                    .ThenInclude(l => l.WorkOrder)
+                        .ThenInclude(w => w!.Machine)
+                .Include(o => o.Lines)
+                    .ThenInclude(l => l.WorkOrder)
+                        .ThenInclude(w => w!.ProductionDetails)
+                            .ThenInclude(pd => pd.FscSerial)
+                                .ThenInclude(s => s.Lot)
+                                    .ThenInclude(lot => lot.Supplier)
+                .Include(o => o.Lines)
+                    .ThenInclude(l => l.WorkOrder)
+                        .ThenInclude(w => w!.ProductionDetails)
+                            .ThenInclude(pd => pd.FscSerial)
+                                .ThenInclude(s => s.Lot)
+                                    .ThenInclude(lot => lot.FscType)
+                .Include(o => o.Lines)
+                    .ThenInclude(l => l.WorkOrder)
+                        .ThenInclude(w => w!.ProductionDetails)
+                            .ThenInclude(pd => pd.Machine)
+                .FirstOrDefaultAsync(o => o.Id == id);
+
+            if (order == null) return NotFound();
+
+            var lineModels = new List<TraceabilityLineModel>();
+
+            foreach (var line in order.Lines)
+            {
+                var lm = new TraceabilityLineModel { Line = line, WorkOrder = line.WorkOrder };
+
+                if (line.WorkOrder?.ProductionDetails != null && line.WorkOrder.ProductionDetails.Any())
+                {
+                    var lotGroups = line.WorkOrder.ProductionDetails
+                        .GroupBy(pd => pd.FscSerial?.LotId ?? 0)
+                        .Select(g =>
+                        {
+                            var lot = g.First().FscSerial?.Lot;
+                            if (lot == null) return null;
+
+                            var supplier = lot.Supplier;
+                            var fscValid = supplier != null &&
+                                           supplier.IsFscActive &&
+                                           (supplier.FscExpiryDate == null || supplier.FscExpiryDate >= DateTime.Today);
+
+                            return new TraceabilityConsumptionGroup
+                            {
+                                Lot            = lot,
+                                ConsumedKg     = g.Sum(pd => pd.ConsumedWeight),
+                                WasteKg        = g.Sum(pd => pd.WasteWeight),
+                                SupplierFscValid = fscValid,
+                                Serials = g.OrderBy(pd => pd.FscSerial?.SerialNo).Select(pd => new TraceabilitySerialRow
+                                {
+                                    Serial         = pd.FscSerial!,
+                                    ConsumedKg     = pd.ConsumedWeight,
+                                    WasteKg        = pd.WasteWeight,
+                                    ProducedQty    = pd.ProducedQuantity,
+                                    ProductionDate = pd.ProductionDate
+                                }).ToList()
+                            };
+                        })
+                        .Where(g => g != null)
+                        .Cast<TraceabilityConsumptionGroup>()
+                        .ToList();
+
+                    lm.LotGroups       = lotGroups;
+                    lm.TotalConsumedKg = lotGroups.Sum(g => g.ConsumedKg);
+                    lm.TotalWasteKg    = lotGroups.Sum(g => g.WasteKg);
+                    lm.HasFullChain    = lotGroups.Any() && lotGroups.All(g => g.SupplierFscValid);
+                }
+
+                lineModels.Add(lm);
+            }
+
+            var model = new TraceabilityModel
+            {
+                Order           = order,
+                Lines           = lineModels,
+                ChainComplete   = lineModels.Any() && lineModels.All(l => l.HasFullChain),
+                TotalLots       = lineModels.SelectMany(l => l.LotGroups).Select(g => g.Lot.Id).Distinct().Count(),
+                TotalSerials    = lineModels.SelectMany(l => l.LotGroups).SelectMany(g => g.Serials).Count(),
+                TotalConsumedKg = lineModels.Sum(l => l.TotalConsumedKg),
+                TotalWasteKg    = lineModels.Sum(l => l.TotalWasteKg)
+            };
+
+            ViewData["Title"] = $"Tam İzlenebilirlik — {order.SalesOrderNo}";
+            return View(model);
+        }
     }
 
     // ── View Model Sınıfları ──────────────────────────────────────────────────
@@ -570,5 +668,46 @@ namespace FSCTakip.WebUI.Controllers
         public FscLot Lot                         { get; set; } = null!;
         public List<FscSerial> Serials            { get; set; } = new();
         public List<SalesOrderLine> SalesLines    { get; set; } = new();
+    }
+
+    // ── Tam İzlenebilirlik View Modelleri ──────────────────────────────────────
+
+    public class TraceabilityModel
+    {
+        public SalesOrder Order             { get; set; } = null!;
+        public List<TraceabilityLineModel> Lines { get; set; } = new();
+        public bool    ChainComplete        { get; set; }
+        public int     TotalLots            { get; set; }
+        public int     TotalSerials         { get; set; }
+        public decimal TotalConsumedKg      { get; set; }
+        public decimal TotalWasteKg         { get; set; }
+    }
+
+    public class TraceabilityLineModel
+    {
+        public SalesOrderLine Line          { get; set; } = null!;
+        public WorkOrder?     WorkOrder     { get; set; }
+        public List<TraceabilityConsumptionGroup> LotGroups { get; set; } = new();
+        public bool    HasFullChain         { get; set; }
+        public decimal TotalConsumedKg      { get; set; }
+        public decimal TotalWasteKg         { get; set; }
+    }
+
+    public class TraceabilityConsumptionGroup
+    {
+        public FscLot  Lot                  { get; set; } = null!;
+        public decimal ConsumedKg           { get; set; }
+        public decimal WasteKg              { get; set; }
+        public bool    SupplierFscValid     { get; set; }
+        public List<TraceabilitySerialRow> Serials { get; set; } = new();
+    }
+
+    public class TraceabilitySerialRow
+    {
+        public FscSerial Serial             { get; set; } = null!;
+        public decimal   ConsumedKg         { get; set; }
+        public decimal   WasteKg            { get; set; }
+        public decimal   ProducedQty        { get; set; }
+        public DateTime  ProductionDate     { get; set; }
     }
 }

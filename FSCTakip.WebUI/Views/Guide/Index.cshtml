@@ -482,6 +482,14 @@
                 <span class="toc-num">26.</span> Lot Evrak Görüntüleyici
                 <span class="toc-badge done">✓</span>
             </a>
+            <a class="toc-item" href="#denetim-ozet" onclick="scrollTo('denetim-ozet')">
+                <span class="toc-num">27.</span> Denetim Özet Raporu
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#tam-izlenebilirlik" onclick="scrollTo('tam-izlenebilirlik')">
+                <span class="toc-num">28.</span> Tam İzlenebilirlik
+                <span class="toc-badge done">✓</span>
+            </a>
         </div>
     </div>
 
@@ -495,11 +503,11 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>26 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis Sync → Lot Evrak)</span>
+                <span>28 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis Sync → Denetim → İzlenebilirlik)</span>
             </div>
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓</span>
-                <span>v1.9 — Tüm operasyonel modüller tamamlandı</span>
+                <span>v2.0 — Denetim Özeti + Tam İzlenebilirlik tamamlandı</span>
             </div>
             <div class="ms-auto text-muted" style="font-size:11px;">
                 <i class="fas fa-sync-alt me-1"></i> Her modül tamamlandıktan sonra güncellenir
@@ -553,7 +561,9 @@
             'İmha Kayıtları': 'imha',
             'ERP Entegrasyonu — ETL': 'etl',
             'Netsis Senkronizasyonu': 'netsis-sync',
-            'Üretim Fişi — Lot Evrak Görüntüleyici': 'lot-evrak'
+            'Üretim Fişi — Lot Evrak Görüntüleyici': 'lot-evrak',
+            'Denetim Özet Raporu': 'denetim-ozet',
+            'Tam İzlenebilirlik — Satış → Üretim → Lot': 'tam-izlenebilirlik'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {
