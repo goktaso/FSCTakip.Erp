@@ -230,8 +230,16 @@
                                 </a>
                             </td>
                             <td>
-                                <div style="font-size:12px;">@d.FscSerial?.Lot?.LotNo</div>
-                                <div class="text-muted" style="font-size:11px;">@d.FscSerial?.Lot?.Supplier?.Name</div>
+                                <button onclick="showLotDocs(@(d.FscSerial?.Id ?? 0))"
+                                        class="p-0 text-start"
+                                        style="background:none;border:none;cursor:pointer;"
+                                        title="Evrak ve lot detayını görüntüle">
+                                    <div style="font-size:12px;color:var(--accent);font-weight:600;">
+                                        @d.FscSerial?.Lot?.LotNo
+                                        <i class="fas fa-folder-open ms-1" style="font-size:10px;color:#9ca3af;"></i>
+                                    </div>
+                                    <div class="text-muted" style="font-size:11px;">@d.FscSerial?.Lot?.Supplier?.Name</div>
+                                </button>
                             </td>
                             <td class="text-end fw-semibold">@d.ConsumedWeight.ToString("N2")</td>
                             <td class="text-end">
@@ -278,6 +286,108 @@
                     </tfoot>
                 }
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Lot Evrak Modal -->
+<div class="modal fade" id="lotDocsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px;height:32px;border-radius:8px;background:#16a34a;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-file-alt" style="font-size:13px;color:#fff;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold mb-0" id="lotDocsTitle">Lot Evrak Detayı</h5>
+                        <div class="text-white-50" style="font-size:11px;" id="lotDocsSubtitle"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body p-0">
+
+                <!-- Lot Bilgileri -->
+                <div class="p-3 border-bottom" style="background:#f8fafc;">
+                    <div class="row g-3" id="lotInfoGrid">
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Lot No</div>
+                            <div class="fw-semibold" id="ldLotNo">—</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Tedarikçi</div>
+                            <div id="ldSupplier">—</div>
+                            <div class="text-muted" style="font-size:11px;" id="ldSupplierCode"></div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">FSC Tipi</div>
+                            <div id="ldFscType">—</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Hammadde</div>
+                            <div id="ldProduct">—</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Giriş Tarihi</div>
+                            <div id="ldArrival">—</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Plaka</div>
+                            <div id="ldPlate">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Evrak Alanları -->
+                <div class="p-3">
+                    <div class="row g-3">
+                        <!-- Fatura -->
+                        <div class="col-md-6">
+                            <div class="p-3 rounded border h-100" id="invoiceCard">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <div style="width:32px;height:32px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="fas fa-file-invoice" style="color:#1d4ed8;font-size:14px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold" style="font-size:13px;">Alış Faturası</div>
+                                        <div class="text-muted" style="font-size:11px;" id="ldInvoiceNo">—</div>
+                                    </div>
+                                    <div class="ms-auto text-end" id="ldInvoiceAmount" style="font-size:12px;font-weight:600;color:#1d4ed8;"></div>
+                                </div>
+                                <div id="ldInvoicePdf">
+                                    <div class="text-muted small"><i class="fas fa-info-circle me-1"></i>PDF henüz yüklenmemiş</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- İrsaliye -->
+                        <div class="col-md-6">
+                            <div class="p-3 rounded border h-100" id="dispatchCard">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <div style="width:32px;height:32px;border-radius:8px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="fas fa-truck" style="color:#16a34a;font-size:14px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold" style="font-size:13px;">Alış İrsaliyesi</div>
+                                        <div class="text-muted" style="font-size:11px;" id="ldDispatchNo">—</div>
+                                    </div>
+                                </div>
+                                <div id="ldDispatchPdf">
+                                    <div class="text-muted small"><i class="fas fa-info-circle me-1"></i>PDF henüz yüklenmemiş</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <a id="ldLotDetailLink" href="#" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-external-link-alt me-1"></i> Lot Detayına Git
+                </a>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
+            </div>
         </div>
     </div>
 </div>
@@ -368,6 +478,54 @@
 
 @section Scripts {
 <script>
+function showLotDocs(serialId) {
+    if (!serialId) return;
+    fetch(`/Production/GetLotDocuments/${serialId}`)
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success) { showToast('Lot bilgisi alınamadı.', 'error'); return; }
+            const d = res.data;
+
+            document.getElementById('lotDocsTitle').textContent   = `Lot: ${d.lotNo}`;
+            document.getElementById('lotDocsSubtitle').textContent = `Bobin: ${d.serialNo}`;
+
+            document.getElementById('ldLotNo').textContent       = d.lotNo    || '—';
+            document.getElementById('ldSupplier').textContent    = d.supplier || '—';
+            document.getElementById('ldSupplierCode').textContent = d.supplierCode ? `(${d.supplierCode})` : '';
+            document.getElementById('ldFscType').innerHTML       = d.fscType
+                ? `<span class="badge badge-success">${d.fscType}</span>`
+                : '—';
+            document.getElementById('ldProduct').textContent     = d.product ? `${d.product} (${d.productCode})` : '—';
+            document.getElementById('ldArrival').textContent     = d.arrivalDate || '—';
+            document.getElementById('ldPlate').textContent       = d.truckPlate  || '—';
+
+            // Fatura
+            const invNo = d.invoiceNo || '—';
+            document.getElementById('ldInvoiceNo').textContent = invNo;
+            const invAmt = d.invoiceAmount
+                ? new Intl.NumberFormat('tr-TR', { minimumFractionDigits:2 }).format(d.invoiceAmount) + ' ' + d.currency
+                : '';
+            document.getElementById('ldInvoiceAmount').textContent = invAmt;
+            document.getElementById('ldInvoicePdf').innerHTML = d.invoicePdfPath
+                ? `<a href="/${d.invoicePdfPath}" target="_blank" class="btn btn-primary btn-sm w-100">
+                       <i class="fas fa-file-pdf me-1"></i> Fatura PDF'ini Aç
+                   </a>`
+                : `<div class="text-muted small"><i class="fas fa-info-circle me-1"></i>PDF henüz yüklenmemiş</div>`;
+
+            // İrsaliye
+            const dispNo = d.dispatchNo || '—';
+            document.getElementById('ldDispatchNo').textContent = dispNo;
+            document.getElementById('ldDispatchPdf').innerHTML = d.dispatchPdfPath
+                ? `<a href="/${d.dispatchPdfPath}" target="_blank" class="btn btn-success btn-sm w-100">
+                       <i class="fas fa-file-pdf me-1"></i> İrsaliye PDF'ini Aç
+                   </a>`
+                : `<div class="text-muted small"><i class="fas fa-info-circle me-1"></i>PDF henüz yüklenmemiş</div>`;
+
+            document.getElementById('ldLotDetailLink').href = `/Purchase/Detail/${d.lotId}`;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('lotDocsModal')).show();
+        });
+}
+
 window.openAddDetailFn = function() {
     document.getElementById('detailId').value = '';
     document.getElementById('detailSerialId').value = '';

@@ -157,6 +157,40 @@ namespace FSCTakip.WebUI.Controllers
             return View(wo);
         }
 
+        // GET /Production/GetLotDocuments/{serialId}
+        [HttpGet]
+        public async Task<IActionResult> GetLotDocuments(int serialId)
+        {
+            var serial = await _context.FscSerials
+                .Include(s => s.Lot).ThenInclude(l => l.Supplier)
+                .Include(s => s.Lot).ThenInclude(l => l.FscType)
+                .Include(s => s.Lot).ThenInclude(l => l.Product)
+                .FirstOrDefaultAsync(s => s.Id == serialId);
+
+            if (serial == null) return Json(new { success = false, message = "Bobin bulunamadı." });
+
+            var lot = serial.Lot;
+            return Json(new { success = true, data = new {
+                lotId           = lot.Id,
+                lotNo           = lot.LotNo,
+                serialNo        = serial.SerialNo,
+                supplier        = lot.Supplier?.Name,
+                supplierCode    = lot.Supplier?.SupplierCode,
+                fscType         = lot.FscType?.Name,
+                fscCode         = lot.FscType?.Code,
+                product         = lot.Product?.ProductName,
+                productCode     = lot.Product?.ProductCode,
+                arrivalDate     = lot.ArrivalDate.ToString("dd.MM.yyyy"),
+                invoiceNo       = lot.InvoiceNo,
+                dispatchNo      = lot.DispatchNo,
+                truckPlate      = lot.TruckPlate,
+                invoicePdfPath  = lot.InvoicePdfPath,
+                dispatchPdfPath = lot.DispatchPdfPath,
+                invoiceAmount   = lot.InvoiceAmount,
+                currency        = lot.Currency ?? "TRY"
+            }});
+        }
+
         // GET /Production/GetDetail/{id}
         [HttpGet]
         public async Task<IActionResult> GetDetail(int id)

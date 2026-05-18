@@ -231,87 +231,340 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // ─── Özel indir şablonları ────────────────────────────────────────────
-        public IActionResult DownloadTemplate(string type)
+        public async Task<IActionResult> DownloadTemplate(string type)
         {
+            // DB'den referans veriler
+            var fscTypes    = await _context.FscTypes.OrderBy(f => f.Name).ToListAsync();
+            var suppliers   = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.SupplierCode).ToListAsync();
+            var customers   = await _context.Customers.Where(c => c.IsActive).OrderBy(c => c.CustomerCode).ToListAsync();
+            var products    = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductCode).ToListAsync();
+            var machines    = await _context.Machines.OrderBy(m => m.Name).ToListAsync();
+            var groups      = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
+
             using var wb = new XLWorkbook();
+
+            // Renk sabitleri
+            var headerBg    = XLColor.FromHtml("#1e3d14");
+            var headerBg2   = XLColor.FromHtml("#2d5a1e");
+            var reqBg       = XLColor.FromHtml("#fff7ed");
+            var optBg       = XLColor.FromHtml("#f0fdf4");
+            var noteColor   = XLColor.FromHtml("#6b7280");
+            var exampleBg   = XLColor.FromHtml("#f8fafc");
+
+            // Referans sayfası (gizli — dropdown kaynağı)
+            var wsRef = wb.AddWorksheet("_Referans");
+            wsRef.Visibility = XLWorksheetVisibility.Hidden;
+
+            // FSC Tipleri (A sütunu)
+            wsRef.Cell(1,1).Value = "FSC_Tipleri";
+            for (int i = 0; i < fscTypes.Count; i++)
+                wsRef.Cell(i+2, 1).Value = fscTypes[i].Name;
+
+            // Tedarikçi Kodları (B sütunu)
+            wsRef.Cell(1,2).Value = "Tedarikci_Kodlari";
+            for (int i = 0; i < suppliers.Count; i++)
+                wsRef.Cell(i+2, 2).Value = $"{suppliers[i].SupplierCode} - {suppliers[i].Name}";
+
+            // Müşteri Kodları (C sütunu)
+            wsRef.Cell(1,3).Value = "Musteri_Kodlari";
+            for (int i = 0; i < customers.Count; i++)
+                wsRef.Cell(i+2, 3).Value = $"{customers[i].CustomerCode} - {customers[i].Name}";
+
+            // Ürün Kodları (D sütunu)
+            wsRef.Cell(1,4).Value = "Urun_Kodlari";
+            for (int i = 0; i < products.Count; i++)
+                wsRef.Cell(i+2, 4).Value = $"{products[i].ProductCode} - {products[i].ProductName}";
+
+            // Makine Adları (E sütunu)
+            wsRef.Cell(1,5).Value = "Makineler";
+            for (int i = 0; i < machines.Count; i++)
+                wsRef.Cell(i+2, 5).Value = machines[i].Name;
+
+            // Grup Adları (F sütunu)
+            wsRef.Cell(1,6).Value = "Gruplar";
+            for (int i = 0; i < groups.Count; i++)
+                wsRef.Cell(i+2, 6).Value = groups[i].GroupName;
+
+            // Adlandırılmış aralıklar
+            int fscCount   = Math.Max(fscTypes.Count, 1);
+            int supCount   = Math.Max(suppliers.Count, 1);
+            int cusCount   = Math.Max(customers.Count, 1);
+            int prdCount   = Math.Max(products.Count, 1);
+            int mchCount   = Math.Max(machines.Count, 1);
+            int grpCount   = Math.Max(groups.Count, 1);
+
+            wb.NamedRanges.Add("FSC_Tipleri",   wsRef.Range(2, 1, fscCount+1, 1));
+            wb.NamedRanges.Add("Tedarikci_Kod", wsRef.Range(2, 2, supCount+1, 2));
+            wb.NamedRanges.Add("Musteri_Kod",   wsRef.Range(2, 3, cusCount+1, 3));
+            wb.NamedRanges.Add("Urun_Kodu",     wsRef.Range(2, 4, prdCount+1, 4));
+            wb.NamedRanges.Add("Makineler",     wsRef.Range(2, 5, mchCount+1, 5));
+            wb.NamedRanges.Add("Gruplar",       wsRef.Range(2, 6, grpCount+1, 6));
+
             IXLWorksheet ws;
 
+            // ── Yerel yardımcı: başlık satırı yaz ──────────────────────────
+            void WriteHeaders(IXLWorksheet sheet, (string col, bool required, string hint)[] defs)
+            {
+                for (int i = 0; i < defs.Length; i++)
+                {
+                    var cell = sheet.Cell(1, i+1);
+                    cell.Value = defs[i].required ? defs[i].col + " *" : defs[i].col;
+                    cell.Style.Font.Bold      = true;
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Fill.BackgroundColor = defs[i].required ? headerBg : headerBg2;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    if (!string.IsNullOrWhiteSpace(defs[i].hint))
+                        cell.GetComment().AddText(defs[i].hint);
+                }
+            }
+
+            void StyleExampleRow(IXLWorksheet sheet, int row, int colCount)
+            {
+                var r = sheet.Range(row, 1, row, colCount);
+                r.Style.Fill.BackgroundColor = exampleBg;
+                r.Style.Font.Italic = true;
+                r.Style.Font.FontColor = XLColor.FromHtml("#374151");
+            }
+
+            // ─── LotImport ────────────────────────────────────────────────
             if (type == "LotImport")
             {
                 ws = wb.AddWorksheet("HammaddeLot");
-                string[] cols = { "LotNo","TedarikciKodu","UrunKodu","FscTipi","SeriNo","Miktar","AlisIrsaliyeNo","AlisFaturaNo","GirisTarihi","Plaka","Notlar" };
-                for (int i = 0; i < cols.Length; i++) { ws.Cell(1,i+1).Value=cols[i]; ws.Cell(1,i+1).Style.Font.Bold=true; }
+                var defs = new (string, bool, string)[] {
+                    ("LotNo",          true,  "Tedarikçi tarafından verilen lot/parti numarası.\nÖr: 24H0537\nAynı LotNo ile birden fazla seri (bobin) satırı ekleyebilirsiniz."),
+                    ("TedarikciKodu",  true,  "Sistemdeki tedarikçi kodu (TED-XXX formatı).\nGeçerli kodlar için Referans sayfasına bakın.\nKod yerine tam isim de kabul edilir."),
+                    ("UrunKodu",       true,  "Hammadde ürün kodu.\nÖr: 10255 veya HM-001\nGeçerli kodlar için Referans sayfasına bakın."),
+                    ("FscTipi",        true,  "FSC sertifika tipi. Aşağıdaki listeden seçin:\n" + string.Join("\n", fscTypes.Select(f => "• " + f.Name))),
+                    ("SeriNo",         false, "Bobin seri numarası. Boş bırakılırsa otomatik üretilir.\nÖrnek: 24H0537-01\nAynı lot için her satıra farklı seri numarası girin."),
+                    ("Miktar",         true,  "Bobin ağırlığı KG cinsinden.\nOndalık ayırıcı: nokta (.) veya virgül (,)\nÖr: 1757.50 veya 1757,50"),
+                    ("AlisIrsaliyeNo", false, "Alış irsaliye numarası. Ör: ORS202400001"),
+                    ("AlisFaturaNo",   false, "Alış fatura numarası. Ör: FAT202400001"),
+                    ("GirisTarihi",    false, "Giriş tarihi. Format: gg.AA.yyyy\nÖr: 15.05.2025"),
+                    ("Plaka",          false, "Araç plakası. Ör: 34ABC123"),
+                    ("Notlar",         false, "Ek notlar (opsiyonel)")
+                };
+                WriteHeaders(ws, defs);
 
-                // Açıklamalar (3. satır)
-                ws.Cell(3,1).Value="LotNo: Tedarikçinin seri/lot numarası (ör: 24H0537)";
-                ws.Cell(4,1).Value="FscTipi: FSC 100% | FSC_MIX | FSC RECYCLED | FSC MIX Credit | FSC MIX 70%";
-                ws.Cell(5,1).Value="SeriNo: Boş bırakılırsa LotNo kullanılır. Birden fazla seri için aynı LotNo ile yeni satır ekleyin.";
-                ws.Cell(3,1).Style.Font.Italic=true; ws.Cell(3,1).Style.Font.FontColor=XLColor.Gray;
-                ws.Cell(4,1).Style.Font.Italic=true; ws.Cell(4,1).Style.Font.FontColor=XLColor.Gray;
-                ws.Cell(5,1).Style.Font.Italic=true; ws.Cell(5,1).Style.Font.FontColor=XLColor.Gray;
-
-                ws.Cell(2,1).Value="24H0537"; ws.Cell(2,2).Value="TED-001"; ws.Cell(2,3).Value="10255";
-                ws.Cell(2,4).Value="FSC_MIX"; ws.Cell(2,5).Value="24H0537-01"; ws.Cell(2,6).Value=1757;
+                // Örnek satır
+                ws.Cell(2,1).Value="24H0537"; ws.Cell(2,2).Value= suppliers.FirstOrDefault()?.SupplierCode ?? "TED-001";
+                ws.Cell(2,3).Value= products.FirstOrDefault()?.ProductCode ?? "10255";
+                ws.Cell(2,4).Value= fscTypes.FirstOrDefault()?.Name ?? "FSC_MIX";
+                ws.Cell(2,5).Value="24H0537-01"; ws.Cell(2,6).Value=1757.50;
                 ws.Cell(2,7).Value="ORS202400001"; ws.Cell(2,8).Value="FAT202400001";
                 ws.Cell(2,9).Value="15.05.2025"; ws.Cell(2,10).Value="34ABC123";
+                StyleExampleRow(ws, 2, defs.Length);
+
+                ws.Cell(3,1).Value="24H0537"; ws.Cell(3,2).Value= suppliers.FirstOrDefault()?.SupplierCode ?? "TED-001";
+                ws.Cell(3,3).Value= products.FirstOrDefault()?.ProductCode ?? "10255";
+                ws.Cell(3,4).Value= fscTypes.FirstOrDefault()?.Name ?? "FSC_MIX";
+                ws.Cell(3,5).Value="24H0537-02"; ws.Cell(3,6).Value=1820;
+                ws.Cell(3,7).Value="ORS202400001"; ws.Cell(3,8).Value="FAT202400001";
+                ws.Cell(3,9).Value="15.05.2025"; ws.Cell(3,10).Value="34ABC123";
+                StyleExampleRow(ws, 3, defs.Length);
+
+                // Tarih format sütunu
+                ws.Column(9).Style.NumberFormat.Format = "@"; // metin olarak sakla
+
+                // FscTipi dropdown (D sütunu)
+                if (fscTypes.Any())
+                    ws.Range("D4:D10000").SetDataValidation().List(wsRef.Range(2,1, fscCount+1,1), true);
+
+                // Sayısal format (Miktar)
+                ws.Range("F4:F10000").Style.NumberFormat.Format = "#,##0.00";
             }
+            // ─── UretimImport ────────────────────────────────────────────
             else if (type == "UretimImport")
             {
                 ws = wb.AddWorksheet("UretimKaydi");
-                string[] cols = { "UretimNo","Tarih","Makine","MamulKodu","UretimMiktari","LotNo","HammaddeKodu","KullanilanMiktar","Fire","Notlar" };
-                for (int i = 0; i < cols.Length; i++) { ws.Cell(1,i+1).Value=cols[i]; ws.Cell(1,i+1).Style.Font.Bold=true; }
+                var defs = new (string, bool, string)[] {
+                    ("UretimNo",       true,  "Üretim fişi numarası. Tekrarlanabilir (aynı üretim için birden fazla hammadde).\nÖr: URE-2025-001"),
+                    ("Tarih",          true,  "Üretim tarihi. Format: gg.AA.yyyy\nÖr: 15.05.2025"),
+                    ("Makine",         true,  "Makine adı veya kodu (sistemde tanımlı olmalı).\nGeçerli makineler için Referans sayfasına bakın."),
+                    ("MamulKodu",      true,  "Üretilen mamul ürün kodu.\nÖr: 30001\nGeçerli kodlar için Referans sayfasına bakın."),
+                    ("UretimMiktari",  true,  "Üretilen adet miktarı (tamsayı).\nÖr: 6600"),
+                    ("LotNo",          true,  "Tüketilen hammaddenin LOT numarası (sistemde kayıtlı olmalı).\nÖr: 24H0537"),
+                    ("HammaddeKodu",   true,  "Tüketilen hammadde ürün kodu.\nÖr: 10255"),
+                    ("KullanilanMiktar", true, "Tüketilen hammadde miktarı KG.\nOndalık: nokta veya virgül.\nÖr: 1500.00"),
+                    ("Fire",           false, "Fire/atık miktarı KG. Boş bırakılabilir.\nÖr: 12.50"),
+                    ("Notlar",         false, "Ek notlar (opsiyonel)")
+                };
+                WriteHeaders(ws, defs);
 
-                ws.Cell(3,1).Value="UretimNo: Üretim fişi/iş emri numarası. Aynı üretim için birden fazla hammadde satırı ekleyin.";
-                ws.Cell(4,1).Value="Makine: Makine kodu veya adı (sistemde tanımlı olmalı). Fire: kg cinsinden fire miktarı.";
-                ws.Cell(3,1).Style.Font.Italic=true; ws.Cell(3,1).Style.Font.FontColor=XLColor.Gray;
-                ws.Cell(4,1).Style.Font.Italic=true; ws.Cell(4,1).Style.Font.FontColor=XLColor.Gray;
+                var machName  = machines.FirstOrDefault()?.Name ?? "DILME";
+                var prodCode  = products.FirstOrDefault(p => !p.ProductCode.StartsWith("HM"))?.ProductCode ?? "30001";
+                var hmCode    = products.FirstOrDefault()?.ProductCode ?? "10255";
 
-                ws.Cell(2,1).Value="URE-2025-001"; ws.Cell(2,2).Value="15.05.2025"; ws.Cell(2,3).Value="DILME";
-                ws.Cell(2,4).Value="30001"; ws.Cell(2,5).Value=6600; ws.Cell(2,6).Value="24H0537";
-                ws.Cell(2,7).Value="10255"; ws.Cell(2,8).Value=1500; ws.Cell(2,9).Value=12;
+                ws.Cell(2,1).Value="URE-2025-001"; ws.Cell(2,2).Value="15.05.2025"; ws.Cell(2,3).Value=machName;
+                ws.Cell(2,4).Value=prodCode;        ws.Cell(2,5).Value=6600;         ws.Cell(2,6).Value="24H0537";
+                ws.Cell(2,7).Value=hmCode;          ws.Cell(2,8).Value=1500;         ws.Cell(2,9).Value=12;
+                StyleExampleRow(ws, 2, defs.Length);
+
+                ws.Cell(3,1).Value="URE-2025-001"; ws.Cell(3,2).Value="15.05.2025"; ws.Cell(3,3).Value=machName;
+                ws.Cell(3,4).Value=prodCode;        ws.Cell(3,5).Value=6600;         ws.Cell(3,6).Value="24H0538";
+                ws.Cell(3,7).Value=hmCode;          ws.Cell(3,8).Value=980;          ws.Cell(3,9).Value=8;
+                StyleExampleRow(ws, 3, defs.Length);
+
+                ws.Column(2).Style.NumberFormat.Format = "@";
+                ws.Range("H4:H10000").Style.NumberFormat.Format = "#,##0.00";
+                ws.Range("I4:I10000").Style.NumberFormat.Format = "#,##0.00";
+
+                // Makine dropdown
+                if (machines.Any())
+                    ws.Range("C4:C10000").SetDataValidation().List(wsRef.Range(2,5, mchCount+1,5), true);
             }
+            // ─── SatisImport ──────────────────────────────────────────────
             else if (type == "SatisImport")
             {
                 ws = wb.AddWorksheet("SatisKaydi");
-                string[] cols = { "SatisNo","Tarih","MusteriKodu","UrunKodu","Miktar","BirimFiyat","IrsaliyeNo","FaturaNo","Notlar" };
-                for (int i = 0; i < cols.Length; i++) { ws.Cell(1,i+1).Value=cols[i]; ws.Cell(1,i+1).Style.Font.Bold=true; }
+                var defs = new (string, bool, string)[] {
+                    ("SatisNo",     true,  "Satış irsaliye/fatura numarası. Tekrarlanabilir (aynı satış için birden fazla ürün).\nÖr: SAT-2025-001"),
+                    ("Tarih",       true,  "Satış tarihi. Format: gg.AA.yyyy\nÖr: 15.05.2025"),
+                    ("MusteriKodu", true,  "Sistemdeki müşteri kodu (MHS-XXX formatı).\nGeçerli kodlar için Referans sayfasına bakın.\nKod yerine tam isim de kabul edilir."),
+                    ("UrunKodu",    true,  "Satılan mamul ürün kodu.\nÖr: 30001\nGeçerli kodlar için Referans sayfasına bakın."),
+                    ("Miktar",      true,  "Satış miktarı (adet).\nÖr: 5000"),
+                    ("BirimFiyat",  false, "Birim fiyat (opsiyonel). Ondalık: nokta veya virgül.\nÖr: 2.50"),
+                    ("IrsaliyeNo",  false, "Satış irsaliye numarası. Ör: IRS202500001"),
+                    ("FaturaNo",    false, "Satış fatura numarası. Ör: FAT202500001"),
+                    ("Notlar",      false, "Ek notlar (opsiyonel)")
+                };
+                WriteHeaders(ws, defs);
 
-                ws.Cell(3,1).Value="SatisNo: Satış irsaliyesi/fatura numarası. Aynı satış için birden fazla ürün satırı ekleyin.";
-                ws.Cell(3,1).Style.Font.Italic=true; ws.Cell(3,1).Style.Font.FontColor=XLColor.Gray;
+                var cusCode  = customers.FirstOrDefault()?.CustomerCode ?? "MHS-001";
+                var prodCode = products.FirstOrDefault()?.ProductCode ?? "30001";
 
-                ws.Cell(2,1).Value="SAT-2025-001"; ws.Cell(2,2).Value="15.05.2025"; ws.Cell(2,3).Value="MHS-001";
-                ws.Cell(2,4).Value="30001"; ws.Cell(2,5).Value=5000; ws.Cell(2,6).Value=2.5m;
-                ws.Cell(2,7).Value="IRS202500001"; ws.Cell(2,8).Value="FAT202500001";
+                ws.Cell(2,1).Value="SAT-2025-001"; ws.Cell(2,2).Value="15.05.2025"; ws.Cell(2,3).Value=cusCode;
+                ws.Cell(2,4).Value=prodCode;        ws.Cell(2,5).Value=5000;         ws.Cell(2,6).Value=2.50;
+                ws.Cell(2,7).Value="IRS202500001";  ws.Cell(2,8).Value="FAT202500001";
+                StyleExampleRow(ws, 2, defs.Length);
+
+                ws.Cell(3,1).Value="SAT-2025-001"; ws.Cell(3,2).Value="15.05.2025"; ws.Cell(3,3).Value=cusCode;
+                ws.Cell(3,4).Value=prodCode;        ws.Cell(3,5).Value=2000;         ws.Cell(3,6).Value=2.50;
+                ws.Cell(3,7).Value="IRS202500001";  ws.Cell(3,8).Value="FAT202500001";
+                StyleExampleRow(ws, 3, defs.Length);
+
+                ws.Column(2).Style.NumberFormat.Format = "@";
+                ws.Range("F4:F10000").Style.NumberFormat.Format = "#,##0.00";
+
+                // Müşteri dropdown
+                if (customers.Any())
+                    ws.Range("C4:C10000").SetDataValidation().List(wsRef.Range(2,3, cusCount+1,3), true);
             }
+            // ─── ProductImport ────────────────────────────────────────────
             else if (type == "ProductImport")
             {
                 ws = wb.AddWorksheet("Urunler");
-                string[] cols = { "UrunKodu", "UrunAdi", "Birim", "GrupAdi", "IsActive" };
-                for (int i = 0; i < cols.Length; i++) { ws.Cell(1,i+1).Value=cols[i]; ws.Cell(1,i+1).Style.Font.Bold=true; }
-                ws.Cell(2,1).Value="HM-999"; ws.Cell(2,2).Value="Örnek Hammadde"; ws.Cell(2,3).Value="Kg";
-                ws.Cell(2,4).Value="Hammadde"; ws.Cell(2,5).Value="1";
+                var defs = new (string, bool, string)[] {
+                    ("UrunKodu",  false, "Ürün kodu. Boş bırakılırsa otomatik üretilir.\nMevcut kod girilirse güncelleme yapılır."),
+                    ("UrunAdi",   true,  "Ürün adı (zorunlu)."),
+                    ("Birim",     true,  "Birim: Kg, Adet, Metre, Rulo vb."),
+                    ("GrupAdi",   false, "Ürün grubu adı (sistemde tanımlı olmalı).\nGeçerli gruplar için Referans sayfasına bakın."),
+                    ("IsActive",  false, "Aktif/Pasif: 1 = Aktif, 0 = Pasif. Boş = Aktif.")
+                };
+                WriteHeaders(ws, defs);
+
+                ws.Cell(2,1).Value="HM-999"; ws.Cell(2,2).Value="Örnek Hammadde Kağıt"; ws.Cell(2,3).Value="Kg";
+                ws.Cell(2,4).Value= groups.FirstOrDefault()?.GroupName ?? "Hammadde"; ws.Cell(2,5).Value="1";
+                StyleExampleRow(ws, 2, defs.Length);
+
+                if (groups.Any())
+                    ws.Range("D3:D10000").SetDataValidation().List(wsRef.Range(2,6, grpCount+1,6), true);
             }
+            // ─── SupplierImport ───────────────────────────────────────────
             else if (type == "SupplierImport")
             {
                 ws = wb.AddWorksheet("Tedarikciler");
-                string[] cols = { "TedarikciKodu", "TedarikciAdi", "FscKodu", "ContactPerson", "Telefon", "Email" };
-                for (int i = 0; i < cols.Length; i++) { ws.Cell(1,i+1).Value=cols[i]; ws.Cell(1,i+1).Style.Font.Bold=true; }
-                ws.Cell(2,1).Value="TED-999"; ws.Cell(2,2).Value="Örnek Tedarikçi A.Ş.";
-                ws.Cell(2,3).Value="FSC-C000001"; ws.Cell(2,4).Value="İletişim Kişisi";
+                var defs = new (string, bool, string)[] {
+                    ("TedarikciKodu",  false, "Tedarikçi kodu. Boş bırakılırsa otomatik TED-NNN üretilir.\nMevcut kod girilirse güncelleme yapılır."),
+                    ("TedarikciAdi",   true,  "Tedarikçi ticari ünvanı (zorunlu)."),
+                    ("FscKodu",        false, "FSC sertifika kodu. Ör: FSC-C000001"),
+                    ("ContactPerson",  false, "İletişim kurulacak kişi adı."),
+                    ("Telefon",        false, "Telefon. Yalnızca rakamlar kullanılır.\nÖr: 02121234567 veya 05551234567"),
+                    ("Email",          false, "E-posta adresi. Ör: info@firma.com.tr")
+                };
+                WriteHeaders(ws, defs);
+
+                ws.Cell(2,1).Value="TED-999"; ws.Cell(2,2).Value="Örnek Tedarikçi Kağıt A.Ş.";
+                ws.Cell(2,3).Value="FSC-C000001"; ws.Cell(2,4).Value="Ahmet Yılmaz";
                 ws.Cell(2,5).Value="02121234567"; ws.Cell(2,6).Value="info@ornek.com";
+                StyleExampleRow(ws, 2, defs.Length);
             }
-            else // CustomerImport
+            // ─── CustomerImport ───────────────────────────────────────────
+            else
             {
                 ws = wb.AddWorksheet("Musteriler");
-                string[] cols = { "MusteriKodu", "MusteriAdi", "VergiNo", "VergiDairesi", "Sehir", "Telefon", "Email" };
-                for (int i = 0; i < cols.Length; i++) { ws.Cell(1,i+1).Value=cols[i]; ws.Cell(1,i+1).Style.Font.Bold=true; }
-                ws.Cell(2,1).Value="MHS-999"; ws.Cell(2,2).Value="Örnek Müşteri Ltd.";
+                var defs = new (string, bool, string)[] {
+                    ("MusteriKodu",   false, "Müşteri kodu. Boş bırakılırsa otomatik MHS-NNN üretilir.\nMevcut kod girilirse güncelleme yapılır."),
+                    ("MusteriAdi",    true,  "Müşteri ticari ünvanı (zorunlu)."),
+                    ("VergiNo",       false, "Vergi kimlik numarası (10 hane)."),
+                    ("VergiDairesi",  false, "Bağlı olduğu vergi dairesi."),
+                    ("Sehir",         false, "Şehir. Ör: İstanbul, Ankara"),
+                    ("Telefon",       false, "Telefon. Ör: 02161234567"),
+                    ("Email",         false, "E-posta. Ör: info@musteri.com.tr")
+                };
+                WriteHeaders(ws, defs);
+
+                ws.Cell(2,1).Value="MHS-999"; ws.Cell(2,2).Value="Örnek Müşteri Ambalaj Ltd.";
                 ws.Cell(2,3).Value="1234567890"; ws.Cell(2,4).Value="Kadıköy";
                 ws.Cell(2,5).Value="İstanbul"; ws.Cell(2,6).Value="02161234567";
                 ws.Cell(2,7).Value="info@musteri.com";
+                StyleExampleRow(ws, 2, defs.Length);
             }
 
+            // Açıklama sayfası (kullanıcıya görünür)
+            var wsInfo = wb.AddWorksheet("OKUYUN");
+            wsInfo.Cell("A1").Value = $"{type} — Dolum Kılavuzu";
+            wsInfo.Cell("A1").Style.Font.Bold = true;
+            wsInfo.Cell("A1").Style.Font.FontSize = 14;
+            wsInfo.Cell("A1").Style.Font.FontColor = headerBg;
+            wsInfo.Cell("A2").Value = $"Oluşturulma: {DateTime.Now:dd.MM.yyyy HH:mm}  |  Bu dosyayı silmeyin, doldurulmuş veri sayfasıyla birlikte yükleyin.";
+            wsInfo.Cell("A2").Style.Font.FontColor = noteColor;
+
+            var rules = new[] {
+                ("GENEL KURALLAR", ""),
+                ("1. Başlık satırı (1. satır)", "Değiştirmeyin. Sistem kolonları bu satırdan okur."),
+                ("2. Zorunlu alanlar (*)", "Başlığında * işareti olan kolonlar boş bırakılamaz."),
+                ("3. Tarih formatı", "gg.AA.yyyy — Ör: 15.05.2025  (yıl 4 haneli, ay ve gün 2 haneli)"),
+                ("4. Ondalık sayılar", "Nokta (1757.50) veya virgül (1757,50) her ikisi de kabul edilir."),
+                ("5. Kodlar", "Sistemde kayıtlı kodlarla eşleşmelidir. Yanlış kod = hata satırı."),
+                ("6. Tekrarlı satırlar", "Lot/Üretim/Satış No aynı ise aynı fişe ait birden fazla kalem olarak işlenir."),
+                ("7. Boş satır", "Ortada boş satır bırakmayın. Sistem ilk boş satırda okumayı durdurabilir."),
+                ("", ""),
+                ("SÜTUN REHBERİ", "Başlık hücresinin üzerine gelin — sarı not baloncuğunda açıklama görünür."),
+                ("", ""),
+                ("GEÇERLİ FSC TİPLERİ", string.Join(", ", fscTypes.Select(f => f.Name))),
+                ("GEÇERLİ TEDARİKÇİ KODLARI", string.Join(", ", suppliers.Select(s => s.SupplierCode))),
+                ("GEÇERLİ MÜŞTERİ KODLARI", string.Join(", ", customers.Select(c => c.CustomerCode))),
+                ("GEÇERLİ MAKİNELER", string.Join(", ", machines.Select(m => m.Name))),
+            };
+
+            int row = 4;
+            foreach (var (label, val) in rules)
+            {
+                if (string.IsNullOrEmpty(label)) { row++; continue; }
+                wsInfo.Cell(row, 1).Value = label;
+                wsInfo.Cell(row, 1).Style.Font.Bold = true;
+                wsInfo.Cell(row, 2).Value = val;
+                if (label.EndsWith("KURALLAR") || label.EndsWith("REHBERİ") || label.Contains("GEÇERLİ"))
+                    wsInfo.Cell(row, 1).Style.Font.FontColor = headerBg;
+                row++;
+            }
+            wsInfo.Column(1).Width = 35;
+            wsInfo.Column(2).Width = 80;
+            wsInfo.Column(2).Style.Alignment.WrapText = true;
+
             ws.Columns().AdjustToContents();
+            ws.SheetView.FreezeRows(1);
+
+            // Örnek satırların ayrımı için kenarlık
+            if (ws.LastRowUsed() != null)
+            {
+                var lastDataRow = ws.LastRowUsed()!.RowNumber();
+                ws.Range(2, 1, lastDataRow, ws.LastColumnUsed()!.ColumnNumber())
+                  .Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+                ws.Range(2, 1, lastDataRow, ws.LastColumnUsed()!.ColumnNumber())
+                  .Style.Border.BottomBorderColor = XLColor.FromHtml("#e5e7eb");
+            }
+
             using var ms = new MemoryStream();
             wb.SaveAs(ms);
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
