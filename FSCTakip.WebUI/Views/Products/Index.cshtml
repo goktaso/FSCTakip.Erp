@@ -111,7 +111,7 @@
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold"><i class="fas fa-box mr-2"></i>Ürün Formu</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Products" asp-action="Save" method="post">
                 <div class="modal-body">
@@ -232,7 +232,7 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Vazgeç</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
                     <button type="submit" class="btn btn-primary btn-sm px-4">Kaydet</button>
                 </div>
             </form>
@@ -242,47 +242,52 @@
 
 @section Scripts {
     <script>
+        const _productModal = new bootstrap.Modal(document.getElementById('productModal'));
+
         function openAddModal() {
-            $('#productId').val(0);
-            $('#productGroupId').val('');
-            $('#supplierId').val(''); // Temizleme
-            $('#productCode').val('');
-            $('#productName').val('');
-            $('#paperColorId').val('');
-            $('#paperWeightId').val('');
-            $('#paperWidthId').val('');
-            $('#fscTypeId').val('');
-            $('#paperTypeId').val('');
-            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Ürün Ekle');
-            $('#productModal').modal('show');
+            document.getElementById('productId').value       = '0';
+            document.getElementById('productGroupId').value  = '';
+            document.getElementById('supplierId').value      = '';
+            document.getElementById('productCode').value     = '';
+            document.getElementById('productName').value     = '';
+            document.getElementById('paperColorId').value    = '';
+            document.getElementById('paperWeightId').value   = '';
+            document.getElementById('paperWidthId').value    = '';
+            document.getElementById('fscTypeId').value       = '';
+            document.getElementById('paperTypeId').value     = '';
+            document.querySelector('.modal-title').innerHTML = '<i class="fas fa-plus me-2"></i>Yeni Ürün Ekle';
+            _productModal.show();
         }
 
         function editProduct(id) {
-            $.get('/Products/GetProduct', { id: id }, function(data) {
-                if (data.success) {
-                    $('#productId').val(data.id);
-                    $('#productGroupId').val(data.productGroupId || '');
-                    $('#supplierId').val(data.supplierId || ''); // Yükleme
-                    $('#productCode').val(data.productCode);
-                    $('#productName').val(data.productName);
-                    $('#paperColorId').val(data.paperColorId || '');
-                    $('#paperWeightId').val(data.paperWeightId || '');
-                    $('#paperWidthId').val(data.paperWidthId || '');
-                    $('#unit').val(data.unit);
-                    $('#fscTypeId').val(data.fscTypeId || '');
-                    $('#paperTypeId').val(data.paperTypeId || '');
-                    $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Ürün Düzenle');
-                    $('#productModal').modal('show');
-                }
-            });
+            fetch(`/Products/GetProduct?id=${id}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) return;
+                    document.getElementById('productId').value      = data.id;
+                    document.getElementById('productGroupId').value = data.productGroupId || '';
+                    document.getElementById('supplierId').value     = data.supplierId || '';
+                    document.getElementById('productCode').value    = data.productCode;
+                    document.getElementById('productName').value    = data.productName;
+                    document.getElementById('paperColorId').value   = data.paperColorId || '';
+                    document.getElementById('paperWeightId').value  = data.paperWeightId || '';
+                    document.getElementById('paperWidthId').value   = data.paperWidthId || '';
+                    document.getElementById('unit').value           = data.unit;
+                    document.getElementById('fscTypeId').value      = data.fscTypeId || '';
+                    document.getElementById('paperTypeId').value    = data.paperTypeId || '';
+                    document.querySelector('.modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>Ürün Düzenle';
+                    _productModal.show();
+                });
         }
 
         function toggleProduct(id) {
-            $.post('/Products/ToggleStatus', { id: id }, function(res) {
-                if (res.success) {
-                    const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
-                    toast.fire({ icon: 'success', title: 'Güncellendi' });
-                }
+            fetch('/Products/ToggleStatus', {
+                method: 'POST',
+                body: (() => { const f = new FormData(); f.append('id', id); return f; })()
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) showToast('Durum güncellendi.', 'success');
             });
         }
 
