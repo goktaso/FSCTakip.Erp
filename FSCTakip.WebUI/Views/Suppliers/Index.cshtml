@@ -13,6 +13,14 @@
         <button class="btn btn-sm btn-outline-success" onclick="location.href='@Url.Action("ExportSuppliers", "Suppliers")'">
             <i class="fas fa-file-excel"></i> Excel
         </button>
+        <button class="btn btn-sm btn-outline-warning" onclick="location.href='@Url.Action("ExportFscTemplate", "Suppliers")'"
+                title="FSC Kodu doldurmak için şablon indir">
+            <i class="fas fa-certificate"></i> FSC Şablonu
+        </button>
+        <button class="btn btn-sm btn-outline-info" onclick="openFscImportModal()"
+                title="Doldurulmuş FSC şablonunu yükle">
+            <i class="fas fa-upload"></i> FSC Yükle
+        </button>
         <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
             <i class="fas fa-print"></i> Yazdır
         </button>
@@ -172,6 +180,47 @@
     </div>
 </div>
 
+@* --- FSC KODU YÜKLEME MODALI --- *@
+<div class="modal fade" id="fscImportModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header" style="background:#92400e;color:#fff;">
+                <h6 class="modal-title font-weight-bold">
+                    <i class="fas fa-certificate me-2"></i>FSC Kodu Toplu Güncelleme
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning py-2 small mb-3">
+                    <ol class="mb-0 ps-3">
+                        <li><strong>FSC Şablonu İndir</strong> butonu ile şablonu indirin.</li>
+                        <li>Sarı alanlara <strong>FscKodu</strong> (ör. FSC-C123456) ve <strong>FscBitisTarihi</strong> (ör. 2027-06-30) girin.</li>
+                        <li>Dosyayı kaydedin ve aşağıdan yükleyin.</li>
+                    </ol>
+                </div>
+                <div class="mb-3">
+                    <label class="small font-weight-bold text-uppercase">Excel Dosyası</label>
+                    <input type="file" id="fscFile" class="form-control form-control-sm" accept=".xlsx,.xls">
+                    <small class="text-muted">Yalnızca FSC_Kodlari_*.xlsx şablonu kabul edilir.</small>
+                </div>
+                <div id="fscImportResult" style="display:none;"></div>
+            </div>
+            <div class="modal-footer bg-light p-2 d-flex justify-content-between">
+                <a href="/Suppliers/ExportFscTemplate" class="btn btn-warning btn-sm">
+                    <i class="fas fa-download me-1"></i> Şablonu İndir
+                </a>
+                <div>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Kapat</button>
+                    <button type="button" id="fscUploadBtn" class="btn btn-sm px-4"
+                            style="background:#92400e;color:#fff;" onclick="uploadFscCodes()">
+                        <i class="fas fa-upload me-1"></i> Yükle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         $(document).ready(function () {
@@ -244,6 +293,50 @@
                                  : badge.removeClass('badge-success').addClass('badge-secondary').text('Pasif');
                 }
             });
+        }
+
+        function openFscImportModal() {
+            document.getElementById('fscFile').value = '';
+            document.getElementById('fscImportResult').style.display = 'none';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('fscImportModal')).show();
+        }
+
+        function uploadFscCodes() {
+            const file = document.getElementById('fscFile').files[0];
+            if (!file) { alert('Lütfen bir Excel dosyası seçin.'); return; }
+
+            const btn = document.getElementById('fscUploadBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Yükleniyor...';
+
+            const fd = new FormData();
+            fd.append('file', file);
+
+            fetch('/Suppliers/ImportFscCodes', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(res => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-upload me-1"></i> Yükle';
+
+                    const box = document.getElementById('fscImportResult');
+                    box.style.display = '';
+                    if (res.success) {
+                        box.className = 'alert alert-success py-2 small mt-2';
+                        let html = `<i class="fas fa-check-circle me-1"></i><strong>${res.message}</strong>`;
+                        if (res.errors && res.errors.length > 0)
+                            html += `<ul class="mb-0 mt-1">` + res.errors.map(e => `<li>${e}</li>`).join('') + `</ul>`;
+                        box.innerHTML = html;
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        box.className = 'alert alert-danger py-2 small mt-2';
+                        box.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i>${res.message}`;
+                    }
+                })
+                .catch(e => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-upload me-1"></i> Yükle';
+                    alert('Bağlantı hatası: ' + e.message);
+                });
         }
     </script>
 }
