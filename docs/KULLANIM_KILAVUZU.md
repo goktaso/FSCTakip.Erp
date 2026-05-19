@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 2.1 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 2.2 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -36,6 +36,7 @@
 27. [Denetim Özet Raporu](#denetim-ozet)
 28. [Tam İzlenebilirlik — Satış → Üretim → Lot](#tam-izlenebilirlik)
 29. [BOM Bileşen Analizi](#bom-analizi)
+30. [Netsis ETL Excel Dosyaları](#netsis-etl-excel)
 
 ---
 
@@ -1383,6 +1384,105 @@ Sütunlar: İş Emri No · Mamul · Durum · Plan Tarihi · Bileşen · Bileşen
 > Her iki yöntem de bu raporda görünür. BOM tanımlı olmayan iş emirleri sarı uyarı ile gösterilir.
 
 > **⚠️ FSC CoC Uyarısı:** Denetimde her mamul bileşeni için ayrı hammadde takibi istenebilir. Kraft torba üretiminde gövde, sap ve etiket bileşenlerinin her birinin ayrı lot ve FSC tipiyle eşleştirilmesi mass-balance hesabını kesinleştirir.
+
+---
+
+## 30. Netsis ETL Excel Dosyaları {#netsis-etl-excel}
+
+**Sayfa:** `/Etl/NetsisSync`  
+**Menü:** Sol Menü → ERP Entegrasyon → Netsis Senkronizasyonu
+
+ACOREFSC25 (Netsis FSC izleme veritabanı) ve ACORE23 (Netsis ana veritabanı) kaynaklarından çıkarılmış, FSC Takip ERP'ye toplu aktarım için hazır Excel dosyalarıdır.
+
+```
+[≡] [Bağlantılar]   Netsis Senkronizasyonu   [📥 ETL Excel ▼]   [👤]
+```
+
+### Mevcut Dosyalar
+
+| Dosya | Kaynak | Kayıt Sayısı | Kapsam |
+|-------|--------|--------------|--------|
+| **ETL_Tedarikciler.xlsx** | ACOREFSC25 · TBLCASABIT (S tipi) | 16 tedarikçi | Hammadde tedarikçileri |
+| **ETL_Musteriler.xlsx** | ACORE23 · TBLCASABIT (A tipi) | 316 müşteri | Aktif müşteri kartları |
+| **ETL_HammaddeGirisleri.xlsx** | ACOREFSC25 · TBLSTHAR (G girişleri) | 160 satır / 151 lot | 2022–2025 alış hareketleri |
+
+### İndirme
+
+Netsis Senkronizasyonu sayfasının altındaki **"Netsis ETL Excel Dosyaları"** kartından her dosya tek tıkla indirilir. Dosya adı indirildiği tarihe göre otomatik güncellenir (`ETL_Tedarikciler_19052026.xlsx` gibi).
+
+### Renk Kodları
+
+| Renk | Anlam |
+|------|-------|
+| **Beyaz / normal** | Otomatik çıkarılan, doğrulanmış veriler |
+| **Sarı arka plan** | Manuel doldurulması gereken alanlar (FSC Kodu, Sertifika Bitiş Tarihi) |
+| **Yeşil başlık satırı** | Sütun isimleri (içe aktarma sütun eşleşmesi bu isimlere göre yapılır) |
+
+### Tedarikçi Dosyası (ETL_Tedarikciler.xlsx)
+
+Sütunlar:
+
+| Sütun | Dolu mu? | Açıklama |
+|-------|----------|----------|
+| TedarikciAdi | ✓ | TBLCASABIT.CARI_ISIM (temizlenmiş) |
+| Telefon | ✓ | CARI_TEL / GSM1 |
+| Email | ✓ | EMAIL |
+| Adres | ✓ | CARI_ADRES |
+| Sehir | ✓ | CARI_IL |
+| VergiDairesi | ✓ | VERGI_DAIRESI |
+| VergiNo | ✓ | VERGI_NUMARASI |
+| FscKodu | ⚠ Sarı | Manuel doldurulacak |
+| FscBitisTarihi | ⚠ Sarı | Manuel doldurulacak |
+
+### Müşteri Dosyası (ETL_Musteriler.xlsx)
+
+Sütunlar:
+
+| Sütun | Dolu mu? | Açıklama |
+|-------|----------|----------|
+| MusteriAdi | ✓ | TBLCASABIT.CARI_ISIM (temizlenmiş) |
+| Telefon | ✓ | CARI_TEL / GSM1 |
+| Email | ✓ | EMAIL |
+| Adres | ✓ | CARI_ADRES |
+| Sehir | ✓ | CARI_IL |
+| VergiDairesi | ✓ | VERGI_DAIRESI |
+| VergiNo | ✓ | VERGI_NUMARASI |
+| FscLisansKodu | ⚠ Sarı | Manuel doldurulacak |
+| FscBitisTarihi | ⚠ Sarı | Manuel doldurulacak |
+
+### Hammadde Girişleri Dosyası (ETL_HammaddeGirisleri.xlsx)
+
+Her satır bir FscSerial kaydına, her LotNo grubu bir FscLot kaydına karşılık gelir.
+
+Sütunlar:
+
+| Sütun | Dolu mu? | Açıklama |
+|-------|----------|----------|
+| LotNo | ✓ | L{YYYY}-{NNN} formatında otomatik üretildi |
+| SeriNo | ✓ | S{YYYY}-{NNN}-{NN} formatında |
+| StokKodu | ✓ | TBLSTSABIT.STOK_KODU |
+| StokAdi | ✓ | TBLSTSABIT.STOK_ADI (temizlenmiş) |
+| FscTipi | ✓ | FSC-100 / FSC-MIX / FSC-MIX-70 vb. (stok adından çıkarıldı) |
+| Tedarikci | ✓ | Cari kodu veya stok adından tahmin edildi |
+| Miktar_kg | ✓ | STHAR_GCMIK |
+| Tarih | ✓ | STHAR tarih alanı |
+| FisNo | ✓ | TBLSTHAR.FISNO (fiş/irsaliye numarası) |
+| IrsaliyeNo | ✓ | IRSALIYE_NO (varsa) |
+| DepoKodu | ✓ | DEPO_KODU |
+
+### Aktarım Sırası
+
+Dosyaları şu sırayla kullanın:
+
+1. **Tedarikçiler** — Önce tedarikçileri sisteme ekleyin (sarı alanları doldurun)
+2. **Müşteriler** — Ardından müşteri kartlarını aktarın
+3. **Hammadde Girişleri** — En son lot/seri kayıtlarını girin (tedarikçi eşleşmesi için 1. adım tamamlanmış olmalı)
+
+> **⚠️ Sarı Alan Uyarısı:** FSC Kodu ve Sertifika Bitiş Tarihi alanları Netsis veritabanında bulunmadığından boş gelir. Bu alanlar tedarikçi/müşteri ile birebir görüşülerek veya FSC CoC lisans sorgulama portalından doğrulanarak doldurulmalıdır.
+
+> **ℹ️ Açılış Bakiyesi:** HTUR='A' (açılış devir) kayıtlarında STHAR_CARIKOD genellikle boş gelir. Bu durumda tedarikçi adı stok adındaki anahtar kelimelerden tahmin edilmiştir (KMK, MONDI, BILLERUD vb.). Aktarım öncesinde tedarikçi sütununu doğrulayın.
+
+> **ℹ️ Lot Gruplama Mantığı:** Her FISNO + STOK_KODU kombinasyonu tek bir FscLot olarak tanımlanmıştır. FISNO boş olan açılış devir kayıtları `ACILIS-{tarih}-{stokKodu}` anahtarıyla gruplandırılmıştır.
 
 ---
 

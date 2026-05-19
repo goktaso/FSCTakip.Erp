@@ -494,6 +494,10 @@
                 <span class="toc-num">29.</span> BOM Bileşen Analizi
                 <span class="toc-badge done">✓</span>
             </a>
+            <a class="toc-item" href="#netsis-etl-excel" onclick="scrollTo('netsis-etl-excel')">
+                <span class="toc-num">30.</span> Netsis ETL Excel
+                <span class="toc-badge done">✓</span>
+            </a>
         </div>
     </div>
 
@@ -507,11 +511,11 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>29 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis Sync → Denetim → İzlenebilirlik → BOM Analizi)</span>
+                <span>30 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis Sync → Denetim → İzlenebilirlik → BOM Analizi → ETL Excel)</span>
             </div>
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓</span>
-                <span>v2.1 — BOM Bileşen Analizi raporu tamamlandı</span>
+                <span>v2.2 — Netsis ETL Excel dosyaları eklendi</span>
             </div>
             <div class="ms-auto text-muted" style="font-size:11px;">
                 <i class="fas fa-sync-alt me-1"></i> Her modül tamamlandıktan sonra güncellenir
@@ -568,7 +572,8 @@
             'Üretim Fişi — Lot Evrak Görüntüleyici': 'lot-evrak',
             'Denetim Özet Raporu': 'denetim-ozet',
             'Tam İzlenebilirlik — Satış → Üretim → Lot': 'tam-izlenebilirlik',
-            'BOM Bileşen Analizi': 'bom-analizi'
+            'BOM Bileşen Analizi': 'bom-analizi',
+            'Netsis ETL Excel Dosyaları': 'netsis-etl-excel'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {
