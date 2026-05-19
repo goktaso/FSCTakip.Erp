@@ -130,8 +130,27 @@
                     </div>
                     <div class="form-group">
                         <label class="small font-weight-bold text-uppercase">E-Posta</label>
-                        @* style="text-transform: lowercase;" ile görsel kontrol sağlandı *@
                         <input type="text" class="form-control" name="Email" id="suppEmail" placeholder="orn@mail.com" style="text-transform: lowercase;">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8 form-group">
+                            <label class="small font-weight-bold text-uppercase">Adres</label>
+                            <input type="text" class="form-control" name="Address" id="suppAddress">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="small font-weight-bold text-uppercase">Şehir</label>
+                            <input type="text" class="form-control" name="City" id="suppCity">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold text-uppercase">Vergi Dairesi</label>
+                            <input type="text" class="form-control" name="TaxOffice" id="suppTaxOffice">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="small font-weight-bold text-uppercase">Vergi Numarası</label>
+                            <input type="text" class="form-control" name="TaxNumber" id="suppTaxNumber" maxlength="11">
+                        </div>
                     </div>
                     <div class="row bg-light p-2 mt-2 border-radius">
                         <div class="col-md-6 form-group">
@@ -186,6 +205,10 @@
             $('#suppContact').val('');
             $('#suppPhone').val('');
             $('#suppEmail').val('');
+            $('#suppAddress').val('');
+            $('#suppCity').val('');
+            $('#suppTaxOffice').val('');
+            $('#suppTaxNumber').val('');
             $('#suppFsc').val('');
             $('#suppDate').val('');
             $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Tedarikçi Ekle');
@@ -201,6 +224,10 @@
                     $('#suppContact').val(res.data.contactPerson);
                     $('#suppPhone').val(res.data.phone);
                     $('#suppEmail').val(res.data.email);
+                    $('#suppAddress').val(res.data.address || '');
+                    $('#suppCity').val(res.data.city || '');
+                    $('#suppTaxOffice').val(res.data.taxOffice || '');
+                    $('#suppTaxNumber').val(res.data.taxNumber || '');
                     $('#suppFsc').val(res.data.fscCode);
                     if (res.data.fscExpiryDate) $('#suppDate').val(res.data.fscExpiryDate.split('T')[0]);
                     $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Tedarikçi Düzenle');

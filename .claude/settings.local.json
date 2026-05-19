@@ -25,7 +25,28 @@
       "mcp__Claude_in_Chrome__list_connected_browsers",
       "Bash(grep -n \"tedarikci-fsc.*\\\\`$\\\\|^\\\\`,$\\\\|^        \\\\`$\" FSCTakip.WebUI/Views/Guide/Index.cshtml)",
       "Bash(git commit *)",
-      "Bash(grep -rn \"data-dismiss=\\\\\"modal\\\\\"\\\\|\\\\.modal\\('show'\\)\\\\|\\\\.modal\\('hide'\\)\\\\|\\\\$\\('#.*modal\\\\|class=\\\\\"close \" FSCTakip.WebUI/Views/ --include=\"*.cshtml\")"
+      "Bash(grep -rn \"data-dismiss=\\\\\"modal\\\\\"\\\\|\\\\.modal\\('show'\\)\\\\|\\\\.modal\\('hide'\\)\\\\|\\\\$\\('#.*modal\\\\|class=\\\\\"close \" FSCTakip.WebUI/Views/ --include=\"*.cshtml\")",
+      "Bash(sqlcmd -?)",
+      "Bash(sqlcmd -S \"ARDA\\\\ARDA\" -U \"data\" -P \"data123\" -Q \"SELECT name FROM sys.databases WHERE name NOT IN \\('master','tempdb','model','msdb'\\) ORDER BY name\" -W)",
+      "Bash(dotnet run *)",
+      "Bash(Get-ChildItem \"D:\\\\C#\\\\FSCTakip.Erp\\\\.claude\\\\worktrees\\\\affectionate-hawking-cb4488\\\\FSCTakip.Core\\\\Entities\" -Filter \"*.cs\")",
+      "Bash(Select-Object Name)",
+      "Bash(Sort-Object Name)",
+      "Bash(grep -E \"^.*error CS|Build succeeded|Hata$\")",
+      "Bash(grep -E \"error CS|Build succeeded|Hata$|Başarılı\")",
+      "Bash(dotnet script *)",
+      "Bash(dotnet tool *)",
+      "Bash(mkdir -p \"C:\\\\Temp\\\\XlRead\")",
+      "Read(//c/Temp/**)",
+      "Bash(dotnet new *)",
+      "Bash(dotnet add *)",
+      "Bash(sqlcmd -S \"ARDA\\\\ARDA\" -U data -P data123 -d ACOREFSC25 -Q \"SELECT TOP 5 * FROM TBLFATUIRS ORDER BY FAIRS_TARIH DESC\" -W)",
+      "Bash(dotnet --version)",
+      "Bash(ls /mnt/c/Temp/EtlExcel/ 2>/dev/null || ls /c/Temp/EtlExcel/ 2>/dev/null)",
+      "Bash(find /mnt -name \"EtlExcel.csproj\")",
+      "Read(//d//**)",
+      "Bash(sqlcmd -S 'ARDA\\\\ARDA' -U data -P data123 -d ACOREFSC25 -Q ' *)",
+      "Bash(sqlcmd -S 'ARDA\\\\ARDA' -U data -P data123 -d ACORE23 -Q ' *)"
     ]
   }
 }

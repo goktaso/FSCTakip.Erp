@@ -42,13 +42,17 @@ namespace FSCTakip.WebUI.Controllers
                 var existing = await _context.Suppliers.FindAsync(model.Id);
                 if (existing != null)
                 {
-                    existing.Name = model.Name;
+                    existing.Name          = model.Name;
                     existing.ContactPerson = model.ContactPerson;
-                    existing.Email = model.Email;
-                    existing.Phone = model.Phone;
-                    existing.FscCode = model.FscCode;
+                    existing.Email         = model.Email;
+                    existing.Phone         = model.Phone;
+                    existing.Address       = model.Address;
+                    existing.City          = model.City;
+                    existing.TaxOffice     = model.TaxOffice;
+                    existing.TaxNumber     = model.TaxNumber;
+                    existing.FscCode       = model.FscCode;
                     existing.FscExpiryDate = model.FscExpiryDate;
-                    existing.UpdatedDate = DateTime.Now;
+                    existing.UpdatedDate   = DateTime.Now;
                     _context.Suppliers.Update(existing);
                 }
             }

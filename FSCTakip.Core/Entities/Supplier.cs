@@ -11,6 +11,10 @@ namespace FSCTakip.Core.Entities
         public string ContactPerson { get; set; }    // Yetkili Kişi
         public string Phone { get; set; }            // Telefon
         public string Email { get; set; }            // E-Posta
+        public string Address { get; set; }          // Adres
+        public string City { get; set; }             // Şehir
+        public string TaxNumber { get; set; }        // Vergi Numarası
+        public string TaxOffice { get; set; }        // Vergi Dairesi
         public bool IsFscActive { get; set; } = true;
         public bool IsActive { get; set; } = true;    // Genel Aktiflik
     }

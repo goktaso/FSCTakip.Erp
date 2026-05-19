@@ -186,6 +186,13 @@ namespace FSCTakip.WebUI.Controllers
 
                 job.TotalRecords = rows.Count;
 
+                // Başlık satırını oku (ETL otomatik algılama için)
+                var headerRow = ws.RangeUsed()?.RowsUsed().FirstOrDefault();
+                var headers   = headerRow != null
+                    ? headerRow.CellsUsed().Select((c, i) => new { Col = i + 1, Name = c.GetString().Trim() })
+                              .ToDictionary(x => x.Name, x => x.Col, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
                 if (jobType == "ProductImport")
                     (inserted, updated, skipped, errors) = await ImportProducts(rows);
                 else if (jobType == "SupplierImport")
@@ -198,6 +205,8 @@ namespace FSCTakip.WebUI.Controllers
                     (inserted, updated, skipped, errors) = await ImportUretim(rows);
                 else if (jobType == "SatisImport")
                     (inserted, updated, skipped, errors) = await ImportSatis(rows);
+                else if (jobType == "EtlImport")
+                    (inserted, updated, skipped, errors) = await ImportFromEtlFile(rows, headers);
 
                 job.Status        = errors.Count == 0 ? "Completed" : (inserted + updated > 0 ? "Partial" : "Failed");
                 job.InsertedCount = inserted;
@@ -908,6 +917,305 @@ namespace FSCTakip.WebUI.Controllers
                 catch (Exception ex) { errors.Add($"{r.Kod} - {r.Isim}: {ex.Message}"); }
             }
             return (ins, upd, skp, errors);
+        }
+
+        // ─── ETL Auto-Detect Import ──────────────────────────────────────────────
+        // ETL_Tedarikciler / ETL_Musteriler / ETL_HammaddeGirisleri formatlarını
+        // başlık satırı adlarına bakarak otomatik algılar.
+        private async Task<(int ins, int upd, int skp, List<string> errs)> ImportFromEtlFile(
+            List<IXLRangeRow> rows, Dictionary<string, int> hdrs)
+        {
+            string ColVal(IXLRangeRow r, string name)
+                => hdrs.TryGetValue(name, out var c) ? r.Cell(c).GetString().Trim() : string.Empty;
+
+            decimal ColDec(IXLRangeRow r, string name)
+            {
+                var s = ColVal(r, name).Replace(',', '.');
+                return decimal.TryParse(s, System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0;
+            }
+
+            DateTime? ColDate(IXLRangeRow r, string name)
+            {
+                var s = ColVal(r, name);
+                if (string.IsNullOrWhiteSpace(s)) return null;
+                if (DateTime.TryParseExact(s, new[] { "dd.MM.yyyy", "yyyy-MM-dd", "d.M.yyyy" },
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var d)) return d;
+                if (DateTime.TryParse(s, out var d2)) return d2;
+                return null;
+            }
+
+            // Algılama: başlık adlarına bak
+            bool isSupplier  = hdrs.ContainsKey("TedarikciAdi");
+            bool isCustomer  = hdrs.ContainsKey("MusteriAdi");
+            bool isHammadde  = hdrs.ContainsKey("LotNo") && hdrs.ContainsKey("SeriNo");
+
+            int ins = 0, upd = 0, skp = 0;
+            var errors = new List<string>();
+
+            if (!isSupplier && !isCustomer && !isHammadde)
+            {
+                errors.Add("ETL dosyası formatı tanınamadı. Başlık satırını kontrol edin (TedarikciAdi / MusteriAdi / LotNo+SeriNo bekleniyor).");
+                return (ins, upd, skp, errors);
+            }
+
+            // ── Tedarikçi ETL ──────────────────────────────────────────────────
+            if (isSupplier)
+            {
+                var count = await _context.Suppliers.CountAsync();
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    var row  = rows[i];
+                    var name = ColVal(row, "TedarikciAdi");
+                    if (string.IsNullOrWhiteSpace(name)) { skp++; continue; }
+
+                    var phone     = ColVal(row, "Telefon");
+                    var email     = NormalizeEmail(ColVal(row, "Email"));
+                    var address   = ColVal(row, "Adres");
+                    var city      = ColVal(row, "Sehir");
+                    var taxOffice = ColVal(row, "VergiDairesi");
+                    var taxNo     = ColVal(row, "VergiNo");
+                    var fscCode   = ColVal(row, "FscKodu");
+                    var fscExpStr = ColVal(row, "FscBitisTarihi");
+                    DateTime? fscExp = null;
+                    if (!string.IsNullOrWhiteSpace(fscExpStr))
+                        if (DateTime.TryParseExact(fscExpStr, new[] { "dd.MM.yyyy", "yyyy-MM-dd" },
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.None, out var fe)) fscExp = fe;
+
+                    try
+                    {
+                        var existing = await _context.Suppliers
+                            .FirstOrDefaultAsync(s => s.Name == name ||
+                                (!string.IsNullOrWhiteSpace(taxNo) && s.TaxNumber == taxNo));
+                        if (existing == null)
+                        {
+                            count++;
+                            _context.Suppliers.Add(new Supplier
+                            {
+                                SupplierCode  = $"TED-{count:D3}",
+                                Name          = name,
+                                Phone         = phone,
+                                Email         = email,
+                                Address       = address,
+                                City          = city,
+                                TaxOffice     = taxOffice,
+                                TaxNumber     = taxNo,
+                                FscCode       = fscCode,
+                                FscExpiryDate = fscExp,
+                                IsActive      = true,
+                                IsFscActive   = !string.IsNullOrWhiteSpace(fscCode),
+                                CreatedDate   = DateTime.Now,
+                                CreatedBy     = "ETL"
+                            });
+                            ins++;
+                        }
+                        else
+                        {
+                            existing.Phone         = phone;
+                            existing.Email         = string.IsNullOrWhiteSpace(email) ? existing.Email : email;
+                            existing.Address       = address;
+                            existing.City          = city;
+                            existing.TaxOffice     = taxOffice;
+                            existing.TaxNumber     = string.IsNullOrWhiteSpace(taxNo) ? existing.TaxNumber : taxNo;
+                            if (!string.IsNullOrWhiteSpace(fscCode)) { existing.FscCode = fscCode; existing.IsFscActive = true; }
+                            if (fscExp.HasValue) existing.FscExpiryDate = fscExp;
+                            existing.UpdatedDate = DateTime.Now;
+                            existing.UpdatedBy   = "ETL";
+                            upd++;
+                        }
+                        await _context.SaveChangesAsync();
+                    }
+                    catch (Exception ex) { errors.Add($"Satır {i + 2} ({name}): {ex.Message}"); }
+                }
+                return (ins, upd, skp, errors);
+            }
+
+            // ── Müşteri ETL ──────────────────────────────────────────────────
+            if (isCustomer)
+            {
+                var count = await _context.Customers.CountAsync();
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    var row  = rows[i];
+                    var name = ColVal(row, "MusteriAdi");
+                    if (string.IsNullOrWhiteSpace(name)) { skp++; continue; }
+
+                    var phone     = ColVal(row, "Telefon");
+                    var email     = NormalizeEmail(ColVal(row, "Email"));
+                    var address   = ColVal(row, "Adres");
+                    var city      = ColVal(row, "Sehir");
+                    var taxOffice = ColVal(row, "VergiDairesi");
+                    var taxNo     = ColVal(row, "VergiNo");
+                    var fscLic    = ColVal(row, "FscLisansKodu");
+                    var fscExpStr = ColVal(row, "FscBitisTarihi");
+                    DateTime? fscExp = null;
+                    if (!string.IsNullOrWhiteSpace(fscExpStr))
+                        if (DateTime.TryParseExact(fscExpStr, new[] { "dd.MM.yyyy", "yyyy-MM-dd" },
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.None, out var fe)) fscExp = fe;
+
+                    try
+                    {
+                        var existing = await _context.Customers
+                            .FirstOrDefaultAsync(c => c.Name == name ||
+                                (!string.IsNullOrWhiteSpace(taxNo) && c.TaxNumber == taxNo));
+                        if (existing == null)
+                        {
+                            count++;
+                            _context.Customers.Add(new Customer
+                            {
+                                CustomerCode   = $"MHS-{count:D3}",
+                                Name           = name,
+                                Phone          = phone,
+                                Email          = email,
+                                Address        = address,
+                                City           = city,
+                                TaxOffice      = taxOffice,
+                                TaxNumber      = taxNo,
+                                FscLicenseCode = fscLic,
+                                FscExpiryDate  = fscExp,
+                                IsActive       = true,
+                                IsFscActive    = !string.IsNullOrWhiteSpace(fscLic),
+                                CreatedDate    = DateTime.Now,
+                                CreatedBy      = "ETL"
+                            });
+                            ins++;
+                        }
+                        else
+                        {
+                            existing.Phone     = phone;
+                            existing.Email     = string.IsNullOrWhiteSpace(email) ? existing.Email : email;
+                            existing.Address   = address;
+                            existing.City      = city;
+                            existing.TaxOffice = taxOffice;
+                            existing.TaxNumber = string.IsNullOrWhiteSpace(taxNo) ? existing.TaxNumber : taxNo;
+                            if (!string.IsNullOrWhiteSpace(fscLic)) { existing.FscLicenseCode = fscLic; existing.IsFscActive = true; }
+                            if (fscExp.HasValue) existing.FscExpiryDate = fscExp;
+                            existing.UpdatedDate = DateTime.Now;
+                            existing.UpdatedBy   = "ETL";
+                            upd++;
+                        }
+                        await _context.SaveChangesAsync();
+                    }
+                    catch (Exception ex) { errors.Add($"Satır {i + 2} ({name}): {ex.Message}"); }
+                }
+                return (ins, upd, skp, errors);
+            }
+
+            // ── Hammadde ETL ──────────────────────────────────────────────────
+            // Sütunlar: LotNo, SeriNo, StokKodu, StokAdi, FscTipi, Tedarikci,
+            //           Miktar_kg, Tarih, FisNo, IrsaliyeNo, DepoKodu
+            {
+                var fscTypes    = await _context.FscTypes.ToListAsync();
+                var suppliers   = await _context.Suppliers.ToListAsync();
+                var products    = await _context.Products.ToListAsync();
+                var warehouses  = await _context.Warehouses.ToListAsync();
+                var defWh       = warehouses.FirstOrDefault();
+
+                var groups = rows
+                    .Select((r, idx) => new { Row = r, Idx = idx })
+                    .GroupBy(x => ColVal(x.Row, "LotNo"))
+                    .Where(g => !string.IsNullOrWhiteSpace(g.Key))
+                    .ToList();
+
+                foreach (var group in groups)
+                {
+                    var lotNo    = group.Key;
+                    var firstRow = group.First().Row;
+                    var firstIdx = group.First().Idx;
+                    try
+                    {
+                        var stokKodu     = ColVal(firstRow, "StokKodu");
+                        var fscTipiStr   = ColVal(firstRow, "FscTipi");
+                        var tedarikciAdi = ColVal(firstRow, "Tedarikci");
+                        var irsNo        = ColVal(firstRow, "IrsaliyeNo");
+                        var fisNo        = ColVal(firstRow, "FisNo");
+                        var tarih        = ColDate(firstRow, "Tarih");
+
+                        var product  = products.FirstOrDefault(p => p.ProductCode == stokKodu);
+                        var supplier = suppliers.FirstOrDefault(s =>
+                            s.Name.Equals(tedarikciAdi, StringComparison.OrdinalIgnoreCase) ||
+                            (tedarikciAdi.Length > 3 && s.Name.Contains(tedarikciAdi.Substring(0, Math.Min(6, tedarikciAdi.Length)), StringComparison.OrdinalIgnoreCase)));
+                        var fscType = fscTypes.FirstOrDefault(f =>
+                            f.Name.Equals(fscTipiStr, StringComparison.OrdinalIgnoreCase) ||
+                            f.Code.Equals(fscTipiStr, StringComparison.OrdinalIgnoreCase) ||
+                            fscTipiStr.Contains(f.Code, StringComparison.OrdinalIgnoreCase));
+
+                        if (product  == null) { errors.Add($"Lot {lotNo}: Ürün bulunamadı '{stokKodu}' — ürün kartı oluşturulup tekrar deneyin."); skp += group.Count(); continue; }
+                        if (supplier == null) { errors.Add($"Lot {lotNo}: Tedarikçi bulunamadı '{tedarikciAdi}' — tedarikçi kaydı oluşturulup tekrar deneyin."); skp += group.Count(); continue; }
+                        if (fscType  == null) { errors.Add($"Lot {lotNo}: FSC Tipi bulunamadı '{fscTipiStr}'."); skp += group.Count(); continue; }
+
+                        var lot = await _context.FscLots.FirstOrDefaultAsync(l => l.LotNo == lotNo);
+                        bool lotNew = lot == null;
+                        if (lotNew)
+                        {
+                            lot = new FscLot
+                            {
+                                LotNo       = lotNo,
+                                FscTypeId   = fscType.Id,
+                                SupplierId  = supplier.Id,
+                                ProductId   = product.Id,
+                                DispatchNo  = irsNo,
+                                InvoiceNo   = fisNo,
+                                ArrivalDate = tarih ?? DateTime.Today,
+                                CreatedDate = DateTime.Now,
+                                CreatedBy   = "ETL"
+                            };
+                            _context.FscLots.Add(lot);
+                            await _context.SaveChangesAsync();
+                            ins++;
+                        }
+                        else { upd++; }
+
+                        foreach (var item in group)
+                        {
+                            var row    = item.Row;
+                            var rowNum = item.Idx + 2;
+                            try
+                            {
+                                var seriNo = ColVal(row, "SeriNo").IfEmpty(lotNo);
+                                var miktar = ColDec(row, "Miktar_kg");
+                                if (miktar <= 0) { skp++; continue; }
+
+                                var existingSerial = await _context.FscSerials
+                                    .FirstOrDefaultAsync(s => s.LotId == lot!.Id && s.SerialNo == seriNo);
+                                if (existingSerial == null)
+                                {
+                                    _context.FscSerials.Add(new FscSerial
+                                    {
+                                        LotId         = lot!.Id,
+                                        SerialNo      = seriNo,
+                                        InitialWeight = miktar,
+                                        CurrentWeight = miktar,
+                                        CreatedDate   = DateTime.Now,
+                                        CreatedBy     = "ETL"
+                                    });
+                                    _context.StockMovements.Add(new StockMovement
+                                    {
+                                        Type          = MovementType.PurchaseEntry,
+                                        DocumentNo    = fisNo.IfEmpty(lotNo),
+                                        DocumentDate  = tarih ?? DateTime.Today,
+                                        ProductId     = product.Id,
+                                        Quantity      = miktar,
+                                        Unit          = product.Unit ?? "KG",
+                                        ToWarehouseId = defWh?.Id,
+                                        Description   = $"ETL Lot: {lotNo} | Seri: {seriNo}",
+                                        CreatedDate   = DateTime.Now,
+                                        CreatedBy     = "ETL"
+                                    });
+                                    await _context.SaveChangesAsync();
+                                }
+                                // else: aynı seri zaten var, atla
+                            }
+                            catch (Exception ex) { errors.Add($"Satır {rowNum}: {ex.Message}"); }
+                        }
+                    }
+                    catch (Exception ex) { errors.Add($"Lot {lotNo}: {ex.Message}"); }
+                }
+                return (ins, upd, skp, errors);
+            }
         }
 
         private static string NormalizeEmail(string email)
