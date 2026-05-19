@@ -1407,6 +1407,8 @@ ACOREFSC25 (Netsis FSC izleme veritabanı) ve ACORE23 (Netsis ana veritabanı) k
 | **ETL_Tedarikciler.xlsx** | ACOREFSC25 · TBLCASABIT (S tipi) | 16 tedarikçi | Hammadde tedarikçileri |
 | **ETL_Musteriler.xlsx** | ACORE23 · TBLCASABIT (A tipi) | 316 müşteri | Aktif müşteri kartları |
 | **ETL_HammaddeGirisleri.xlsx** | ACOREFSC25 · TBLSTHAR (G girişleri) | 160 satır / 151 lot | 2022–2025 alış hareketleri |
+| **ETL_SatisGirisleri.xlsx** | ACOREFSC25 · TBLSTHAR (C çıkışları) | 734 çıkış hareketi | Grup 10/20/30/40 satış hareketleri |
+| **ETL_FaturaListesi.xlsx** | ACOREFSC25 · TBLFATUIRS | 206 fatura/irsaliye | Tüm satış faturaları ve irsaliyeleri |
 
 ### İndirme
 
@@ -1472,6 +1474,44 @@ Sütunlar:
 | IrsaliyeNo | ✓ | IRSALIYE_NO (varsa) |
 | DepoKodu | ✓ | DEPO_KODU |
 
+### Satış Girişleri Dosyası (ETL_SatisGirisleri.xlsx)
+
+TBLSTHAR tablosundan GCKOD='C' (çıkış) kayıtları. Grup dağılımı: Grup 30 (282 kayıt), Grup 10 (248), Grup 20 (183), Grup 40 (21).
+
+| Sütun | Dolu mu? | Açıklama |
+|-------|----------|----------|
+| StokKodu | ✓ | TBLSTSABIT.STOK_KODU |
+| StokAdi | ✓ | Stok adı (temizlenmiş) |
+| GrupKodu | ✓ | Ürün grubu (10/20/30/40) |
+| CariKod | ✓ | Müşteri cari kodu |
+| CariIsim | ✓ | Müşteri adı |
+| Tarih | ✓ | İşlem tarihi |
+| FisNo | ✓ | Fiş/irsaliye numarası |
+| IrsaliyeNo | ✓ | İrsaliye no (varsa) |
+| Miktar | ✓ | Çıkış miktarı |
+| Htur | ✓ | Hareket türü (B=Fatura, H=Diğer) |
+| DepoKodu | ✓ | Kaynak depo |
+
+> **ℹ️ Bilgi:** Bu dosya referans / analiz amaçlıdır. ETL Otomatik Algıla import ile satış hareketi girişi henüz desteklenmemektedir — satış fişleri SalesController üzerinden yapılacaktır.
+
+### Fatura Listesi Dosyası (ETL_FaturaListesi.xlsx)
+
+TBLFATUIRS tablosundan tüm fatura ve irsaliye belgeleri.
+
+| Sütun | Dolu mu? | Açıklama |
+|-------|----------|----------|
+| BelgeTuru | ✓ | F=Fatura, İ=İrsaliye (FTIRSIP) |
+| FisNo | ✓ | Fiş numarası (FATIRS_NO) |
+| CariKod | ✓ | Müşteri cari kodu |
+| CariIsim | ✓ | Müşteri adı |
+| Tarih | ✓ | Belge tarihi |
+| BrutTutar | ✓ | Brüt tutar (TL) |
+| KdvTutar | ✓ | KDV tutarı (TL) |
+| ToplamTutar | ✓ | Net toplam (Brüt + KDV) |
+| ParaBirimi | ✓ | TL / USD / EUR |
+
+> **ℹ️ Bilgi:** Fatura listesi referans / mutabakat amaçlıdır. Fatura PDF yükleme işlemi PurchaseController ve SalesController üzerinden yapılacaktır.
+
 ### Aktarım Sırası
 
 Dosyaları şu sırayla kullanın:
@@ -1479,6 +1519,8 @@ Dosyaları şu sırayla kullanın:
 1. **Tedarikçiler** — Önce tedarikçileri sisteme ekleyin (sarı alanları doldurun)
 2. **Müşteriler** — Ardından müşteri kartlarını aktarın
 3. **Hammadde Girişleri** — En son lot/seri kayıtlarını girin (tedarikçi eşleşmesi için 1. adım tamamlanmış olmalı)
+4. **Satış Girişleri** — İsteğe bağlı; satış geçmişini analiz etmek için gözden geçirin
+5. **Fatura Listesi** — Mutabakat ve belge takibi için referans olarak kullanın
 
 > **⚠️ Sarı Alan Uyarısı:** FSC Kodu ve Sertifika Bitiş Tarihi alanları Netsis veritabanında bulunmadığından boş gelir. Bu alanlar tedarikçi/müşteri ile birebir görüşülerek veya FSC CoC lisans sorgulama portalından doğrulanarak doldurulmalıdır.
 

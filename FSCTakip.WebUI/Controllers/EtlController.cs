@@ -583,7 +583,7 @@ namespace FSCTakip.WebUI.Controllers
         // ─── Netsis ETL Excel İndir ───────────────────────────────────────────
         public IActionResult DownloadNetsisEtl(string file)
         {
-            var allowed = new[] { "ETL_Tedarikciler", "ETL_Musteriler", "ETL_HammaddeGirisleri" };
+            var allowed = new[] { "ETL_Tedarikciler", "ETL_Musteriler", "ETL_HammaddeGirisleri", "ETL_SatisGirisleri", "ETL_FaturaListesi" };
             if (!allowed.Contains(file))
                 return NotFound();
 
