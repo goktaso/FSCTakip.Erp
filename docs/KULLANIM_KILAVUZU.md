@@ -1231,6 +1231,11 @@ sorularının cevapları tek tıkla erişilebilir durumdadır.
 | Gelişmiş Excel Şablonları | ✅ Tamamlandı | 1.9 |
 | Denetim Özet Raporu | ✅ Tamamlandı | 2.0 |
 | Tam İzlenebilirlik (Satış→Lot) | ✅ Tamamlandı | 2.0 |
+| BOM Bileşen Analizi | ✅ Tamamlandı | 2.1 |
+| Netsis ETL Excel Dosyaları | ✅ Tamamlandı | 2.2 |
+| Hammadde Stoğu — Bobin Bazlı | ✅ Tamamlandı | 2.3 |
+| ETL Otomatik Algıla Import | ✅ Tamamlandı | 2.4 |
+| Satış & Fatura ETL Dosyaları | ✅ Tamamlandı | 2.4 |
 
 ---
 
