@@ -67,14 +67,35 @@
                     <i class="fas fa-truck me-2"></i>
                     <strong>Tedarikçileri Senkronize Et</strong>
                     <br>
-                    <small class="text-muted ms-4">TBLCASABIT (TİP=S) → Tedarikçiler</small>
+                    <small class="text-muted ms-4">TBLCASABIT (TİP=S) → Tedarikçiler (ekle/güncelle)</small>
                 </button>
                 <button class="btn btn-outline-success text-start" onclick="runSync('CustomerImport')">
                     <i class="fas fa-users me-2"></i>
                     <strong>Müşterileri Senkronize Et</strong>
                     <br>
-                    <small class="text-muted ms-4">TBLCASABIT (TİP=A) → Müşteriler</small>
+                    <small class="text-muted ms-4">TBLCASABIT (TİP=A) → Müşteriler (ekle/güncelle)</small>
                 </button>
+                <hr class="my-1">
+
+                <!-- Temizle + Yeniden İçe Aktar -->
+                <div class="p-2 rounded" style="background:#fef2f2;border:1px solid #fecaca;">
+                    <div class="small fw-semibold text-danger mb-2">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Temizle + Yeniden İçe Aktar
+                    </div>
+                    <div class="d-grid gap-1">
+                        <button class="btn btn-sm btn-danger text-start" onclick="clearAndSync('Suppliers','SupplierImport')">
+                            <i class="fas fa-trash-alt me-1"></i>
+                            <strong>Tedarikçileri Sil + Netsis'ten Yükle</strong>
+                            <small class="d-block text-white-50 ms-3">Mevcut tedarikçiler silinir, Netsis'ten yeniden çekilir</small>
+                        </button>
+                        <button class="btn btn-sm btn-danger text-start" onclick="clearAndSync('Customers','CustomerImport')">
+                            <i class="fas fa-trash-alt me-1"></i>
+                            <strong>Müşterileri Sil + Netsis'ten Yükle</strong>
+                            <small class="d-block text-white-50 ms-3">Mevcut müşteriler silinir, Netsis'ten yeniden çekilir</small>
+                        </button>
+                    </div>
+                </div>
+
                 <hr class="my-1">
                 <button class="btn btn-primary text-start" onclick="runAll()">
                     <i class="fas fa-sync-alt me-2"></i>
@@ -364,6 +385,49 @@ function showResult(ins, upd, skp, errCnt, errors) {
 function resetPanel() {
     document.getElementById('panelResult').style.display  = 'none';
     document.getElementById('panelStart').style.display   = '';
+}
+
+async function clearAndSync(recordType, syncType) {
+    const label = recordType === 'Suppliers' ? 'tedarikçiler' : 'müşteriler';
+    const labelSync = recordType === 'Suppliers' ? 'Tedarikçiler' : 'Müşteriler';
+
+    if (!confirm(`⚠️ DİKKAT: Sistemdeki tüm ${label} silinecek ve Netsis'ten yeniden çekilecek.\n\nBağlı lot veya sipariş kaydı varsa silme işlemi iptal edilir.\n\nOnaylıyor musunuz?`)) return;
+
+    const connId = document.getElementById('connectionId')?.value ?? '';
+
+    // 1. Önce temizle
+    showLoading(`${labelSync} siliniyor...`);
+    try {
+        const clearFd = new FormData();
+        clearFd.append('recordType', recordType);
+        const clearRes = await fetch('/Etl/ClearRecords', { method: 'POST', body: clearFd }).then(r => r.json());
+
+        if (!clearRes.success) {
+            hideLoading();
+            alert('Silme başarısız: ' + clearRes.message);
+            return;
+        }
+
+        // 2. Netsis'ten yeniden yükle
+        document.getElementById('loadingMsg').textContent = `${labelSync} Netsis'ten yükleniyor...`;
+        const fd = new FormData();
+        fd.append('syncType', syncType);
+        if (connId) fd.append('connectionId', connId);
+        const res = await fetch('/Etl/NetsisExecute', { method: 'POST', body: fd }).then(r => r.json());
+
+        if (res.success) {
+            showResult(res.inserted, res.updated, res.skipped, res.errorCount, res.errors);
+            // Sonuç başlığını özelleştir
+            document.getElementById('resultTitle').textContent =
+                `${clearRes.deleted} silindi → ${res.inserted} yeni eklendi, ${res.updated} güncellendi`;
+        } else {
+            hideLoading();
+            alert('Senkronizasyon hatası: ' + res.message);
+        }
+    } catch(e) {
+        hideLoading();
+        alert('Bağlantı hatası: ' + e.message);
+    }
 }
 </script>
 }

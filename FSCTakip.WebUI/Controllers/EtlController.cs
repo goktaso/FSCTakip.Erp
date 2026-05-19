@@ -613,6 +613,40 @@ namespace FSCTakip.WebUI.Controllers
             return View();
         }
 
+        // POST /Etl/ClearRecords  — tedarikçi veya müşteri kayıtlarını temizle
+        [HttpPost]
+        public async Task<IActionResult> ClearRecords(string recordType)
+        {
+            try
+            {
+                if (recordType == "Suppliers")
+                {
+                    var hasLots = await _context.FscLots.AnyAsync();
+                    if (hasLots)
+                        return Json(new { success = false, message = $"Bağlı hammadde lot kaydı mevcut ({await _context.FscLots.CountAsync()} lot). Önce lot kayıtlarını silin." });
+
+                    var count = await _context.Suppliers.CountAsync();
+                    await _context.Database.ExecuteSqlRawAsync("DELETE FROM Suppliers");
+                    return Json(new { success = true, message = $"{count} tedarikçi silindi.", deleted = count });
+                }
+                else if (recordType == "Customers")
+                {
+                    var hasOrders = await _context.SalesOrders.AnyAsync();
+                    if (hasOrders)
+                        return Json(new { success = false, message = $"Bağlı satış siparişi mevcut ({await _context.SalesOrders.CountAsync()} sipariş). Önce siparişleri silin." });
+
+                    var count = await _context.Customers.CountAsync();
+                    await _context.Database.ExecuteSqlRawAsync("DELETE FROM Customers");
+                    return Json(new { success = true, message = $"{count} müşteri silindi.", deleted = count });
+                }
+                return Json(new { success = false, message = "Geçersiz kayıt türü." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Silme hatası: {ex.Message}" });
+            }
+        }
+
         [HttpPost]
         public async Task<IActionResult> NetsisExecute(string syncType, int? connectionId)
         {
@@ -777,7 +811,13 @@ namespace FSCTakip.WebUI.Controllers
             var count = await _context.Suppliers.CountAsync();
 
             const string sql = @"
-                SELECT CARI_KOD, CARI_ISIM, CARI_TEL, EMAIL, VERGI_NUMARASI, VERGI_DAIRESI, CARI_IL
+                SELECT CARI_KOD, CARI_ISIM, CARI_TEL,
+                       ISNULL(GSM1,'') AS GSM1,
+                       ISNULL(EMAIL,'') AS EMAIL,
+                       ISNULL(VERGI_NUMARASI,'') AS VERGI_NUMARASI,
+                       ISNULL(VERGI_DAIRESI,'') AS VERGI_DAIRESI,
+                       ISNULL(CARI_ADRES,'') AS CARI_ADRES,
+                       ISNULL(CARI_IL,'') AS CARI_IL
                 FROM TBLCASABIT
                 WHERE CARI_TIP = 'S'
                 ORDER BY CARI_KOD";
@@ -785,16 +825,20 @@ namespace FSCTakip.WebUI.Controllers
             using var cmd = new SqlCommand(sql, cn);
             using var rdr = await cmd.ExecuteReaderAsync();
 
-            var rows = new List<(string Kod, string Isim, string Tel, string Mail, string Vn, string Vd, string Il)>();
+            var rows = new List<(string Kod, string Isim, string Tel, string Gsm, string Mail, string Vn, string Vd, string Adres, string Il)>();
             while (await rdr.ReadAsync())
             {
+                var tel = rdr["CARI_TEL"]?.ToString()?.Trim() ?? "";
+                var gsm = rdr["GSM1"]?.ToString()?.Trim() ?? "";
                 rows.Add((
                     rdr["CARI_KOD"]?.ToString()?.Trim() ?? "",
                     rdr["CARI_ISIM"]?.ToString()?.Trim() ?? "",
-                    rdr["CARI_TEL"]?.ToString()?.Trim() ?? "",
+                    tel,
+                    gsm,
                     rdr["EMAIL"]?.ToString()?.Trim() ?? "",
                     rdr["VERGI_NUMARASI"]?.ToString()?.Trim() ?? "",
                     rdr["VERGI_DAIRESI"]?.ToString()?.Trim() ?? "",
+                    rdr["CARI_ADRES"]?.ToString()?.Trim() ?? "",
                     rdr["CARI_IL"]?.ToString()?.Trim() ?? ""
                 ));
             }
@@ -809,6 +853,9 @@ namespace FSCTakip.WebUI.Controllers
                         .FirstOrDefaultAsync(s => s.SupplierCode == r.Kod || s.Name == r.Isim);
 
                     var email = NormalizeEmail(r.Mail);
+                    // Telefon: GSM yoksa Tel, ikisi de varsa GSM'i seç (daha güncel)
+                    var phone = !string.IsNullOrWhiteSpace(r.Gsm) ? r.Gsm : r.Tel;
+                    phone = new string(phone.Where(char.IsDigit).ToArray());
 
                     if (existing == null)
                     {
@@ -817,8 +864,12 @@ namespace FSCTakip.WebUI.Controllers
                         {
                             SupplierCode  = string.IsNullOrWhiteSpace(r.Kod) ? $"TED-{count:D3}" : r.Kod,
                             Name          = r.Isim,
-                            Phone         = r.Tel,
+                            Phone         = phone,
                             Email         = email,
+                            Address       = r.Adres,
+                            City          = r.Il,
+                            TaxNumber     = r.Vn,
+                            TaxOffice     = r.Vd,
                             IsActive      = true,
                             IsFscActive   = false,
                             CreatedDate   = DateTime.Now,
@@ -829,8 +880,12 @@ namespace FSCTakip.WebUI.Controllers
                     else
                     {
                         existing.Name        = r.Isim;
-                        existing.Phone       = r.Tel;
+                        existing.Phone       = phone;
                         existing.Email       = email;
+                        existing.Address     = r.Adres;
+                        existing.City        = r.Il;
+                        existing.TaxNumber   = r.Vn;
+                        existing.TaxOffice   = r.Vd;
                         existing.UpdatedDate = DateTime.Now;
                         existing.UpdatedBy   = "NETSIS";
                         upd++;
@@ -849,7 +904,13 @@ namespace FSCTakip.WebUI.Controllers
             var count = await _context.Customers.CountAsync();
 
             const string sql = @"
-                SELECT CARI_KOD, CARI_ISIM, CARI_TEL, EMAIL, VERGI_NUMARASI, VERGI_DAIRESI, CARI_IL
+                SELECT CARI_KOD, CARI_ISIM, CARI_TEL,
+                       ISNULL(GSM1,'') AS GSM1,
+                       ISNULL(EMAIL,'') AS EMAIL,
+                       ISNULL(VERGI_NUMARASI,'') AS VERGI_NUMARASI,
+                       ISNULL(VERGI_DAIRESI,'') AS VERGI_DAIRESI,
+                       ISNULL(CARI_ADRES,'') AS CARI_ADRES,
+                       ISNULL(CARI_IL,'') AS CARI_IL
                 FROM TBLCASABIT
                 WHERE CARI_TIP = 'A'
                 ORDER BY CARI_KOD";
@@ -857,16 +918,20 @@ namespace FSCTakip.WebUI.Controllers
             using var cmd = new SqlCommand(sql, cn);
             using var rdr = await cmd.ExecuteReaderAsync();
 
-            var rows = new List<(string Kod, string Isim, string Tel, string Mail, string Vn, string Vd, string Il)>();
+            var rows = new List<(string Kod, string Isim, string Tel, string Gsm, string Mail, string Vn, string Vd, string Adres, string Il)>();
             while (await rdr.ReadAsync())
             {
+                var tel = rdr["CARI_TEL"]?.ToString()?.Trim() ?? "";
+                var gsm = rdr["GSM1"]?.ToString()?.Trim() ?? "";
                 rows.Add((
                     rdr["CARI_KOD"]?.ToString()?.Trim() ?? "",
                     rdr["CARI_ISIM"]?.ToString()?.Trim() ?? "",
-                    rdr["CARI_TEL"]?.ToString()?.Trim() ?? "",
+                    tel,
+                    gsm,
                     rdr["EMAIL"]?.ToString()?.Trim() ?? "",
                     rdr["VERGI_NUMARASI"]?.ToString()?.Trim() ?? "",
                     rdr["VERGI_DAIRESI"]?.ToString()?.Trim() ?? "",
+                    rdr["CARI_ADRES"]?.ToString()?.Trim() ?? "",
                     rdr["CARI_IL"]?.ToString()?.Trim() ?? ""
                 ));
             }
@@ -881,6 +946,8 @@ namespace FSCTakip.WebUI.Controllers
                         .FirstOrDefaultAsync(c => c.CustomerCode == r.Kod || c.Name == r.Isim);
 
                     var email = NormalizeEmail(r.Mail);
+                    var phone = !string.IsNullOrWhiteSpace(r.Gsm) ? r.Gsm : r.Tel;
+                    phone = new string(phone.Where(char.IsDigit).ToArray());
 
                     if (existing == null)
                     {
@@ -889,8 +956,9 @@ namespace FSCTakip.WebUI.Controllers
                         {
                             CustomerCode = string.IsNullOrWhiteSpace(r.Kod) ? $"MHS-{count:D3}" : r.Kod,
                             Name         = r.Isim,
-                            Phone        = r.Tel,
+                            Phone        = phone,
                             Email        = email,
+                            Address      = r.Adres,
                             TaxNumber    = r.Vn,
                             TaxOffice    = r.Vd,
                             City         = r.Il,
@@ -903,8 +971,9 @@ namespace FSCTakip.WebUI.Controllers
                     else
                     {
                         existing.Name        = r.Isim;
-                        existing.Phone       = r.Tel;
+                        existing.Phone       = phone;
                         existing.Email       = email;
+                        existing.Address     = r.Adres;
                         existing.TaxNumber   = r.Vn;
                         existing.TaxOffice   = r.Vd;
                         existing.City        = r.Il;
