@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 2.3 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 2.4 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -38,6 +38,7 @@
 29. [BOM Bileşen Analizi](#bom-analizi)
 30. [Netsis ETL Excel Dosyaları](#netsis-etl-excel)
 31. [Hammadde Stoğu — Bobin Bazlı](#hammadde-stogu)
+32. [ETL Otomatik Algıla Import](#etl-oto-import)
 
 ---
 
@@ -1552,6 +1553,63 @@ Sütunlar: Seri No · Lot No · Ürün · Tedarikçi · FSC Tipi · Giriş kg ·
 > **ℹ️ FSC CoC Mass-Balance:** Denetimde "hangi FSC tipinden kaç kg hammadde girdiniz, kaç kg kullandınız, kaç kg hâlâ var?" sorusu sorulur. Bu ekran anlık kalan stoku FSC tipi bazında gösterir. CoC raporu ile birlikte kullanıldığında dönem içi giriş-çıkış-kalan dengesi tam olarak izlenebilir.
 
 > **⚠️ CurrentWeight Güncelleme:** Kalan ağırlık (CurrentWeight) üretimde hammadde tüketim kaydedilirken otomatik düşürülür. Tüketim kaydı girilmemiş iş emirleri bu değeri güncellemez — tüm tüketimlerin sisteme girilmesi FSC doğruluğu için zorunludur.
+
+---
+
+## 32. ETL Otomatik Algıla Import {#etl-oto-import}
+
+**Sayfa:** `/Etl/Import`  
+**Menü:** Sol Menü → ERP Entegrasyon → Excel Aktarımı
+
+Netsis ETL Excel dosyalarını (ETL_Tedarikciler / ETL_Musteriler / ETL_HammaddeGirisleri) **şablon indirmeye gerek kalmadan** doğrudan içe aktarır. Başlık satırı okunarak dosya türü otomatik belirlenir.
+
+### Kullanım Adımları
+
+1. Sol Menü → **ERP Entegrasyon** → **Excel Aktarımı**
+2. **Aktarım Türü** açılır listesinden **"⭐ ETL Otomatik Algıla"** seçin
+3. Netsis → Senkronizasyon sayfasından indirdiğiniz ETL Excel dosyasını seçin
+4. **Önizle** butonuyla ilk 10 satırı kontrol edin
+5. **Aktarmayı Başlat** — sistem dosya tipini otomatik algılar ve içe aktarır
+
+### Otomatik Algılama Mantığı
+
+| Başlık Satırında Bulunan | Algılanan Tip |
+|--------------------------|---------------|
+| `TedarikciAdi` sütunu | Tedarikçi ETL (ETL_Tedarikciler.xlsx) |
+| `MusteriAdi` sütunu | Müşteri ETL (ETL_Musteriler.xlsx) |
+| `LotNo` + `SeriNo` sütunları | Hammadde ETL (ETL_HammaddeGirisleri.xlsx) |
+
+### Sütun Eşleştirme (ETL Formatı)
+
+**Tedarikçi dosyası:** TedarikciAdi · Telefon · Email · Adres · Sehir · VergiDairesi · VergiNo · FscKodu · FscBitisTarihi
+
+**Müşteri dosyası:** MusteriAdi · Telefon · Email · Adres · Sehir · VergiDairesi · VergiNo · FscLisansKodu · FscBitisTarihi
+
+**Hammadde dosyası:** LotNo · SeriNo · StokKodu · StokAdi · FscTipi · Tedarikci · Miktar_kg · Tarih · FisNo · IrsaliyeNo · DepoKodu
+
+### Sonuç Raporu
+
+Aktarım bittikten sonra gösterilen özet:
+
+| Gösterge | Açıklama |
+|----------|----------|
+| Eklendi | Yeni kayıt sayısı |
+| Güncellendi | Mevcut eşleşip güncellenen |
+| Atlandı | Boş satır veya eşleşme bulunamayan |
+| Hata | Açıklama listesinde gösterilir |
+
+### Çakışma Kuralları
+
+- **Tedarikçi:** Aynı `Name` veya `TaxNumber` varsa günceller, yoksa `TED-NNN` kodu ile ekler
+- **Müşteri:** Aynı `Name` veya `TaxNumber` varsa günceller, yoksa `MHS-NNN` kodu ile ekler
+- **Hammadde:** Aynı `LotNo` varsa lot güncellenmez, ancak aynı `LotNo+SeriNo` yoksa yeni seri eklenir
+
+### Aktarım Sonrası
+
+- Tedarikçi/Müşteri için FSC Kodu ve Bitiş Tarihi sarı alanlar Tedarikçiler/Müşteriler listesinden düzenlenmelidir
+- Hammadde için ürün `StokKodu` FSC ERP'deki `ProductCode` ile eşleşmelidir — ürün bulunamazsa satır hata listesine düşer
+
+> **ℹ️ Sıralama:** Hammadde aktarımı öncesinde tedarikçi ve ürün kartları sistemde mevcut olmalıdır. Önce Tedarikçi → sonra Ürünler → son olarak Hammadde dosyasını aktarın.
 
 ---
 
