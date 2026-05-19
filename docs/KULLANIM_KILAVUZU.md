@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 2.2 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 2.3 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -37,6 +37,7 @@
 28. [Tam İzlenebilirlik — Satış → Üretim → Lot](#tam-izlenebilirlik)
 29. [BOM Bileşen Analizi](#bom-analizi)
 30. [Netsis ETL Excel Dosyaları](#netsis-etl-excel)
+31. [Hammadde Stoğu — Bobin Bazlı](#hammadde-stogu)
 
 ---
 
@@ -1483,6 +1484,74 @@ Dosyaları şu sırayla kullanın:
 > **ℹ️ Açılış Bakiyesi:** HTUR='A' (açılış devir) kayıtlarında STHAR_CARIKOD genellikle boş gelir. Bu durumda tedarikçi adı stok adındaki anahtar kelimelerden tahmin edilmiştir (KMK, MONDI, BILLERUD vb.). Aktarım öncesinde tedarikçi sütununu doğrulayın.
 
 > **ℹ️ Lot Gruplama Mantığı:** Her FISNO + STOK_KODU kombinasyonu tek bir FscLot olarak tanımlanmıştır. FISNO boş olan açılış devir kayıtları `ACILIS-{tarih}-{stokKodu}` anahtarıyla gruplandırılmıştır.
+
+---
+
+## 31. Hammadde Stoğu — Bobin Bazlı {#hammadde-stogu}
+
+**Sayfa:** `/Stock/RawMaterial`  
+**Menü:** Sol Menü → FSC İşlemleri → Hammadde Stoğu
+
+FSC CoC (Chain of Custody) mass-balance hesabı için en kritik ekran. Her FscSerial (bobin/rulo) kaydının anlık kalan ağırlığını, FSC tipini ve hangi lot'a ait olduğunu gösterir.
+
+```
+[≡] [← Hammadde Girişi]   Hammadde Stoğu   [Filtrele] [Excel] [👤]
+```
+
+### Özet Kartlar
+
+| Kart | Gösterge |
+|------|----------|
+| Toplam Kalan Ağırlık | Tüm aktif bobinlerin CurrentWeight toplamı (kg) |
+| Bobin / Seri | Aktif seri kayıt sayısı |
+| Lot Sayısı | Kaç farklı lot'tan geldiği |
+| FSC-100 Stoku | Yalnızca FSC-100 sertifikalı bobin ağırlığı |
+
+### FSC Tipi Dağılım Bandı
+
+Özet kartların altında her FSC tipinin kalan kg ve yüzdesi renkli kutularda gösterilir:
+- **Yeşil kutu** — FSC-100 (en katı sertifika)
+- **Mavi kutu** — FSC-MIX sınıfları
+- **Sarı kutu** — FSC-RECYCLED
+
+### Tablo Sütunları
+
+| Sütun | Açıklama |
+|-------|----------|
+| Seri No | FscSerial.SerialNo — lot detayına link |
+| Lot No | Bağlı FscLot.LotNo — lot detayına link |
+| Stok Adı | Hammadde ürün adı |
+| Tedarikçi | Tedarikçi firma adı |
+| FSC Tipi | FSC sertifika sınıfı (renkli badge) |
+| Giriş (kg) | InitialWeight — sisteme ilk girildiğindeki ağırlık |
+| Kalan (kg) | CurrentWeight — anlık kalan ağırlık |
+| Tüketim % | İlerleme çubuğu: kırmızı >%90, sarı >%50, yeşil diğer |
+| Durum | Mevcut / Az Kaldı (%10 altı) / Tükendi |
+
+### Filtreler
+
+| Alan | Açıklama |
+|------|----------|
+| FSC Tipi | Belirli sertifika sınıfını göster |
+| Tedarikçi | Tedarikçiye göre filtrele |
+| Stok / Ürün | Belirli hammadde türüne göre filtrele |
+| Tükenenler dahil | İşaretlenirse CurrentWeight=0 bobinler de gösterilir |
+
+### Kullanım
+
+1. Sol Menü → **Hammadde Stoğu** tıklayın
+2. Varsayılan görünümde yalnızca aktif (CurrentWeight > 0) bobinler listelenir
+3. **Filtrele** ile FSC tipine veya tedarikçiye göre daraltın — denetim anında hangi FSC sınıfından kaç kg kaldığını gösterir
+4. **Excel** ile tüm aktif stoğu dışa aktarın
+5. Seri No veya Lot No linkine tıklayarak Lot Detayı sayfasına geçin
+
+### Excel İndirme
+
+Sütunlar: Seri No · Lot No · Ürün · Tedarikçi · FSC Tipi · Giriş kg · Kalan kg · Tüketim kg · % Kalan · Açılış Devir · Lot Tarihi · Fatura No · İrsaliye No · Notlar
+
+> **ℹ️ FSC CoC Mass-Balance:** Denetimde "hangi FSC tipinden kaç kg hammadde girdiniz, kaç kg kullandınız, kaç kg hâlâ var?" sorusu sorulur. Bu ekran anlık kalan stoku FSC tipi bazında gösterir. CoC raporu ile birlikte kullanıldığında dönem içi giriş-çıkış-kalan dengesi tam olarak izlenebilir.
+
+> **⚠️ CurrentWeight Güncelleme:** Kalan ağırlık (CurrentWeight) üretimde hammadde tüketim kaydedilirken otomatik düşürülür. Tüketim kaydı girilmemiş iş emirleri bu değeri güncellemez — tüm tüketimlerin sisteme girilmesi FSC doğruluğu için zorunludur.
 
 ---
 

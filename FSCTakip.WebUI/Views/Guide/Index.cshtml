@@ -498,6 +498,10 @@
                 <span class="toc-num">30.</span> Netsis ETL Excel
                 <span class="toc-badge done">✓</span>
             </a>
+            <a class="toc-item" href="#hammadde-stogu" onclick="scrollTo('hammadde-stogu')">
+                <span class="toc-num">31.</span> Hammadde Stoğu
+                <span class="toc-badge done">✓</span>
+            </a>
         </div>
     </div>
 
@@ -511,11 +515,11 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>30 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis Sync → Denetim → İzlenebilirlik → BOM Analizi → ETL Excel)</span>
+                <span>31 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis Sync → Denetim → İzlenebilirlik → BOM Analizi → ETL Excel → Hammadde Stoğu)</span>
             </div>
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓</span>
-                <span>v2.2 — Netsis ETL Excel dosyaları eklendi</span>
+                <span>v2.3 — Hammadde Stoğu (bobin bazlı) modülü eklendi</span>
             </div>
             <div class="ms-auto text-muted" style="font-size:11px;">
                 <i class="fas fa-sync-alt me-1"></i> Her modül tamamlandıktan sonra güncellenir
@@ -573,7 +577,8 @@
             'Denetim Özet Raporu': 'denetim-ozet',
             'Tam İzlenebilirlik — Satış → Üretim → Lot': 'tam-izlenebilirlik',
             'BOM Bileşen Analizi': 'bom-analizi',
-            'Netsis ETL Excel Dosyaları': 'netsis-etl-excel'
+            'Netsis ETL Excel Dosyaları': 'netsis-etl-excel',
+            'Hammadde Stoğu — Bobin Bazlı': 'hammadde-stogu'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {
