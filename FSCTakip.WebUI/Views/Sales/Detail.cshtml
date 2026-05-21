@@ -66,11 +66,37 @@
                     }
                     @if (!string.IsNullOrEmpty(Model.DispatchNo))
                     {
-                        <tr><td class="text-muted ps-3">İrsaliye No</td><td>@Model.DispatchNo</td></tr>
+                        <tr>
+                            <td class="text-muted ps-3">İrsaliye No</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(Model.DispatchPdfPath))
+                                {
+                                    <button class="doc-num-btn"
+                                            onclick="showPdf('/@Model.DispatchPdfPath','İrsaliye — @Model.DispatchNo')"
+                                            title="İrsaliyeyi görüntüle">
+                                        <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@Model.DispatchNo
+                                    </button>
+                                }
+                                else { <span>@Model.DispatchNo</span> }
+                            </td>
+                        </tr>
                     }
                     @if (!string.IsNullOrEmpty(Model.InvoiceNo))
                     {
-                        <tr><td class="text-muted ps-3">Fatura No</td><td>@Model.InvoiceNo</td></tr>
+                        <tr>
+                            <td class="text-muted ps-3">Fatura No</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(Model.InvoicePdfPath))
+                                {
+                                    <button class="doc-num-btn"
+                                            onclick="showPdf('/@Model.InvoicePdfPath','Fatura — @Model.InvoiceNo')"
+                                            title="Faturayı görüntüle">
+                                        <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@Model.InvoiceNo
+                                    </button>
+                                }
+                                else { <span>@Model.InvoiceNo</span> }
+                            </td>
+                        </tr>
                     }
                     @if (Model.InvoiceAmount.HasValue)
                     {

@@ -66,11 +66,41 @@ namespace FSCTakip.WebUI.Controllers
             if (startDate.HasValue) query = query.Where(m => m.DocumentDate >= startDate.Value);
             if (endDate.HasValue)   query = query.Where(m => m.DocumentDate <= endDate.Value.AddDays(1));
 
+            var movements = await query.OrderByDescending(m => m.DocumentDate).ThenByDescending(m => m.Id).ToListAsync();
+
+            // Alış hareketleri için FscLot PDF bilgileri (DocumentNo = irsaliye/fatura no)
+            var purchaseDocNos = movements
+                .Where(m => m.Type == MovementType.PurchaseEntry && m.DocumentNo != null)
+                .Select(m => m.DocumentNo!).Distinct().ToList();
+            var purchaseLots = await _context.FscLots
+                .Where(l => (l.DispatchNo != null && purchaseDocNos.Contains(l.DispatchNo))
+                         || (l.InvoiceNo  != null && purchaseDocNos.Contains(l.InvoiceNo)))
+                .ToListAsync();
+            // Belge no → lot eşleşmesi (önce irsaliye, yoksa fatura ile)
+            var purchaseLotMap = new Dictionary<string, FscLot>(StringComparer.OrdinalIgnoreCase);
+            foreach (var lot in purchaseLots)
+            {
+                if (!string.IsNullOrEmpty(lot.DispatchNo) && !purchaseLotMap.ContainsKey(lot.DispatchNo))
+                    purchaseLotMap[lot.DispatchNo] = lot;
+                if (!string.IsNullOrEmpty(lot.InvoiceNo) && !purchaseLotMap.ContainsKey(lot.InvoiceNo))
+                    purchaseLotMap[lot.InvoiceNo] = lot;
+            }
+            ViewBag.PurchaseLotMap = purchaseLotMap;
+
+            // Satış hareketleri için SalesOrder PDF bilgileri (DocumentNo = SalesOrderNo)
+            var salesDocNos = movements
+                .Where(m => m.Type == MovementType.SalesDispatch && m.DocumentNo != null)
+                .Select(m => m.DocumentNo!).Distinct().ToList();
+            var salesOrderMap = await _context.SalesOrders
+                .Where(o => salesDocNos.Contains(o.SalesOrderNo))
+                .ToDictionaryAsync(o => o.SalesOrderNo, StringComparer.OrdinalIgnoreCase);
+            ViewBag.SalesOrderMap = salesOrderMap;
+
             ViewBag.Products  = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
             ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
             ViewBag.EndDate   = endDate?.ToString("yyyy-MM-dd");
 
-            return View(await query.OrderByDescending(m => m.DocumentDate).ThenByDescending(m => m.Id).ToListAsync());
+            return View(movements);
         }
 
         // POST /Stock/SaveTransfer

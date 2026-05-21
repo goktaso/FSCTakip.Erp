@@ -25,23 +25,37 @@
 
 <!-- Dönem Filtresi -->
 <div class="table-card p-3 mb-3">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <span style="width:30px;height:30px;border-radius:8px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-shield-alt" style="color:#1d4ed8;font-size:13px;"></i>
+        </span>
+        <div>
+            <strong style="font-size:13px;">Denetim Dönemi Seçimi</strong>
+            <div class="text-muted" style="font-size:11px;">Önceki denetim tarihinden mevcut denetime kadar olan verileri raporlar</div>
+        </div>
+    </div>
     <form method="get" action="/Reports/AuditReport" class="d-flex align-items-end gap-3 flex-wrap">
         <div>
-            <label class="form-label small fw-semibold mb-1">Başlangıç</label>
+            <label class="form-label small fw-semibold mb-1">
+                <i class="fas fa-calendar-minus me-1 text-muted"></i>Önceki Denetim Tarihi
+            </label>
             <input type="date" name="startDate" class="form-control form-control-sm"
-                   value="@Model.StartDate.ToString("yyyy-MM-dd")" style="width:150px;">
+                   value="@Model.StartDate.ToString("yyyy-MM-dd")" style="width:180px;">
         </div>
+        <div class="text-muted align-self-center pt-3 px-1">→</div>
         <div>
-            <label class="form-label small fw-semibold mb-1">Bitiş</label>
+            <label class="form-label small fw-semibold mb-1">
+                <i class="fas fa-calendar-check me-1 text-muted"></i>Mevcut Denetim Tarihi
+            </label>
             <input type="date" name="endDate" class="form-control form-control-sm"
-                   value="@Model.EndDate.ToString("yyyy-MM-dd")" style="width:150px;">
+                   value="@Model.EndDate.ToString("yyyy-MM-dd")" style="width:180px;">
         </div>
         <button type="submit" class="btn btn-primary btn-sm px-4">
             <i class="fas fa-search me-1"></i> Rapor Oluştur
         </button>
         <div class="ms-auto text-muted small align-self-center">
             <i class="fas fa-calendar-alt me-1"></i>
-            Dönem: <strong>@sd — @ed</strong>
+            Denetim Dönemi: <strong>@sd — @ed</strong>
         </div>
     </form>
 </div>

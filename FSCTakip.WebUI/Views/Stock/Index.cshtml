@@ -89,7 +89,13 @@
             <tbody>
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="9" class="text-center text-muted py-4">Henüz stok hareketi bulunmuyor</td></tr>
+                    <tr><td colspan="9">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-warehouse"></i></div>
+                            <h6>Henüz stok hareketi yok</h6>
+                            <p>Hammadde girişi ve satış işlemleri gerçekleştikçe stok burada görünür.</p>
+                        </div>
+                    </td></tr>
                 }
                 @foreach (var row in Model)
                 {

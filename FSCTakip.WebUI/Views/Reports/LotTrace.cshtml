@@ -61,8 +61,34 @@ else
                             <span class="badge badge-primary">@lot.FscType.Name</span>
                         }
                     </td></tr>
-                    <tr><td class="text-muted small">İrsaliye No</td><td>@(lot.DispatchNo ?? "—")</td></tr>
-                    <tr><td class="text-muted small">Fatura No</td><td>@(lot.InvoiceNo ?? "—")</td></tr>
+                    <tr>
+                        <td class="text-muted small">İrsaliye No</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(lot.DispatchNo) && !string.IsNullOrEmpty(lot.DispatchPdfPath))
+                            {
+                                <button class="doc-num-btn"
+                                        onclick="showPdf('/@lot.DispatchPdfPath','İrsaliye — @lot.DispatchNo')"
+                                        title="İrsaliyeyi görüntüle">
+                                    <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@lot.DispatchNo
+                                </button>
+                            }
+                            else { <span>@(lot.DispatchNo ?? "—")</span> }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Fatura No</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(lot.InvoiceNo) && !string.IsNullOrEmpty(lot.InvoicePdfPath))
+                            {
+                                <button class="doc-num-btn"
+                                        onclick="showPdf('/@lot.InvoicePdfPath','Fatura — @lot.InvoiceNo')"
+                                        title="Faturayı görüntüle">
+                                    <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@lot.InvoiceNo
+                                </button>
+                            }
+                            else { <span>@(lot.InvoiceNo ?? "—")</span> }
+                        </td>
+                    </tr>
                     <tr><td class="text-muted small">Ürün</td><td>@(lot.Product?.ProductName ?? "—")</td></tr>
                 </table>
             </div>

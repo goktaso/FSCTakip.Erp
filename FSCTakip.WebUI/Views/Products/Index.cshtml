@@ -76,7 +76,7 @@
                                 <td><strong class="text-primary">@item.ProductCode</strong></td>
                                 <td class="small font-weight-bold">@item.ProductName</td>
                                 <td><span class="text-muted small">@(item.Supplier?.Name ?? "-")</span></td>
-                                <td><span class="badge badge-light border">@(item.ProductGroup?.GroupName ?? "-")</span></td>
+                                <td><span class="badge badge-blue" style="font-size:11px;">@(item.ProductGroup?.GroupName ?? "-")</span></td>
                                 <td>@(item.PaperColor?.Name ?? "-")</td>
                                 <td>@(item.PaperWeight != null ? $"{item.PaperWeight.Value} {item.PaperWeight.Unit}" : "-")</td>
                                 <td>@(item.PaperWidth != null ? $"{item.PaperWidth.Value} {item.PaperWidth.Unit}" : "-")</td>
@@ -92,9 +92,22 @@
                                     <button class="btn btn-sm btn-outline-primary" onclick="editProduct(@item.Id)" title="Düzenle">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <a href="/Products/Recipe/@item.Id" class="btn btn-sm btn-outline-success" title="Reçete / BOM">
-                                        <i class="fas fa-list-ul"></i>
-                                    </a>
+                                    @{
+                                        var groupName = item.ProductGroup?.GroupName ?? "";
+                                        bool isHammadde = groupName.Contains("Hammadde", StringComparison.OrdinalIgnoreCase);
+                                    }
+                                    @if (!isHammadde)
+                                    {
+                                        <a href="/Products/Recipe/@item.Id" class="btn btn-sm btn-outline-success" title="Reçete / BOM">
+                                            <i class="fas fa-list-ul"></i>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary" disabled title="Hammadde için reçete gerekmez">
+                                            <i class="fas fa-list-ul"></i>
+                                        </button>
+                                    }
                                 </td>
                             </tr>
                         }

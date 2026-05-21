@@ -2,9 +2,11 @@
 @using FSCTakip.Core.Entities
 @{
     ViewData["Title"] = "Stok Hareketleri";
-    var products  = ViewBag.Products as List<Product> ?? new();
-    string? start = ViewBag.StartDate;
-    string? end   = ViewBag.EndDate;
+    var products       = ViewBag.Products       as List<Product>                           ?? new();
+    var purchaseLotMap = ViewBag.PurchaseLotMap as Dictionary<string, FscLot>              ?? new();
+    var salesOrderMap  = ViewBag.SalesOrderMap  as Dictionary<string, SalesOrder>          ?? new();
+    string? start      = ViewBag.StartDate;
+    string? end        = ViewBag.EndDate;
 }
 
 <div class="page-header">
@@ -45,11 +47,11 @@
             <thead>
                 <tr>
                     <th>TARİH</th>
-                    <th>BELGE NO</th>
                     <th>TİP</th>
                     <th>ÜRÜN</th>
                     <th class="text-end">MİKTAR</th>
                     <th>BİRİM</th>
+                    <th>BELGELER</th>
                     <th>MÜŞTERİ / AÇIKLAMA</th>
                     <th>PLAKA</th>
                     <th>İŞ EMRİ</th>
@@ -58,14 +60,20 @@
             <tbody>
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="9" class="text-center text-muted py-4">Kayıt bulunamadı</td></tr>
+                    <tr><td colspan="9">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-exchange-alt"></i></div>
+                            <h6>Stok hareketi bulunamadı</h6>
+                            <p>Seçilen filtre kriterlerine uygun hareket kaydı yok.</p>
+                        </div>
+                    </td></tr>
                 }
                 @foreach (var m in Model)
                 {
                     string tipClass = m.Type switch {
-                        MovementType.PurchaseEntry    => "badge-info",
-                        MovementType.ProductionEntry  => "badge-primary",
-                        MovementType.SalesDispatch    => "badge-danger",
+                        MovementType.PurchaseEntry     => "badge-info",
+                        MovementType.ProductionEntry   => "badge-primary",
+                        MovementType.SalesDispatch     => "badge-danger",
                         MovementType.WarehouseTransfer => "badge-warning",
                         _ => "badge-secondary"
                     };
@@ -77,15 +85,95 @@
                         _ => m.Type.ToString()
                     };
                     bool isGiris = m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry;
+
+                    // Belge bilgisi — alış için FscLot, satış için SalesOrder
+                    FscLot?    purchaseLot  = null;
+                    SalesOrder? salesOrder  = null;
+                    if (m.Type == MovementType.PurchaseEntry && m.DocumentNo != null)
+                        purchaseLotMap.TryGetValue(m.DocumentNo, out purchaseLot);
+                    if (m.Type == MovementType.SalesDispatch && m.DocumentNo != null)
+                        salesOrderMap.TryGetValue(m.DocumentNo, out salesOrder);
+
                     <tr>
                         <td class="small text-muted">@m.DocumentDate.ToString("dd.MM.yyyy")</td>
-                        <td class="small fw-semibold">@(m.DocumentNo ?? "—")</td>
                         <td><span class="badge @tipClass">@tipText</span></td>
                         <td><strong class="small">@(m.Product?.ProductName ?? "—")</strong></td>
                         <td class="text-end fw-semibold @(isGiris ? "text-success" : m.Type == MovementType.SalesDispatch ? "text-danger" : "")">
                             @(isGiris ? "+" : m.Type == MovementType.SalesDispatch ? "-" : "")@m.Quantity.ToString("N0")
                         </td>
                         <td class="small text-muted">@m.Unit</td>
+                        <td>
+                            @* --- Alış hareketi: irsaliye + fatura PDF --- *@
+                            @if (purchaseLot != null)
+                            {
+                                @if (!string.IsNullOrEmpty(purchaseLot.DispatchNo))
+                                {
+                                    <div class="small mb-1">
+                                        <i class="fas fa-truck me-1 text-muted" title="İrsaliye"></i>
+                                        @if (!string.IsNullOrEmpty(purchaseLot.DispatchPdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@purchaseLot.DispatchPdfPath','İrsaliye — @purchaseLot.DispatchNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@purchaseLot.DispatchNo
+                                            </button>
+                                        }
+                                        else { <span>@purchaseLot.DispatchNo</span> }
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(purchaseLot.InvoiceNo))
+                                {
+                                    <div class="small">
+                                        <i class="fas fa-file-invoice me-1 text-muted" title="Fatura"></i>
+                                        @if (!string.IsNullOrEmpty(purchaseLot.InvoicePdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@purchaseLot.InvoicePdfPath','Fatura — @purchaseLot.InvoiceNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@purchaseLot.InvoiceNo
+                                            </button>
+                                        }
+                                        else { <span>@purchaseLot.InvoiceNo</span> }
+                                    </div>
+                                }
+                                @if (string.IsNullOrEmpty(purchaseLot.DispatchNo) && string.IsNullOrEmpty(purchaseLot.InvoiceNo))
+                                {
+                                    <span class="small text-muted">@(m.DocumentNo ?? "—")</span>
+                                }
+                            }
+                            @* --- Satış hareketi: irsaliye + fatura PDF --- *@
+                            else if (salesOrder != null)
+                            {
+                                <div class="small mb-1 fw-semibold text-muted" style="font-size:10px;">@salesOrder.SalesOrderNo</div>
+                                @if (!string.IsNullOrEmpty(salesOrder.DispatchNo))
+                                {
+                                    <div class="small mb-1">
+                                        <i class="fas fa-truck me-1 text-muted" title="İrsaliye"></i>
+                                        @if (!string.IsNullOrEmpty(salesOrder.DispatchPdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@salesOrder.DispatchPdfPath','İrsaliye — @salesOrder.DispatchNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@salesOrder.DispatchNo
+                                            </button>
+                                        }
+                                        else { <span>@salesOrder.DispatchNo</span> }
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(salesOrder.InvoiceNo))
+                                {
+                                    <div class="small">
+                                        <i class="fas fa-file-invoice me-1 text-muted" title="Fatura"></i>
+                                        @if (!string.IsNullOrEmpty(salesOrder.InvoicePdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@salesOrder.InvoicePdfPath','Fatura — @salesOrder.InvoiceNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@salesOrder.InvoiceNo
+                                            </button>
+                                        }
+                                        else { <span>@salesOrder.InvoiceNo</span> }
+                                    </div>
+                                }
+                            }
+                            @* --- Diğer hareketler: sadece belge no --- *@
+                            else
+                            {
+                                <span class="small fw-semibold">@(m.DocumentNo ?? "—")</span>
+                            }
+                        </td>
                         <td class="small text-muted">
                             @if (m.Customer != null) { <span>@m.Customer.Name</span> }
                             else if (!string.IsNullOrEmpty(m.Description)) { <span>@m.Description</span> }

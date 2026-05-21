@@ -108,7 +108,7 @@
 
 <!-- Tablo -->
 <div class="table-card">
-    <table class="table">
+    <table class="data-table">
         <thead>
             <tr>
                 <th>SİPARİŞ NO</th>
@@ -126,7 +126,13 @@
         <tbody>
             @if (!Model.Any())
             {
-                <tr><td colspan="10"><div class="empty-state"><i class="fas fa-file-invoice"></i><p>Henüz satış kaydı yok.</p></div></td></tr>
+                <tr><td colspan="10">
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
+                        <h6>Henüz satış kaydı yok</h6>
+                        <p><strong>+ Yeni Sipariş</strong> butonu ile ilk siparişi oluşturun.</p>
+                    </div>
+                </td></tr>
             }
             @foreach (var s in Model)
             {
@@ -154,8 +160,28 @@
                         }
                     </td>
                     <td class="text-muted">@s.OrderDate.ToString("dd.MM.yyyy")</td>
-                    <td class="text-muted">@(s.DispatchNo ?? "—")</td>
-                    <td class="text-muted">@(s.InvoiceNo ?? "—")</td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(s.DispatchNo) && !string.IsNullOrEmpty(s.DispatchPdfPath))
+                        {
+                            <button class="doc-num-btn"
+                                    onclick="showPdf('/@s.DispatchPdfPath','İrsaliye — @s.DispatchNo')"
+                                    title="İrsaliyeyi görüntüle">
+                                <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@s.DispatchNo
+                            </button>
+                        }
+                        else { <span class="text-muted">@(s.DispatchNo ?? "—")</span> }
+                    </td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(s.InvoiceNo) && !string.IsNullOrEmpty(s.InvoicePdfPath))
+                        {
+                            <button class="doc-num-btn"
+                                    onclick="showPdf('/@s.InvoicePdfPath','Fatura — @s.InvoiceNo')"
+                                    title="Faturayı görüntüle">
+                                <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@s.InvoiceNo
+                            </button>
+                        }
+                        else { <span class="text-muted">@(s.InvoiceNo ?? "—")</span> }
+                    </td>
                     <td class="text-end fw-semibold">
                         @if (s.InvoiceAmount.HasValue)
                         {

@@ -58,11 +58,31 @@
                     </div>
                     <div class="col-6">
                         <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;">İrsaliye No</div>
-                        <div>@(Model.DispatchNo ?? "—")</div>
+                        <div>
+                            @if (!string.IsNullOrEmpty(Model.DispatchNo) && !string.IsNullOrEmpty(Model.DispatchPdfPath))
+                            {
+                                <button class="doc-num-btn"
+                                        onclick="showPdf('/Purchase/ViewDocument?path=@Model.DispatchPdfPath','İrsaliye — @Model.DispatchNo')"
+                                        title="İrsaliyeyi görüntüle">
+                                    <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@Model.DispatchNo
+                                </button>
+                            }
+                            else { @(Model.DispatchNo ?? "—") }
+                        </div>
                     </div>
                     <div class="col-6">
                         <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;">Fatura No</div>
-                        <div>@(Model.InvoiceNo ?? "—")</div>
+                        <div>
+                            @if (!string.IsNullOrEmpty(Model.InvoiceNo) && !string.IsNullOrEmpty(Model.InvoicePdfPath))
+                            {
+                                <button class="doc-num-btn"
+                                        onclick="showPdf('/Purchase/ViewDocument?path=@Model.InvoicePdfPath','Fatura — @Model.InvoiceNo')"
+                                        title="Faturayı görüntüle">
+                                    <i class="fas fa-file-invoice me-1" style="color:#d97706;font-size:11px;"></i>@Model.InvoiceNo
+                                </button>
+                            }
+                            else { @(Model.InvoiceNo ?? "—") }
+                        </div>
                     </div>
                     @if (Model.InvoiceAmount.HasValue)
                     {
@@ -128,11 +148,11 @@
                     @if (!string.IsNullOrEmpty(Model.DispatchPdfPath))
                     {
                         <div class="d-flex gap-2">
-                            <a href="/Purchase/ViewDocument?path=@Model.DispatchPdfPath" target="_blank"
-                               class="btn btn-sm flex-fill"
-                               style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;">
+                            <button onclick="showPdf('/Purchase/ViewDocument?path=@Model.DispatchPdfPath','İrsaliye — @Model.DispatchNo')"
+                                    class="btn btn-sm flex-fill"
+                                    style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;">
                                 <i class="fas fa-file-pdf me-1"></i> Görüntüle
-                            </a>
+                            </button>
                             <button onclick="uploadDoc('dispatch')"
                                     class="btn btn-sm" style="background:#f9fafb;border:1px solid var(--border);border-radius:8px;"
                                     title="Değiştir"><i class="fas fa-sync-alt"></i></button>
@@ -151,11 +171,11 @@
                     @if (!string.IsNullOrEmpty(Model.InvoicePdfPath))
                     {
                         <div class="d-flex gap-2">
-                            <a href="/Purchase/ViewDocument?path=@Model.InvoicePdfPath" target="_blank"
-                               class="btn btn-sm flex-fill"
-                               style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:8px;">
+                            <button onclick="showPdf('/Purchase/ViewDocument?path=@Model.InvoicePdfPath','Fatura — @Model.InvoiceNo')"
+                                    class="btn btn-sm flex-fill"
+                                    style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:8px;">
                                 <i class="fas fa-file-invoice me-1"></i> Görüntüle
-                            </a>
+                            </button>
                             <button onclick="uploadDoc('invoice')"
                                     class="btn btn-sm" style="background:#f9fafb;border:1px solid var(--border);border-radius:8px;"
                                     title="Değiştir"><i class="fas fa-sync-alt"></i></button>

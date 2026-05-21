@@ -690,18 +690,18 @@ function showLotDocs(serialId) {
                 : '';
             document.getElementById('ldInvoiceAmount').textContent = invAmt;
             document.getElementById('ldInvoicePdf').innerHTML = d.invoicePdfPath
-                ? `<a href="/${d.invoicePdfPath}" target="_blank" class="btn btn-primary btn-sm w-100">
-                       <i class="fas fa-file-pdf me-1"></i> Fatura PDF'ini Aç
-                   </a>`
+                ? `<button class="btn btn-primary btn-sm w-100" onclick="showPdf('/${d.invoicePdfPath}','Fatura — ' + invNo)">
+                       <i class="fas fa-file-pdf me-1"></i> Fatura PDF'ini Görüntüle
+                   </button>`
                 : `<div class="text-muted small"><i class="fas fa-info-circle me-1"></i>PDF henüz yüklenmemiş</div>`;
 
             // İrsaliye
             const dispNo = d.dispatchNo || '—';
             document.getElementById('ldDispatchNo').textContent = dispNo;
             document.getElementById('ldDispatchPdf').innerHTML = d.dispatchPdfPath
-                ? `<a href="/${d.dispatchPdfPath}" target="_blank" class="btn btn-success btn-sm w-100">
-                       <i class="fas fa-file-pdf me-1"></i> İrsaliye PDF'ini Aç
-                   </a>`
+                ? `<button class="btn btn-success btn-sm w-100" onclick="showPdf('/${d.dispatchPdfPath}','İrsaliye — ' + dispNo)">
+                       <i class="fas fa-file-pdf me-1"></i> İrsaliye PDF'ini Görüntüle
+                   </button>`
                 : `<div class="text-muted small"><i class="fas fa-info-circle me-1"></i>PDF henüz yüklenmemiş</div>`;
 
             document.getElementById('ldLotDetailLink').href = `/Purchase/Detail/${d.lotId}`;

@@ -74,15 +74,15 @@
         <div class="row g-2 align-items-end">
             <div class="col-md-2">
                 <label class="form-label">Başlangıç Tarihi</label>
-                <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control">
+                <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control form-control-sm">
             </div>
             <div class="col-md-2">
                 <label class="form-label">Bitiş Tarihi</label>
-                <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control">
+                <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control form-control-sm">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Ürün</label>
-                <select name="productId" class="form-select">
+                <select name="productId" class="form-select form-select-sm">
                     <option value="">— Tümü —</option>
                     @foreach (var p in products)
                     {
@@ -92,7 +92,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Durum</label>
-                <select name="status" class="form-select">
+                <select name="status" class="form-select form-select-sm">
                     <option value="">— Tümü —</option>
                     <option value="1">Taslak</option>
                     <option value="2">Üretimde</option>
@@ -100,11 +100,13 @@
                     <option value="4">İptal</option>
                 </select>
             </div>
-            <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-primary w-100">
+            <div class="col-md-3 d-flex gap-2 align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">
                     <i class="fas fa-search me-1"></i> Sorgula
                 </button>
-                <a href="/Production/Index" class="btn btn-outline-secondary w-100">Temizle</a>
+                <a href="/Production/Index" class="btn btn-outline-secondary btn-sm flex-fill">
+                    <i class="fas fa-times me-1"></i> Temizle
+                </a>
             </div>
         </div>
     </form>
@@ -112,19 +114,19 @@
 
 <!-- Tablo -->
 <div class="table-card">
-    <table class="table">
+    <table class="data-table">
         <thead>
             <tr>
-                <th>İş Emri No</th>
-                <th>Ürün</th>
-                <th>Makine</th>
-                <th>Plan Tarihi</th>
-                <th class="text-center">Plan (adet)</th>
-                <th class="text-center">Gerçek (adet)</th>
-                <th class="text-center">Tüketim (kg)</th>
-                <th class="text-center">Fire (kg)</th>
-                <th class="text-center">Durum</th>
-                <th class="text-center">İşlem</th>
+                <th>İŞ EMRİ NO</th>
+                <th>ÜRÜN</th>
+                <th>MAKİNE</th>
+                <th>PLAN TARİHİ</th>
+                <th class="text-center">PLAN (adet)</th>
+                <th class="text-center">GERÇEK (adet)</th>
+                <th class="text-center">TÜKETİM (kg)</th>
+                <th class="text-center">FİRE (kg)</th>
+                <th class="text-center">DURUM</th>
+                <th class="text-center">İŞLEM</th>
             </tr>
         </thead>
         <tbody>
@@ -133,8 +135,9 @@
                 <tr>
                     <td colspan="10">
                         <div class="empty-state">
-                            <i class="fas fa-industry"></i>
-                            <p>Henüz iş emri yok. <strong>Yeni İş Emri</strong> butonunu kullanın.</p>
+                            <div class="empty-icon"><i class="fas fa-industry"></i></div>
+                            <h6>Henüz iş emri yok</h6>
+                            <p><strong>+ Yeni İş Emri</strong> butonu ile üretim planlamaya başlayın.</p>
                         </div>
                     </td>
                 </tr>

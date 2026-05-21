@@ -131,6 +131,30 @@
         .nav-sub .nav-link-item:hover::before { background: #60a5fa; }
         .sidebar.collapsed .nav-sub { display: none; }
 
+        /* ── COLLAPSIBLE NAV SECTIONS ──────────────────────────── */
+        .nav-section-toggle {
+            width: 100%; display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px 4px;
+            background: none; border: none; cursor: pointer;
+            font-size: 10px; font-weight: 600; letter-spacing: .1em;
+            color: rgba(255,255,255,.30); text-transform: uppercase;
+            white-space: nowrap; overflow: hidden;
+            transition: color .15s; line-height: 1.4;
+        }
+        .nav-section-toggle:hover { color: rgba(255,255,255,.52); }
+        .nav-section-toggle:focus { outline: none; box-shadow: none; }
+        .nav-section-arrow {
+            font-size: 9px; flex-shrink: 0; margin-left: 4px;
+            color: rgba(255,255,255,.22);
+            transition: transform .22s ease;
+        }
+        .nav-section-toggle[aria-expanded="true"] .nav-section-arrow { transform: rotate(90deg); }
+        /* İkon-only modda başlıklar gizlenir, tüm öğeler görünür kalır */
+        .sidebar.collapsed .nav-section-toggle {
+            opacity: 0; height: 0; padding: 0; pointer-events: none; overflow: hidden;
+        }
+        .sidebar.collapsed .nav-section-collapse { display: block !important; }
+
         .sidebar-footer {
             padding: 10px 12px;
             border-top: 1px solid rgba(255,255,255,.08);
@@ -404,10 +428,61 @@
         .fade-in { animation: fadeIn .3s ease; }
         @@keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
 
+        /* ── BELGE NO LİNKİ ────────────────────────────── */
+        .doc-num-btn {
+            background: none; border: none; padding: 0; cursor: pointer;
+            font-size: inherit; font-weight: 600; color: #1a2744;
+            text-decoration: underline; text-decoration-style: dotted;
+            text-underline-offset: 3px; transition: color .15s;
+        }
+        .doc-num-btn:hover { color: var(--accent); text-decoration-style: solid; }
+
+        /* ── STATS GRID ────────────────────────────────── */
+        .stats-grid {
+            display: grid;
+            gap: 14px;
+        }
+
+        /* ── DATA TABLE ────────────────────────────────── */
+        .data-table {
+            width: 100%; border-collapse: collapse; font-size: 13px; margin: 0;
+        }
+        .data-table thead tr {
+            background: var(--table-header-bg);
+        }
+        .data-table thead th {
+            color: var(--table-header-color); font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: .06em;
+            padding: 11px 14px; white-space: nowrap; border: none;
+        }
+        .data-table tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background .12s;
+        }
+        .data-table tbody tr:nth-child(even) { background: #fafbfd; }
+        .data-table tbody tr:hover { background: #eff6ff !important; }
+        .data-table tbody tr:last-child { border-bottom: none; }
+        .data-table tbody td {
+            padding: 10px 14px; vertical-align: middle; color: #374151;
+        }
+        .data-table tfoot td {
+            padding: 10px 14px; background: #f1f5f9;
+            border-top: 2px solid #e2e8f0; font-weight: 600; font-size: 12px;
+        }
+
         /* ── EMPTY STATE ───────────────────────────────── */
-        .empty-state { padding: 60px 20px; text-align: center; }
+        .empty-state {
+            padding: 56px 20px; text-align: center;
+        }
+        .empty-state .empty-icon {
+            width: 64px; height: 64px; border-radius: 16px;
+            background: #f1f5f9; display: inline-flex;
+            align-items: center; justify-content: center;
+            font-size: 28px; color: #94a3b8; margin-bottom: 14px;
+        }
+        .empty-state h6 { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+        .empty-state p { color: var(--text-muted); font-size: 12.5px; margin: 0; }
         .empty-state i { font-size: 40px; color: #d1d5db; margin-bottom: 12px; display: block; }
-        .empty-state p { color: var(--text-muted); margin: 0; }
 
         /* ── TOAST ─────────────────────────────────────── */
         .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; }
@@ -432,6 +507,141 @@
             font-size: 11px; font-weight: 600; padding: 2px 9px;
             border-radius: 20px;
         }
+
+        /* ── INFO CARD (açıklama kartı) ─────────────────── */
+        .info-card {
+            background: #f8faff; border: 1px solid #dbeafe;
+            border-radius: 10px; padding: 12px 16px;
+            display: flex; gap: 10px; align-items: flex-start;
+        }
+        .info-card.warning { background: #fffbeb; border-color: #fde68a; }
+        .info-card.danger  { background: #fef2f2; border-color: #fecaca; }
+        .info-card.success { background: #f0fdf4; border-color: #bbf7d0; }
+        .info-card i { font-size: 15px; margin-top: 1px; flex-shrink: 0; }
+
+        /* ── SECTION HEADER ────────────────────────────── */
+        .section-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 12px 16px; border-bottom: 1px solid var(--border);
+            background: #fff;
+        }
+        .section-header .sh-icon {
+            width: 30px; height: 30px; border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; flex-shrink: 0;
+        }
+        .section-header .sh-title { font-size: 13px; font-weight: 600; color: #1e293b; }
+        .section-header .sh-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+        .section-header .sh-actions { margin-left: auto; display: flex; gap: 6px; }
+
+        /* ── DETAIL ROW ────────────────────────────────── */
+        .detail-row {
+            display: flex; padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9; font-size: 13px;
+            align-items: flex-start;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row .dr-label {
+            width: 140px; flex-shrink: 0;
+            color: var(--text-muted); font-size: 12px;
+        }
+        .detail-row .dr-value { font-weight: 500; color: #1e293b; flex: 1; }
+
+        /* ── FSC BADGE ──────────────────────────────────── */
+        .fsc-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+        }
+        .fsc-badge.active  { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .fsc-badge.warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .fsc-badge.expired { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+        /* ── PROGRESS STACKED BAR ───────────────────────── */
+        .stock-bar {
+            height: 6px; border-radius: 4px; background: #e5e7eb;
+            overflow: hidden; min-width: 60px;
+        }
+        .stock-bar-fill {
+            height: 100%; border-radius: 4px;
+            transition: width .4s cubic-bezier(.4,0,.2,1);
+        }
+
+        /* ── NAV TABS IMPROVED ──────────────────────────── */
+        .nav-tabs .nav-link {
+            color: #6b7280; font-size: 13px; font-weight: 500;
+            padding: 8px 16px; border-radius: 8px 8px 0 0;
+            border: 1px solid transparent; transition: all .15s;
+        }
+        .nav-tabs .nav-link:hover { color: var(--accent); background: #f0f4ff; }
+        .nav-tabs .nav-link.active {
+            color: var(--accent); background: #fff;
+            border-color: var(--border) var(--border) #fff;
+            font-weight: 600;
+        }
+
+        /* ── TOPBAR PAGE TITLE ──────────────────────────── */
+        .topbar-page-title {
+            font-size: 14px; font-weight: 600; color: #1e293b; letter-spacing: -.01em;
+        }
+
+        /* ── QUICK ACTION CARD ──────────────────────────── */
+        .quick-action {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 12px; border-radius: 8px;
+            border: 1px solid var(--border); background: #fff;
+            text-decoration: none; color: #374151; font-size: 12.5px;
+            transition: all .15s; cursor: pointer;
+        }
+        .quick-action:hover {
+            border-color: var(--accent); background: #eff6ff;
+            color: var(--accent); transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(25,118,210,.12);
+        }
+        .quick-action i { font-size: 14px; flex-shrink: 0; }
+
+        /* ── PAGE HEADER ────────────────────────────────── */
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 18px; padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .page-title {
+            font-size: 17px; font-weight: 700; color: #1e293b;
+            margin: 0; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* ── FILTER CARD / FORM ─────────────────────────── */
+        .filter-card {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 12px 16px;
+            margin-bottom: 14px; box-shadow: var(--shadow-sm);
+            border-left: 3px solid var(--accent);
+        }
+        .filter-form {
+            display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+        }
+        .filter-form .form-control,
+        .filter-form .form-select { min-width: 140px; }
+
+        /* ── BOOTSTRAP BADGE OVERRIDE ───────────────────── */
+        .badge-success  { background: #dcfce7 !important; color: #166534 !important; }
+        .badge-danger   { background: #fee2e2 !important; color: #991b1b !important; }
+        .badge-warning  { background: #fef3c7 !important; color: #92400e !important; }
+        .badge-info     { background: #dbeafe !important; color: #1d4ed8 !important; }
+        .badge-primary  { background: #dbeafe !important; color: #1d4ed8 !important; }
+        .badge-secondary{ background: #f3f4f6 !important; color: #374151 !important; }
+        /* soft variants (no !important — used inline alongside .badge) */
+        .badge-success-soft  { background: #dcfce7; color: #166534; }
+        .badge-danger-soft   { background: #fee2e2; color: #991b1b; }
+        .badge-warning-soft  { background: #fef3c7; color: #92400e; }
+        .badge-info-soft     { background: #dbeafe; color: #1d4ed8; }
+        .badge-secondary-soft{ background: #f3f4f6; color: #374151; }
+        .badge-amber         { background: #fef3c7 !important; color: #92400e !important; }
+
+        /* ── STOCK BAR COLORS ───────────────────────────── */
+        .bg-success-soft { background: #16a34a; }
+        .bg-warning-soft { background: #d97706; }
+        .bg-danger-soft  { background: #dc2626; }
     </style>
 </head>
 <body>
@@ -439,6 +649,19 @@
 @{
     var ctrl   = ViewContext.RouteData.Values["Controller"]?.ToString() ?? "";
     var action = ViewContext.RouteData.Values["Action"]?.ToString() ?? "";
+
+    // Hangi sidebar bölümü aktif?
+    var activeSection = ctrl switch {
+        "Purchase" or "Production" or "Sales" or "Stock" => "fsc",
+        "Customers" or "Suppliers" or "Products"          => "ticari",
+        "Reports"                                         => "rapor",
+        "Product" or "Paper" or "Machine" or "Warehouse"
+            or "Etl" or "Guide"                           => "tanim",
+        _                                                 => "genel"
+    };
+
+    string Sec(string id) => activeSection == id ? "show" : "";
+    string Exp(string id) => activeSection == id ? "true" : "false";
 }
 
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -456,193 +679,223 @@
 
     <nav class="sidebar-nav">
 
-        <div class="nav-section">Genel</div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Home"?"active":"")" href="/Home/Index">
-                <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
-                <span class="nav-label">Dashboard</span>
-            </a>
+        <!-- ── GENEL ─────────────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-genel" aria-expanded="@Exp("genel")">
+            <span>Genel</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("genel")" id="sec-genel">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Home"?"active":"")" href="/Home/Index">
+                    <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+            </div>
         </div>
 
-        <div class="nav-section">FSC İşlemleri</div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Purchase"?"active":"")" href="/Purchase/Index">
-                <span class="nav-icon"><i class="fas fa-truck-loading"></i></span>
-                <span class="nav-label">Hammadde Girişi</span>
-            </a>
+        <!-- ── FSC İŞLEMLERİ ──────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-fsc" aria-expanded="@Exp("fsc")">
+            <span>FSC İşlemleri</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("fsc")" id="sec-fsc">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Purchase"?"active":"")" href="/Purchase/Index">
+                    <span class="nav-icon"><i class="fas fa-truck-loading"></i></span>
+                    <span class="nav-label">Hammadde Girişi</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Production"&&action=="Index"?"active":"")" href="/Production/Index">
+                    <span class="nav-icon"><i class="fas fa-industry"></i></span>
+                    <span class="nav-label">İş Emirleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Production"&&action=="WasteReport"?"active":"")" href="/Production/WasteReport">
+                    <span class="nav-icon"><i class="fas fa-burn"></i></span>
+                    <span class="nav-label">Fire Raporu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Production"&&action=="WasteManagement"?"active":"")" href="/Production/WasteManagement">
+                    <span class="nav-icon"><i class="fas fa-trash-alt"></i></span>
+                    <span class="nav-label">İmha Kayıtları</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Sales"?"active":"")" href="/Sales/Index">
+                    <span class="nav-icon"><i class="fas fa-shipping-fast"></i></span>
+                    <span class="nav-label">Satış / Sevkiyat</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="RawMaterial"?"active":"")" href="/Stock/RawMaterial">
+                    <span class="nav-icon"><i class="fas fa-scroll"></i></span>
+                    <span class="nav-label">Hammadde Stoğu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="Index"?"active":"")" href="/Stock/Index">
+                    <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
+                    <span class="nav-label">Stok Durumu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="Movements"?"active":"")" href="/Stock/Movements">
+                    <span class="nav-icon"><i class="fas fa-exchange-alt"></i></span>
+                    <span class="nav-label">Stok Hareketleri</span>
+                </a>
+            </div>
         </div>
 
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Production"&&action=="Index"?"active":"")" href="/Production/Index">
-                <span class="nav-icon"><i class="fas fa-industry"></i></span>
-                <span class="nav-label">İş Emirleri</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Production"&&action=="WasteReport"?"active":"")" href="/Production/WasteReport">
-                <span class="nav-icon"><i class="fas fa-burn"></i></span>
-                <span class="nav-label">Fire Raporu</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Production"&&action=="WasteManagement"?"active":"")" href="/Production/WasteManagement">
-                <span class="nav-icon"><i class="fas fa-trash-alt"></i></span>
-                <span class="nav-label">İmha Kayıtları</span>
-            </a>
-        </div>
-
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Sales"?"active":"")" href="/Sales/Index">
-                <span class="nav-icon"><i class="fas fa-shipping-fast"></i></span>
-                <span class="nav-label">Satış / Sevkiyat</span>
-            </a>
-        </div>
-
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Stock"&&action=="RawMaterial"?"active":"")" href="/Stock/RawMaterial">
-                <span class="nav-icon"><i class="fas fa-scroll"></i></span>
-                <span class="nav-label">Hammadde Stoğu</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Stock"&&action=="Index"?"active":"")" href="/Stock/Index">
-                <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
-                <span class="nav-label">Stok Durumu</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Stock"&&action=="Movements"?"active":"")" href="/Stock/Movements">
-                <span class="nav-icon"><i class="fas fa-exchange-alt"></i></span>
-                <span class="nav-label">Stok Hareketleri</span>
-            </a>
+        <!-- ── TİCARİ ──────────────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-ticari" aria-expanded="@Exp("ticari")">
+            <span>Ticari</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("ticari")" id="sec-ticari">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Customers"?"active":"")" href="/Customers/Index">
+                    <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+                    <span class="nav-label">Müşteriler</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Suppliers"?"active":"")" href="/Suppliers/Index">
+                    <span class="nav-icon"><i class="fas fa-truck"></i></span>
+                    <span class="nav-label">Tedarikçiler</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Products"?"active":"")" href="/Products/Index">
+                    <span class="nav-icon"><i class="fas fa-box-open"></i></span>
+                    <span class="nav-label">Ürünler</span>
+                </a>
+            </div>
         </div>
 
-        <div class="nav-section">Ticari</div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Customers"?"active":"")" href="/Customers/Index">
-                <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
-                <span class="nav-label">Müşteriler</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Suppliers"?"active":"")" href="/Suppliers/Index">
-                <span class="nav-icon"><i class="fas fa-truck"></i></span>
-                <span class="nav-label">Tedarikçiler</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Products"?"active":"")" href="/Products/Index">
-                <span class="nav-icon"><i class="fas fa-box-open"></i></span>
-                <span class="nav-label">Ürünler</span>
-            </a>
-        </div>
-
-        <div class="nav-section">FSC Raporlar</div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Reports"&&action=="ChainOfCustody"?"active":"")" href="/Reports/ChainOfCustody">
-                <span class="nav-icon"><i class="fas fa-link"></i></span>
-                <span class="nav-label">Chain of Custody</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Reports"&&action=="LotTrace"?"active":"")" href="/Reports/LotTrace">
-                <span class="nav-icon"><i class="fas fa-search"></i></span>
-                <span class="nav-label">Lot Takip</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Reports"&&action=="SupplierFsc"?"active":"")" href="/Reports/SupplierFsc">
-                <span class="nav-icon"><i class="fas fa-certificate"></i></span>
-                <span class="nav-label">Tedarikçi FSC</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Reports"&&action=="AuditReport"?"active":"")" href="/Reports/AuditReport">
-                <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
-                <span class="nav-label">Denetim Özeti</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Reports"&&action=="BomAnalysis"?"active":"")" href="/Reports/BomAnalysis">
-                <span class="nav-icon"><i class="fas fa-sitemap"></i></span>
-                <span class="nav-label">BOM Analizi</span>
-            </a>
+        <!-- ── FSC RAPORLAR ───────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-rapor" aria-expanded="@Exp("rapor")">
+            <span>FSC Raporlar</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("rapor")" id="sec-rapor">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="ChainOfCustody"?"active":"")" href="/Reports/ChainOfCustody">
+                    <span class="nav-icon"><i class="fas fa-link"></i></span>
+                    <span class="nav-label">Chain of Custody</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="LotTrace"?"active":"")" href="/Reports/LotTrace">
+                    <span class="nav-icon"><i class="fas fa-search"></i></span>
+                    <span class="nav-label">Lot Takip</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="SupplierFsc"?"active":"")" href="/Reports/SupplierFsc">
+                    <span class="nav-icon"><i class="fas fa-certificate"></i></span>
+                    <span class="nav-label">Tedarikçi FSC</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="AuditReport"?"active":"")" href="/Reports/AuditReport">
+                    <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+                    <span class="nav-label">Denetim Özeti</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="BomAnalysis"?"active":"")" href="/Reports/BomAnalysis">
+                    <span class="nav-icon"><i class="fas fa-sitemap"></i></span>
+                    <span class="nav-label">BOM Analizi</span>
+                </a>
+            </div>
         </div>
 
-        <div class="nav-section">Tanımlamalar</div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Product"&&action=="BagTypes"?"active":"")" href="/Product/BagTypes">
-                <span class="nav-icon"><i class="fas fa-shopping-bag"></i></span>
-                <span class="nav-label">Torba Tipleri</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Product"&&action=="Groups"?"active":"")" href="/Product/Groups">
-                <span class="nav-icon"><i class="fas fa-layer-group"></i></span>
-                <span class="nav-label">Ürün Grupları</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Paper"&&action=="Types"?"active":"")" href="/Paper/Types">
-                <span class="nav-icon"><i class="fas fa-scroll"></i></span>
-                <span class="nav-label">Kağıt Tipleri</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Paper"&&action=="Colors"?"active":"")" href="/Paper/Colors">
-                <span class="nav-icon"><i class="fas fa-palette"></i></span>
-                <span class="nav-label">Kağıt Renkleri</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Paper"&&action=="Weights"?"active":"")" href="/Paper/Weights">
-                <span class="nav-icon"><i class="fas fa-balance-scale"></i></span>
-                <span class="nav-label">Gramajlar</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Paper"&&action=="Widths"?"active":"")" href="/Paper/Widths">
-                <span class="nav-icon"><i class="fas fa-ruler-horizontal"></i></span>
-                <span class="nav-label">Kağıt Enleri</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Paper"&&action=="FscTypes"?"active":"")" href="/Paper/FscTypes">
-                <span class="nav-icon"><i class="fas fa-leaf"></i></span>
-                <span class="nav-label">FSC Tipleri</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Machine"?"active":"")" href="/Machine/Machines">
-                <span class="nav-icon"><i class="fas fa-cogs"></i></span>
-                <span class="nav-label">Makineler</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Warehouse"?"active":"")" href="/Warehouse/Index">
-                <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
-                <span class="nav-label">Depolar</span>
-            </a>
-        </div>
-
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Etl"?"active":"")" href="/Etl/Index">
-                <span class="nav-icon"><i class="fas fa-sync-alt"></i></span>
-                <span class="nav-label">ERP Entegrasyon</span>
-            </a>
-        </div>
-
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Guide"&&action=="Index"?"active":"")" href="/Guide/Index">
-                <span class="nav-icon"><i class="fas fa-book-open"></i></span>
-                <span class="nav-label">Kullanım Kılavuzu</span>
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link-item @(ctrl=="Guide"&&action=="TestScenario"?"active":"")" href="/Guide/TestScenario">
-                <span class="nav-icon"><i class="fas fa-flask"></i></span>
-                <span class="nav-label">Test Senaryosu</span>
-            </a>
+        <!-- ── TANIMLAMALAR ──────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-tanim" aria-expanded="@Exp("tanim")">
+            <span>Tanımlamalar</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("tanim")" id="sec-tanim">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Product"&&action=="BagTypes"?"active":"")" href="/Product/BagTypes">
+                    <span class="nav-icon"><i class="fas fa-shopping-bag"></i></span>
+                    <span class="nav-label">Torba Tipleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Product"&&action=="Groups"?"active":"")" href="/Product/Groups">
+                    <span class="nav-icon"><i class="fas fa-layer-group"></i></span>
+                    <span class="nav-label">Ürün Grupları</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Types"?"active":"")" href="/Paper/Types">
+                    <span class="nav-icon"><i class="fas fa-scroll"></i></span>
+                    <span class="nav-label">Kağıt Tipleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Colors"?"active":"")" href="/Paper/Colors">
+                    <span class="nav-icon"><i class="fas fa-palette"></i></span>
+                    <span class="nav-label">Kağıt Renkleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Weights"?"active":"")" href="/Paper/Weights">
+                    <span class="nav-icon"><i class="fas fa-balance-scale"></i></span>
+                    <span class="nav-label">Gramajlar</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Widths"?"active":"")" href="/Paper/Widths">
+                    <span class="nav-icon"><i class="fas fa-ruler-horizontal"></i></span>
+                    <span class="nav-label">Kağıt Enleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="FscTypes"?"active":"")" href="/Paper/FscTypes">
+                    <span class="nav-icon"><i class="fas fa-leaf"></i></span>
+                    <span class="nav-label">FSC Tipleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Machine"?"active":"")" href="/Machine/Machines">
+                    <span class="nav-icon"><i class="fas fa-cogs"></i></span>
+                    <span class="nav-label">Makineler</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Warehouse"?"active":"")" href="/Warehouse/Index">
+                    <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
+                    <span class="nav-label">Depolar</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Etl"?"active":"")" href="/Etl/Index">
+                    <span class="nav-icon"><i class="fas fa-sync-alt"></i></span>
+                    <span class="nav-label">ERP Entegrasyon</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Guide"&&action=="Index"?"active":"")" href="/Guide/Index">
+                    <span class="nav-icon"><i class="fas fa-book-open"></i></span>
+                    <span class="nav-label">Kullanım Kılavuzu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Guide"&&action=="TestScenario"?"active":"")" href="/Guide/TestScenario">
+                    <span class="nav-icon"><i class="fas fa-flask"></i></span>
+                    <span class="nav-label">Test Senaryosu</span>
+                </a>
+            </div>
         </div>
 
     </nav>
@@ -708,6 +961,32 @@
 <!-- Toast container -->
 <div class="toast-container" id="toastContainer"></div>
 
+<!-- ── GLOBAL PDF GÖRÜNTÜLEYICI MODAL ──────────────────────────── -->
+<div class="modal fade" id="pdfViewerModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:92vw;">
+        <div class="modal-content" style="height:88vh;display:flex;flex-direction:column;">
+            <div class="modal-header dark py-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-file-pdf" style="color:#f87171;font-size:15px;"></i>
+                    <h5 class="modal-title fw-semibold mb-0 fs-6" id="pdfViewerTitle">Belge</h5>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a id="pdfViewerLink" href="#" target="_blank"
+                       class="btn btn-sm btn-outline-light" style="font-size:12px;padding:3px 10px;">
+                        <i class="fas fa-external-link-alt me-1"></i> Yeni Sekmede Aç
+                    </a>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            style="filter:invert(1) opacity(.7);"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0" style="flex:1;overflow:hidden;">
+                <iframe id="pdfViewerFrame" src=""
+                        style="width:100%;height:100%;border:none;display:block;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="~/lib/jquery/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -738,6 +1017,62 @@
         sidebar.classList.add('collapsed');
     }
 })();
+
+// ── NAV SECTION COLLAPSE — localStorage ile durum kalıcı ────────────────
+(function () {
+    const KEY      = 'navSecState';
+    const sections = ['sec-genel', 'sec-fsc', 'sec-ticari', 'sec-rapor', 'sec-tanim'];
+
+    // Kayıtlı durumu oku
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+
+    sections.forEach(id => {
+        const el  = document.getElementById(id);
+        const btn = document.querySelector(`[data-bs-target="#${id}"]`);
+        if (!el || !btn) return;
+
+        // Eğer localStorage'da kayıt varsa sunucu-side durumunu geçersiz kıl
+        if (id in saved) {
+            if (saved[id]) {
+                el.classList.add('show');
+                btn.setAttribute('aria-expanded', 'true');
+            } else {
+                el.classList.remove('show');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        // Toggle olaylarını dinle ve kaydet
+        el.addEventListener('shown.bs.collapse',  () => saveSec(id, true));
+        el.addEventListener('hidden.bs.collapse', () => saveSec(id, false));
+    });
+
+    function saveSec(id, open) {
+        let s = {};
+        try { s = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+        s[id] = open;
+        localStorage.setItem(KEY, JSON.stringify(s));
+    }
+})();
+
+// ── Global PDF Viewer ────────────────────────────────────────────────────
+var _pdfModal = null;
+function showPdf(url, title) {
+    var el = document.getElementById('pdfViewerModal');
+    if (!el) { window.open(url, '_blank'); return; }
+    document.getElementById('pdfViewerTitle').textContent = title || 'Belge';
+    document.getElementById('pdfViewerFrame').src = url;
+    document.getElementById('pdfViewerLink').href = url;
+    if (!_pdfModal) _pdfModal = new bootstrap.Modal(el);
+    _pdfModal.show();
+}
+document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('pdfViewerModal');
+    if (el) el.addEventListener('hide.bs.modal', function () {
+        document.getElementById('pdfViewerFrame').src = '';
+    });
+});
 
 function showToast(msg, type = 'success') {
     const icons  = { success:'check-circle', error:'times-circle', warning:'exclamation-triangle', info:'info-circle' };

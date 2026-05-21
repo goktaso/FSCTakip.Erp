@@ -680,24 +680,35 @@ namespace FSCTakip.WebUI.Controllers
             if (string.IsNullOrWhiteSpace(connStr))
                 return Json(new { success = false, message = "Netsis bağlantı dizgisi tanımlı değil." });
 
-            var job = new EtlJob
-            {
-                EtlConnectionId = connectionId,
-                JobType         = syncType,
-                Source          = "Netsis",
-                Status          = "Running",
-                StartedAt       = DateTime.Now,
-                CreatedDate     = DateTime.Now,
-                CreatedBy       = "SYSTEM"
-            };
-            _context.EtlJobs.Add(job);
-            await _context.SaveChangesAsync();
-
             int inserted = 0, updated = 0, skipped = 0;
             var errors = new List<string>();
+            EtlJob? job = null;
 
             try
             {
+                // Job kaydını try içinde oluştur — DB hatası olursa JSON döner
+                job = new EtlJob
+                {
+                    EtlConnectionId = connectionId,
+                    JobType         = syncType,
+                    Source          = "Netsis",
+                    Status          = "Running",
+                    StartedAt       = DateTime.Now,
+                    CreatedDate     = DateTime.Now,
+                    CreatedBy       = "SYSTEM"
+                };
+                try
+                {
+                    _context.EtlJobs.Add(job);
+                    await _context.SaveChangesAsync();
+                }
+                catch
+                {
+                    // EtlJobs tablosu yoksa veya kayıt başarısızsa loglama atla, sync devam etsin
+                    _context.ChangeTracker.Clear();
+                    job = null;
+                }
+
                 using var netsisCon = new SqlConnection(connStr);
                 await netsisCon.OpenAsync();
 
@@ -709,29 +720,40 @@ namespace FSCTakip.WebUI.Controllers
                     _ => (0, 0, 0, new List<string> { "Bilinmeyen senkronizasyon türü." })
                 };
 
-                job.Status        = errors.Count == 0 ? "Completed" : (inserted + updated > 0 ? "Partial" : "Failed");
-                job.InsertedCount = inserted;
-                job.UpdatedCount  = updated;
-                job.SkippedCount  = skipped;
-                job.ErrorCount    = errors.Count;
-                job.CompletedAt   = DateTime.Now;
-                job.ErrorDetails  = errors.Count > 0 ? string.Join("\n", errors.Take(50)) : null;
+                if (job != null)
+                {
+                    job.Status        = errors.Count == 0 ? "Completed" : (inserted + updated > 0 ? "Partial" : "Failed");
+                    job.InsertedCount = inserted;
+                    job.UpdatedCount  = updated;
+                    job.SkippedCount  = skipped;
+                    job.ErrorCount    = errors.Count;
+                    job.CompletedAt   = DateTime.Now;
+                    job.ErrorDetails  = errors.Count > 0 ? string.Join("\n", errors.Take(50)) : null;
+                }
 
                 if (connectionId.HasValue)
                 {
                     var conn = await _context.EtlConnections.FindAsync(connectionId.Value);
-                    if (conn != null) { conn.LastSyncAt = DateTime.Now; conn.LastSyncStatus = job.Status; }
+                    if (conn != null) { conn.LastSyncAt = DateTime.Now; conn.LastSyncStatus = job?.Status ?? "Completed"; }
                 }
 
-                await _context.SaveChangesAsync();
-                return Json(new { success = true, inserted, updated, skipped, errorCount = errors.Count, errors = errors.Take(20), jobId = job.Id });
+                try { await _context.SaveChangesAsync(); } catch { /* loglama başarısız olsa da sonuç dön */ }
+
+                return Json(new { success = true, inserted, updated, skipped, errorCount = errors.Count, errors = errors.Take(20), jobId = job?.Id });
             }
             catch (Exception ex)
             {
-                job.Status       = "Failed";
-                job.ErrorDetails = ex.Message;
-                job.CompletedAt  = DateTime.Now;
-                await _context.SaveChangesAsync();
+                if (job != null)
+                {
+                    try
+                    {
+                        job.Status       = "Failed";
+                        job.ErrorDetails = ex.Message;
+                        job.CompletedAt  = DateTime.Now;
+                        await _context.SaveChangesAsync();
+                    }
+                    catch { /* loglama hatasını görmezden gel */ }
+                }
                 return Json(new { success = false, message = ex.Message });
             }
         }
@@ -799,7 +821,11 @@ namespace FSCTakip.WebUI.Controllers
                     }
                     await _context.SaveChangesAsync();
                 }
-                catch (Exception ex) { errors.Add($"{r.Kod}: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    _context.ChangeTracker.Clear(); // başarısız entity'yi temizle, sonraki kayıt etkilenmesin
+                    errors.Add($"{r.Kod}: {GetDbError(ex)}");
+                }
             }
             return (ins, upd, skp, errors);
         }
@@ -892,7 +918,11 @@ namespace FSCTakip.WebUI.Controllers
                     }
                     await _context.SaveChangesAsync();
                 }
-                catch (Exception ex) { errors.Add($"{r.Kod} - {r.Isim}: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    _context.ChangeTracker.Clear(); // başarısız entity'yi temizle
+                    errors.Add($"{r.Kod} - {r.Isim}: {GetDbError(ex)}");
+                }
             }
             return (ins, upd, skp, errors);
         }
@@ -983,7 +1013,11 @@ namespace FSCTakip.WebUI.Controllers
                     }
                     await _context.SaveChangesAsync();
                 }
-                catch (Exception ex) { errors.Add($"{r.Kod} - {r.Isim}: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    _context.ChangeTracker.Clear(); // başarısız entity'yi temizle
+                    errors.Add($"{r.Kod} - {r.Isim}: {GetDbError(ex)}");
+                }
             }
             return (ins, upd, skp, errors);
         }
@@ -1291,6 +1325,24 @@ namespace FSCTakip.WebUI.Controllers
         {
             if (string.IsNullOrWhiteSpace(email)) return string.Empty;
             return email.Replace("İ", "i").Replace("I", "ı").ToLowerInvariant();
+        }
+
+        /// <summary>
+        /// DbUpdateException ve iç istisnalar dahil tam hata zincirini döndürür.
+        /// SaveChangesAsync başarısız olduğunda gerçek SQL hatasını görünür kılar.
+        /// </summary>
+        private static string GetDbError(Exception ex)
+        {
+            var msgs = new List<string>();
+            var current = ex;
+            while (current != null)
+            {
+                if (!string.IsNullOrWhiteSpace(current.Message) &&
+                    !msgs.Any(m => m == current.Message))
+                    msgs.Add(current.Message);
+                current = current.InnerException;
+            }
+            return string.Join(" → ", msgs);
         }
 
         // ─── Import yardımcıları ──────────────────────────────────────────────
