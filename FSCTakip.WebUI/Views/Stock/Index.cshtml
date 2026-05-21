@@ -141,23 +141,25 @@
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label">Çıkış Deposu</label>
-                        <select id="tFromWarehouse" class="form-control">
-                            <option value="">— Seçiniz —</option>
-                            @foreach (var w in warehouses)
-                            {
-                                <option value="@w.Id">@w.Name</option>
-                            }
-                        </select>
+                        <div class="qa-group">
+                            <select id="tFromWarehouse" class="form-control">
+                                <option value="">— Seçiniz —</option>
+                                @foreach (var w in warehouses)
+                                { <option value="@w.Id">@w.Name</option> }
+                            </select>
+                            <button type="button" class="qa-btn" onclick="openQuickAdd('warehouse','tFromWarehouse')" title="Yeni Depo Ekle"><i class="fas fa-plus"></i></button>
+                        </div>
                     </div>
                     <div class="col-6">
                         <label class="form-label">Giriş Deposu</label>
-                        <select id="tToWarehouse" class="form-control">
-                            <option value="">— Seçiniz —</option>
-                            @foreach (var w in warehouses)
-                            {
-                                <option value="@w.Id">@w.Name</option>
-                            }
-                        </select>
+                        <div class="qa-group">
+                            <select id="tToWarehouse" class="form-control">
+                                <option value="">— Seçiniz —</option>
+                                @foreach (var w in warehouses)
+                                { <option value="@w.Id">@w.Name</option> }
+                            </select>
+                            <button type="button" class="qa-btn" onclick="openQuickAdd('warehouse','tToWarehouse')" title="Yeni Depo Ekle"><i class="fas fa-plus"></i></button>
+                        </div>
                     </div>
                 </div>
                 <div class="row g-2 mb-3">

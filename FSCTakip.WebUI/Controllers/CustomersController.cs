@@ -9,6 +9,28 @@ namespace FSCTakip.WebUI.Controllers
     {
         public CustomersController(AppDbContext context) : base(context) { }
 
+        // POST /Customers/QuickAdd — inline hızlı müşteri ekleme
+        [HttpPost]
+        public async Task<IActionResult> QuickAdd(string Name, string? Phone)
+        {
+            if (string.IsNullOrWhiteSpace(Name))
+                return Json(new { success = false, message = "Müşteri adı zorunludur." });
+
+            var count = await _context.Customers.CountAsync();
+            var c = new Customer
+            {
+                Name         = Name.Trim().ToUpper(new System.Globalization.CultureInfo("tr-TR")),
+                CustomerCode = $"MHS-{(count + 1):D3}",
+                Phone        = Phone?.Trim(),
+                IsActive     = true,
+                CreatedDate  = DateTime.Now,
+                CreatedBy    = User.Identity?.Name ?? "System"
+            };
+            _context.Customers.Add(c);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, id = c.Id, text = c.Name });
+        }
+
         // Müşteri Listesi - Verilerin gelmesini garanti eder
         public IActionResult Index()
         {

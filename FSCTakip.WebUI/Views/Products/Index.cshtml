@@ -130,116 +130,94 @@
                 <div class="modal-body">
                     <input type="hidden" name="Id" id="productId" value="0" />
 
-                    <div class="row">
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Ürün Grubu <span class="text-danger">*</span></label>
-                                <select name="ProductGroupId" id="productGroupId" class="form-control" required>
+                            <label class="form-label small fw-semibold">Ürün Grubu <span class="text-danger">*</span></label>
+                            <div class="qa-group">
+                                <select name="ProductGroupId" id="productGroupId" class="form-control form-select" required>
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var g in productGroups)
-                                    {
-                                        <option value="@g.Value">@g.Text</option>
-                                    }
+                                    { <option value="@g.Value">@g.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('productgroup','productGroupId')" title="Yeni Ürün Grubu Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Tedarikçi</label>
-                                <select name="SupplierId" id="supplierId" class="form-control">
+                            <label class="form-label small fw-semibold">Tedarikçi</label>
+                            <div class="qa-group">
+                                <select name="SupplierId" id="supplierId" class="form-control form-select">
                                     <option value="">-- Tedarikçi Seçiniz --</option>
                                     @foreach (var s in suppliers)
-                                    {
-                                        <option value="@s.Value">@s.Text</option>
-                                    }
+                                    { <option value="@s.Value">@s.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('supplier','supplierId')" title="Yeni Tedarikçi Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="row">
                         <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Ürün Kodu</label>
-                                <input type="text" id="productCode" class="form-control bg-light" readonly placeholder="Otomatik" />
-                            </div>
+                            <label class="form-label small fw-semibold">Ürün Kodu</label>
+                            <input type="text" id="productCode" class="form-control bg-light" readonly placeholder="Otomatik" />
                         </div>
                         <div class="col-md-8">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Ürün Adı <span class="text-danger">*</span></label>
-                                <input type="text" name="ProductName" id="productName" class="form-control text-uppercase" required />
-                            </div>
+                            <label class="form-label small fw-semibold">Ürün Adı <span class="text-danger">*</span></label>
+                            <input type="text" name="ProductName" id="productName" class="form-control text-uppercase" required />
                         </div>
-                    </div>
-
-                    <div class="row">
                         <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Kağıt Rengi</label>
-                                <select name="PaperColorId" id="paperColorId" class="form-control">
+                            <label class="form-label small fw-semibold">Kağıt Rengi</label>
+                            <div class="qa-group">
+                                <select name="PaperColorId" id="paperColorId" class="form-control form-select">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var c in paperColors)
-                                    {
-                                        <option value="@c.Value">@c.Text</option>
-                                    }
+                                    { <option value="@c.Value">@c.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('papercolor','paperColorId')" title="Yeni Renk Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Gramaj (gr) [cite: 2026-03-04]</label>
-                                <select name="PaperWeightId" id="paperWeightId" class="form-control">
+                            <label class="form-label small fw-semibold">Gramaj (gr/m²)</label>
+                            <div class="qa-group">
+                                <select name="PaperWeightId" id="paperWeightId" class="form-control form-select">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var w in paperWeights)
-                                    {
-                                        <option value="@w.Value">@w.Text</option>
-                                    }
+                                    { <option value="@w.Value">@w.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('paperweight','paperWeightId')" title="Yeni Gramaj Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">En (cm) [cite: 2026-03-04]</label>
-                                <select name="PaperWidthId" id="paperWidthId" class="form-control">
+                            <label class="form-label small fw-semibold">Kağıt Eni (mm)</label>
+                            <div class="qa-group">
+                                <select name="PaperWidthId" id="paperWidthId" class="form-control form-select">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var w in paperWidths)
-                                    {
-                                        <option value="@w.Value">@w.Text</option>
-                                    }
+                                    { <option value="@w.Value">@w.Text</option> }
                                 </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Birim</label>
-                                <input type="text" name="Unit" id="unit" class="form-control text-uppercase" value="ADET" />
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('paperwidth','paperWidthId')" title="Yeni En Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">FSC Tipi</label>
-                                <select name="FscTypeId" id="fscTypeId" class="form-control">
+                            <label class="form-label small fw-semibold">Birim</label>
+                            <input type="text" name="Unit" id="unit" class="form-control text-uppercase" value="ADET" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">FSC Tipi</label>
+                            <div class="qa-group">
+                                <select name="FscTypeId" id="fscTypeId" class="form-control form-select">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var f in fscTypes)
-                                    {
-                                        <option value="@f.Value">@f.Text</option>
-                                    }
+                                    { <option value="@f.Value">@f.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('fsctype','fscTypeId')" title="Yeni FSC Tipi Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Kağıt Tipi</label>
-                                <select name="PaperTypeId" id="paperTypeId" class="form-control">
+                            <label class="form-label small fw-semibold">Kağıt Tipi</label>
+                            <div class="qa-group">
+                                <select name="PaperTypeId" id="paperTypeId" class="form-control form-select">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var p in paperTypes)
-                                    {
-                                        <option value="@p.Value">@p.Text</option>
-                                    }
+                                    { <option value="@p.Value">@p.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('papertype','paperTypeId')" title="Yeni Kağıt Tipi Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                     </div>

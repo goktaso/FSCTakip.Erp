@@ -9,6 +9,26 @@ namespace FSCTakip.WebUI.Controllers
     {
         public WarehouseController(AppDbContext context) : base(context) { }
 
+        // POST /Warehouse/QuickAdd — inline hızlı depo ekleme
+        [HttpPost]
+        public async Task<IActionResult> QuickAdd(string Name)
+        {
+            if (string.IsNullOrWhiteSpace(Name))
+                return Json(new { success = false, message = "Depo adı zorunludur." });
+            var count = await _context.Warehouses.CountAsync();
+            var w = new Warehouse
+            {
+                Name        = Name.Trim().ToUpper(new System.Globalization.CultureInfo("tr-TR")),
+                Code        = $"DEP-{(count + 1):D2}",
+                IsActive    = true,
+                CreatedDate = DateTime.Now,
+                CreatedBy   = User.Identity?.Name ?? "System"
+            };
+            _context.Warehouses.Add(w);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, id = w.Id, text = w.Name });
+        }
+
         public async Task<IActionResult> Index()
         {
             ViewData["Title"] = "Depo Tanımlamaları";

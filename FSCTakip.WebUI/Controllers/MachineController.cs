@@ -8,6 +8,24 @@ namespace FSCTakip.WebUI.Controllers
     {
         public MachineController(AppDbContext context) : base(context) { }
 
+        // POST /Machine/QuickAdd — inline hızlı makine ekleme
+        [HttpPost]
+        public async Task<IActionResult> QuickAdd(string Name)
+        {
+            if (string.IsNullOrWhiteSpace(Name))
+                return Json(new { success = false, message = "Makine adı zorunludur." });
+            var m = new Machine
+            {
+                Name        = Name.Trim().ToUpper(new System.Globalization.CultureInfo("tr-TR")),
+                IsActive    = true,
+                CreatedDate = DateTime.Now,
+                CreatedBy   = User.Identity?.Name ?? "System"
+            };
+            _context.Machines.Add(m);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, id = m.Id, text = m.Name });
+        }
+
         // --- ÜRETİM TANIMLARI ---
 
         public async Task<IActionResult> Machines()

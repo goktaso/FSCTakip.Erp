@@ -278,13 +278,16 @@
                     </div>
                     <div class="col-md-5">
                         <label class="form-label">Makine <span class="text-danger">*</span></label>
-                        <select id="woMachineId" class="form-select">
-                            <option value="">— Seçiniz —</option>
-                            @foreach (var m in machines)
-                            {
-                                <option value="@m.Id">@m.Name</option>
-                            }
-                        </select>
+                        <div class="qa-group">
+                            <select id="woMachineId" class="form-select">
+                                <option value="">— Seçiniz —</option>
+                                @foreach (var m in machines)
+                                {
+                                    <option value="@m.Id">@m.Name</option>
+                                }
+                            </select>
+                            <button type="button" class="qa-btn" onclick="openQuickAdd('machine','woMachineId')" title="Yeni Makine Ekle"><i class="fas fa-plus"></i></button>
+                        </div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Planlanan Miktar (adet) <span class="text-danger">*</span></label>

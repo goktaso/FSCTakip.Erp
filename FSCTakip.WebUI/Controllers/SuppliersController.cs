@@ -12,6 +12,29 @@ namespace FSCTakip.WebUI.Controllers
 
         public async Task<IActionResult> Index() => View(await _context.Suppliers.OrderBy(s => s.Name).ToListAsync());
 
+        // POST /Suppliers/QuickAdd — inline hızlı tedarikçi ekleme
+        [HttpPost]
+        public async Task<IActionResult> QuickAdd(string Name, string? Phone, string? TaxNumber)
+        {
+            if (string.IsNullOrWhiteSpace(Name))
+                return Json(new { success = false, message = "Tedarikçi adı zorunludur." });
+
+            var count = await _context.Suppliers.CountAsync();
+            var s = new Supplier
+            {
+                Name          = Name.Trim().ToUpper(new System.Globalization.CultureInfo("tr-TR")),
+                SupplierCode  = $"TED-{(count + 1):D3}",
+                Phone         = Phone?.Trim(),
+                TaxNumber     = TaxNumber?.Trim(),
+                IsActive      = true,
+                CreatedDate   = DateTime.Now,
+                CreatedBy     = User.Identity?.Name ?? "System"
+            };
+            _context.Suppliers.Add(s);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, id = s.Id, text = s.Name });
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetSupplier(int id)
         {

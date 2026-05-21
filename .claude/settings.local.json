@@ -83,7 +83,8 @@
       "Bash(git -C \"D:/C#/FSCTakip.Erp/.claude/worktrees/affectionate-hawking-cb4488\" diff --cached --name-only HEAD)",
       "Bash(git -C \"D:/C#/FSCTakip.Erp\" log --oneline -10)",
       "Bash(git -C \"D:/C#/FSCTakip.Erp/.claude/worktrees/affectionate-hawking-cb4488\" log --oneline -10)",
-      "mcp__Claude_in_Chrome__browser_batch"
+      "mcp__Claude_in_Chrome__browser_batch",
+      "Bash(grep -v \"^$\")"
     ]
   }
 }

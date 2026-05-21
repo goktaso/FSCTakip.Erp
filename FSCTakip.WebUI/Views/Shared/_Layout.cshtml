@@ -642,6 +642,24 @@
         .bg-success-soft { background: #16a34a; }
         .bg-warning-soft { background: #d97706; }
         .bg-danger-soft  { background: #dc2626; }
+
+        /* ── QUICK-ADD INLINE BUTTON ─────────────────────── */
+        .qa-group { display: flex; gap: 4px; align-items: stretch; }
+        .qa-group > select,
+        .qa-group > .form-select { flex: 1; min-width: 0; }
+        .qa-btn {
+            width: 32px; min-width: 32px;
+            border-radius: 6px;
+            border: 1.5px dashed #93c5fd;
+            background: #eff6ff; color: #1d4ed8;
+            cursor: pointer; font-size: 12px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all .15s; padding: 0; line-height: 1;
+        }
+        .qa-btn:hover { background: #dbeafe; border-style: solid; border-color: #1d4ed8; transform: none; }
+        .qa-btn:active { background: #bfdbfe; }
+        /* QuickAdd modal header color band */
+        .qa-modal-header { border-radius: 0; padding: 14px 20px; }
     </style>
 </head>
 <body>
@@ -987,6 +1005,35 @@
     </div>
 </div>
 
+<!-- ── GLOBAL QUICK-ADD MODAL ───────────────────────────────────── -->
+<div class="modal fade" id="quickAddModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+        <div class="modal-content">
+            <div class="modal-header qa-modal-header" id="qaHeader" style="background:#1a2744;color:#fff;">
+                <div class="d-flex align-items-center gap-2">
+                    <div id="qaHeaderIcon" style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" id="qaTitle" style="font-size:14px;">Yeni Kayıt</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaClose"></button>
+            </div>
+            <div class="modal-body p-4" id="qaBody">
+                <!-- Dinamik form alanları buraya gelir -->
+            </div>
+            <div class="modal-footer border-top" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaCancelBtn">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" id="qaSaveBtn">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="~/lib/jquery/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1104,6 +1151,191 @@ function exportToExcel() {
     const ctrl   = '@ViewContext.RouteData.Values["Controller"]';
     const action = '@ViewContext.RouteData.Values["Action"]';
     window.location.href = `/${ctrl}/Export${action}`;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   GLOBAL QUICK-ADD SİSTEMİ
+   Kullanım: openQuickAdd('supplier', 'supplierId')
+   Her kayıt türü için form alanları ve endpoint aşağıda tanımlı.
+══════════════════════════════════════════════════════════════════ */
+const QA_CONFIGS = {
+    supplier: {
+        title: 'Yeni Tedarikçi', icon: 'fas fa-truck', color: '#1565c0',
+        url: '/Suppliers/QuickAdd',
+        fields: [
+            { name:'Name',      label:'Tedarikçi Ünvanı',   req:true,  upper:true },
+            { name:'Phone',     label:'Telefon',             ph:'5xxxxxxxxx' },
+            { name:'TaxNumber', label:'Vergi Numarası',      maxlen:11 }
+        ]
+    },
+    customer: {
+        title: 'Yeni Müşteri', icon: 'fas fa-user-tie', color: '#1565c0',
+        url: '/Customers/QuickAdd',
+        fields: [
+            { name:'Name',  label:'Müşteri Ünvanı', req:true, upper:true },
+            { name:'Phone', label:'Telefon',         ph:'5xxxxxxxxx' }
+        ]
+    },
+    fsctype: {
+        title: 'Yeni FSC Tipi', icon: 'fas fa-certificate', color: '#166534',
+        url: '/Paper/QuickAddFscType',
+        fields: [
+            { name:'Name', label:'FSC Tipi (örn: FSC-MIX, FSC-100)', req:true, upper:true }
+        ]
+    },
+    productgroup: {
+        title: 'Yeni Ürün Grubu', icon: 'fas fa-layer-group', color: '#5b21b6',
+        url: '/Product/QuickAddGroup',
+        fields: [
+            { name:'GroupName', label:'Grup Adı',             req:true, upper:true },
+            { name:'GroupCode', label:'Grup Kodu (sayı)',     type:'number', min:1 }
+        ]
+    },
+    papercolor: {
+        title: 'Yeni Kağıt Rengi', icon: 'fas fa-palette', color: '#92400e',
+        url: '/Paper/QuickAddColor',
+        fields: [
+            { name:'Name', label:'Renk Adı', req:true, upper:true }
+        ]
+    },
+    paperweight: {
+        title: 'Yeni Gramaj', icon: 'fas fa-balance-scale', color: '#0e7490',
+        url: '/Paper/QuickAddWeight',
+        fields: [
+            { name:'Value', label:'Gramaj (gr/m²)', type:'number', req:true, min:1, step:'1' },
+            { name:'Unit',  label:'Birim',           type:'static', val:'gr/m²' }
+        ]
+    },
+    paperwidth: {
+        title: 'Yeni Kağıt Eni', icon: 'fas fa-arrows-alt-h', color: '#0e7490',
+        url: '/Paper/QuickAddWidth',
+        fields: [
+            { name:'Code',  label:'En Kodu (örn: B80)',  req:true, upper:true },
+            { name:'Value', label:'En Değeri (mm)',       type:'number', req:true, min:1 }
+        ]
+    },
+    papertype: {
+        title: 'Yeni Kağıt Tipi', icon: 'fas fa-file-alt', color: '#374151',
+        url: '/Paper/QuickAddPaperType',
+        fields: [
+            { name:'Name', label:'Kağıt Tipi Adı', req:true, upper:true }
+        ]
+    },
+    machine: {
+        title: 'Yeni Makine', icon: 'fas fa-cogs', color: '#374151',
+        url: '/Machine/QuickAdd',
+        fields: [
+            { name:'Name', label:'Makine Adı', req:true, upper:true }
+        ]
+    },
+    warehouse: {
+        title: 'Yeni Depo', icon: 'fas fa-warehouse', color: '#374151',
+        url: '/Warehouse/QuickAdd',
+        fields: [
+            { name:'Name', label:'Depo Adı', req:true, upper:true }
+        ]
+    }
+};
+
+var _qaModal = null;
+var _qaTargetSelectId = null;
+var _qaCurrentConfig = null;
+
+function openQuickAdd(type, targetSelectId) {
+    const cfg = QA_CONFIGS[type];
+    if (!cfg) { console.error('QuickAdd: unknown type', type); return; }
+    _qaTargetSelectId = targetSelectId;
+    _qaCurrentConfig  = cfg;
+
+    // Header
+    document.getElementById('qaTitle').textContent = cfg.title;
+    const icon = document.getElementById('qaHeaderIcon');
+    icon.innerHTML = `<i class="${cfg.icon}"></i>`;
+    document.getElementById('qaHeader').style.background = cfg.color;
+
+    // Form alanlarını oluştur
+    let html = '<div class="row g-3">';
+    cfg.fields.forEach(f => {
+        if (f.type === 'static') {
+            html += `<div class="col-6">
+                <label class="form-label small fw-semibold">${f.label}</label>
+                <input type="text" class="form-control form-control-sm" value="${f.val||''}" readonly style="background:#f8fafc;">
+                <input type="hidden" name="${f.name}" value="${f.val||''}">
+            </div>`;
+        } else if (f.type === 'number') {
+            html += `<div class="col-6">
+                <label class="form-label small fw-semibold">${f.label}${f.req?'<span class="text-danger ms-1">*</span>':''}</label>
+                <input type="number" class="form-control form-control-sm" name="${f.name}"
+                       ${f.min!==undefined?'min="'+f.min+'"':''} ${f.step?'step="'+f.step+'"':'step="1"'}
+                       ${f.req?'required':''}>
+            </div>`;
+        } else {
+            html += `<div class="col-12">
+                <label class="form-label small fw-semibold">${f.label}${f.req?'<span class="text-danger ms-1">*</span>':''}</label>
+                <input type="text" class="form-control form-control-sm" name="${f.name}"
+                       ${f.ph?'placeholder="'+f.ph+'"':''} ${f.maxlen?'maxlength="'+f.maxlen+'"':''}
+                       ${f.req?'required':''} ${f.upper?'style="text-transform:uppercase;"':''}>
+            </div>`;
+        }
+    });
+    html += '</div>';
+    document.getElementById('qaBody').innerHTML = html;
+
+    if (!_qaModal) {
+        const el = document.getElementById('quickAddModal');
+        _qaModal = new bootstrap.Modal(el);
+        document.getElementById('qaClose').addEventListener('click',  () => _qaModal.hide());
+        document.getElementById('qaCancelBtn').addEventListener('click', () => _qaModal.hide());
+        document.getElementById('qaSaveBtn').addEventListener('click', saveQuickAdd);
+    }
+    _qaModal.show();
+    // İlk alana odaklan
+    setTimeout(() => { const inp = document.querySelector('#qaBody input:not([readonly])'); if(inp) inp.focus(); }, 350);
+}
+
+async function saveQuickAdd() {
+    const cfg = _qaCurrentConfig;
+    const body = document.getElementById('qaBody');
+
+    // Validasyon
+    const inputs = body.querySelectorAll('input[required]');
+    let valid = true;
+    inputs.forEach(i => { if (!i.value.trim()) { i.classList.add('is-invalid'); valid = false; } else { i.classList.remove('is-invalid'); } });
+    if (!valid) return;
+
+    // Büyük harf dönüşümü
+    body.querySelectorAll('input[style*="uppercase"]').forEach(i => { i.value = i.value.toUpperCase(); });
+
+    const fd = new FormData();
+    body.querySelectorAll('input[name]').forEach(i => fd.append(i.name, i.value.trim()));
+
+    const btn = document.getElementById('qaSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Kaydediliyor...';
+
+    try {
+        const res  = await fetch(cfg.url, { method:'POST', body: fd });
+        const json = await res.json();
+        if (json.success) {
+            // Hedef select'e yeni seçenek ekle ve seç
+            const sel = document.getElementById(_qaTargetSelectId);
+            if (sel) {
+                const opt = new Option(json.text, json.id, true, true);
+                sel.appendChild(opt);
+                sel.value = json.id;
+                sel.dispatchEvent(new Event('change'));
+            }
+            _qaModal.hide();
+            showToast(`${cfg.title.replace('Yeni ','')}: "${json.text}" eklendi.`, 'success');
+        } else {
+            showToast(json.message || 'Kayıt hatası.', 'error');
+        }
+    } catch(e) {
+        showToast('Bağlantı hatası.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> Kaydet & Seç';
+    }
 }
 </script>
 

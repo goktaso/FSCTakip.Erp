@@ -287,16 +287,19 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Tedarikçi <span class="text-danger">*</span></label>
-                        <select id="supplierId" class="form-select">
-                            <option value="">— Seçiniz —</option>
-                            @foreach (var s in suppliers)
-                            {
-                                <option value="@s.Id" data-fsc="@s.IsFscActive.ToString().ToLower()"
-                                        data-expiry="@s.FscExpiryDate?.ToString("dd.MM.yyyy")">
-                                    @s.Name
-                                </option>
-                            }
-                        </select>
+                        <div class="qa-group">
+                            <select id="supplierId" class="form-select">
+                                <option value="">— Seçiniz —</option>
+                                @foreach (var s in suppliers)
+                                {
+                                    <option value="@s.Id" data-fsc="@s.IsFscActive.ToString().ToLower()"
+                                            data-expiry="@s.FscExpiryDate?.ToString("dd.MM.yyyy")">
+                                        @s.Name
+                                    </option>
+                                }
+                            </select>
+                            <button type="button" class="qa-btn" onclick="openQuickAdd('supplier','supplierId')" title="Yeni Tedarikçi Ekle"><i class="fas fa-plus"></i></button>
+                        </div>
                         <div id="supplierFscWarning" class="mt-1 px-2 py-1 rounded small"
                              style="display:none;background:#fffbeb;border:1px solid #fde68a;color:#92400e;">
                             <i class="fas fa-exclamation-triangle me-1"></i>Bu tedarikçinin FSC sertifikası geçersiz!
@@ -304,13 +307,16 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">FSC Tipi <span class="text-danger">*</span></label>
-                        <select id="fscTypeId" class="form-select">
-                            <option value="">— Seçiniz —</option>
-                            @foreach (var f in fscTypes)
-                            {
-                                <option value="@f.Id">@f.Name</option>
-                            }
-                        </select>
+                        <div class="qa-group">
+                            <select id="fscTypeId" class="form-select">
+                                <option value="">— Seçiniz —</option>
+                                @foreach (var f in fscTypes)
+                                {
+                                    <option value="@f.Id">@f.Name</option>
+                                }
+                            </select>
+                            <button type="button" class="qa-btn" onclick="openQuickAdd('fsctype','fscTypeId')" title="Yeni FSC Tipi Ekle"><i class="fas fa-plus"></i></button>
+                        </div>
                     </div>
                     <div class="col-md-12">
                         <label class="form-label">Hammadde Ürünü</label>

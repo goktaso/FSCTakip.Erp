@@ -72,6 +72,28 @@ namespace FSCTakip.WebUI.Controllers
             return View(groups);
         }
 
+        // POST /Product/QuickAddGroup — inline hızlı ürün grubu ekleme
+        [HttpPost]
+        public async Task<IActionResult> QuickAddGroup(string GroupName, int? GroupCode)
+        {
+            if (string.IsNullOrWhiteSpace(GroupName))
+                return Json(new { success = false, message = "Grup adı zorunludur." });
+            var code = GroupCode ?? (await _context.ProductGroups.MaxAsync(g => (int?)g.GroupCode) ?? 0) + 1;
+            var g = new ProductGroup
+            {
+                GroupName   = GroupName.Trim().ToUpper(new System.Globalization.CultureInfo("tr-TR")),
+                GroupCode   = code,
+                RangeStart  = code * 1000,
+                RangeEnd    = code * 1000 + 999,
+                IsActive    = true,
+                CreatedDate = DateTime.Now,
+                CreatedBy   = User.Identity?.Name ?? "System"
+            };
+            _context.ProductGroups.Add(g);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, id = g.Id, text = g.GroupName });
+        }
+
         [HttpPost]
         public async Task<IActionResult> SaveProductGroup(ProductGroup model)
         {

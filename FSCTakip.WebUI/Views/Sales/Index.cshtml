@@ -243,13 +243,16 @@
                     </div>
                     <div class="col-md-12">
                         <label class="form-label">Müşteri *</label>
-                        <select id="salesCustomerId" class="form-select form-select-sm">
-                            <option value="">— Seçiniz —</option>
-                            @foreach (var c in customers)
-                            {
-                                <option value="@c.Id" data-fsc="@c.IsFscActive">@c.CustomerCode — @c.Name</option>
-                            }
-                        </select>
+                        <div class="qa-group">
+                            <select id="salesCustomerId" class="form-select form-select-sm">
+                                <option value="">— Seçiniz —</option>
+                                @foreach (var c in customers)
+                                {
+                                    <option value="@c.Id" data-fsc="@c.IsFscActive">@c.CustomerCode — @c.Name</option>
+                                }
+                            </select>
+                            <button type="button" class="qa-btn" onclick="openQuickAdd('customer','salesCustomerId')" title="Yeni Müşteri Ekle"><i class="fas fa-plus"></i></button>
+                        </div>
                         <div id="customerFscInfo" style="display:none;margin-top:4px;"></div>
                     </div>
                     <div class="col-md-3">

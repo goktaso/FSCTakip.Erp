@@ -9,6 +9,49 @@ namespace FSCTakip.WebUI.Controllers
     {
         public PaperController(AppDbContext context) : base(context) { }
 
+        // ── QUICK-ADD ENDPOINTS (inline modal kayıtları) ────────────────
+
+        [HttpPost] public async Task<IActionResult> QuickAddFscType(string Name)
+        {
+            if (string.IsNullOrWhiteSpace(Name)) return Json(new { success=false, message="Ad zorunludur." });
+            var e = new FSCTakip.Core.Entities.FscType { Name=Name.Trim().ToUpper(), IsActive=true };
+            _context.FscTypes.Add(e); await _context.SaveChangesAsync();
+            return Json(new { success=true, id=e.Id, text=e.Name });
+        }
+
+        [HttpPost] public async Task<IActionResult> QuickAddColor(string Name)
+        {
+            if (string.IsNullOrWhiteSpace(Name)) return Json(new { success=false, message="Ad zorunludur." });
+            var e = new PaperColor { Name=Name.Trim().ToUpper(), IsActive=true };
+            _context.PaperColors.Add(e); await _context.SaveChangesAsync();
+            return Json(new { success=true, id=e.Id, text=e.Name });
+        }
+
+        [HttpPost] public async Task<IActionResult> QuickAddPaperType(string Name)
+        {
+            if (string.IsNullOrWhiteSpace(Name)) return Json(new { success=false, message="Ad zorunludur." });
+            var e = new PaperType { Name=Name.Trim().ToUpper(), IsActive=true };
+            _context.PaperTypes.Add(e); await _context.SaveChangesAsync();
+            return Json(new { success=true, id=e.Id, text=e.Name });
+        }
+
+        [HttpPost] public async Task<IActionResult> QuickAddWeight(decimal Value, string? Unit)
+        {
+            if (Value <= 0) return Json(new { success=false, message="Gramaj değeri 0'dan büyük olmalıdır." });
+            var u = string.IsNullOrWhiteSpace(Unit) ? "gr/m²" : Unit.Trim();
+            var e = new PaperWeight { Value=Value, Unit=u, IsActive=true };
+            _context.PaperWeights.Add(e); await _context.SaveChangesAsync();
+            return Json(new { success=true, id=e.Id, text=$"{Value} {u}" });
+        }
+
+        [HttpPost] public async Task<IActionResult> QuickAddWidth(string Code, decimal Value)
+        {
+            if (string.IsNullOrWhiteSpace(Code) || Value <= 0) return Json(new { success=false, message="Kod ve değer zorunludur." });
+            var e = new PaperWidth { Code=Code.Trim().ToUpper(), Value=Value, Unit="mm", IsActive=true };
+            _context.PaperWidths.Add(e); await _context.SaveChangesAsync();
+            return Json(new { success=true, id=e.Id, text=$"{Code.ToUpper()} ({Value} mm)" });
+        }
+
         // --- LİSTELEME METOTLARI ---
         public async Task<IActionResult> Types() => View(await _context.PaperTypes.ToListAsync());
         public async Task<IActionResult> Colors() => View(await _context.PaperColors.ToListAsync());
