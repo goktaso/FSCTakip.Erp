@@ -9,22 +9,47 @@ namespace FSCTakip.WebUI.Controllers
     {
         public CustomersController(AppDbContext context) : base(context) { }
 
-        // POST /Customers/QuickAdd — inline hızlı müşteri ekleme
+        // POST /Customers/QuickAdd — tam form ile hızlı müşteri ekleme
         [HttpPost]
-        public async Task<IActionResult> QuickAdd(string Name, string? Phone)
+        public async Task<IActionResult> QuickAdd(
+            string Name,
+            string? Phone,
+            string? Email,
+            string? TaxOffice,
+            string? TaxNumber,
+            string? City,
+            string? Address,
+            string? FscLicenseCode,
+            DateTime? FscExpiryDate)
         {
             if (string.IsNullOrWhiteSpace(Name))
                 return Json(new { success = false, message = "Müşteri adı zorunludur." });
 
+            var tr = new System.Globalization.CultureInfo("tr-TR");
             var count = await _context.Customers.CountAsync();
+
+            if (!string.IsNullOrEmpty(Email))
+                Email = Email.Trim().Replace("İ", "i").Replace("I", "ı").ToLowerInvariant();
+
+            if (!string.IsNullOrEmpty(Phone))
+                Phone = new string(Phone.Where(char.IsDigit).ToArray());
+
             var c = new Customer
             {
-                Name         = Name.Trim().ToUpper(new System.Globalization.CultureInfo("tr-TR")),
-                CustomerCode = $"MHS-{(count + 1):D3}",
-                Phone        = Phone?.Trim(),
-                IsActive     = true,
-                CreatedDate  = DateTime.Now,
-                CreatedBy    = User.Identity?.Name ?? "System"
+                Name           = Name.Trim().ToUpper(tr),
+                CustomerCode   = $"MHS-{(count + 1):D3}",
+                Phone          = Phone,
+                Email          = Email,
+                TaxOffice      = TaxOffice?.Trim(),
+                TaxNumber      = TaxNumber?.Trim(),
+                City           = City?.Trim(),
+                Address        = Address?.Trim(),
+                FscLicenseCode = FscLicenseCode?.Trim().ToUpperInvariant(),
+                FscExpiryDate  = FscExpiryDate,
+                IsFscActive    = !string.IsNullOrEmpty(FscLicenseCode),
+                IsActive       = true,
+                CreatedDate    = DateTime.Now,
+                CreatedBy      = User.Identity?.Name ?? "System"
             };
             _context.Customers.Add(c);
             await _context.SaveChangesAsync();

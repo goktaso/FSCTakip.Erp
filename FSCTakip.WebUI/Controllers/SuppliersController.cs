@@ -12,20 +12,48 @@ namespace FSCTakip.WebUI.Controllers
 
         public async Task<IActionResult> Index() => View(await _context.Suppliers.OrderBy(s => s.Name).ToListAsync());
 
-        // POST /Suppliers/QuickAdd — inline hızlı tedarikçi ekleme
+        // POST /Suppliers/QuickAdd — tam form ile hızlı tedarikçi ekleme
         [HttpPost]
-        public async Task<IActionResult> QuickAdd(string Name, string? Phone, string? TaxNumber)
+        public async Task<IActionResult> QuickAdd(
+            string Name,
+            string? ContactPerson,
+            string? Phone,
+            string? Email,
+            string? City,
+            string? Address,
+            string? TaxOffice,
+            string? TaxNumber,
+            string? FscCode,
+            DateTime? FscExpiryDate)
         {
             if (string.IsNullOrWhiteSpace(Name))
                 return Json(new { success = false, message = "Tedarikçi adı zorunludur." });
 
+            var tr = new System.Globalization.CultureInfo("tr-TR");
             var count = await _context.Suppliers.CountAsync();
+
+            // E-posta normalize
+            if (!string.IsNullOrEmpty(Email))
+                Email = Email.Trim().Replace("İ", "i").Replace("I", "ı").ToLowerInvariant();
+
+            // Telefon yalnızca rakam
+            if (!string.IsNullOrEmpty(Phone))
+                Phone = new string(Phone.Where(char.IsDigit).ToArray());
+
             var s = new Supplier
             {
-                Name          = Name.Trim().ToUpper(new System.Globalization.CultureInfo("tr-TR")),
+                Name          = Name.Trim().ToUpper(tr),
                 SupplierCode  = $"TED-{(count + 1):D3}",
-                Phone         = Phone?.Trim(),
+                ContactPerson = ContactPerson?.Trim(),
+                Phone         = Phone,
+                Email         = Email,
+                City          = City?.Trim(),
+                Address       = Address?.Trim(),
+                TaxOffice     = TaxOffice?.Trim(),
                 TaxNumber     = TaxNumber?.Trim(),
+                FscCode       = FscCode?.Trim().ToUpperInvariant(),
+                FscExpiryDate = FscExpiryDate,
+                IsFscActive   = !string.IsNullOrEmpty(FscCode),
                 IsActive      = true,
                 CreatedDate   = DateTime.Now,
                 CreatedBy     = User.Identity?.Name ?? "System"

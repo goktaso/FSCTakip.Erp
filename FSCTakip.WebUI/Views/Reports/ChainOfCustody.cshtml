@@ -1,172 +1,265 @@
 @model List<FSCTakip.WebUI.Controllers.CocRow>
 @using FSCTakip.Core.Entities
 @{
-    ViewData["Title"] = "FSC Chain of Custody Raporu";
-    var customers = ViewBag.Customers as List<Customer> ?? new();
-    var products  = ViewBag.Products  as List<Product>  ?? new();
-    string? start = ViewBag.StartDate;
-    string? end   = ViewBag.EndDate;
+    ViewData["Title"] = "FSC Chain of Custody";
+    var customers   = ViewBag.Customers  as List<Customer> ?? new();
+    var products    = ViewBag.Products   as List<Product>  ?? new();
+    string? start   = ViewBag.StartDate;
+    string? end     = ViewBag.EndDate;
+    int? filtCust   = ViewBag.CustomerId  as int?;
+    int? filtProd   = ViewBag.ProductId   as int?;
+    int totalLines  = ViewBag.TotalLines  ?? 0;
+    int fullChain   = ViewBag.FullChain   ?? 0;
+    int missing     = ViewBag.MissingChain ?? 0;
+    int pct         = totalLines > 0 ? (int)(fullChain * 100.0 / totalLines) : 0;
 }
 
-<div class="page-header">
-    <h4 class="page-title"><i class="fas fa-link me-2 text-success"></i>FSC Chain of Custody Raporu</h4>
+@section TopbarActions {
+    <button class="topbar-btn btn-filter" onclick="toggleFilter()">
+        <i class="fas fa-filter"></i> Filtrele
+    </button>
+    <a href="/Reports/ExportCoc?startDate=@start&endDate=@end&customerId=@filtCust&productId=@filtProd"
+       class="topbar-btn btn-excel">
+        <i class="fas fa-file-excel"></i> Excel
+    </a>
+}
+
+<!-- Özet Kartları -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-file-invoice"></i></div>
+            <div>
+                <div class="stat-value">@totalLines</div>
+                <div class="stat-label">Toplam Kalem</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-link"></i></div>
+            <div>
+                <div class="stat-value">@fullChain</div>
+                <div class="stat-label">Zincir Tam</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-unlink"></i></div>
+            <div>
+                <div class="stat-value">@missing</div>
+                <div class="stat-label">Zincir Eksik</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon @(pct >= 90 ? "green" : pct >= 60 ? "amber" : "red")">
+                <i class="fas fa-percent"></i>
+            </div>
+            <div>
+                <div class="stat-value">%@pct</div>
+                <div class="stat-label">Tamamlanma Oranı</div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Stat Cards -->
-<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
-    <div class="stat-card">
-        <div class="stat-icon blue"><i class="fas fa-list"></i></div>
-        <div class="stat-info"><div class="stat-value">@ViewBag.TotalLines</div><div class="stat-label">Toplam Kalem</div></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon green"><i class="fas fa-check-double"></i></div>
-        <div class="stat-info"><div class="stat-value">@ViewBag.FullChain</div><div class="stat-label">Zincir Tam</div></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon red"><i class="fas fa-unlink"></i></div>
-        <div class="stat-info"><div class="stat-value">@ViewBag.MissingChain</div><div class="stat-label">Zincir Eksik</div></div>
-    </div>
-</div>
-
-<!-- Filter -->
-<div class="filter-card">
-    <form method="get" action="/Reports/ChainOfCustody" class="filter-form">
-        <input type="date" name="startDate" class="form-control form-control-sm" value="@start" title="Başlangıç" />
-        <input type="date" name="endDate"   class="form-control form-control-sm" value="@end"   title="Bitiş" />
-        <select name="customerId" class="form-control form-control-sm">
-            <option value="">— Müşteri —</option>
-            @foreach (var c in customers)
-            {
-                <option value="@c.Id">@c.Name</option>
-            }
-        </select>
-        <select name="productId" class="form-control form-control-sm">
-            <option value="">— Ürün —</option>
-            @foreach (var p in products)
-            {
-                <option value="@p.Id">@p.ProductName</option>
-            }
-        </select>
-        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Filtrele</button>
-        <a href="/Reports/ChainOfCustody" class="btn btn-outline-secondary btn-sm">Temizle</a>
-        <div class="ms-auto">
-            <a href="/Reports/ExportCoc?startDate=@start&endDate=@end&customerId=@ViewBag.CustomerId&productId=@ViewBag.ProductId"
-               class="btn btn-success btn-sm"><i class="fas fa-file-excel me-1"></i>Excel</a>
+<!-- Filtre Paneli -->
+<div id="filterPanel" class="filter-panel mb-3" style="@(start != null || end != null || filtCust != null || filtProd != null ? "" : "display:none;")">
+    <form method="get" action="/Reports/ChainOfCustody">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Başlangıç</label>
+                <input type="date" name="startDate" value="@start" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Bitiş</label>
+                <input type="date" name="endDate" value="@end" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Müşteri</label>
+                <select name="customerId" class="form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var c in customers)
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Ürün</label>
+                <select name="productId" class="form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var p in products)
+                    {
+                        <option value="@p.Id">@p.ProductName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2 align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-search me-1"></i>Sorgula
+                </button>
+                <a href="/Reports/ChainOfCustody" class="btn btn-outline-secondary btn-sm">Temizle</a>
+            </div>
         </div>
     </form>
 </div>
 
-<!-- Table -->
+<!-- CoC Tablosu -->
 <div class="table-card">
-    <div class="table-responsive">
-        <table class="data-table">
-            <thead>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width:80px;">DURUM</th>
+                <th>SEVKİYAT</th>
+                <th>SİPARİŞ NO</th>
+                <th>MÜŞTERİ</th>
+                <th>ÜRÜN</th>
+                <th class="text-end">MİKTAR</th>
+                <th>İŞ EMRİ</th>
+                <th>FSC LOT(LAR)</th>
+                <th>TEDARİKÇİ / FSC</th>
+                <th class="text-center" style="width:60px;">İZLE</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Any())
+            {
                 <tr>
-                    <th>DURUM</th>
-                    <th>SEVKİYAT TARİHİ</th>
-                    <th>SİPARİŞ NO</th>
-                    <th>MÜŞTERİ</th>
-                    <th>ÜRÜN</th>
-                    <th class="text-end">MİKTAR</th>
-                    <th>İŞ EMRİ</th>
-                    <th>FSC LOT</th>
-                    <th>TEDARİKÇİ</th>
-                    <th>FSC TİPİ</th>
+                    <td colspan="10">
+                        <div class="empty-state">
+                            <i class="fas fa-link"></i>
+                            <p>
+                                Henüz teslim edilmiş sipariş kaydı yok.<br>
+                                <span style="font-size:12px;">Filtre uygulandıysa tarih aralığını genişletmeyi deneyin.</span>
+                            </p>
+                        </div>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
-                @if (!Model.Any())
-                {
-                    <tr><td colspan="10" class="text-center text-muted py-4">
-                        Henüz teslim edilmiş sipariş kaydı yok
-                    </td></tr>
-                }
-                @foreach (var r in Model)
-                {
-                    <tr class="@(!r.ChainComplete ? "table-warning" : "")">
-                        <td>
-                            @if (r.ChainComplete)
+            }
+            @foreach (var r in Model)
+            {
+                <tr style="@(!r.ChainComplete ? "background:#fffbeb;" : "")">
+                    <td>
+                        @if (r.ChainComplete)
+                        {
+                            <span class="badge badge-green" style="font-size:11px;">
+                                <i class="fas fa-check-circle me-1"></i>Tam
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-red" style="font-size:11px;"
+                                  title="İş emri veya tedarikçi FSC bağlantısı eksik">
+                                <i class="fas fa-exclamation-circle me-1"></i>Eksik
+                            </span>
+                        }
+                    </td>
+                    <td class="text-muted" style="font-size:12px;">
+                        @(r.DispatchDate?.ToString("dd.MM.yyyy") ?? "—")
+                    </td>
+                    <td>
+                        <a href="/Sales/Detail/@r.SalesOrderId" class="table-link fw-semibold" style="font-size:12px;">
+                            @r.SalesOrderNo
+                        </a>
+                    </td>
+                    <td>
+                        <div style="font-size:13px;">@r.CustomerName</div>
+                        @if (!string.IsNullOrEmpty(r.CustomerFscLicense))
+                        {
+                            <span class="badge badge-green" style="font-size:10px;margin-top:2px;">
+                                <i class="fas fa-certificate me-1"></i>@r.CustomerFscLicense
+                            </span>
+                        }
+                    </td>
+                    <td class="fw-semibold" style="font-size:13px;">@r.ProductName</td>
+                    <td class="text-end" style="font-size:13px;">
+                        @r.Quantity.ToString("N0")
+                        <span class="text-muted" style="font-size:11px;">@r.Unit</span>
+                    </td>
+                    <td>
+                        @if (r.WorkOrderNo != null && r.WorkOrderId.HasValue)
+                        {
+                            <a href="/Production/Detail/@r.WorkOrderId" class="table-link" style="font-size:12px;">
+                                @r.WorkOrderNo
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="badge badge-red" style="font-size:10px;">
+                                <i class="fas fa-minus me-1"></i>Bağlı Değil
+                            </span>
+                        }
+                    </td>
+                    <td>
+                        @if (r.LotNos.Any())
+                        {
+                            @foreach (var lot in r.LotNos)
                             {
-                                <span class="badge badge-success" title="FSC zinciri tam">
-                                    <i class="fas fa-check-circle me-1"></i>Tam
-                                </span>
+                                <span class="badge badge-blue me-1" style="font-size:10px;">@lot</span>
                             }
-                            else
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                    <td>
+                        @if (r.SupplierNames.Any())
+                        {
+                            <div style="font-size:12px;font-weight:500;">@string.Join(", ", r.SupplierNames)</div>
+                            @if (r.SupplierFscCodes.Any())
                             {
-                                <span class="badge badge-danger" title="İş emri veya lot bağlantısı eksik">
-                                    <i class="fas fa-exclamation-circle me-1"></i>Eksik
-                                </span>
+                                <div class="text-muted" style="font-size:10px;">@string.Join(", ", r.SupplierFscCodes)</div>
                             }
-                        </td>
-                        <td class="small text-muted">@(r.DispatchDate?.ToString("dd.MM.yyyy") ?? "—")</td>
-                        <td class="fw-semibold small">@r.SalesOrderNo</td>
-                        <td class="small">
-                            @r.CustomerName
-                            @if (!string.IsNullOrEmpty(r.CustomerFscLicense))
-                            {
-                                <br /><span class="badge badge-info small" style="font-size:10px;">@r.CustomerFscLicense</span>
-                            }
-                        </td>
-                        <td class="small"><strong>@r.ProductName</strong></td>
-                        <td class="text-end small">@r.Quantity.ToString("N0") @r.Unit</td>
-                        <td class="small">
-                            @if (r.WorkOrderNo != null)
-                            {
-                                <span class="text-primary fw-semibold">@r.WorkOrderNo</span>
-                            }
-                            else
-                            {
-                                <span class="text-danger"><i class="fas fa-minus"></i> Yok</span>
-                            }
-                        </td>
-                        <td class="small">
-                            @if (r.LotNos.Any())
-                            {
-                                @foreach (var lot in r.LotNos)
+                            <div style="margin-top:2px;">
+                                @foreach (var fsc in r.FscTypes)
                                 {
-                                    <span class="badge badge-primary me-1" style="font-size:10px;">@lot</span>
+                                    <span class="badge badge-green me-1" style="font-size:10px;">@fsc</span>
                                 }
-                            }
-                            else
-                            {
-                                <span class="text-muted">—</span>
-                            }
-                        </td>
-                        <td class="small">
-                            @if (r.SupplierNames.Any())
-                            {
-                                @string.Join(", ", r.SupplierNames)
-                                if (r.SupplierFscCodes.Any())
-                                {
-                                    <br /><span class="text-muted" style="font-size:10px;">@string.Join(", ", r.SupplierFscCodes)</span>
-                                }
-                            }
-                            else
-                            {
-                                <span class="text-muted">—</span>
-                            }
-                        </td>
-                        <td class="small">
-                            @foreach (var fsc in r.FscTypes)
-                            {
-                                <span class="badge badge-success me-1" style="font-size:10px;">@fsc</span>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        <a href="/Reports/Traceability/@r.SalesOrderId"
+                           class="btn btn-sm"
+                           style="padding:3px 8px;border-radius:5px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
+                           title="Satış → Üretim → Lot tam izlenebilirlik zinciri">
+                            <i class="fas fa-search"></i>
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
     @if (Model.Any())
     {
-        var pct = Model.Count > 0 ? (int)(ViewBag.FullChain * 100.0 / Model.Count) : 0;
-        <div class="px-3 py-2 border-top d-flex align-items-center gap-3 small text-muted">
-            <span>@Model.Count kalem — FSC Zincir Tamamlanma: <strong class="text-success">%@pct</strong></span>
-            <div class="progress flex-grow-1" style="height:6px;max-width:200px;">
-                <div class="progress-bar bg-success" style="width:@pct%"></div>
+        <div class="px-4 py-2 border-top d-flex align-items-center gap-3"
+             style="font-size:12px;color:#6b7280;background:#fafafa;">
+            <span>
+                <strong>@Model.Count</strong> kalem &nbsp;·&nbsp;
+                FSC Zincir Tamamlanma:
+                <strong class="@(pct >= 90 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger")">
+                    %@pct
+                </strong>
+            </span>
+            <div class="progress" style="height:6px;width:160px;">
+                <div class="progress-bar @(pct >= 90 ? "bg-success" : pct >= 60 ? "bg-warning" : "bg-danger")"
+                     style="width:@pct%;"></div>
             </div>
+            <span class="ms-auto" style="font-size:11px;">
+                <i class="fas fa-info-circle me-1"></i>
+                Yalnızca <strong>Teslim Edildi</strong> statüsündeki siparişler gösterilir.
+                FSC denetiminde her satır için tedarikçi sertifika kopyası sunulabilir.
+            </span>
         </div>
     }
 </div>
-
-> **Not:** Bu rapor yalnızca **Teslim Edildi** statüsündeki satış siparişlerini gösterir. FSC denetiminde müşteri talep ettiğinde her satır için tedarikçi sertifika kopyası sunulabilir.

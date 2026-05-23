@@ -12,7 +12,7 @@
 }
 
 @section TopbarPrimary {
-    <button class="btn-topbar-add" data-bs-toggle="modal" data-bs-target="#salesModal">
+    <button class="btn-topbar-add" onclick="openNewOrder()">
         <span class="btn-add-icon"><i class="fas fa-plus"></i></span>
         Yeni Sipariş
     </button>
@@ -218,33 +218,24 @@
 <div class="modal fade" id="salesModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header card-header-accent">
-                <span id="salesModalTitle"><i class="fas fa-file-invoice me-2"></i>Yeni Sipariş</span>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-file-invoice" style="font-size:13px;color:#fff;"></i>
+                    </div>
+                    <h5 class="modal-title fw-semibold mb-0" id="salesModalTitle">Yeni Sipariş</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
             </div>
-            <div class="modal-body p-3">
+            <div class="modal-body">
                 <input type="hidden" id="salesOrderId">
-                <div class="row g-2">
-                    <div class="col-md-4">
-                        <label class="form-label">Sipariş No</label>
-                        <input type="text" id="salesOrderNo" class="form-control form-control-sm" placeholder="Otomatik">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Sipariş Tarihi *</label>
-                        <input type="date" id="salesOrderDate" class="form-control form-control-sm">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Durum</label>
-                        <select id="salesStatus" class="form-select form-select-sm">
-                            <option value="1">Taslak</option>
-                            <option value="2">Teslim Edildi</option>
-                            <option value="3">İptal</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Müşteri *</label>
+                <div class="row g-3">
+
+                    <!-- Her zaman görünen alanlar -->
+                    <div class="col-12">
+                        <label class="form-label">Müşteri <span class="text-danger">*</span></label>
                         <div class="qa-group">
-                            <select id="salesCustomerId" class="form-select form-select-sm">
+                            <select id="salesCustomerId" class="form-select" onchange="onCustomerChange()">
                                 <option value="">— Seçiniz —</option>
                                 @foreach (var c in customers)
                                 {
@@ -253,46 +244,66 @@
                             </select>
                             <button type="button" class="qa-btn" onclick="openQuickAdd('customer','salesCustomerId')" title="Yeni Müşteri Ekle"><i class="fas fa-plus"></i></button>
                         </div>
-                        <div id="customerFscInfo" style="display:none;margin-top:4px;"></div>
+                        <div id="customerFscInfo" style="display:none;margin-top:6px;"></div>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">İrsaliye No</label>
-                        <input type="text" id="salesDispatchNo" class="form-control form-control-sm">
+                    <div class="col-md-6">
+                        <label class="form-label">Sipariş Tarihi <span class="text-danger">*</span></label>
+                        <input type="date" id="salesOrderDate" class="form-control">
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Fatura No</label>
-                        <input type="text" id="salesInvoiceNo" class="form-control form-control-sm">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Tutar</label>
-                        <input type="number" id="salesInvoiceAmount" class="form-control form-control-sm" step="0.01" min="0">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Para Birimi</label>
-                        <select id="salesCurrency" class="form-select form-select-sm">
-                            <option value="TRY">TRY — Türk Lirası</option>
-                            <option value="USD">USD — Dolar</option>
-                            <option value="EUR">EUR — Euro</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Araç Plakası</label>
-                        <input type="text" id="salesPlate" class="form-control form-control-sm">
-                    </div>
-                    <div class="col-md-8">
-                        <label class="form-label">Teslimat Adresi</label>
-                        <input type="text" id="salesAddress" class="form-control form-control-sm">
-                    </div>
-                    <div class="col-12">
+                    <div class="col-md-6">
                         <label class="form-label">Notlar</label>
-                        <textarea id="salesNotes" class="form-control form-control-sm" rows="2"></textarea>
+                        <input type="text" id="salesNotes" class="form-control" placeholder="Opsiyonel...">
                     </div>
+
+                    <!-- Yalnızca düzenleme modunda görünen alanlar -->
+                    <div id="salesEditFields" style="display:none;">
+                        <div style="border-top:1px solid #e5e7eb;margin:4px 0 12px;"></div>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Durum</label>
+                                <select id="salesStatus" class="form-select">
+                                    <option value="1">Taslak</option>
+                                    <option value="2">Teslim Edildi</option>
+                                    <option value="3">İptal</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">İrsaliye No</label>
+                                <input type="text" id="salesDispatchNo" class="form-control" placeholder="—">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Fatura No</label>
+                                <input type="text" id="salesInvoiceNo" class="form-control" placeholder="—">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Tutar</label>
+                                <input type="number" id="salesInvoiceAmount" class="form-control" step="0.01" min="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Para Birimi</label>
+                                <select id="salesCurrency" class="form-select">
+                                    <option value="TRY">TRY</option>
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Araç Plakası</label>
+                                <input type="text" id="salesPlate" class="form-control" placeholder="—">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Teslimat Adresi</label>
+                                <input type="text" id="salesAddress" class="form-control" placeholder="—">
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
-                <button type="button" class="btn btn-primary btn-sm" onclick="saveOrder()">
-                    <i class="fas fa-save me-1"></i> Kaydet
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-primary px-4" id="salesSaveBtn" onclick="saveOrder()">
+                    <i class="fas fa-arrow-right me-1"></i> Kaydet &amp; Kalemlere Geç
                 </button>
             </div>
         </div>
@@ -301,94 +312,125 @@
 
 @section Scripts {
 <script>
-let _salesEditMode = false;
+let _salesIsEdit = false;
 
-document.getElementById('salesModal').addEventListener('show.bs.modal', function () {
-    if (!_salesEditMode) {
-        ['salesOrderId','salesOrderNo','salesDispatchNo','salesInvoiceNo',
-         'salesInvoiceAmount','salesPlate','salesAddress','salesNotes'].forEach(id => {
-            const el = document.getElementById(id); if (el) el.value = '';
-        });
-        document.getElementById('salesOrderDate').value = new Date().toISOString().split('T')[0];
-        document.getElementById('salesCustomerId').value = '';
-        document.getElementById('salesCurrency').value = 'TRY';
-        document.getElementById('salesStatus').value = '1';
-        document.getElementById('customerFscInfo').style.display = 'none';
-        document.getElementById('salesModalTitle').innerHTML = '<i class="fas fa-file-invoice me-2"></i>Yeni Sipariş';
-    }
-    _salesEditMode = false;
-});
+function openNewOrder() {
+    _salesIsEdit = false;
+    document.getElementById('salesOrderId').value    = '';
+    document.getElementById('salesCustomerId').value = '';
+    document.getElementById('salesOrderDate').value  = new Date().toISOString().split('T')[0];
+    document.getElementById('salesNotes').value      = '';
+    document.getElementById('customerFscInfo').style.display = 'none';
+    document.getElementById('salesEditFields').style.display = 'none';
+    document.getElementById('salesModalTitle').textContent   = 'Yeni Sipariş';
+    document.getElementById('salesSaveBtn').innerHTML = '<i class="fas fa-arrow-right me-1"></i> Kaydet & Kalemlere Geç';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('salesModal')).show();
+}
 
-document.getElementById('salesCustomerId').addEventListener('change', function () {
-    const opt = this.options[this.selectedIndex];
+function onCustomerChange() {
+    const opt  = document.getElementById('salesCustomerId').options;
+    const sel  = opt[opt.selectedIndex];
     const info = document.getElementById('customerFscInfo');
-    if (opt && opt.dataset.fsc === 'True') {
+    if (sel && sel.dataset.fsc === 'True') {
         info.style.display = 'block';
-        info.innerHTML = '<span class="badge badge-green"><i class="fas fa-certificate me-1"></i>FSC Sertifikalı Müşteri — CoC kaydı otomatik oluşturulur</span>';
+        info.innerHTML = '<span class="badge badge-green"><i class="fas fa-certificate me-1"></i>FSC Sertifikalı Müşteri — CoC zinciri takip edilecek</span>';
     } else {
         info.style.display = 'none';
     }
-});
+}
 
 function editOrder(id) {
-    _salesEditMode = true;
     fetch(`/Sales/GetOrder/${id}`)
         .then(r => r.json()).then(res => {
-            if (!res.success) { _salesEditMode = false; return; }
+            if (!res.success) return;
+            _salesIsEdit = true;
             const d = res.data;
             document.getElementById('salesOrderId').value       = d.id;
-            document.getElementById('salesOrderNo').value       = d.salesOrderNo;
             document.getElementById('salesOrderDate').value     = d.orderDate;
             document.getElementById('salesCustomerId').value    = d.customerId;
+            document.getElementById('salesNotes').value         = d.notes || '';
+            // edit-only fields
+            document.getElementById('salesEditFields').style.display = '';
+            document.getElementById('salesStatus').value        = d.status;
             document.getElementById('salesDispatchNo').value    = d.dispatchNo || '';
             document.getElementById('salesInvoiceNo').value     = d.invoiceNo || '';
             document.getElementById('salesInvoiceAmount').value = d.invoiceAmount || '';
             document.getElementById('salesCurrency').value      = d.currency || 'TRY';
             document.getElementById('salesPlate').value         = d.plateNumber || '';
             document.getElementById('salesAddress').value       = d.deliveryAddress || '';
-            document.getElementById('salesStatus').value        = d.status;
-            document.getElementById('salesNotes').value         = d.notes || '';
-            document.getElementById('salesModalTitle').innerHTML = `<i class="fas fa-pen me-2"></i>Sipariş Düzenle — ${d.salesOrderNo}`;
+            document.getElementById('customerFscInfo').style.display = 'none';
+            document.getElementById('salesModalTitle').textContent = `Sipariş Düzenle — ${d.salesOrderNo}`;
+            document.getElementById('salesSaveBtn').innerHTML = '<i class="fas fa-save me-1"></i> Güncelle';
             bootstrap.Modal.getOrCreateInstance(document.getElementById('salesModal')).show();
         });
 }
 
 function saveOrder() {
     const customerId = document.getElementById('salesCustomerId').value;
-    if (!customerId) { showToast('Müşteri seçiniz', 'warning'); return; }
+    const orderDate  = document.getElementById('salesOrderDate').value;
+    if (!customerId) { showToast('Müşteri seçiniz.', 'warning'); return; }
+    if (!orderDate)  { showToast('Sipariş tarihi zorunludur.', 'warning'); return; }
 
     const fd = new FormData();
     fd.append('salesOrderId',    document.getElementById('salesOrderId').value || '0');
     fd.append('customerId',      customerId);
-    fd.append('orderDate',       document.getElementById('salesOrderDate').value);
-    fd.append('dispatchNo',      document.getElementById('salesDispatchNo').value);
-    fd.append('invoiceNo',       document.getElementById('salesInvoiceNo').value);
-    fd.append('invoiceAmount',   document.getElementById('salesInvoiceAmount').value);
-    fd.append('currency',        document.getElementById('salesCurrency').value);
-    fd.append('plateNumber',     document.getElementById('salesPlate').value);
-    fd.append('deliveryAddress', document.getElementById('salesAddress').value);
-    fd.append('status',          document.getElementById('salesStatus').value);
+    fd.append('orderDate',       orderDate);
     fd.append('notes',           document.getElementById('salesNotes').value);
+
+    if (_salesIsEdit) {
+        fd.append('status',          document.getElementById('salesStatus').value || '1');
+        fd.append('dispatchNo',      document.getElementById('salesDispatchNo').value);
+        fd.append('invoiceNo',       document.getElementById('salesInvoiceNo').value);
+        fd.append('invoiceAmount',   document.getElementById('salesInvoiceAmount').value);
+        fd.append('currency',        document.getElementById('salesCurrency').value);
+        fd.append('plateNumber',     document.getElementById('salesPlate').value);
+        fd.append('deliveryAddress', document.getElementById('salesAddress').value);
+    } else {
+        fd.append('status', '1'); // Taslak
+        fd.append('currency', 'TRY');
+    }
+
+    const btn = document.getElementById('salesSaveBtn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Kaydediliyor...';
 
     fetch('/Sales/SaveOrder', { method: 'POST', body: fd })
         .then(r => r.json()).then(res => {
+            btn.disabled = false; btn.innerHTML = orig;
             if (res.success) {
                 bootstrap.Modal.getInstance(document.getElementById('salesModal'))?.hide();
-                showToast(res.message + ' (' + res.salesOrderNo + ')', 'success');
-                setTimeout(() => location.reload(), 1200);
+                if (_salesIsEdit) {
+                    showToast(res.message, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    // Yeni sipariş → kalem eklemek için detay sayfasına git
+                    showToast(`${res.salesOrderNo} oluşturuldu`, 'success');
+                    setTimeout(() => { window.location.href = `/Sales/Detail/${res.id}`; }, 700);
+                }
             } else {
                 showToast(res.message, 'error');
             }
-        });
+        }).catch(() => { btn.disabled = false; btn.innerHTML = orig; });
 }
 
 function deleteOrder(id, no) {
-    if (!confirm(`"${no}" siparişini silmek istiyor musunuz?`)) return;
-    fetch(`/Sales/DeleteOrder/${id}`, { method: 'POST' })
-        .then(r => r.json()).then(res => {
-            showToast(res.message, res.success ? 'success' : 'error');
-            if (res.success) setTimeout(() => location.reload(), 1000);
-        });
+    Swal.fire({
+        title: 'Siparişi Sil',
+        text: `"${no}" siparişini silmek istiyor musunuz?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Sil',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#dc2626'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        fetch(`/Sales/DeleteOrder/${id}`, { method: 'POST' })
+            .then(r => r.json()).then(res => {
+                showToast(res.message, res.success ? 'success' : 'error');
+                if (res.success) setTimeout(() => location.reload(), 1000);
+            });
+    });
 }
 </script>
 }

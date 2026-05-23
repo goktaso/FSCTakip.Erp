@@ -11,12 +11,18 @@ namespace FSCTakip.WebUI.Controllers
 
         // ── QUICK-ADD ENDPOINTS (inline modal kayıtları) ────────────────
 
-        [HttpPost] public async Task<IActionResult> QuickAddFscType(string Name)
+        [HttpPost] public async Task<IActionResult> QuickAddFscType(string Name, string? Code, string? Description, bool IsActive = true)
         {
-            if (string.IsNullOrWhiteSpace(Name)) return Json(new { success=false, message="Ad zorunludur." });
-            var e = new FSCTakip.Core.Entities.FscType { Name=Name.Trim().ToUpper(), IsActive=true };
+            if (string.IsNullOrWhiteSpace(Name)) return Json(new { success=false, message="Sertifika adı zorunludur." });
+            if (string.IsNullOrWhiteSpace(Code))  return Json(new { success=false, message="Kısa kod zorunludur." });
+            var e = new FSCTakip.Core.Entities.FscType {
+                Name        = Name.Trim().ToUpper(),
+                Code        = Code.Trim().ToUpperInvariant(),
+                Description = Description?.Trim(),
+                IsActive    = IsActive
+            };
             _context.FscTypes.Add(e); await _context.SaveChangesAsync();
-            return Json(new { success=true, id=e.Id, text=e.Name });
+            return Json(new { success=true, id=e.Id, text=$"{e.Code} – {e.Name}" });
         }
 
         [HttpPost] public async Task<IActionResult> QuickAddColor(string Name)

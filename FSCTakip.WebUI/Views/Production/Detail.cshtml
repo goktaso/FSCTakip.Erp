@@ -491,80 +491,81 @@
             <div class="modal-body">
                 <input type="hidden" id="detailId">
                 <input type="hidden" id="detailWoId" value="@Model.Id">
+                <input type="hidden" id="detailWaste" value="0">
                 <div class="row g-3">
-                    <!-- Reçete Bileşeni (FSC CoC için kritik) -->
+
+                    <!-- Bobin (grouped by lot) -->
                     <div class="col-12">
-                        <label class="form-label d-flex align-items-center gap-2">
-                            <i class="fas fa-sitemap text-success"></i>
-                            Reçete Bileşeni
-                            <span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;font-weight:500;">FSC CoC için önerilir</span>
-                        </label>
-                        <select id="detailRecipeId" class="form-select">
-                            <option value="">— Serbest Tüketim (Reçete Dışı) —</option>
-                            @foreach (var wr in workOrderRecipes)
-                            {
-                                <option value="@wr.Id">
-                                    @(wr.Product?.ProductName ?? "?") — Plan: @wr.PlannedQuantity.ToString("N0") kg · Gerçek: @wr.ActualConsumedQuantity.ToString("N0") kg
-                                </option>
+                        <label class="form-label">Bobin <span class="text-danger">*</span></label>
+                        <select id="detailSerialId" class="form-select" onchange="updateSerialInfo()">
+                            <option value="">— Bobin Seçiniz —</option>
+                            @{
+                                var byLot = serials.GroupBy(s => new {
+                                    LotNo    = s.Lot?.LotNo    ?? "—",
+                                    Supplier = s.Lot?.Supplier?.Name ?? "Bilinmiyor"
+                                });
                             }
-                            @if (!workOrderRecipes.Any() && recipeComponents.Any())
+                            @foreach (var g in byLot)
                             {
-                                <optgroup label="— Önce Bileşen Ekleyin —">
-                                    @foreach (var rc in recipeComponents)
+                                <optgroup label="@g.Key.LotNo — @g.Key.Supplier">
+                                    @foreach (var s in g)
                                     {
-                                        <option value="" disabled>@rc.ChildProduct?.ProductName — @rc.StandardQuantity @rc.Unit (standart)</option>
+                                        <option value="@s.Id"
+                                                data-kalan="@s.CurrentWeight"
+                                                data-lotno="@g.Key.LotNo"
+                                                data-supplier="@g.Key.Supplier">
+                                            @s.SerialNo · Kalan: @s.CurrentWeight.ToString("N2") kg
+                                        </option>
                                     }
                                 </optgroup>
                             }
                         </select>
-                        <div class="form-text" style="font-size:11px;color:#6b7280;">
-                            <i class="fas fa-info-circle me-1"></i>Seçilirse bu tüketim ilgili bileşenin mass-balance analizine dahil edilir.
-                        </div>
+                        <div id="serialInfo" class="mt-1 px-2 py-1 rounded small" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:12px;"></div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Bobin (Hammadde Serisi) <span class="text-danger">*</span></label>
-                        <select id="detailSerialId" class="form-select" onchange="updateSerialInfo()">
-                            <option value="">— Seçiniz —</option>
-                            @foreach (var s in serials)
-                            {
-                                <option value="@s.Id"
-                                        data-kalan="@s.CurrentWeight"
-                                        data-lotno="@s.Lot?.LotNo"
-                                        data-supplier="@s.Lot?.Supplier?.Name">
-                                    @s.SerialNo — Kalan: @s.CurrentWeight.ToString("N2") kg
-                                </option>
-                            }
-                        </select>
-                        <div id="serialInfo" class="mt-1 px-2 py-1 rounded small" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;"></div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Makine <span class="text-danger">*</span></label>
-                        <select id="detailMachineId" class="form-select">
-                            <option value="">— Seçiniz —</option>
-                            @foreach (var m in machines)
-                            {
-                                <option value="@m.Id" selected="@(m.Id == Model.MachineId)">@m.Name</option>
-                            }
-                        </select>
-                    </div>
+
+                    <!-- Tarih | Tüketim | Fire -->
                     <div class="col-md-4">
                         <label class="form-label">Üretim Tarihi <span class="text-danger">*</span></label>
                         <input type="date" id="detailDate" class="form-control">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Tüketilen Hammadde (kg) <span class="text-danger">*</span></label>
+                        <label class="form-label">Tüketilen (kg) <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="number" id="detailConsumed" class="form-control" step="0.01" min="0.01" placeholder="0.00">
+                            <input type="number" id="detailConsumed" class="form-control" step="0.01" min="0.01"
+                                   placeholder="0.00" oninput="onConsumedChange()">
                             <span class="input-group-text">kg</span>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Fire / Atık (kg)</label>
-                        <div class="input-group">
-                            <input type="number" id="detailWaste" class="form-control" step="0.01" min="0" placeholder="0.00" value="0">
-                            <span class="input-group-text">kg</span>
+                        <label class="form-label d-flex align-items-center justify-content-between">
+                            <span>Fire / Atık</span>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <input type="radio" class="btn-check" name="fireMode" id="fireModeKg" value="kg" checked onchange="toggleFireMode()">
+                                <label class="btn btn-outline-secondary" for="fireModeKg" style="font-size:11px;padding:1px 10px;line-height:1.6;">kg</label>
+                                <input type="radio" class="btn-check" name="fireMode" id="fireModePct" value="pct" onchange="toggleFireMode()">
+                                <label class="btn btn-outline-secondary" for="fireModePct" style="font-size:11px;padding:1px 10px;line-height:1.6;">%</label>
+                            </div>
+                        </label>
+                        <!-- kg mode -->
+                        <div id="fireKgDiv">
+                            <div class="input-group">
+                                <input type="number" id="fireKgDirect" class="form-control" step="0.01" min="0"
+                                       placeholder="0.00" value="0" oninput="syncFireKg()">
+                                <span class="input-group-text">kg</span>
+                            </div>
+                        </div>
+                        <!-- % mode -->
+                        <div id="firePctDiv" style="display:none;">
+                            <div class="input-group">
+                                <input type="number" id="firePercent" class="form-control" step="0.1" min="0" max="100"
+                                       placeholder="0.0" oninput="calcFireFromPct()">
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <div class="form-text" id="fireKgCalcText" style="font-size:11px;color:#dc2626;font-weight:500;">= 0.00 kg fire</div>
                         </div>
                     </div>
+
+                    <!-- Üretilen | Makine -->
                     <div class="col-md-6">
                         <label class="form-label">Üretilen Miktar (adet) <span class="text-danger">*</span></label>
                         <div class="input-group">
@@ -573,9 +574,61 @@
                         </div>
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label text-muted" style="font-size:12px;">Makine</label>
+                        <select id="detailMachineId" class="form-select form-select-sm">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var m in machines)
+                            {
+                                <option value="@m.Id">@m.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Notlar -->
+                    <div class="col-12">
                         <label class="form-label">Notlar</label>
                         <input type="text" id="detailNotes" class="form-control" placeholder="Opsiyonel...">
                     </div>
+
+                    <!-- FSC CoC İzleme (collapsible) -->
+                    <div class="col-12">
+                        <div style="border-top:1px dashed #e5e7eb;padding-top:10px;">
+                            <button type="button" class="btn btn-link p-0 text-decoration-none"
+                                    style="font-size:12px;color:#6b7280;"
+                                    data-bs-toggle="collapse" data-bs-target="#cocSection">
+                                <i class="fas fa-sitemap me-1 text-success"></i>
+                                FSC CoC İzleme <span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;font-weight:500;margin-left:4px;">Opsiyonel</span>
+                                <i class="fas fa-chevron-down ms-1" style="font-size:10px;"></i>
+                            </button>
+                            <div class="collapse" id="cocSection">
+                                <div class="mt-2 p-2 rounded" style="background:#f8fafc;border:1px solid #e5e7eb;">
+                                    <label class="form-label" style="font-size:12px;">Reçete Bileşeni</label>
+                                    <select id="detailRecipeId" class="form-select form-select-sm">
+                                        <option value="">— Serbest Tüketim (Reçete Dışı) —</option>
+                                        @foreach (var wr in workOrderRecipes)
+                                        {
+                                            <option value="@wr.Id">
+                                                @(wr.Product?.ProductName ?? "?") — Plan: @wr.PlannedQuantity.ToString("N0") kg · Gerçek: @wr.ActualConsumedQuantity.ToString("N0") kg
+                                            </option>
+                                        }
+                                        @if (!workOrderRecipes.Any() && recipeComponents.Any())
+                                        {
+                                            <optgroup label="— Önce Bileşen Ekleyin —">
+                                                @foreach (var rc in recipeComponents)
+                                                {
+                                                    <option value="" disabled>@rc.ChildProduct?.ProductName — @rc.StandardQuantity @rc.Unit (standart)</option>
+                                                }
+                                            </optgroup>
+                                        }
+                                    </select>
+                                    <div class="form-text" style="font-size:11px;color:#6b7280;">
+                                        <i class="fas fa-info-circle me-1"></i>Seçilirse bu tüketim ilgili bileşenin mass-balance analizine dahil edilir.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
             <div class="modal-footer">
@@ -709,17 +762,61 @@ function showLotDocs(serialId) {
         });
 }
 
+// ── Fire toggle helpers ──────────────────────────────────────────────────────
+function toggleFireMode() {
+    const mode = document.querySelector('input[name="fireMode"]:checked').value;
+    document.getElementById('fireKgDiv').style.display  = mode === 'kg'  ? '' : 'none';
+    document.getElementById('firePctDiv').style.display = mode === 'pct' ? '' : 'none';
+    if (mode === 'pct') calcFireFromPct(); else syncFireKg();
+}
+
+function syncFireKg() {
+    const kg = parseFloat(document.getElementById('fireKgDirect').value) || 0;
+    document.getElementById('detailWaste').value = kg.toFixed(2);
+}
+
+function calcFireFromPct() {
+    const consumed = parseFloat(document.getElementById('detailConsumed').value) || 0;
+    const pct      = parseFloat(document.getElementById('firePercent').value)    || 0;
+    const kg       = consumed * pct / 100;
+    document.getElementById('detailWaste').value        = kg.toFixed(2);
+    document.getElementById('fireKgCalcText').textContent =
+        `= ${kg.toLocaleString('tr-TR', {minimumFractionDigits:2})} kg fire`;
+}
+
+function onConsumedChange() {
+    const mode = document.querySelector('input[name="fireMode"]:checked')?.value;
+    if (mode === 'pct') calcFireFromPct();
+}
+
+function _resetFireMode() {
+    document.getElementById('fireModeKg').checked = true;
+    document.getElementById('fireKgDiv').style.display  = '';
+    document.getElementById('firePctDiv').style.display = 'none';
+    document.getElementById('fireKgDirect').value = '0';
+    document.getElementById('firePercent').value  = '';
+    document.getElementById('fireKgCalcText').textContent = '= 0.00 kg fire';
+    document.getElementById('detailWaste').value  = '0';
+}
+
+// ── Tüketim modal ────────────────────────────────────────────────────────────
 window.openAddDetailFn = function() {
-    document.getElementById('detailId').value = '';
+    document.getElementById('detailId').value      = '';
     document.getElementById('detailSerialId').value = '';
     document.getElementById('detailRecipeId').value = '';
-    document.getElementById('detailDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('detailDate').value    = new Date().toISOString().split('T')[0];
     document.getElementById('detailConsumed').value = '';
-    document.getElementById('detailWaste').value = '0';
-    document.getElementById('detailQty').value = '';
-    document.getElementById('detailNotes').value = '';
+    document.getElementById('detailQty').value      = '';
+    document.getElementById('detailNotes').value    = '';
     document.getElementById('serialInfo').style.display = 'none';
+    _resetFireMode();
+    // ensure machine pre-filled from work order
+    if (!document.getElementById('detailMachineId').value)
+        document.getElementById('detailMachineId').value = '@Model.MachineId';
     document.getElementById('detailModalTitle').textContent = 'Tüketim Kaydı Ekle';
+    // collapse CoC section
+    const coc = bootstrap.Collapse.getOrCreateInstance(document.getElementById('cocSection'), {toggle:false});
+    coc.hide();
     bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal')).show();
 };
 
@@ -728,10 +825,11 @@ function updateSerialInfo() {
     const opt = sel.options[sel.selectedIndex];
     const info = document.getElementById('serialInfo');
     if (!opt.value) { info.style.display = 'none'; return; }
+    const kalan = parseFloat(opt.dataset.kalan || 0).toLocaleString('tr-TR', {minimumFractionDigits:2});
     info.style.display = 'block';
     info.innerHTML = `<i class="fas fa-info-circle me-1"></i>
-        <strong>${opt.dataset.lotno}</strong> · ${opt.dataset.supplier} ·
-        Kalan: <strong>${parseFloat(opt.dataset.kalan).toLocaleString('tr-TR', {minimumFractionDigits:2})} kg</strong>`;
+        <strong>${opt.dataset.lotno ?? '—'}</strong> · ${opt.dataset.supplier ?? '—'} ·
+        Kalan: <strong>${kalan} kg</strong>`;
 }
 
 function editDetail(id) {
@@ -745,40 +843,59 @@ function editDetail(id) {
             document.getElementById('detailRecipeId').value  = d.workOrderRecipeId || '';
             document.getElementById('detailDate').value      = d.productionDate;
             document.getElementById('detailConsumed').value  = d.consumedWeight;
-            document.getElementById('detailWaste').value     = d.wasteWeight;
             document.getElementById('detailQty').value       = d.producedQuantity;
             document.getElementById('detailNotes').value     = d.notes || '';
             document.getElementById('detailModalTitle').textContent = 'Tüketim Kaydını Düzenle';
+            // fire: always restore as kg on edit
+            _resetFireMode();
+            document.getElementById('fireKgDirect').value   = d.wasteWeight;
+            document.getElementById('detailWaste').value    = d.wasteWeight;
+            // expand CoC if recipe is selected
+            if (d.workOrderRecipeId) {
+                bootstrap.Collapse.getOrCreateInstance(document.getElementById('cocSection'), {toggle:false}).show();
+            }
             updateSerialInfo();
             bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal')).show();
         });
 }
 
 function saveDetail() {
-    if (!document.getElementById('detailSerialId').value ||
-        !document.getElementById('detailMachineId').value ||
-        !document.getElementById('detailDate').value ||
-        !document.getElementById('detailConsumed').value ||
-        !document.getElementById('detailQty').value) {
-        showToast('Bobin, Makine, Tarih, Tüketim ve Üretim Miktarı zorunludur.', 'warning');
+    const serialVal   = document.getElementById('detailSerialId').value;
+    const dateVal     = document.getElementById('detailDate').value;
+    const consumedVal = document.getElementById('detailConsumed').value;
+    const qtyVal      = document.getElementById('detailQty').value;
+
+    if (!serialVal || !dateVal || !consumedVal || !qtyVal) {
+        showToast('Bobin, Tarih, Tüketim ve Üretim Miktarı zorunludur.', 'warning');
         return;
     }
+
+    // ensure hidden waste is up-to-date
+    const mode = document.querySelector('input[name="fireMode"]:checked')?.value;
+    if (mode === 'pct') calcFireFromPct(); else syncFireKg();
+
     const fd = new FormData();
     const id = document.getElementById('detailId').value;
     if (id) fd.append('Id', id);
     fd.append('WorkOrderId',      document.getElementById('detailWoId').value);
-    fd.append('FscSerialId',      document.getElementById('detailSerialId').value);
+    fd.append('FscSerialId',      serialVal);
     fd.append('MachineId',        document.getElementById('detailMachineId').value);
-    fd.append('ProductionDate',   document.getElementById('detailDate').value);
-    fd.append('ConsumedWeight',   document.getElementById('detailConsumed').value);
+    fd.append('ProductionDate',   dateVal);
+    fd.append('ConsumedWeight',   consumedVal);
     fd.append('WasteWeight',      document.getElementById('detailWaste').value || '0');
-    fd.append('ProducedQuantity', document.getElementById('detailQty').value);
+    fd.append('ProducedQuantity', qtyVal);
     fd.append('Notes',            document.getElementById('detailNotes').value);
     const recipeId = document.getElementById('detailRecipeId').value;
     if (recipeId) fd.append('WorkOrderRecipeId', recipeId);
 
+    const btn = document.querySelector('#detailModal .btn-primary');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Kaydediliyor...';
+
     fetch('/Production/SaveDetail', { method: 'POST', body: fd })
         .then(r => r.json()).then(res => {
+            btn.disabled = false; btn.innerHTML = orig;
             if (res.success) {
                 bootstrap.Modal.getInstance(document.getElementById('detailModal'))?.hide();
                 showToast(res.message, 'success');
@@ -786,7 +903,7 @@ function saveDetail() {
             } else {
                 showToast(res.message, 'error');
             }
-        });
+        }).catch(() => { btn.disabled = false; btn.innerHTML = orig; });
 }
 
 function deleteDetail(id) {

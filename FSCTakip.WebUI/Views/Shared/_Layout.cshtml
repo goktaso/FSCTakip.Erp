@@ -1034,6 +1034,222 @@
     </div>
 </div>
 
+<!-- ── QA: TEDARİKÇİ TAM FORM MODALI ──────────────────────────────── -->
+<div class="modal fade" id="qaSupplierModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#1a2744;color:#fff;border-radius:10px 10px 0 0;padding:14px 20px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" style="font-size:14px;">Yeni Tedarikçi Ekle</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaSupplierClose"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Tedarikçi Ünvanı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaSuppName" placeholder="Büyük harf ile girilir" style="text-transform:uppercase;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Tedarikçi Kodu</label>
+                        <input type="text" class="form-control" id="qaSuppCode" readonly style="background:#f8fafc;color:#6b7280;" placeholder="Otomatik">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Yetkili Kişi</label>
+                        <input type="text" class="form-control" id="qaSuppContact">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Telefon <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaSuppPhone" placeholder="5xxxxxxxxx">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">E-Posta</label>
+                        <input type="text" class="form-control" id="qaSuppEmail" placeholder="ornek@firma.com" style="text-transform:lowercase;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Şehir</label>
+                        <input type="text" class="form-control" id="qaSuppCity">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Adres</label>
+                        <input type="text" class="form-control" id="qaSuppAddress">
+                    </div>
+                    <div class="col-md-4">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Vergi Dairesi</label>
+                                <input type="text" class="form-control" id="qaSuppTaxOffice">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Vergi No</label>
+                                <input type="text" class="form-control" id="qaSuppTaxNumber" maxlength="11">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <i class="fas fa-certificate text-success"></i>
+                                <span class="fw-semibold" style="font-size:13px;color:#166534;">FSC Sertifika Bilgileri</span>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">FSC Sertifika No</label>
+                                    <input type="text" class="form-control" id="qaSuppFscCode" placeholder="FSC-C123456">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Sertifika Bitiş Tarihi</label>
+                                    <input type="date" class="form-control" id="qaSuppFscDate">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaSupplierCancel">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" id="qaSupplierSave">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── QA: MÜŞTERİ TAM FORM MODALI ───────────────────────────────── -->
+<div class="modal fade" id="qaCustomerModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#1a2744;color:#fff;border-radius:10px 10px 0 0;padding:14px 20px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" style="font-size:14px;">Yeni Müşteri Ekle</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaCustomerClose"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Müşteri Ünvanı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaCustName" placeholder="Büyük harf ile girilir" style="text-transform:uppercase;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Müşteri Kodu</label>
+                        <input type="text" class="form-control" id="qaCustCode" readonly style="background:#f8fafc;color:#6b7280;" placeholder="Otomatik">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Vergi Dairesi</label>
+                        <input type="text" class="form-control" id="qaCustTaxOffice">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Vergi Numarası</label>
+                        <input type="text" class="form-control" id="qaCustTaxNumber" maxlength="11">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Telefon <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaCustPhone" placeholder="5xxxxxxxxx">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">E-Posta</label>
+                        <input type="text" class="form-control" id="qaCustEmail" placeholder="ornek@firma.com" style="text-transform:lowercase;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Şehir</label>
+                        <input type="text" class="form-control" id="qaCustCity">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Adres</label>
+                        <input type="text" class="form-control" id="qaCustAddress">
+                    </div>
+                    <div class="col-12">
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <i class="fas fa-certificate text-success"></i>
+                                <span class="fw-semibold" style="font-size:13px;color:#166534;">FSC Lisans Bilgileri</span>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">FSC Lisans Kodu</label>
+                                    <input type="text" class="form-control" id="qaCustFscCode" placeholder="FSC-C123456">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Sertifika Bitiş Tarihi</label>
+                                    <input type="date" class="form-control" id="qaCustFscDate">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaCustomerCancel">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" id="qaCustomerSave">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── QA: FSC TİPİ TAM FORM MODALI ──────────────────────────────── -->
+<div class="modal fade" id="qaFscTypeModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#166534;color:#fff;border-radius:10px 10px 0 0;padding:14px 20px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-certificate"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" style="font-size:14px;">Yeni FSC Sertifika Tipi Ekle</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaFscTypeClose"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Sertifika Adı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaFscName" placeholder="Örn: Mix">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Kısa Kod <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaFscCode" placeholder="Örn: FSC-MIX" style="text-transform:uppercase;">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Açıklama</label>
+                        <textarea class="form-control" rows="2" id="qaFscDescription"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="qaFscIsActive" checked>
+                            <label class="form-check-label small fw-semibold" for="qaFscIsActive">Aktif</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaFscTypeCancel">İptal</button>
+                <button type="button" class="btn btn-success btn-sm px-4" id="qaFscTypeSave">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="~/lib/jquery/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1237,11 +1453,163 @@ const QA_CONFIGS = {
     }
 };
 
+// ── FULL-FORM MODALS: Tedarikçi / Müşteri / FSC Tipi ──────────────────
+// Her modalın kendi singleton + target select ID'si
+
+var _qaFullModals = {};
+var _qaFullTargetId = {};
+
+function _getOrCreateModal(id) {
+    if (!_qaFullModals[id]) {
+        _qaFullModals[id] = new bootstrap.Modal(document.getElementById(id));
+    }
+    return _qaFullModals[id];
+}
+
+function _resetAndOpenFullModal(modalId, targetSelectId) {
+    _qaFullTargetId[modalId] = targetSelectId;
+    // Tüm input/textarea temizle
+    document.querySelectorAll('#' + modalId + ' input:not([readonly]):not([type="checkbox"]), #' + modalId + ' textarea').forEach(el => {
+        el.value = '';
+        el.classList.remove('is-invalid');
+    });
+    // Checkbox'ları sıfırla
+    document.querySelectorAll('#' + modalId + ' input[type="checkbox"]').forEach(el => { el.checked = true; });
+    _getOrCreateModal(modalId).show();
+    setTimeout(() => {
+        const first = document.querySelector('#' + modalId + ' input:not([readonly])');
+        if (first) first.focus();
+    }, 350);
+}
+
+async function _saveFullModal(modalId, url, buildFd, btnId, labelBase) {
+    const fd  = buildFd();
+    if (!fd) return; // validation failed
+    const btn = document.getElementById(btnId);
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Kaydediliyor...';
+    try {
+        const res  = await fetch(url, { method: 'POST', body: fd });
+        const json = await res.json();
+        if (json.success) {
+            const targetId = _qaFullTargetId[modalId];
+            const sel = document.getElementById(targetId);
+            if (sel) {
+                const opt = new Option(json.text, json.id, true, true);
+                sel.appendChild(opt);
+                sel.value = json.id;
+                sel.dispatchEvent(new Event('change'));
+            }
+            _getOrCreateModal(modalId).hide();
+            showToast(labelBase + ': "' + json.text + '" eklendi.', 'success');
+        } else {
+            showToast(json.message || 'Kayıt hatası.', 'error');
+        }
+    } catch(e) {
+        showToast('Bağlantı hatası.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> Kaydet & Seç';
+    }
+}
+
+// ── TEDARİKÇİ TAM FORM ────────────────────────────────────────────────
+(function () {
+    document.getElementById('qaSupplierClose')?.addEventListener('click', () => _getOrCreateModal('qaSupplierModal').hide());
+    document.getElementById('qaSupplierCancel')?.addEventListener('click', () => _getOrCreateModal('qaSupplierModal').hide());
+    document.getElementById('qaSupplierSave')?.addEventListener('click', () => {
+        const name  = document.getElementById('qaSuppName').value.trim();
+        const phone = document.getElementById('qaSuppPhone').value.trim();
+        if (!name) { document.getElementById('qaSuppName').classList.add('is-invalid'); return; }
+        if (!phone) { document.getElementById('qaSuppPhone').classList.add('is-invalid'); return; }
+        document.getElementById('qaSuppName').classList.remove('is-invalid');
+        document.getElementById('qaSuppPhone').classList.remove('is-invalid');
+
+        _saveFullModal('qaSupplierModal', '/Suppliers/QuickAdd', () => {
+            const fd = new FormData();
+            fd.append('Name',          name.toUpperCase());
+            fd.append('ContactPerson', document.getElementById('qaSuppContact').value.trim());
+            fd.append('Phone',         phone);
+            fd.append('Email',         document.getElementById('qaSuppEmail').value.trim());
+            fd.append('City',          document.getElementById('qaSuppCity').value.trim());
+            fd.append('Address',       document.getElementById('qaSuppAddress').value.trim());
+            fd.append('TaxOffice',     document.getElementById('qaSuppTaxOffice').value.trim());
+            fd.append('TaxNumber',     document.getElementById('qaSuppTaxNumber').value.trim());
+            fd.append('FscCode',       document.getElementById('qaSuppFscCode').value.trim());
+            fd.append('FscExpiryDate', document.getElementById('qaSuppFscDate').value);
+            return fd;
+        }, 'qaSupplierSave', 'Tedarikçi');
+    });
+})();
+
+// ── MÜŞTERİ TAM FORM ──────────────────────────────────────────────────
+(function () {
+    document.getElementById('qaCustomerClose')?.addEventListener('click', () => _getOrCreateModal('qaCustomerModal').hide());
+    document.getElementById('qaCustomerCancel')?.addEventListener('click', () => _getOrCreateModal('qaCustomerModal').hide());
+    document.getElementById('qaCustomerSave')?.addEventListener('click', () => {
+        const name  = document.getElementById('qaCustName').value.trim();
+        const phone = document.getElementById('qaCustPhone').value.trim();
+        if (!name) { document.getElementById('qaCustName').classList.add('is-invalid'); return; }
+        if (!phone) { document.getElementById('qaCustPhone').classList.add('is-invalid'); return; }
+        document.getElementById('qaCustName').classList.remove('is-invalid');
+        document.getElementById('qaCustPhone').classList.remove('is-invalid');
+
+        _saveFullModal('qaCustomerModal', '/Customers/QuickAdd', () => {
+            const fd = new FormData();
+            fd.append('Name',           name.toUpperCase());
+            fd.append('Phone',          phone);
+            fd.append('Email',          document.getElementById('qaCustEmail').value.trim());
+            fd.append('TaxOffice',      document.getElementById('qaCustTaxOffice').value.trim());
+            fd.append('TaxNumber',      document.getElementById('qaCustTaxNumber').value.trim());
+            fd.append('City',           document.getElementById('qaCustCity').value.trim());
+            fd.append('Address',        document.getElementById('qaCustAddress').value.trim());
+            fd.append('FscLicenseCode', document.getElementById('qaCustFscCode').value.trim());
+            fd.append('FscExpiryDate',  document.getElementById('qaCustFscDate').value);
+            return fd;
+        }, 'qaCustomerSave', 'Müşteri');
+    });
+})();
+
+// ── FSC TİPİ TAM FORM ─────────────────────────────────────────────────
+(function () {
+    document.getElementById('qaFscTypeClose')?.addEventListener('click', () => _getOrCreateModal('qaFscTypeModal').hide());
+    document.getElementById('qaFscTypeCancel')?.addEventListener('click', () => _getOrCreateModal('qaFscTypeModal').hide());
+    document.getElementById('qaFscTypeSave')?.addEventListener('click', () => {
+        const name = document.getElementById('qaFscName').value.trim();
+        const code = document.getElementById('qaFscCode').value.trim();
+        let valid = true;
+        if (!name) { document.getElementById('qaFscName').classList.add('is-invalid'); valid = false; }
+        else document.getElementById('qaFscName').classList.remove('is-invalid');
+        if (!code) { document.getElementById('qaFscCode').classList.add('is-invalid'); valid = false; }
+        else document.getElementById('qaFscCode').classList.remove('is-invalid');
+        if (!valid) return;
+
+        _saveFullModal('qaFscTypeModal', '/Paper/QuickAddFscType', () => {
+            const fd = new FormData();
+            fd.append('Name',        name);
+            fd.append('Code',        code.toUpperCase());
+            fd.append('Description', document.getElementById('qaFscDescription').value.trim());
+            fd.append('IsActive',    document.getElementById('qaFscIsActive').checked ? 'true' : 'false');
+            return fd;
+        }, 'qaFscTypeSave', 'FSC Tipi');
+    });
+})();
+
+// ── GENEL QUICK-ADD ROUTER ─────────────────────────────────────────────
+// supplier / customer / fsctype → tam form modalları
+// Diğerleri → basit jenerik modal
+
 var _qaModal = null;
 var _qaTargetSelectId = null;
 var _qaCurrentConfig = null;
 
 function openQuickAdd(type, targetSelectId) {
+    // Tam form modal türleri
+    if (type === 'supplier') { _resetAndOpenFullModal('qaSupplierModal', targetSelectId); return; }
+    if (type === 'customer') { _resetAndOpenFullModal('qaCustomerModal', targetSelectId); return; }
+    if (type === 'fsctype')  { _resetAndOpenFullModal('qaFscTypeModal',  targetSelectId); return; }
+
+    // Jenerik basit modal (diğerleri)
     const cfg = QA_CONFIGS[type];
     if (!cfg) { console.error('QuickAdd: unknown type', type); return; }
     _qaTargetSelectId = targetSelectId;
@@ -1289,7 +1657,6 @@ function openQuickAdd(type, targetSelectId) {
         document.getElementById('qaSaveBtn').addEventListener('click', saveQuickAdd);
     }
     _qaModal.show();
-    // İlk alana odaklan
     setTimeout(() => { const inp = document.querySelector('#qaBody input:not([readonly])'); if(inp) inp.focus(); }, 350);
 }
 
@@ -1297,13 +1664,11 @@ async function saveQuickAdd() {
     const cfg = _qaCurrentConfig;
     const body = document.getElementById('qaBody');
 
-    // Validasyon
     const inputs = body.querySelectorAll('input[required]');
     let valid = true;
     inputs.forEach(i => { if (!i.value.trim()) { i.classList.add('is-invalid'); valid = false; } else { i.classList.remove('is-invalid'); } });
     if (!valid) return;
 
-    // Büyük harf dönüşümü
     body.querySelectorAll('input[style*="uppercase"]').forEach(i => { i.value = i.value.toUpperCase(); });
 
     const fd = new FormData();
@@ -1317,7 +1682,6 @@ async function saveQuickAdd() {
         const res  = await fetch(cfg.url, { method:'POST', body: fd });
         const json = await res.json();
         if (json.success) {
-            // Hedef select'e yeni seçenek ekle ve seç
             const sel = document.getElementById(_qaTargetSelectId);
             if (sel) {
                 const opt = new Option(json.text, json.id, true, true);

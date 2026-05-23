@@ -41,10 +41,12 @@ namespace FSCTakip.WebUI.Controllers
 
             var rows = lines.Select(l => BuildCocRow(l)).ToList();
 
-            ViewBag.Customers  = await _context.Customers.Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync();
-            ViewBag.Products   = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
-            ViewBag.StartDate  = startDate?.ToString("yyyy-MM-dd");
-            ViewBag.EndDate    = endDate?.ToString("yyyy-MM-dd");
+            ViewBag.Customers   = await _context.Customers.Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync();
+            ViewBag.Products    = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
+            ViewBag.StartDate   = startDate?.ToString("yyyy-MM-dd");
+            ViewBag.EndDate     = endDate?.ToString("yyyy-MM-dd");
+            ViewBag.CustomerId  = customerId;
+            ViewBag.ProductId   = productId;
 
             ViewBag.TotalLines    = rows.Count;
             ViewBag.FullChain     = rows.Count(r => r.ChainComplete);
@@ -57,6 +59,7 @@ namespace FSCTakip.WebUI.Controllers
         {
             var row = new CocRow
             {
+                SalesOrderId  = l.SalesOrderId,
                 SalesOrderNo  = l.SalesOrder.SalesOrderNo,
                 DispatchDate  = l.SalesOrder.DispatchDate,
                 CustomerName  = l.SalesOrder.Customer?.Name ?? "—",
@@ -65,6 +68,7 @@ namespace FSCTakip.WebUI.Controllers
                 Quantity      = l.Quantity,
                 Unit          = l.Unit,
                 WorkOrderNo   = l.WorkOrder?.WorkOrderNo,
+                WorkOrderId   = l.WorkOrderId,
                 SalesOrderLineId = l.Id
             };
 
@@ -815,6 +819,7 @@ namespace FSCTakip.WebUI.Controllers
 
     public class CocRow
     {
+        public int    SalesOrderId     { get; set; }
         public string SalesOrderNo     { get; set; } = "";
         public DateTime? DispatchDate  { get; set; }
         public string CustomerName     { get; set; } = "";
@@ -823,6 +828,7 @@ namespace FSCTakip.WebUI.Controllers
         public decimal Quantity        { get; set; }
         public string Unit             { get; set; } = "";
         public string? WorkOrderNo     { get; set; }
+        public int?   WorkOrderId      { get; set; }
         public int SalesOrderLineId    { get; set; }
         public List<string> Serials    { get; set; } = new();
         public List<string> LotNos     { get; set; } = new();

@@ -53,8 +53,14 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // POST /Purchase/SaveLot
+        // serialsJson: JSON dizi — yeni giriş modalından bobin ağırlıkları gelir
+        // Örnek: "[500.5,480.0,520.0]"  veya eşit mod için "equal:10:500" (count:weight)
         [HttpPost]
-        public async Task<IActionResult> SaveLot(FscLot model, IFormFile? invoiceFile, IFormFile? dispatchFile)
+        public async Task<IActionResult> SaveLot(
+            FscLot model,
+            IFormFile? invoiceFile,
+            IFormFile? dispatchFile,
+            string? serialsJson)
         {
             try
             {
@@ -85,7 +91,86 @@ namespace FSCTakip.WebUI.Controllers
                     _context.FscLots.Update(model);
 
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Lot kaydedildi.", lotId = model.Id, lotNo = model.LotNo, fscUyari });
+
+                // ── Bobinleri kaydet (yalnızca yeni lot için) ──────────────
+                int serialCount = 0;
+                if (model.Id > 0 && !string.IsNullOrWhiteSpace(serialsJson))
+                {
+                    var weights = new List<decimal>();
+
+                    if (serialsJson.StartsWith("equal:"))
+                    {
+                        // Format: "equal:COUNT:WEIGHT"
+                        var parts = serialsJson.Split(':');
+                        if (parts.Length == 3
+                            && int.TryParse(parts[1], out int cnt)
+                            && decimal.TryParse(parts[2], System.Globalization.NumberStyles.Any,
+                                                System.Globalization.CultureInfo.InvariantCulture, out decimal wgt)
+                            && cnt > 0 && wgt > 0)
+                        {
+                            for (int i = 0; i < cnt; i++) weights.Add(wgt);
+                        }
+                    }
+                    else
+                    {
+                        // Format: JSON dizi "[500.5,480.0]"
+                        try
+                        {
+                            weights = System.Text.Json.JsonSerializer.Deserialize<List<decimal>>(serialsJson)
+                                      ?? new List<decimal>();
+                        }
+                        catch { /* geçersiz JSON — bobin eklenmez */ }
+                    }
+
+                    for (int i = 0; i < weights.Count; i++)
+                    {
+                        if (weights[i] <= 0) continue;
+                        var serial = new FscSerial
+                        {
+                            LotId         = model.Id,
+                            SerialNo      = $"{model.LotNo}-B{i + 1:D2}",
+                            InitialWeight = weights[i],
+                            CurrentWeight = weights[i],
+                            CreatedDate   = DateTime.Now,
+                            CreatedBy     = User.Identity?.Name ?? "System"
+                        };
+                        _context.FscSerials.Add(serial);
+                        serialCount++;
+                    }
+
+                    if (serialCount > 0)
+                    {
+                        await _context.SaveChangesAsync();
+
+                        // StockMovement: hammadde giriş kaydı oluştur
+                        if (model.ProductId.HasValue)
+                        {
+                            var totalKg = weights.Where(w => w > 0).Sum();
+                            _context.StockMovements.Add(new StockMovement
+                            {
+                                Type         = MovementType.PurchaseEntry,
+                                ProductId    = model.ProductId.Value,
+                                Quantity     = totalKg,
+                                Unit         = "kg",
+                                DocumentNo   = model.DispatchNo ?? model.LotNo,
+                                DocumentDate = model.ArrivalDate,
+                                Description  = $"Hammadde girişi — {model.LotNo} ({serialCount} bobin)",
+                                CreatedDate  = DateTime.Now,
+                                CreatedBy    = User.Identity?.Name ?? "System"
+                            });
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
+
+                return Json(new {
+                    success     = true,
+                    message     = $"Hammadde girişi kaydedildi.",
+                    lotId       = model.Id,
+                    lotNo       = model.LotNo,
+                    serialCount,
+                    fscUyari
+                });
             }
             catch (Exception ex)
             {

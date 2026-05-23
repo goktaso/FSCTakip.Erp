@@ -13,9 +13,9 @@
 }
 
 @section TopbarPrimary {
-    <button class="btn-topbar-add" data-bs-toggle="modal" data-bs-target="#lotModal">
+    <button class="btn-topbar-add" onclick="openNewEntryModal()">
         <span class="btn-add-icon"><i class="fas fa-plus"></i></span>
-        Yeni Lot Ekle
+        Yeni Hammadde Girişi
     </button>
 }
 
@@ -257,56 +257,54 @@
     </table>
 </div>
 
-<!-- Lot Modal -->
-<div class="modal fade" id="lotModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+<!-- ═══════════════════════════════════════════════════════════════════
+     YENİ HAMMADdE GİRİŞİ MODALI — Lot + Bobinler tek formda
+════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="lotModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
+
             <div class="modal-header dark">
                 <div class="d-flex align-items-center gap-2">
-                    <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
-                        <i class="fas fa-truck-loading" style="font-size:13px;color:#fff;"></i>
+                    <div style="width:34px;height:34px;border-radius:9px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-truck-loading" style="font-size:14px;color:#fff;"></i>
                     </div>
-                    <h5 class="modal-title fw-semibold mb-0" id="lotModalTitle">Yeni Hammadde Girişi</h5>
+                    <div>
+                        <h5 class="modal-title fw-semibold mb-0" id="lotModalTitle">Yeni Hammadde Girişi</h5>
+                        <div class="text-muted" style="font-size:11px;opacity:.7;" id="lotModalSubtitle">Lot numarası otomatik atanacak</div>
+                    </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
             </div>
-            <div class="modal-body">
+
+            <div class="modal-body" style="padding:24px;">
                 <input type="hidden" id="lotId">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Lot No <span class="text-muted fw-normal">(boş=otomatik)</span></label>
-                        <input type="text" id="lotNo" class="form-control" placeholder="L2026-001">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Geliş Tarihi <span class="text-danger">*</span></label>
-                        <input type="date" id="arrivalDate" class="form-control">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Araç Plakası</label>
-                        <input type="text" id="truckPlate" class="form-control" placeholder="34 ABC 123">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Tedarikçi <span class="text-danger">*</span></label>
+
+                <!-- ── BÖLÜM 1: Temel Bilgiler ─────────────────────────── -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Tedarikçi <span class="text-danger">*</span></label>
                         <div class="qa-group">
                             <select id="supplierId" class="form-select">
                                 <option value="">— Seçiniz —</option>
                                 @foreach (var s in suppliers)
                                 {
-                                    <option value="@s.Id" data-fsc="@s.IsFscActive.ToString().ToLower()"
+                                    <option value="@s.Id"
+                                            data-fsc="@s.IsFscActive.ToString().ToLower()"
                                             data-expiry="@s.FscExpiryDate?.ToString("dd.MM.yyyy")">
                                         @s.Name
                                     </option>
                                 }
                             </select>
-                            <button type="button" class="qa-btn" onclick="openQuickAdd('supplier','supplierId')" title="Yeni Tedarikçi Ekle"><i class="fas fa-plus"></i></button>
+                            <button type="button" class="qa-btn" onclick="openQuickAdd('supplier','supplierId')" title="Yeni Tedarikçi"><i class="fas fa-plus"></i></button>
                         </div>
                         <div id="supplierFscWarning" class="mt-1 px-2 py-1 rounded small"
                              style="display:none;background:#fffbeb;border:1px solid #fde68a;color:#92400e;">
                             <i class="fas fa-exclamation-triangle me-1"></i>Bu tedarikçinin FSC sertifikası geçersiz!
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">FSC Tipi <span class="text-danger">*</span></label>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">FSC Tipi <span class="text-danger">*</span></label>
                         <div class="qa-group">
                             <select id="fscTypeId" class="form-select">
                                 <option value="">— Seçiniz —</option>
@@ -315,154 +313,403 @@
                                     <option value="@f.Id">@f.Name</option>
                                 }
                             </select>
-                            <button type="button" class="qa-btn" onclick="openQuickAdd('fsctype','fscTypeId')" title="Yeni FSC Tipi Ekle"><i class="fas fa-plus"></i></button>
+                            <button type="button" class="qa-btn" onclick="openQuickAdd('fsctype','fscTypeId')" title="Yeni FSC Tipi"><i class="fas fa-plus"></i></button>
                         </div>
                     </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Hammadde Ürünü</label>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Geliş Tarihi <span class="text-danger">*</span></label>
+                        <input type="date" id="arrivalDate" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Araç Plakası</label>
+                        <input type="text" id="truckPlate" class="form-control" placeholder="34 ABC 123">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Hammadde Ürünü</label>
                         <select id="productId" class="form-select">
-                            <option value="">— Seçiniz —</option>
+                            <option value="">— Ürün seçiniz (stok hareketine işlenir) —</option>
                             @foreach (var p in products)
                             {
                                 <option value="@p.Id">@p.ProductCode — @p.ProductName</option>
                             }
                         </select>
                     </div>
+                </div>
 
-                    <div class="col-12"><hr class="my-1" style="border-color:var(--border);"></div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">İrsaliye No</label>
-                        <input type="text" id="dispatchNo" class="form-control">
+                <!-- ── BÖLÜM 2: Belgeler ───────────────────────────────── -->
+                <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
+                    <div class="fw-semibold mb-3" style="font-size:13px;color:#374151;">
+                        <i class="fas fa-file-alt me-2 text-muted"></i>Belge Bilgileri
+                        <span class="text-muted fw-normal" style="font-size:11px;margin-left:6px;">(opsiyonel)</span>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Fatura No</label>
-                        <input type="text" id="invoiceNo" class="form-control">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Tutar</label>
-                        <input type="number" id="invoiceAmount" class="form-control" step="0.01" placeholder="0.00">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Para Birimi</label>
-                        <select id="currency" class="form-select">
-                            <option>TRY</option><option>USD</option><option>EUR</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label"><i class="fas fa-file-pdf text-danger me-1"></i>İrsaliye PDF</label>
-                        <input type="file" id="dispatchFile" class="form-control" accept=".pdf">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label"><i class="fas fa-file-invoice text-warning me-1"></i>Fatura PDF</label>
-                        <input type="file" id="invoiceFile" class="form-control" accept=".pdf">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">Notlar</label>
-                        <textarea id="lotNotes" class="form-control" rows="2" placeholder="Opsiyonel açıklama..."></textarea>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label small">İrsaliye No</label>
+                            <input type="text" id="dispatchNo" class="form-control form-control-sm" placeholder="İRS-2026/001">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Fatura No</label>
+                            <input type="text" id="invoiceNo" class="form-control form-control-sm" placeholder="FTR-2026/001">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Tutar</label>
+                            <input type="number" id="invoiceAmount" class="form-control form-control-sm" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small">Döviz</label>
+                            <select id="currency" class="form-select form-select-sm">
+                                <option>TRY</option><option>USD</option><option>EUR</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Not</label>
+                            <input type="text" id="lotNotes" class="form-control form-control-sm" placeholder="Opsiyonel...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small"><i class="fas fa-file-pdf text-danger me-1"></i>İrsaliye PDF</label>
+                            <input type="file" id="dispatchFile" class="form-control form-control-sm" accept=".pdf">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small"><i class="fas fa-file-invoice text-warning me-1"></i>Fatura PDF</label>
+                            <input type="file" id="invoiceFile" class="form-control form-control-sm" accept=".pdf">
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
+
+                <!-- ── BÖLÜM 3: Bobinler / Miktarlar ─────────────────── -->
+                <div id="bobinSection" style="border:2px solid #bbf7d0;border-radius:10px;padding:18px;background:#f0fdf4;">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div class="fw-semibold" style="font-size:13px;color:#166534;">
+                            <i class="fas fa-scroll me-2"></i>Bobinler / Miktarlar
+                            <span class="text-muted fw-normal" style="font-size:11px;margin-left:4px;">(düzenleme modunda detay sayfasından eklenebilir)</span>
+                        </div>
+                        <!-- Mod seçici -->
+                        <div class="btn-group btn-group-sm" role="group" id="bobinModeGroup">
+                            <input type="radio" class="btn-check" name="bobinMode" id="modeEqual" value="equal" autocomplete="off" checked>
+                            <label class="btn btn-outline-success" for="modeEqual">
+                                <i class="fas fa-equals me-1"></i> Eşit Ağırlıklı
+                            </label>
+                            <input type="radio" class="btn-check" name="bobinMode" id="modeDiff" value="diff" autocomplete="off">
+                            <label class="btn btn-outline-success" for="modeDiff">
+                                <i class="fas fa-list-ol me-1"></i> Farklı Ağırlıklı
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Eşit Ağırlıklı Mod -->
+                    <div id="equalModePanel">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Bobin Sayısı <span class="text-danger">*</span></label>
+                                <input type="number" id="eqCount" class="form-control" min="1" step="1" placeholder="Örn: 10" oninput="updateEqualTotal()">
+                            </div>
+                            <div class="col-auto d-flex align-items-end pb-2" style="font-size:20px;color:#9ca3af;">×</div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Birim Ağırlık (kg) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" id="eqWeight" class="form-control" min="0.001" step="0.001" placeholder="Örn: 500" oninput="updateEqualTotal()">
+                                    <span class="input-group-text">kg</span>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-end pb-2" style="font-size:20px;color:#9ca3af;">=</div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Toplam</label>
+                                <div id="eqTotal" style="font-size:22px;font-weight:700;color:#166534;line-height:38px;">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Farklı Ağırlıklı Mod -->
+                    <div id="diffModePanel" style="display:none;">
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-2" style="background:#fff;border-radius:8px;overflow:hidden;">
+                                <thead style="background:#dcfce7;">
+                                    <tr>
+                                        <th style="width:50px;padding:8px 12px;font-size:12px;">#</th>
+                                        <th style="padding:8px 12px;font-size:12px;">Ağırlık (kg)</th>
+                                        <th style="width:50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="diffRows">
+                                    <!-- JS ile doldurulur -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex align-items-center gap-3 mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="addDiffRow()">
+                                <i class="fas fa-plus me-1"></i> Bobin Ekle
+                            </button>
+                            <div class="ms-auto text-end">
+                                <div style="font-size:11px;color:#6b7280;">Toplam</div>
+                                <div id="diffTotal" style="font-size:20px;font-weight:700;color:#166534;">— kg</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Düzenleme modunda bobin bölümü -->
+                    <div id="editModeBobinNote" style="display:none;">
+                        <div class="text-muted" style="font-size:13px;padding:8px 0;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Düzenleme modunda bobin eklemek için
+                            <a href="#" id="goToDetailLink" class="fw-semibold">detay sayfasını</a> kullanın.
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /modal-body -->
+
+            <div class="modal-footer" style="background:#f8fafc;padding:14px 24px;">
+                <div class="text-muted small me-auto" id="lotModalHint" style="font-size:12px;">
+                    <i class="fas fa-info-circle me-1"></i>Lot numarası otomatik oluşturulur.
+                </div>
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
-                <button type="button" class="btn btn-success px-4" onclick="saveLot()">
+                <button type="button" class="btn btn-success px-4" id="saveLotBtn" onclick="saveLot()">
                     <i class="fas fa-save me-1"></i> Kaydet
                 </button>
             </div>
+
         </div>
     </div>
 </div>
 
 @section Scripts {
 <script>
-// Flag: editLot programmatik açışta sıfırlamayı engeller
+/* ─── GLOBAL STATE ───────────────────────────────────────────── */
 let _lotEditMode = false;
+let _diffRowCount = 0;
 
-// Yeni lot formu sıfırlama — modal açılmadan önce tetiklenir
-document.getElementById('lotModal').addEventListener('show.bs.modal', function () {
-    if (!_lotEditMode) {
-        ['lotId','lotNo','truckPlate','dispatchNo','invoiceNo','invoiceAmount','lotNotes'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = '';
-        });
-        document.getElementById('arrivalDate').value = new Date().toISOString().split('T')[0];
-        document.getElementById('supplierId').value = '';
-        document.getElementById('fscTypeId').value = '';
-        document.getElementById('productId').value = '';
-        document.getElementById('currency').value = 'TRY';
-        document.getElementById('supplierFscWarning').style.display = 'none';
-        document.getElementById('lotModalTitle').textContent = 'Yeni Hammadde Girişi';
-    }
+/* ─── MODAL AÇMA ─────────────────────────────────────────────── */
+function openNewEntryModal() {
     _lotEditMode = false;
-});
+    resetLotForm();
+    document.getElementById('lotModalTitle').textContent    = 'Yeni Hammadde Girişi';
+    document.getElementById('lotModalSubtitle').textContent = 'Lot numarası otomatik atanacak';
+    document.getElementById('lotModalHint').innerHTML       = '<i class="fas fa-info-circle me-1"></i>Lot numarası otomatik oluşturulur.';
+    document.getElementById('bobinSection').style.display  = '';
+    document.getElementById('editModeBobinNote').style.display = 'none';
+    document.getElementById('equalModePanel').style.display = '';
+    document.getElementById('bobinModeGroup').style.display = '';
+    document.getElementById('saveLotBtn').innerHTML = '<i class="fas fa-save me-1"></i> Kaydet';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('lotModal')).show();
+}
 
+function resetLotForm() {
+    ['lotId','truckPlate','dispatchNo','invoiceNo','invoiceAmount','lotNotes'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    document.getElementById('arrivalDate').value  = new Date().toISOString().split('T')[0];
+    document.getElementById('supplierId').value   = '';
+    document.getElementById('fscTypeId').value    = '';
+    document.getElementById('productId').value    = '';
+    document.getElementById('currency').value     = 'TRY';
+    document.getElementById('supplierFscWarning').style.display = 'none';
+    document.getElementById('eqCount').value  = '';
+    document.getElementById('eqWeight').value = '';
+    document.getElementById('eqTotal').textContent = '—';
+    document.getElementById('modeEqual').checked = true;
+    showEqualMode();
+    _diffRowCount = 0;
+    document.getElementById('diffRows').innerHTML = '';
+    document.getElementById('diffTotal').textContent = '— kg';
+    // Dosya inputlarını sıfırla
+    ['dispatchFile','invoiceFile'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+}
+
+/* ─── DÜZENLEME MODU ─────────────────────────────────────────── */
 function editLot(id) {
     _lotEditMode = true;
     fetch(`/Purchase/GetLot/${id}`)
         .then(r => r.json()).then(res => {
-            if (!res.success) { _lotEditMode = false; return; }
+            if (!res.success) return;
             const d = res.data;
-            document.getElementById('lotId').value = d.id;
-            document.getElementById('lotNo').value = d.lotNo;
-            document.getElementById('arrivalDate').value = d.arrivalDate;
-            document.getElementById('supplierId').value = d.supplierId;
-            document.getElementById('fscTypeId').value = d.fscTypeId;
-            document.getElementById('productId').value = d.productId || '';
-            document.getElementById('truckPlate').value = d.truckPlate || '';
-            document.getElementById('dispatchNo').value = d.dispatchNo || '';
-            document.getElementById('invoiceNo').value = d.invoiceNo || '';
-            document.getElementById('invoiceAmount').value = d.invoiceAmount || '';
-            document.getElementById('currency').value = d.currency || 'TRY';
-            document.getElementById('lotNotes').value = d.notes || '';
-            document.getElementById('lotModalTitle').textContent = 'Lot Düzenle — ' + d.lotNo;
+            resetLotForm();
+            document.getElementById('lotId').value            = d.id;
+            document.getElementById('arrivalDate').value      = d.arrivalDate;
+            document.getElementById('supplierId').value       = d.supplierId;
+            document.getElementById('fscTypeId').value        = d.fscTypeId;
+            document.getElementById('productId').value        = d.productId || '';
+            document.getElementById('truckPlate').value       = d.truckPlate || '';
+            document.getElementById('dispatchNo').value       = d.dispatchNo || '';
+            document.getElementById('invoiceNo').value        = d.invoiceNo || '';
+            document.getElementById('invoiceAmount').value    = d.invoiceAmount || '';
+            document.getElementById('currency').value         = d.currency || 'TRY';
+            document.getElementById('lotNotes').value         = d.notes || '';
+            document.getElementById('lotModalTitle').textContent    = 'Düzenle — Lot ' + d.lotNo;
+            document.getElementById('lotModalSubtitle').textContent = d.lotNo;
+            document.getElementById('lotModalHint').innerHTML       = '<i class="fas fa-pencil-alt me-1"></i>Belge bilgilerini ve lot detaylarını güncelleyebilirsiniz.';
+            // Düzenleme modunda bobin alanını gizle
+            document.getElementById('equalModePanel').style.display = 'none';
+            document.getElementById('diffModePanel').style.display  = 'none';
+            document.getElementById('bobinModeGroup').style.display = 'none';
+            document.getElementById('editModeBobinNote').style.display = '';
+            document.getElementById('goToDetailLink').href = '/Purchase/Detail/' + d.id;
+            document.getElementById('saveLotBtn').innerHTML = '<i class="fas fa-save me-1"></i> Güncelle';
             bootstrap.Modal.getOrCreateInstance(document.getElementById('lotModal')).show();
         });
 }
 
-document.getElementById('supplierId').addEventListener('change', function() {
+/* ─── EŞİT / FARKLI MOD DEĞİŞİMİ ───────────────────────────── */
+document.querySelectorAll('input[name="bobinMode"]').forEach(r => {
+    r.addEventListener('change', () => {
+        if (r.value === 'equal') showEqualMode();
+        else showDiffMode();
+    });
+});
+
+function showEqualMode() {
+    document.getElementById('equalModePanel').style.display = '';
+    document.getElementById('diffModePanel').style.display  = 'none';
+}
+
+function showDiffMode() {
+    document.getElementById('equalModePanel').style.display = 'none';
+    document.getElementById('diffModePanel').style.display  = '';
+    if (_diffRowCount === 0) addDiffRow();
+}
+
+/* ─── EŞİT MOD TOPLAM ────────────────────────────────────────── */
+function updateEqualTotal() {
+    const cnt = parseFloat(document.getElementById('eqCount').value) || 0;
+    const wgt = parseFloat(document.getElementById('eqWeight').value) || 0;
+    const total = cnt * wgt;
+    document.getElementById('eqTotal').textContent = total > 0
+        ? total.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' kg'
+        : '—';
+}
+
+/* ─── FARKLI MOD SATIRLARI ───────────────────────────────────── */
+function addDiffRow() {
+    _diffRowCount++;
+    const tbody = document.getElementById('diffRows');
+    const tr = document.createElement('tr');
+    tr.id = 'diffRow_' + _diffRowCount;
+    tr.innerHTML = `
+        <td style="padding:6px 12px;color:#6b7280;font-size:13px;vertical-align:middle;">${_diffRowCount}</td>
+        <td style="padding:4px 8px;">
+            <div class="input-group input-group-sm">
+                <input type="number" class="form-control diff-weight" min="0.001" step="0.001"
+                       placeholder="0.000" oninput="updateDiffTotal()">
+                <span class="input-group-text">kg</span>
+            </div>
+        </td>
+        <td style="padding:4px 8px;text-align:center;">
+            <button type="button" onclick="removeDiffRow(${_diffRowCount})"
+                    class="btn btn-sm" style="padding:2px 8px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:6px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </td>`;
+    tbody.appendChild(tr);
+    tr.querySelector('input').focus();
+}
+
+function removeDiffRow(id) {
+    const el = document.getElementById('diffRow_' + id);
+    if (el) el.remove();
+    updateDiffTotal();
+}
+
+function updateDiffTotal() {
+    let sum = 0;
+    document.querySelectorAll('.diff-weight').forEach(inp => {
+        sum += parseFloat(inp.value) || 0;
+    });
+    document.getElementById('diffTotal').textContent = sum > 0
+        ? sum.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' kg'
+        : '— kg';
+}
+
+/* ─── TEDARİKÇİ FSC UYARI ───────────────────────────────────── */
+document.getElementById('supplierId').addEventListener('change', function () {
     const fscOk = this.options[this.selectedIndex]?.dataset.fsc === 'true';
     document.getElementById('supplierFscWarning').style.display = fscOk ? 'none' : 'block';
 });
 
-function saveLot() {
-    if (!document.getElementById('supplierId').value ||
-        !document.getElementById('fscTypeId').value ||
-        !document.getElementById('arrivalDate').value) {
+/* ─── KAYDET ─────────────────────────────────────────────────── */
+async function saveLot() {
+    const supplierId  = document.getElementById('supplierId').value;
+    const fscTypeId   = document.getElementById('fscTypeId').value;
+    const arrivalDate = document.getElementById('arrivalDate').value;
+
+    if (!supplierId || !fscTypeId || !arrivalDate) {
         showToast('Tedarikçi, FSC Tipi ve Geliş Tarihi zorunludur.', 'warning');
         return;
     }
+
+    // Bobin validasyonu (sadece yeni kayıt)
+    let serialsJson = null;
+    if (!_lotEditMode) {
+        const mode = document.querySelector('input[name="bobinMode"]:checked').value;
+        if (mode === 'equal') {
+            const cnt = parseInt(document.getElementById('eqCount').value);
+            const wgt = parseFloat(document.getElementById('eqWeight').value);
+            if (!cnt || cnt < 1 || !wgt || wgt <= 0) {
+                showToast('Bobin sayısı ve birim ağırlık giriniz.', 'warning');
+                return;
+            }
+            serialsJson = `equal:${cnt}:${wgt}`;
+        } else {
+            const weights = [];
+            document.querySelectorAll('.diff-weight').forEach(inp => {
+                const v = parseFloat(inp.value);
+                if (v > 0) weights.push(v);
+            });
+            if (weights.length === 0) {
+                showToast('En az 1 bobin ağırlığı giriniz.', 'warning');
+                return;
+            }
+            serialsJson = JSON.stringify(weights);
+        }
+    }
+
+    const btn = document.getElementById('saveLotBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Kaydediliyor...';
+
     const fd = new FormData();
     const id = document.getElementById('lotId').value;
     if (id) fd.append('Id', id);
-    fd.append('LotNo',         document.getElementById('lotNo').value);
-    fd.append('SupplierId',    document.getElementById('supplierId').value);
-    fd.append('FscTypeId',     document.getElementById('fscTypeId').value);
-    fd.append('ArrivalDate',   document.getElementById('arrivalDate').value);
+    fd.append('SupplierId',  supplierId);
+    fd.append('FscTypeId',   fscTypeId);
+    fd.append('ArrivalDate', arrivalDate);
     const pid = document.getElementById('productId').value;
     if (pid) fd.append('ProductId', pid);
-    fd.append('TruckPlate',    document.getElementById('truckPlate').value);
-    fd.append('DispatchNo',    document.getElementById('dispatchNo').value);
-    fd.append('InvoiceNo',     document.getElementById('invoiceNo').value);
+    fd.append('TruckPlate',  document.getElementById('truckPlate').value);
+    fd.append('DispatchNo',  document.getElementById('dispatchNo').value);
+    fd.append('InvoiceNo',   document.getElementById('invoiceNo').value);
     const amt = document.getElementById('invoiceAmount').value;
     if (amt) fd.append('InvoiceAmount', amt);
-    fd.append('Currency',  document.getElementById('currency').value);
-    fd.append('Notes',     document.getElementById('lotNotes').value);
-    const df = document.getElementById('dispatchFile').files[0];
+    fd.append('Currency', document.getElementById('currency').value);
+    fd.append('Notes',    document.getElementById('lotNotes').value);
+    const df  = document.getElementById('dispatchFile').files[0];
     const inf = document.getElementById('invoiceFile').files[0];
     if (df)  fd.append('dispatchFile', df);
     if (inf) fd.append('invoiceFile',  inf);
+    if (serialsJson) fd.append('serialsJson', serialsJson);
 
-    fetch('/Purchase/SaveLot', { method: 'POST', body: fd })
-        .then(r => r.json()).then(res => {
-            if (res.success) {
-                bootstrap.Modal.getInstance(document.getElementById('lotModal'))?.hide();
-                showToast(res.message + ' (' + res.lotNo + ')', 'success');
-                if (res.fscUyari) showToast(res.fscUyari, 'warning');
-                setTimeout(() => location.reload(), 1200);
-            } else {
-                showToast(res.message, 'error');
-            }
-        });
+    try {
+        const res  = await fetch('/Purchase/SaveLot', { method: 'POST', body: fd });
+        const json = await res.json();
+        if (json.success) {
+            bootstrap.Modal.getInstance(document.getElementById('lotModal'))?.hide();
+            const cnt  = json.serialCount > 0 ? ` · ${json.serialCount} bobin eklendi` : '';
+            showToast(`${json.lotNo} kaydedildi${cnt}.`, 'success');
+            if (json.fscUyari) showToast(json.fscUyari, 'warning');
+            setTimeout(() => location.reload(), 1200);
+        } else {
+            showToast(json.message, 'error');
+        }
+    } catch (e) {
+        showToast('Bağlantı hatası.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = _lotEditMode
+            ? '<i class="fas fa-save me-1"></i> Güncelle'
+            : '<i class="fas fa-save me-1"></i> Kaydet';
+    }
 }
 </script>
 }
