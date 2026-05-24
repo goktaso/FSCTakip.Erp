@@ -463,27 +463,30 @@ namespace FSCTakip.WebUI.Controllers
             {
                 ws = wb.AddWorksheet("Urunler");
                 var defs = new (string, bool, string)[] {
-                    ("UrunKodu",  false, "Ürün kodu. Boş bırakılırsa otomatik üretilir.\nMevcut kod girilirse güncelleme yapılır."),
-                    ("UrunAdi",   true,  "Ürün adı (zorunlu)."),
-                    ("Birim",     true,  "Birim: Kg, Adet, Metre, Rulo vb."),
-                    ("GrupAdi",   false, "Ürün grubu adı (sistemde tanımlı olmalı).\nGeçerli gruplar için Referans sayfasına bakın."),
-                    ("IsActive",  false, "Aktif/Pasif: 1 = Aktif, 0 = Pasif. Boş = Aktif.")
+                    ("DahiliKod",  false, "Sistemdeki ürün kodu (URN-NNN). Boş bırakılırsa otomatik üretilir.\nMevcut kayıtla eşleştirmede HariciKod önceliklidir."),
+                    ("HariciKod",  false, "ERP / Netsis stok kodu (STOK_KODU).\nÖr: 001.01.001 veya KAG-10255\nBu kod ile mevcut ürünler güncellenir; yoksa yeni kayıt oluşturulur."),
+                    ("UrunAdi",    true,  "Ürün adı (zorunlu)."),
+                    ("Birim",      true,  "Birim: Kg, Adet, Metre, Rulo vb."),
+                    ("GrupAdi",    false, "Ürün grubu adı (sistemde tanımlı olmalı).\nGeçerli gruplar için Referans sayfasına bakın."),
+                    ("IsActive",   false, "Aktif/Pasif: 1 = Aktif, 0 = Pasif. Boş = Aktif.")
                 };
                 WriteHeaders(ws, defs);
 
-                ws.Cell(2,1).Value="HM-999"; ws.Cell(2,2).Value="Örnek Hammadde Kağıt"; ws.Cell(2,3).Value="Kg";
-                ws.Cell(2,4).Value= groups.FirstOrDefault()?.GroupName ?? "Hammadde"; ws.Cell(2,5).Value="1";
+                ws.Cell(2,1).Value="URN-001"; ws.Cell(2,2).Value="001.01.001";
+                ws.Cell(2,3).Value="Örnek Hammadde Kağıt"; ws.Cell(2,4).Value="Kg";
+                ws.Cell(2,5).Value= groups.FirstOrDefault()?.GroupName ?? "Hammadde"; ws.Cell(2,6).Value="1";
                 StyleExampleRow(ws, 2, defs.Length);
 
                 if (groups.Any())
-                    ws.Range("D3:D10000").SetDataValidation().List(wsRef.Range(2,6, grpCount+1,6), true);
+                    ws.Range("E3:E10000").SetDataValidation().List(wsRef.Range(2,6, grpCount+1,6), true);
             }
             // ─── SupplierImport ───────────────────────────────────────────
             else if (type == "SupplierImport")
             {
                 ws = wb.AddWorksheet("Tedarikciler");
                 var defs = new (string, bool, string)[] {
-                    ("TedarikciKodu",  false, "Tedarikçi kodu. Boş bırakılırsa otomatik TED-NNN üretilir.\nMevcut kod girilirse güncelleme yapılır."),
+                    ("DahiliKod",      false, "Sistemdeki tedarikçi kodu (TED-NNN). Boş bırakılırsa otomatik üretilir.\nMevcut kayıtla eşleştirmede HariciKod önceliklidir."),
+                    ("HariciKod",      false, "ERP / Netsis cari kodu (CARI_KOD).\nÖr: S-00078\nBu kod ile mevcut tedarikçiler güncellenir; yoksa yeni kayıt oluşturulur."),
                     ("TedarikciAdi",   true,  "Tedarikçi ticari ünvanı (zorunlu)."),
                     ("FscKodu",        false, "FSC sertifika kodu. Ör: FSC-C000001"),
                     ("ContactPerson",  false, "İletişim kurulacak kişi adı."),
@@ -492,9 +495,10 @@ namespace FSCTakip.WebUI.Controllers
                 };
                 WriteHeaders(ws, defs);
 
-                ws.Cell(2,1).Value="TED-999"; ws.Cell(2,2).Value="Örnek Tedarikçi Kağıt A.Ş.";
-                ws.Cell(2,3).Value="FSC-C000001"; ws.Cell(2,4).Value="Ahmet Yılmaz";
-                ws.Cell(2,5).Value="02121234567"; ws.Cell(2,6).Value="info@ornek.com";
+                ws.Cell(2,1).Value="TED-001"; ws.Cell(2,2).Value="S-00078";
+                ws.Cell(2,3).Value="Örnek Tedarikçi Kağıt A.Ş."; ws.Cell(2,4).Value="FSC-C000001";
+                ws.Cell(2,5).Value="Ahmet Yılmaz"; ws.Cell(2,6).Value="02121234567";
+                ws.Cell(2,7).Value="info@ornek.com";
                 StyleExampleRow(ws, 2, defs.Length);
             }
             // ─── CustomerImport ───────────────────────────────────────────
@@ -502,7 +506,8 @@ namespace FSCTakip.WebUI.Controllers
             {
                 ws = wb.AddWorksheet("Musteriler");
                 var defs = new (string, bool, string)[] {
-                    ("MusteriKodu",   false, "Müşteri kodu. Boş bırakılırsa otomatik MHS-NNN üretilir.\nMevcut kod girilirse güncelleme yapılır."),
+                    ("DahiliKod",     false, "Sistemdeki müşteri kodu (MHS-NNN). Boş bırakılırsa otomatik üretilir.\nMevcut kayıtla eşleştirmede HariciKod önceliklidir."),
+                    ("HariciKod",     false, "ERP / Netsis cari kodu (CARI_KOD).\nÖr: M-00015\nBu kod ile mevcut müşteriler güncellenir; yoksa yeni kayıt oluşturulur."),
                     ("MusteriAdi",    true,  "Müşteri ticari ünvanı (zorunlu)."),
                     ("VergiNo",       false, "Vergi kimlik numarası (10 hane)."),
                     ("VergiDairesi",  false, "Bağlı olduğu vergi dairesi."),
@@ -512,10 +517,10 @@ namespace FSCTakip.WebUI.Controllers
                 };
                 WriteHeaders(ws, defs);
 
-                ws.Cell(2,1).Value="MHS-999"; ws.Cell(2,2).Value="Örnek Müşteri Ambalaj Ltd.";
-                ws.Cell(2,3).Value="1234567890"; ws.Cell(2,4).Value="Kadıköy";
-                ws.Cell(2,5).Value="İstanbul"; ws.Cell(2,6).Value="02161234567";
-                ws.Cell(2,7).Value="info@musteri.com";
+                ws.Cell(2,1).Value="MHS-001"; ws.Cell(2,2).Value="M-00015";
+                ws.Cell(2,3).Value="Örnek Müşteri Ambalaj Ltd."; ws.Cell(2,4).Value="1234567890";
+                ws.Cell(2,5).Value="Kadıköy"; ws.Cell(2,6).Value="İstanbul";
+                ws.Cell(2,7).Value="02161234567"; ws.Cell(2,8).Value="info@musteri.com";
                 StyleExampleRow(ws, 2, defs.Length);
             }
 
@@ -1377,39 +1382,78 @@ namespace FSCTakip.WebUI.Controllers
         {
             int ins = 0, upd = 0, skp = 0;
             var errors = new List<string>();
-            var groups = await _context.ProductGroups.ToListAsync();
+            var groups      = await _context.ProductGroups.ToListAsync();
+            var allProducts = await _context.Products.ToListAsync();
 
             for (int i = 0; i < rows.Count; i++)
             {
                 var row = rows[i];
                 try
                 {
-                    var code = row.Cell(1).GetString().Trim();
-                    var name = row.Cell(2).GetString().Trim();
-                    if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name)) { skp++; continue; }
+                    // Yeni şablon: DahiliKod | HariciKod | UrunAdi | Birim | GrupAdi | IsActive
+                    // Eski şablon: UrunKodu | UrunAdi | Birim | GrupAdi | IsActive (geriye uyumluluk için)
+                    var col1 = row.Cell(1).GetString().Trim(); // DahiliKod veya UrunKodu
+                    var col2 = row.Cell(2).GetString().Trim(); // HariciKod veya UrunAdi
+                    var col3 = row.Cell(3).GetString().Trim(); // UrunAdi veya Birim
 
-                    var unit      = row.Cell(3).GetString().Trim().IfEmpty("Adet");
-                    var groupName = row.Cell(4).GetString().Trim();
-                    var isActive  = row.Cell(5).GetString().Trim() != "0";
-                    var group     = groups.FirstOrDefault(g => g.GroupName.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+                    // Yeni format tespiti: col3 boş değilse ve col2 "harici kod" gibi görünüyorsa yeni format
+                    bool isNewFormat = !string.IsNullOrWhiteSpace(col3);
+                    string dahiliKod, hariciKod, name, unit, groupName;
+                    bool isActive;
 
-                    var existing = await _context.Products.FirstOrDefaultAsync(p => p.ProductCode == code);
+                    if (isNewFormat)
+                    {
+                        // Yeni format: DahiliKod | HariciKod | UrunAdi | Birim | GrupAdi | IsActive
+                        dahiliKod = col1;
+                        hariciKod = col2;
+                        name      = col3;
+                        unit      = row.Cell(4).GetString().Trim().IfEmpty("Adet");
+                        groupName = row.Cell(5).GetString().Trim();
+                        isActive  = row.Cell(6).GetString().Trim() != "0";
+                    }
+                    else
+                    {
+                        // Eski format: UrunKodu | UrunAdi | Birim | GrupAdi | IsActive
+                        dahiliKod = col1;
+                        hariciKod = "";
+                        name      = col2;
+                        unit      = row.Cell(3).GetString().Trim().IfEmpty("Adet");
+                        groupName = row.Cell(4).GetString().Trim();
+                        isActive  = row.Cell(5).GetString().Trim() != "0";
+                    }
+
+                    if (string.IsNullOrWhiteSpace(name)) { skp++; continue; }
+
+                    var group = groups.FirstOrDefault(g => g.GroupName.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+
+                    // Eşleştirme önceliği: HariciKod → DahiliKod → (yeni kayıt)
+                    Product? existing = null;
+                    if (!string.IsNullOrWhiteSpace(hariciKod))
+                        existing = allProducts.FirstOrDefault(p => p.ExternalCode == hariciKod);
+                    if (existing == null && !string.IsNullOrWhiteSpace(dahiliKod))
+                        existing = allProducts.FirstOrDefault(p => p.ProductCode == dahiliKod);
+
                     if (existing == null)
                     {
-                        _context.Products.Add(new Product
+                        var count = allProducts.Count;
+                        var newProduct = new Product
                         {
-                            ProductCode    = code,
+                            ProductCode    = string.IsNullOrWhiteSpace(dahiliKod) ? $"URN-{count + 1:D3}" : dahiliKod,
+                            ExternalCode   = string.IsNullOrWhiteSpace(hariciKod) ? null : hariciKod.ToUpperInvariant(),
                             ProductName    = name,
                             Unit           = unit,
                             ProductGroupId = group?.Id,
                             IsActive       = isActive,
                             CreatedDate    = DateTime.Now,
                             CreatedBy      = "ETL"
-                        });
+                        };
+                        _context.Products.Add(newProduct);
+                        allProducts.Add(newProduct);
                         ins++;
                     }
                     else
                     {
+                        if (!string.IsNullOrWhiteSpace(hariciKod)) existing.ExternalCode = hariciKod.ToUpperInvariant();
                         existing.ProductName    = name;
                         existing.Unit           = unit;
                         existing.ProductGroupId = group?.Id ?? existing.ProductGroupId;
@@ -1428,52 +1472,86 @@ namespace FSCTakip.WebUI.Controllers
         private async Task<(int ins, int upd, int skp, List<string> errs)> ImportSuppliers(List<IXLRangeRow> rows)
         {
             int ins = 0, upd = 0, skp = 0;
-            var errors = new List<string>();
-            var count  = await _context.Suppliers.CountAsync();
+            var errors       = new List<string>();
+            var allSuppliers = await _context.Suppliers.ToListAsync();
+            var count        = allSuppliers.Count;
 
             for (int i = 0; i < rows.Count; i++)
             {
                 var row = rows[i];
                 try
                 {
-                    var code = row.Cell(1).GetString().Trim();
-                    var name = row.Cell(2).GetString().Trim();
+                    // Yeni şablon: DahiliKod | HariciKod | TedarikciAdi | FscKodu | ContactPerson | Telefon | Email
+                    // Eski şablon: TedarikciKodu | TedarikciAdi | FscKodu | ContactPerson | Telefon | Email
+                    var col1 = row.Cell(1).GetString().Trim();
+                    var col2 = row.Cell(2).GetString().Trim();
+                    var col3 = row.Cell(3).GetString().Trim();
+
+                    bool isNewFormat = !string.IsNullOrWhiteSpace(col3);
+                    string dahiliKod, hariciKod, name, fscCode, contact, phone, email;
+
+                    if (isNewFormat)
+                    {
+                        dahiliKod = col1;
+                        hariciKod = col2;
+                        name      = col3;
+                        fscCode   = row.Cell(4).GetString().Trim();
+                        contact   = row.Cell(5).GetString().Trim();
+                        phone     = row.Cell(6).GetString().Trim();
+                        email     = row.Cell(7).GetString().Trim();
+                    }
+                    else
+                    {
+                        dahiliKod = col1;
+                        hariciKod = "";
+                        name      = col2;
+                        fscCode   = row.Cell(3).GetString().Trim();
+                        contact   = row.Cell(4).GetString().Trim();
+                        phone     = row.Cell(5).GetString().Trim();
+                        email     = row.Cell(6).GetString().Trim();
+                    }
+
                     if (string.IsNullOrWhiteSpace(name)) { skp++; continue; }
 
-                    var fscCode = row.Cell(3).GetString().Trim();
-                    var contact = row.Cell(4).GetString().Trim();
-                    var phone   = row.Cell(5).GetString().Trim();
-                    var email   = row.Cell(6).GetString().Trim();
+                    // Eşleştirme önceliği: HariciKod → DahiliKod → (yeni kayıt)
+                    Supplier? existing = null;
+                    if (!string.IsNullOrWhiteSpace(hariciKod))
+                        existing = allSuppliers.FirstOrDefault(s => s.ExternalCode == hariciKod);
+                    if (existing == null && !string.IsNullOrWhiteSpace(dahiliKod))
+                        existing = allSuppliers.FirstOrDefault(s => s.SupplierCode == dahiliKod);
 
-                    var existing = string.IsNullOrWhiteSpace(code)
-                        ? null
-                        : await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierCode == code);
+                    var normalEmail = NormalizeEmail(email);
+                    phone = new string(phone.Where(char.IsDigit).ToArray());
 
                     if (existing == null)
                     {
                         count++;
-                        _context.Suppliers.Add(new Supplier
+                        var newSupplier = new Supplier
                         {
-                            SupplierCode   = string.IsNullOrWhiteSpace(code) ? $"TED-{count:D3}" : code,
-                            Name           = name,
-                            FscCode        = fscCode,
-                            ContactPerson  = contact,
-                            Phone          = phone,
-                            Email          = email.ToLowerInvariant(),
-                            IsActive       = true,
-                            IsFscActive    = !string.IsNullOrWhiteSpace(fscCode),
-                            CreatedDate    = DateTime.Now,
-                            CreatedBy      = "ETL"
-                        });
+                            SupplierCode  = string.IsNullOrWhiteSpace(dahiliKod) ? $"TED-{count:D3}" : dahiliKod,
+                            ExternalCode  = string.IsNullOrWhiteSpace(hariciKod) ? null : hariciKod.ToUpperInvariant(),
+                            Name          = name,
+                            FscCode       = fscCode,
+                            ContactPerson = contact,
+                            Phone         = phone,
+                            Email         = normalEmail,
+                            IsActive      = true,
+                            IsFscActive   = !string.IsNullOrWhiteSpace(fscCode),
+                            CreatedDate   = DateTime.Now,
+                            CreatedBy     = "ETL"
+                        };
+                        _context.Suppliers.Add(newSupplier);
+                        allSuppliers.Add(newSupplier);
                         ins++;
                     }
                     else
                     {
+                        if (!string.IsNullOrWhiteSpace(hariciKod)) existing.ExternalCode = hariciKod.ToUpperInvariant();
                         existing.Name          = name;
                         existing.FscCode       = fscCode;
                         existing.ContactPerson = contact;
                         existing.Phone         = phone;
-                        existing.Email         = email.ToLowerInvariant();
+                        existing.Email         = normalEmail;
                         existing.UpdatedDate   = DateTime.Now;
                         existing.UpdatedBy     = "ETL";
                         upd++;
@@ -1488,54 +1566,89 @@ namespace FSCTakip.WebUI.Controllers
         private async Task<(int ins, int upd, int skp, List<string> errs)> ImportCustomers(List<IXLRangeRow> rows)
         {
             int ins = 0, upd = 0, skp = 0;
-            var errors = new List<string>();
-            var count  = await _context.Customers.CountAsync();
+            var errors       = new List<string>();
+            var allCustomers = await _context.Customers.ToListAsync();
+            var count        = allCustomers.Count;
 
             for (int i = 0; i < rows.Count; i++)
             {
                 var row = rows[i];
                 try
                 {
-                    var code = row.Cell(1).GetString().Trim();
-                    var name = row.Cell(2).GetString().Trim();
+                    // Yeni şablon: DahiliKod | HariciKod | MusteriAdi | VergiNo | VergiDairesi | Sehir | Telefon | Email
+                    // Eski şablon: MusteriKodu | MusteriAdi | VergiNo | VergiDairesi | Sehir | Telefon | Email
+                    var col1 = row.Cell(1).GetString().Trim();
+                    var col2 = row.Cell(2).GetString().Trim();
+                    var col3 = row.Cell(3).GetString().Trim();
+
+                    bool isNewFormat = !string.IsNullOrWhiteSpace(col3);
+                    string dahiliKod, hariciKod, name, taxNo, taxOffice, city, phone, email;
+
+                    if (isNewFormat)
+                    {
+                        dahiliKod = col1;
+                        hariciKod = col2;
+                        name      = col3;
+                        taxNo     = row.Cell(4).GetString().Trim();
+                        taxOffice = row.Cell(5).GetString().Trim();
+                        city      = row.Cell(6).GetString().Trim();
+                        phone     = row.Cell(7).GetString().Trim();
+                        email     = row.Cell(8).GetString().Trim();
+                    }
+                    else
+                    {
+                        dahiliKod = col1;
+                        hariciKod = "";
+                        name      = col2;
+                        taxNo     = row.Cell(3).GetString().Trim();
+                        taxOffice = row.Cell(4).GetString().Trim();
+                        city      = row.Cell(5).GetString().Trim();
+                        phone     = row.Cell(6).GetString().Trim();
+                        email     = row.Cell(7).GetString().Trim();
+                    }
+
                     if (string.IsNullOrWhiteSpace(name)) { skp++; continue; }
 
-                    var taxNo     = row.Cell(3).GetString().Trim();
-                    var taxOffice = row.Cell(4).GetString().Trim();
-                    var city      = row.Cell(5).GetString().Trim();
-                    var phone     = row.Cell(6).GetString().Trim();
-                    var email     = row.Cell(7).GetString().Trim();
+                    // Eşleştirme önceliği: HariciKod → DahiliKod → (yeni kayıt)
+                    Customer? existing = null;
+                    if (!string.IsNullOrWhiteSpace(hariciKod))
+                        existing = allCustomers.FirstOrDefault(c => c.ExternalCode == hariciKod);
+                    if (existing == null && !string.IsNullOrWhiteSpace(dahiliKod))
+                        existing = allCustomers.FirstOrDefault(c => c.CustomerCode == dahiliKod);
 
-                    var existing = string.IsNullOrWhiteSpace(code)
-                        ? null
-                        : await _context.Customers.FirstOrDefaultAsync(c => c.CustomerCode == code);
+                    var normalEmail = NormalizeEmail(email);
+                    phone = new string(phone.Where(char.IsDigit).ToArray());
 
                     if (existing == null)
                     {
                         count++;
-                        _context.Customers.Add(new Customer
+                        var newCustomer = new Customer
                         {
-                            CustomerCode = string.IsNullOrWhiteSpace(code) ? $"MHS-{count:D3}" : code,
+                            CustomerCode = string.IsNullOrWhiteSpace(dahiliKod) ? $"MHS-{count:D3}" : dahiliKod,
+                            ExternalCode = string.IsNullOrWhiteSpace(hariciKod) ? null : hariciKod.ToUpperInvariant(),
                             Name         = name,
                             TaxNumber    = taxNo,
                             TaxOffice    = taxOffice,
                             City         = city,
                             Phone        = phone,
-                            Email        = email.ToLowerInvariant(),
+                            Email        = normalEmail,
                             IsActive     = true,
                             CreatedDate  = DateTime.Now,
                             CreatedBy    = "ETL"
-                        });
+                        };
+                        _context.Customers.Add(newCustomer);
+                        allCustomers.Add(newCustomer);
                         ins++;
                     }
                     else
                     {
-                        existing.Name      = name;
-                        existing.TaxNumber = taxNo;
-                        existing.TaxOffice = taxOffice;
-                        existing.City      = city;
-                        existing.Phone     = phone;
-                        existing.Email     = email.ToLowerInvariant();
+                        if (!string.IsNullOrWhiteSpace(hariciKod)) existing.ExternalCode = hariciKod.ToUpperInvariant();
+                        existing.Name        = name;
+                        existing.TaxNumber   = taxNo;
+                        existing.TaxOffice   = taxOffice;
+                        existing.City        = city;
+                        existing.Phone       = phone;
+                        existing.Email       = normalEmail;
                         existing.UpdatedDate = DateTime.Now;
                         existing.UpdatedBy   = "ETL";
                         upd++;
