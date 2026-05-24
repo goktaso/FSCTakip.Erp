@@ -10,6 +10,8 @@ namespace FSCTakip.Core.Entities
     public class SalesOrder : BaseEntity
     {
         public string SalesOrderNo { get; set; } = string.Empty;
+        /// <summary>Harici ERP'deki sipariş numarası (örn. Netsis EVRAK_NO). ETL eşleştirmede birincil anahtar.</summary>
+        public string? ExternalOrderNo { get; set; }
 
         public int CustomerId { get; set; }
         public virtual Customer Customer { get; set; } = null!;

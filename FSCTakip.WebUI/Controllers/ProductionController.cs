@@ -40,7 +40,8 @@ namespace FSCTakip.WebUI.Controllers
             return Json(new { success = true, data = new {
                 w.Id, w.WorkOrderNo, w.ProductId, w.MachineId,
                 plannedDate = w.PlannedDate.ToString("yyyy-MM-dd"),
-                w.PlannedQuantity, w.Notes, status = (int)w.Status
+                w.PlannedQuantity, w.Notes, status = (int)w.Status,
+                w.ExternalOrderNo
             }});
         }
 
@@ -57,7 +58,10 @@ namespace FSCTakip.WebUI.Controllers
                 }
 
                 if (model.Id == 0)
+                {
+                    model.ExternalOrderNo = string.IsNullOrWhiteSpace(model.ExternalOrderNo) ? null : model.ExternalOrderNo.Trim();
                     _context.WorkOrders.Add(model);
+                }
                 else
                 {
                     var existing = await _context.WorkOrders.FindAsync(model.Id);
@@ -69,10 +73,11 @@ namespace FSCTakip.WebUI.Controllers
                     existing.PlannedQuantity = model.PlannedQuantity;
                     existing.Notes          = model.Notes;
                     existing.Status         = model.Status;
+                    existing.ExternalOrderNo = string.IsNullOrWhiteSpace(model.ExternalOrderNo) ? existing.ExternalOrderNo : model.ExternalOrderNo.Trim();
                 }
 
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "İş emri kaydedildi.", workOrderNo = model.WorkOrderNo });
+                return Json(new { success = true, message = "İş emri kaydedildi.", workOrderNo = model.WorkOrderNo, workOrderId = model.Id });
             }
             catch (Exception ex)
             {

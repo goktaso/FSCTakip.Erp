@@ -268,6 +268,10 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
+                                <label class="form-label" title="Netsis / ERP sipariş numarası">Harici Sipariş No <i class="fas fa-info-circle text-muted" style="font-size:10px;"></i></label>
+                                <input type="text" id="salesExternalOrderNo" class="form-control" placeholder="ERP sipariş no">
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label">İrsaliye No</label>
                                 <input type="text" id="salesDispatchNo" class="form-control" placeholder="—">
                             </div>
@@ -351,8 +355,9 @@ function editOrder(id) {
             document.getElementById('salesNotes').value         = d.notes || '';
             // edit-only fields
             document.getElementById('salesEditFields').style.display = '';
-            document.getElementById('salesStatus').value        = d.status;
-            document.getElementById('salesDispatchNo').value    = d.dispatchNo || '';
+            document.getElementById('salesStatus').value             = d.status;
+            document.getElementById('salesExternalOrderNo').value    = d.externalOrderNo || '';
+            document.getElementById('salesDispatchNo').value         = d.dispatchNo || '';
             document.getElementById('salesInvoiceNo').value     = d.invoiceNo || '';
             document.getElementById('salesInvoiceAmount').value = d.invoiceAmount || '';
             document.getElementById('salesCurrency').value      = d.currency || 'TRY';
@@ -378,8 +383,9 @@ function saveOrder() {
     fd.append('notes',           document.getElementById('salesNotes').value);
 
     if (_salesIsEdit) {
-        fd.append('status',          document.getElementById('salesStatus').value || '1');
-        fd.append('dispatchNo',      document.getElementById('salesDispatchNo').value);
+        fd.append('status',           document.getElementById('salesStatus').value || '1');
+        fd.append('externalOrderNo',  document.getElementById('salesExternalOrderNo').value);
+        fd.append('dispatchNo',       document.getElementById('salesDispatchNo').value);
         fd.append('invoiceNo',       document.getElementById('salesInvoiceNo').value);
         fd.append('invoiceAmount',   document.getElementById('salesInvoiceAmount').value);
         fd.append('currency',        document.getElementById('salesCurrency').value);

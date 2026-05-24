@@ -90,6 +90,10 @@ namespace FSCTakip.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ExternalCode")
+                        .HasColumnType("nvarchar(100)")
+                        .HasMaxLength(100);
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -650,6 +654,10 @@ namespace FSCTakip.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ExternalCode")
+                        .HasColumnType("nvarchar(100)")
+                        .HasMaxLength(100);
+
                     b.Property<int?>("ProductGroupId")
                         .HasColumnType("int");
 
@@ -862,6 +870,10 @@ namespace FSCTakip.DataAccess.Migrations
 
                     b.Property<string>("DeliveryAddress")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExternalOrderNo")
+                        .HasColumnType("nvarchar(100)")
+                        .HasMaxLength(100);
 
                     b.Property<DateTime?>("DispatchDate")
                         .HasColumnType("datetime2");
@@ -1099,6 +1111,10 @@ namespace FSCTakip.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ExternalCode")
+                        .HasColumnType("nvarchar(100)")
+                        .HasMaxLength(100);
+
                     b.Property<string>("TaxNumber")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1242,6 +1258,10 @@ namespace FSCTakip.DataAccess.Migrations
 
                     b.Property<int>("MachineId")
                         .HasColumnType("int");
+
+                    b.Property<string>("ExternalOrderNo")
+                        .HasColumnType("nvarchar(100)")
+                        .HasMaxLength(100);
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");

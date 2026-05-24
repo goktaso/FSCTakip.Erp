@@ -11,6 +11,8 @@ namespace FSCTakip.Core.Entities
     public class WorkOrder : BaseEntity
     {
         public string WorkOrderNo { get; set; } = string.Empty;
+        /// <summary>Harici ERP'deki iş emri numarası. ETL veya manuel eşleştirmede referans.</summary>
+        public string? ExternalOrderNo { get; set; }
 
         public int ProductId { get; set; }
         public virtual Product Product { get; set; } = null!;

@@ -93,6 +93,7 @@ namespace FSCTakip.WebUI.Controllers
             {
                 var count = await _context.Customers.CountAsync();
                 model.CustomerCode = $"MHS-{(count + 1):D3}";
+                model.ExternalCode = string.IsNullOrWhiteSpace(model.ExternalCode) ? null : model.ExternalCode.Trim().ToUpperInvariant();
                 model.CreatedDate = DateTime.Now;
                 model.IsActive = true;
                 _context.Customers.Add(model);
@@ -112,6 +113,7 @@ namespace FSCTakip.WebUI.Controllers
                     existing.FscLicenseCode = model.FscLicenseCode;
                     existing.FscExpiryDate = model.FscExpiryDate;
                     existing.IsFscActive = model.IsFscActive;
+                    existing.ExternalCode = string.IsNullOrWhiteSpace(model.ExternalCode) ? existing.ExternalCode : model.ExternalCode.Trim().ToUpperInvariant();
                     existing.UpdatedDate = DateTime.Now;
                     _context.Customers.Update(existing);
                 }

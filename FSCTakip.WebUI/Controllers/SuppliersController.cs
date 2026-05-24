@@ -84,6 +84,7 @@ namespace FSCTakip.WebUI.Controllers
             {
                 var count = await _context.Suppliers.CountAsync();
                 model.SupplierCode = $"TED-{(count + 1):D3}";
+                model.ExternalCode = string.IsNullOrWhiteSpace(model.ExternalCode) ? null : model.ExternalCode.Trim().ToUpperInvariant();
                 model.CreatedDate = DateTime.Now;
                 model.IsActive = true;
                 _context.Suppliers.Add(model);
@@ -104,6 +105,7 @@ namespace FSCTakip.WebUI.Controllers
                     existing.FscCode       = model.FscCode;
                     existing.FscExpiryDate = model.FscExpiryDate;
                     existing.IsFscActive   = model.IsFscActive;
+                    existing.ExternalCode  = string.IsNullOrWhiteSpace(model.ExternalCode) ? existing.ExternalCode : model.ExternalCode.Trim().ToUpperInvariant();
                     existing.UpdatedDate   = DateTime.Now;
                     _context.Suppliers.Update(existing);
                 }
@@ -130,6 +132,7 @@ namespace FSCTakip.WebUI.Controllers
         {
             var rows = await _context.Suppliers.OrderBy(s => s.Name).Select(s => new {
                 Kod         = s.SupplierCode,
+                HariciKod   = s.ExternalCode ?? "",
                 Ad          = s.Name,
                 Yetkili     = s.ContactPerson,
                 Telefon     = s.Phone,

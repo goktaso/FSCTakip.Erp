@@ -104,6 +104,7 @@ namespace FSCTakip.WebUI.Controllers
                 }
 
                 model.ProductCode = newCode;
+                model.ExternalCode = string.IsNullOrWhiteSpace(model.ExternalCode) ? null : model.ExternalCode.Trim().ToUpperInvariant();
                 model.SupplierId = model.SupplierId; // Tedarikçi ataması
                 model.Unit = model.Unit ?? "ADET";
                 model.CreatedDate = DateTime.Now;
@@ -125,6 +126,7 @@ namespace FSCTakip.WebUI.Controllers
                     existing.PaperColorId = model.PaperColorId;
                     existing.PaperWeightId = model.PaperWeightId;
                     existing.PaperWidthId = model.PaperWidthId;
+                    existing.ExternalCode = string.IsNullOrWhiteSpace(model.ExternalCode) ? existing.ExternalCode : model.ExternalCode.Trim().ToUpperInvariant();
                     existing.UpdatedDate = DateTime.Now;
                     existing.UpdatedBy = "SYSTEM";
                 }

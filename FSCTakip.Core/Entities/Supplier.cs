@@ -5,6 +5,8 @@ namespace FSCTakip.Core.Entities
     public class Supplier : BaseEntity
     {
         public string SupplierCode { get; set; }
+        /// <summary>Harici ERP'deki tedarikçi kodu (örn. Netsis CARI_KOD). ETL eşleştirmede birincil anahtar.</summary>
+        public string? ExternalCode { get; set; }
         public string Name { get; set; }
         public string FscCode { get; set; }
         public DateTime? FscExpiryDate { get; set; } // Sertifika Bitiş Tarihi

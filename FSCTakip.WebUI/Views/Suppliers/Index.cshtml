@@ -138,6 +138,12 @@
                     </td>
                     <td>
                         <span class="badge badge-gray" style="font-size:11px;letter-spacing:.03em;">@item.SupplierCode</span>
+                        @if (!string.IsNullOrEmpty(item.ExternalCode))
+                        {
+                            <div class="text-muted" style="font-size:10px;margin-top:2px;" title="Harici ERP Kodu">
+                                <i class="fas fa-link me-1"></i>@item.ExternalCode
+                            </div>
+                        }
                     </td>
                     <td>
                         @if (!string.IsNullOrEmpty(item.Phone))
@@ -214,10 +220,15 @@
                             <input type="text" class="form-control" name="Name" id="suppName" required
                                    style="text-transform:uppercase;" placeholder="Büyük harf ile girilir">
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Tedarikçi Kodu</label>
+                        <div class="col-md-2">
+                            <label class="form-label">Dahili Kod</label>
                             <input type="text" class="form-control" name="SupplierCode" id="suppCode"
                                    readonly style="background:#f8fafc;color:#6b7280;" placeholder="Otomatik">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label" title="Netsis / ERP kayıt kodu (CARI_KOD)">Harici Kod <i class="fas fa-info-circle text-muted" style="font-size:10px;"></i></label>
+                            <input type="text" class="form-control" name="ExternalCode" id="suppExtCode"
+                                   placeholder="Örn: S-00078" style="text-transform:uppercase;">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Yetkili Kişi <span class="text-danger">*</span></label>
@@ -376,6 +387,7 @@
                 document.getElementById('suppFsc').value     = res.data.fscCode || '';
                 if (res.data.fscExpiryDate)
                     document.getElementById('suppDate').value = res.data.fscExpiryDate.split('T')[0];
+                document.getElementById('suppExtCode').value  = res.data.externalCode || '';
                 document.getElementById('supplierModalTitle').textContent = 'Tedarikçi Düzenle';
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('supplierModal')).show();
             }

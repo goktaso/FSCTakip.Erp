@@ -4,6 +4,8 @@
     {
         // Örn: "M-00001", "C-10050" (Sayısal kod standartımıza uygun)
         public string CustomerCode { get; set; }
+        /// <summary>Harici ERP'deki müşteri kodu (örn. Netsis CARI_KOD). ETL eşleştirmede birincil anahtar.</summary>
+        public string? ExternalCode { get; set; }
 
         public string Name { get; set; } // Şirket Tam Ünvanı
 

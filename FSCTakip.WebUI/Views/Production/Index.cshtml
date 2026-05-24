@@ -306,6 +306,10 @@
                         </div>
                     </div>
                     <div class="col-md-4">
+                        <label class="form-label fw-semibold" title="Netsis / ERP iş emri numarası">Harici İş Emri No <i class="fas fa-info-circle text-muted" style="font-size:10px;"></i></label>
+                        <input type="text" id="woExternalOrderNo" class="form-control" placeholder="ERP iş emri no">
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label fw-semibold">Notlar</label>
                         <input type="text" id="woNotes" class="form-control" placeholder="Opsiyonel...">
                     </div>
@@ -333,7 +337,8 @@ function openNewWorkOrder() {
     document.getElementById('woProductId').value = '';
     document.getElementById('woMachineId').value = '';
     document.getElementById('woQty').value       = '';
-    document.getElementById('woNotes').value     = '';
+    document.getElementById('woNotes').value            = '';
+    document.getElementById('woExternalOrderNo').value  = '';
     document.getElementById('woEditFields').style.display = 'none';
     document.getElementById('woModalTitle').textContent   = 'Yeni Üretim';
     document.getElementById('woModalSubtitle').textContent = 'İş emri numarası otomatik atanacak';
@@ -354,7 +359,8 @@ function editWorkOrder(id) {
             document.getElementById('woMachineId').value = d.machineId;
             document.getElementById('woQty').value       = d.plannedQuantity;
             document.getElementById('woStatus').value    = d.status;
-            document.getElementById('woNotes').value     = d.notes || '';
+            document.getElementById('woNotes').value           = d.notes || '';
+            document.getElementById('woExternalOrderNo').value = d.externalOrderNo || '';
             document.getElementById('woEditFields').style.display = '';
             document.getElementById('woModalTitle').textContent    = 'Düzenle — ' + d.workOrderNo;
             document.getElementById('woModalSubtitle').textContent = d.workOrderNo;
@@ -384,8 +390,9 @@ function saveWorkOrder() {
     fd.append('PlannedDate',     document.getElementById('woDate').value);
     fd.append('PlannedQuantity', document.getElementById('woQty').value);
     // Yeni kayıt: her zaman "Üretimde" (2) başlar
-    fd.append('Status', _woEditMode ? document.getElementById('woStatus').value : '2');
-    fd.append('Notes',  document.getElementById('woNotes').value);
+    fd.append('Status',          _woEditMode ? document.getElementById('woStatus').value : '2');
+    fd.append('ExternalOrderNo', document.getElementById('woExternalOrderNo').value);
+    fd.append('Notes',           document.getElementById('woNotes').value);
 
     fetch('/Production/SaveWorkOrder', { method: 'POST', body: fd })
         .then(r => r.json()).then(res => {

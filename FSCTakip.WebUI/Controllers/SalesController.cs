@@ -67,12 +67,13 @@ namespace FSCTakip.WebUI.Controllers
                 data = new
                 {
                     s.Id, s.SalesOrderNo, s.CustomerId,
-                    orderDate     = s.OrderDate.ToString("yyyy-MM-dd"),
-                    dispatchDate  = s.DispatchDate?.ToString("yyyy-MM-dd"),
+                    orderDate       = s.OrderDate.ToString("yyyy-MM-dd"),
+                    dispatchDate    = s.DispatchDate?.ToString("yyyy-MM-dd"),
                     s.DispatchNo, s.InvoiceNo,
                     s.InvoiceAmount, s.Currency,
                     s.PlateNumber, s.DeliveryAddress,
-                    status = (int)s.Status, s.Notes
+                    status          = (int)s.Status, s.Notes,
+                    s.ExternalOrderNo
                 }
             });
         }
@@ -81,7 +82,7 @@ namespace FSCTakip.WebUI.Controllers
         [HttpPost]
         public async Task<IActionResult> SaveOrder(
             int salesOrderId, int customerId,
-            DateTime orderDate, string? dispatchNo, string? invoiceNo,
+            DateTime orderDate, string? externalOrderNo, string? dispatchNo, string? invoiceNo,
             decimal? invoiceAmount, string currency,
             string? plateNumber, string? deliveryAddress,
             SalesOrderStatus status, string? notes)
@@ -91,17 +92,18 @@ namespace FSCTakip.WebUI.Controllers
                 var count = await _context.SalesOrders.CountAsync();
                 var order = new SalesOrder
                 {
-                    SalesOrderNo   = $"SIP{DateTime.Today.Year}-{count + 1:D3}",
-                    CustomerId     = customerId,
-                    OrderDate      = orderDate,
-                    DispatchNo     = dispatchNo,
-                    InvoiceNo      = invoiceNo,
-                    InvoiceAmount  = invoiceAmount,
-                    Currency       = currency,
-                    PlateNumber    = plateNumber,
+                    SalesOrderNo    = $"SIP{DateTime.Today.Year}-{count + 1:D3}",
+                    ExternalOrderNo = string.IsNullOrWhiteSpace(externalOrderNo) ? null : externalOrderNo.Trim(),
+                    CustomerId      = customerId,
+                    OrderDate       = orderDate,
+                    DispatchNo      = dispatchNo,
+                    InvoiceNo       = invoiceNo,
+                    InvoiceAmount   = invoiceAmount,
+                    Currency        = currency,
+                    PlateNumber     = plateNumber,
                     DeliveryAddress = deliveryAddress,
-                    Status         = status,
-                    Notes          = notes
+                    Status          = status,
+                    Notes           = notes
                 };
                 _context.SalesOrders.Add(order);
                 await _context.SaveChangesAsync();
@@ -114,6 +116,7 @@ namespace FSCTakip.WebUI.Controllers
 
                 order.CustomerId      = customerId;
                 order.OrderDate       = orderDate;
+                order.ExternalOrderNo = string.IsNullOrWhiteSpace(externalOrderNo) ? order.ExternalOrderNo : externalOrderNo.Trim();
                 order.DispatchNo      = dispatchNo;
                 order.InvoiceNo       = invoiceNo;
                 order.InvoiceAmount   = invoiceAmount;

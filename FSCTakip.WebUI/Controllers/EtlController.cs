@@ -787,6 +787,9 @@ namespace FSCTakip.WebUI.Controllers
             }
             rdr.Close();
 
+            // ExternalCode eşleştirmesi için tüm ürünleri bir kez yükle (N+1 sorgusunu önler)
+            var allProducts = await _context.Products.ToListAsync();
+
             foreach (var r in rows)
             {
                 if (string.IsNullOrWhiteSpace(r.Kod) || string.IsNullOrWhiteSpace(r.Adi)) { skp++; continue; }
@@ -795,23 +798,31 @@ namespace FSCTakip.WebUI.Controllers
                     var grupAdi = r.Grup switch { 10 => "Hammadde", 20 => "Sap", 30 => "Mamul", 40 => "Kimyasal", _ => "Sarf" };
                     var group   = groups.FirstOrDefault(g => g.GroupName.Equals(grupAdi, StringComparison.OrdinalIgnoreCase));
 
-                    var existing = await _context.Products.FirstOrDefaultAsync(p => p.ProductCode == r.Kod);
+                    // Öncelik: ExternalCode eşleşmesi → ardından eski ProductCode eşleşmesi (geçiş dönemi)
+                    var existing = allProducts.FirstOrDefault(p => p.ExternalCode == r.Kod)
+                                ?? allProducts.FirstOrDefault(p => p.ProductCode   == r.Kod);
+
                     if (existing == null)
                     {
-                        _context.Products.Add(new Product
+                        var count = allProducts.Count;
+                        var newProduct = new Product
                         {
-                            ProductCode    = r.Kod,
+                            ProductCode    = $"URN-{count + 1:D3}",
+                            ExternalCode   = r.Kod,
                             ProductName    = r.Adi,
                             Unit           = r.Birim.ToUpperInvariant(),
                             ProductGroupId = group?.Id,
                             IsActive       = true,
                             CreatedDate    = DateTime.Now,
                             CreatedBy      = "NETSIS"
-                        });
+                        };
+                        _context.Products.Add(newProduct);
+                        allProducts.Add(newProduct); // yerel listeyi güncelle
                         ins++;
                     }
                     else
                     {
+                        existing.ExternalCode   = r.Kod; // geçiş dönemi için mevcut kayıtlara da yaz
                         existing.ProductName    = r.Adi;
                         existing.Unit           = r.Birim.ToUpperInvariant();
                         existing.ProductGroupId = group?.Id ?? existing.ProductGroupId;
@@ -870,13 +881,17 @@ namespace FSCTakip.WebUI.Controllers
             }
             rdr.Close();
 
+            // ExternalCode eşleştirmesi için tüm tedarikçileri bir kez yükle
+            var allSuppliers = await _context.Suppliers.ToListAsync();
+
             foreach (var r in rows)
             {
                 if (string.IsNullOrWhiteSpace(r.Isim)) { skp++; continue; }
                 try
                 {
-                    var existing = await _context.Suppliers
-                        .FirstOrDefaultAsync(s => s.SupplierCode == r.Kod || s.Name == r.Isim);
+                    // Öncelik: ExternalCode eşleşmesi → ardından isim eşleşmesi (geçiş dönemi)
+                    var existing = allSuppliers.FirstOrDefault(s => !string.IsNullOrWhiteSpace(r.Kod) && s.ExternalCode == r.Kod)
+                                ?? allSuppliers.FirstOrDefault(s => s.Name == r.Isim);
 
                     var email = NormalizeEmail(r.Mail);
                     // Telefon: GSM yoksa Tel, ikisi de varsa GSM'i seç (daha güncel)
@@ -886,9 +901,10 @@ namespace FSCTakip.WebUI.Controllers
                     if (existing == null)
                     {
                         count++;
-                        _context.Suppliers.Add(new Supplier
+                        var newSupplier = new Supplier
                         {
-                            SupplierCode  = string.IsNullOrWhiteSpace(r.Kod) ? $"TED-{count:D3}" : r.Kod,
+                            SupplierCode  = $"TED-{count:D3}",
+                            ExternalCode  = string.IsNullOrWhiteSpace(r.Kod) ? null : r.Kod,
                             Name          = r.Isim,
                             Phone         = phone,
                             Email         = email,
@@ -900,11 +916,14 @@ namespace FSCTakip.WebUI.Controllers
                             IsFscActive   = false,
                             CreatedDate   = DateTime.Now,
                             CreatedBy     = "NETSIS"
-                        });
+                        };
+                        _context.Suppliers.Add(newSupplier);
+                        allSuppliers.Add(newSupplier);
                         ins++;
                     }
                     else
                     {
+                        if (!string.IsNullOrWhiteSpace(r.Kod)) existing.ExternalCode = r.Kod; // geçiş dönemi
                         existing.Name        = r.Isim;
                         existing.Phone       = phone;
                         existing.Email       = email;
@@ -967,13 +986,17 @@ namespace FSCTakip.WebUI.Controllers
             }
             rdr.Close();
 
+            // ExternalCode eşleştirmesi için tüm müşterileri bir kez yükle
+            var allCustomers = await _context.Customers.ToListAsync();
+
             foreach (var r in rows)
             {
                 if (string.IsNullOrWhiteSpace(r.Isim)) { skp++; continue; }
                 try
                 {
-                    var existing = await _context.Customers
-                        .FirstOrDefaultAsync(c => c.CustomerCode == r.Kod || c.Name == r.Isim);
+                    // Öncelik: ExternalCode eşleşmesi → ardından isim eşleşmesi (geçiş dönemi)
+                    var existing = allCustomers.FirstOrDefault(c => !string.IsNullOrWhiteSpace(r.Kod) && c.ExternalCode == r.Kod)
+                                ?? allCustomers.FirstOrDefault(c => c.Name == r.Isim);
 
                     var email = NormalizeEmail(r.Mail);
                     var phone = !string.IsNullOrWhiteSpace(r.Gsm) ? r.Gsm : r.Tel;
@@ -982,9 +1005,10 @@ namespace FSCTakip.WebUI.Controllers
                     if (existing == null)
                     {
                         count++;
-                        _context.Customers.Add(new Customer
+                        var newCustomer = new Customer
                         {
-                            CustomerCode = string.IsNullOrWhiteSpace(r.Kod) ? $"MHS-{count:D3}" : r.Kod,
+                            CustomerCode = $"MHS-{count:D3}",
+                            ExternalCode = string.IsNullOrWhiteSpace(r.Kod) ? null : r.Kod,
                             Name         = r.Isim,
                             Phone        = phone,
                             Email        = email,
@@ -995,11 +1019,14 @@ namespace FSCTakip.WebUI.Controllers
                             IsActive     = true,
                             CreatedDate  = DateTime.Now,
                             CreatedBy    = "NETSIS"
-                        });
+                        };
+                        _context.Customers.Add(newCustomer);
+                        allCustomers.Add(newCustomer);
                         ins++;
                     }
                     else
                     {
+                        if (!string.IsNullOrWhiteSpace(r.Kod)) existing.ExternalCode = r.Kod; // geçiş dönemi
                         existing.Name        = r.Isim;
                         existing.Phone       = phone;
                         existing.Email       = email;

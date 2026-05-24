@@ -73,7 +73,13 @@
                         foreach (var item in Model)
                         {
                             <tr>
-                                <td><strong class="text-primary">@item.ProductCode</strong></td>
+                                <td>
+                                    <strong class="text-primary">@item.ProductCode</strong>
+                                    @if (!string.IsNullOrEmpty(item.ExternalCode))
+                                    {
+                                        <div class="text-muted" style="font-size:10px;" title="Harici ERP Kodu"><i class="fas fa-link me-1"></i>@item.ExternalCode</div>
+                                    }
+                                </td>
                                 <td class="small font-weight-bold">@item.ProductName</td>
                                 <td><span class="text-muted small">@(item.Supplier?.Name ?? "-")</span></td>
                                 <td><span class="badge badge-blue" style="font-size:11px;">@(item.ProductGroup?.GroupName ?? "-")</span></td>
@@ -153,9 +159,13 @@
                                 <button type="button" class="qa-btn" onclick="openQuickAdd('supplier','supplierId')" title="Yeni Tedarikçi Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Ürün Kodu</label>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Dahili Kod</label>
                             <input type="text" id="productCode" class="form-control bg-light" readonly placeholder="Otomatik" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold" title="Netsis / ERP stok kodu (STOK_KODU)">Harici Kod <i class="fas fa-info-circle text-muted" style="font-size:10px;"></i></label>
+                            <input type="text" name="ExternalCode" id="productExtCode" class="form-control text-uppercase" placeholder="Örn: 001.01.001">
                         </div>
                         <div class="col-md-8">
                             <label class="form-label small fw-semibold">Ürün Adı <span class="text-danger">*</span></label>
@@ -259,6 +269,7 @@
                     document.getElementById('productGroupId').value = data.productGroupId || '';
                     document.getElementById('supplierId').value     = data.supplierId || '';
                     document.getElementById('productCode').value    = data.productCode;
+                    document.getElementById('productExtCode').value = data.externalCode || '';
                     document.getElementById('productName').value    = data.productName;
                     document.getElementById('paperColorId').value   = data.paperColorId || '';
                     document.getElementById('paperWeightId').value  = data.paperWeightId || '';
