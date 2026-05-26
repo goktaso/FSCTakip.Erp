@@ -211,9 +211,13 @@ namespace FSCTakip.WebUI.Controllers
                 await _context.SaveChangesAsync();
                 return Json(new { success = true, message = "Kalem silindi" });
             }
-            catch (Exception)
+            catch (FSCTakip.Core.Entities.PeriodLockedException ex)
             {
-                return Json(new { success = false, message = "Bu kalem silinemez." });
+                return Json(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Bu kalem silinemez. {ex.Message}" });
             }
         }
 
@@ -232,9 +236,13 @@ namespace FSCTakip.WebUI.Controllers
                 await _context.SaveChangesAsync();
                 return Json(new { success = true, message = "Sipariş silindi" });
             }
-            catch (Exception)
+            catch (FSCTakip.Core.Entities.PeriodLockedException ex)
             {
-                return Json(new { success = false, message = "Bu sipariş silinemez." });
+                return Json(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Bu sipariş silinemez. {ex.Message}" });
             }
         }
 

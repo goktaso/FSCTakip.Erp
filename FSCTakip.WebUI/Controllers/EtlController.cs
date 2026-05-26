@@ -164,6 +164,9 @@ namespace FSCTakip.WebUI.Controllers
         [HttpPost]
         public async Task<IActionResult> ImportExecute(IFormFile file, string jobType, int? connectionId)
         {
+            var deny = RequireWrite("ETL");
+            if (deny != null) return deny;
+
             if (file == null || file.Length == 0)
                 return Json(new { success = false, message = "Dosya seçilmedi." });
 
@@ -625,10 +628,13 @@ namespace FSCTakip.WebUI.Controllers
             return View();
         }
 
-        // POST /Etl/ClearRecords  — tedarikçi veya müşteri kayıtlarını temizle
+        // POST /Etl/ClearRecords  — tedarikçi veya müşteri kayıtlarını temizle (Admin only)
         [HttpPost]
         public async Task<IActionResult> ClearRecords(string recordType)
         {
+            if (!IsAdminUser)
+                return Json(new { success = false, message = "Bu işlem yalnızca admin kullanıcılar tarafından yapılabilir." });
+
             try
             {
                 if (recordType == "Suppliers")
@@ -662,6 +668,9 @@ namespace FSCTakip.WebUI.Controllers
         [HttpPost]
         public async Task<IActionResult> NetsisExecute(string syncType, int? connectionId)
         {
+            if (!IsAdminUser)
+                return Json(new { success = false, message = "Netsis senkronizasyonu yalnızca admin kullanıcılar tarafından başlatılabilir." });
+
             var connStr = _cfg.GetConnectionString("NetsisConnection");
 
             if (connectionId.HasValue)

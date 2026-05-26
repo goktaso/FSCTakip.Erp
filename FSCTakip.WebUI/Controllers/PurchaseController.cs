@@ -215,6 +215,9 @@ namespace FSCTakip.WebUI.Controllers
         {
             try
             {
+                if (model.InitialWeight <= 0)
+                    return Json(new { success = false, message = "Bobin ağırlığı sıfırdan büyük olmalıdır." });
+
                 var lot = await _context.FscLots.FindAsync(model.LotId);
                 if (lot == null)
                     return Json(new { success = false, message = "Lot bulunamadı." });
@@ -347,12 +350,42 @@ namespace FSCTakip.WebUI.Controllers
             return ExportToExcel(rows, "HammaddeGirisleri");
         }
 
+        private static readonly string[] _allowedMimeTypes = { "application/pdf", "image/jpeg", "image/png" };
+        private static readonly long _maxFileSize = 20 * 1024 * 1024; // 20 MB
+
         private async Task<string> SaveFile(IFormFile file, string subfolder)
         {
-            var yearMonth = DateTime.Now.ToString("yyyy/MM");
+            // MIME tipi kontrolü
+            if (!_allowedMimeTypes.Contains(file.ContentType.ToLowerInvariant()))
+                throw new InvalidOperationException("Yalnızca PDF, JPEG veya PNG dosyaları kabul edilmektedir.");
+
+            // Dosya boyutu kontrolü
+            if (file.Length > _maxFileSize)
+                throw new InvalidOperationException("Dosya boyutu 20 MB sınırını aşıyor.");
+
+            // Magic bytes kontrolü (PDF: %PDF, JPEG: FF D8 FF, PNG: 89 50 4E 47)
+            using (var peekStream = file.OpenReadStream())
+            {
+                var header = new byte[4];
+                await peekStream.ReadAsync(header, 0, 4);
+                bool isPdf  = header[0] == 0x25 && header[1] == 0x50 && header[2] == 0x44 && header[3] == 0x46;
+                bool isJpeg = header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF;
+                bool isPng  = header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47;
+                if (!isPdf && !isJpeg && !isPng)
+                    throw new InvalidOperationException("Dosya içeriği geçersiz. Lütfen gerçek bir PDF, JPEG veya PNG dosyası yükleyin.");
+            }
+
+            var ext = file.ContentType.ToLowerInvariant() switch {
+                "application/pdf" => ".pdf",
+                "image/jpeg"      => ".jpg",
+                "image/png"       => ".png",
+                _                 => ".bin"
+            };
+
+            var yearMonth = DateTime.Now.ToString("yyyy");
             var dir = Path.Combine(_env.WebRootPath, "uploads", subfolder, yearMonth);
             Directory.CreateDirectory(dir);
-            var name = $"{Guid.NewGuid():N}{Path.GetExtension(file.FileName)}";
+            var name = $"{Guid.NewGuid():N}{ext}";
             var full = Path.Combine(dir, name);
             using var stream = new FileStream(full, FileMode.Create);
             await file.CopyToAsync(stream);

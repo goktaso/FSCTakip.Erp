@@ -74,11 +74,28 @@ namespace FSCTakip.WebUI.Controllers
         [HttpPost]
         public async Task<IActionResult> Save(Supplier model)
         {
-            if (!string.IsNullOrEmpty(model.Email))
-                model.Email = model.Email.Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(model.Name))
+                return Json(new { success = false, message = "Tedarikçi adı zorunludur." });
 
+            // Email formatı kontrolü
+            if (!string.IsNullOrEmpty(model.Email))
+            {
+                model.Email = model.Email.Replace("İ", "i").Replace("I", "ı").Trim().ToLowerInvariant();
+                if (!System.Text.RegularExpressions.Regex.IsMatch(model.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                    return Json(new { success = false, message = "Geçerli bir e-posta adresi giriniz." });
+            }
+
+            // Telefon temizleme — sadece rakamlar
             if (!string.IsNullOrEmpty(model.Phone))
+            {
                 model.Phone = new string(model.Phone.Where(char.IsDigit).ToArray());
+                if (model.Phone.Length > 0 && (model.Phone.Length < 10 || model.Phone.Length > 15))
+                    return Json(new { success = false, message = "Telefon numarası 10-15 rakam arasında olmalıdır." });
+            }
+
+            // FSC son geçerlilik tarihi mantık kontrolü
+            if (model.IsFscActive && model.FscExpiryDate.HasValue && model.FscExpiryDate.Value < DateTime.Today.AddDays(-365))
+                return Json(new { success = false, message = "FSC son geçerlilik tarihi çok eski görünüyor. Lütfen kontrol ediniz." });
 
             if (model.Id == 0)
             {
@@ -111,8 +128,15 @@ namespace FSCTakip.WebUI.Controllers
                 }
             }
 
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Tedarikçi kaydedildi." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
 
         [HttpPost]
