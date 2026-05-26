@@ -1,11 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using FSCTakip.DataAccess.Data;
 using FSCTakip.WebUI.Data;
+using FSCTakip.Business.Services;
+using FSCTakip.WebUI.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Gerekli Servisleri Ekle
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<SessionAuthFilter>();
+});
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication();
 
@@ -16,6 +21,10 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
+
+// PermissionService ve HttpContextAccessor kaydı
+builder.Services.AddScoped<PermissionService>();
+builder.Services.AddHttpContextAccessor();
 
 // DbContext kayd�
 builder.Services.AddDbContext<AppDbContext>(options =>

@@ -12,6 +12,7 @@ namespace FSCTakip.WebUI.Controllers
 
         public async Task<IActionResult> Index()
         {
+            if (CurrentUserId == 0) return RedirectToAction("Login", "Account");
             var today    = DateTime.Today;
             var warn60   = today.AddDays(60);
             var culture  = new System.Globalization.CultureInfo("tr-TR");

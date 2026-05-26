@@ -63,6 +63,17 @@ namespace FSCTakip.WebUI.Controllers
             await _context.SaveChangesAsync();
             return Json(new { success = true, isActive = item.IsActive });
         }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteBagType(int id)
+        {
+            var item = await _context.BagTypes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+            _context.BagTypes.Remove(item);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Torba tipi silindi." });
+        }
         #endregion
 
         #region Ürün Grupları

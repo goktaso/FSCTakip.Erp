@@ -16,19 +16,38 @@ namespace FSCTakip.WebUI.Controllers
         // Hata veren satırı bununla değiştir:
         public ProductsController(FSCTakip.DataAccess.Data.AppDbContext context) : base(context) { }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? supplierId, int? productGroupId, string? search)
         {
             await PopulateDropdowns(ViewData);
-            var products = await _context.Products
+
+            var query = _context.Products
                 .Include(p => p.ProductGroup)
-                .Include(p => p.Supplier) // YENİ: Tedarikçi ilişkisi eklendi
+                .Include(p => p.Supplier)
                 .Include(p => p.FscType)
                 .Include(p => p.PaperType)
                 .Include(p => p.PaperColor)
                 .Include(p => p.PaperWeight)
                 .Include(p => p.PaperWidth)
-                .OrderBy(p => p.ProductCode)
-                .ToListAsync();
+                .AsQueryable();
+
+            if (supplierId.HasValue)
+                query = query.Where(p => p.SupplierId == supplierId.Value);
+            if (productGroupId.HasValue)
+                query = query.Where(p => p.ProductGroupId == productGroupId.Value);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                query = query.Where(p =>
+                    p.ProductCode.Contains(s) ||
+                    p.ProductName.Contains(s) ||
+                    (p.ExternalCode != null && p.ExternalCode.Contains(s)));
+            }
+
+            ViewBag.SupplierId     = supplierId;
+            ViewBag.ProductGroupId = productGroupId;
+            ViewBag.Search         = search;
+
+            var products = await query.OrderBy(p => p.ProductCode).ToListAsync();
             return View(products);
         }
 
@@ -168,23 +187,41 @@ namespace FSCTakip.WebUI.Controllers
             viewData["PaperWidths"] = new SelectList(widths.Select(x => new { Id = x.Id, Text = $"{x.Value} {x.Unit}" }), "Id", "Text");
         }
 
-        public async Task<IActionResult> ExportIndex()
+        public async Task<IActionResult> ExportIndex(int? supplierId, int? productGroupId, string? search)
         {
-            var data = await _context.Products
+            var query = _context.Products
                 .Include(p => p.ProductGroup)
-                .Include(p => p.Supplier) // Excel'e tedarikçi eklendi
+                .Include(p => p.Supplier)
+                .Include(p => p.FscType)
                 .Include(p => p.PaperWeight)
                 .Include(p => p.PaperWidth)
-                .OrderBy(p => p.ProductCode)
+                .AsQueryable();
+
+            if (supplierId.HasValue)
+                query = query.Where(p => p.SupplierId == supplierId.Value);
+            if (productGroupId.HasValue)
+                query = query.Where(p => p.ProductGroupId == productGroupId.Value);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                query = query.Where(p =>
+                    p.ProductCode.Contains(s) ||
+                    p.ProductName.Contains(s) ||
+                    (p.ExternalCode != null && p.ExternalCode.Contains(s)));
+            }
+
+            var data = await query.OrderBy(p => p.ProductCode)
                 .Select(p => new {
-                    p.ProductCode,
-                    p.ProductName,
-                    Tedarikci = p.Supplier.Name ?? "-",
-                    Grup = p.ProductGroup.GroupName,
-                    p.Unit,
-                    Gramaj = p.PaperWeight != null ? $"{p.PaperWeight.Value} {p.PaperWeight.Unit}" : "-",
-                    En = p.PaperWidth != null ? $"{p.PaperWidth.Value} {p.PaperWidth.Unit}" : "-",
-                    Durum = p.IsActive ? "AKTİF" : "PASİF"
+                    DahiliKod   = p.ProductCode,
+                    HariciKod   = p.ExternalCode ?? "",
+                    UrunAdi     = p.ProductName,
+                    Tedarikci   = p.Supplier != null ? p.Supplier.Name : "-",
+                    Grup        = p.ProductGroup != null ? p.ProductGroup.GroupName : "-",
+                    FscTipi     = p.FscType != null ? p.FscType.Name : "-",
+                    Birim       = p.Unit,
+                    Gramaj      = p.PaperWeight != null ? $"{p.PaperWeight.Value} {p.PaperWeight.Unit}" : "-",
+                    En          = p.PaperWidth  != null ? $"{p.PaperWidth.Value} {p.PaperWidth.Unit}"   : "-",
+                    Durum       = p.IsActive ? "AKTİF" : "PASİF"
                 }).ToListAsync();
 
             return ExportToExcel(data, "UrunListesi");
@@ -276,9 +313,16 @@ namespace FSCTakip.WebUI.Controllers
         {
             var item = await _context.ProductRecipes.FindAsync(id);
             if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
-            _context.ProductRecipes.Remove(item);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true });
+            try
+            {
+                _context.ProductRecipes.Remove(item);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu reçete satırı kullanıldığı için silinemez." });
+            }
         }
 
         // POST /Products/ToggleRecipeLine

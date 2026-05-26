@@ -1,0 +1,189 @@
+@model List<FSCTakip.Core.Entities.AuditLog>
+@{
+    ViewData["Title"] = "Değişiklik Günlüğü";
+    int total       = ViewBag.Total;
+    int curPage     = ViewBag.Page;
+    int pageSize    = ViewBag.PageSize;
+    int totalPages  = ViewBag.Pages;
+    var tableNames = ViewBag.TableNames as List<string> ?? new();
+    var users      = ViewBag.Users      as List<string> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0"><i class="fas fa-history me-2 text-primary"></i>Değişiklik Günlüğü</h5>
+    <span class="badge bg-secondary fs-6">Toplam: @total.ToString("N0") kayıt</span>
+</div>
+
+<!-- Filtre Paneli -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" action="/AuditLog" class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Tablo</label>
+                <select name="table" class="form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var t in tableNames)
+                    {
+                        @if (ViewBag.FilterTable == t) { <option value="@t" selected>@t</option> }
+                        else { <option value="@t">@t</option> }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">İşlem</label>
+                <select name="action" class="form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var a in new[] { "INSERT", "UPDATE", "DELETE" })
+                    {
+                        @if (ViewBag.FilterAction == a) { <option value="@a" selected>@a</option> }
+                        else { <option value="@a">@a</option> }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Kullanıcı</label>
+                <select name="user" class="form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var u in users)
+                    {
+                        @if (ViewBag.FilterUser == u) { <option value="@u" selected>@u</option> }
+                        else { <option value="@u">@u</option> }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Tarih Başlangıç</label>
+                <input type="date" name="dateFrom" class="form-control form-control-sm"
+                       value="@ViewBag.FilterDateFrom" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Tarih Bitiş</label>
+                <input type="date" name="dateTo" class="form-control form-control-sm"
+                       value="@ViewBag.FilterDateTo" />
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                    <i class="fas fa-filter me-1"></i>Filtrele
+                </button>
+                <a href="/AuditLog" class="btn btn-outline-secondary btn-sm" title="Temizle">
+                    <i class="fas fa-times"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tablo -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width:140px">Tarih / Saat</th>
+                    <th style="width:130px">Tablo</th>
+                    <th style="width:70px" class="text-center">ID</th>
+                    <th style="width:80px" class="text-center">İşlem</th>
+                    <th style="width:100px">Kullanıcı</th>
+                    <th>Değişiklik Özeti</th>
+                    <th style="width:60px" class="text-center">Detay</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in Model)
+                {
+                    <tr>
+                        <td class="small text-muted">@log.ChangedAt.ToString("dd.MM.yy HH:mm:ss")</td>
+                        <td>
+                            <span class="badge bg-light text-dark border small">@log.TableName</span>
+                        </td>
+                        <td class="text-center small">
+                            @(log.RecordId.HasValue ? "#" + log.RecordId : "-")
+                        </td>
+                        <td class="text-center">
+                            @{
+                                var (badgeCls, icon) = log.Action switch {
+                                    "INSERT" => ("bg-success", "fa-plus"),
+                                    "UPDATE" => ("bg-warning text-dark", "fa-pen"),
+                                    "DELETE" => ("bg-danger", "fa-trash"),
+                                    _ => ("bg-secondary", "fa-question")
+                                };
+                            }
+                            <span class="badge @badgeCls">
+                                <i class="fas @icon me-1"></i>@log.Action
+                            </span>
+                        </td>
+                        <td class="small">
+                            <i class="fas fa-user me-1 text-muted"></i>@(log.ChangedBy ?? "-")
+                        </td>
+                        <td class="small text-muted" style="max-width:400px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">
+                            @if (log.Action == "UPDATE" && log.OldValues != null && log.NewValues != null)
+                            {
+                                @:Güncellendi: @log.NewValues
+                            }
+                            else if (log.Action == "INSERT" && log.NewValues != null)
+                            {
+                                @:Eklendi: @log.NewValues
+                            }
+                            else if (log.Action == "DELETE" && log.OldValues != null)
+                            {
+                                @:Silindi: @log.OldValues
+                            }
+                        </td>
+                        <td class="text-center">
+                            <a href="/AuditLog/Detail/@log.Id" class="btn btn-xs btn-outline-primary py-0 px-2" title="Detay">
+                                <i class="fas fa-search"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                            Kayıt bulunamadı.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (totalPages > 1)
+    {
+        <div class="card-footer d-flex justify-content-between align-items-center py-2">
+            <small class="text-muted">
+                Sayfa @(curPage) / @totalPages &nbsp;·&nbsp;
+                @(((curPage-1)*pageSize)+1)–@(Math.Min(curPage*pageSize, total)) / @total kayıt
+            </small>
+            <div class="d-flex gap-1">
+                @if (curPage > 1)
+                {
+                    <a href="?page=@(curPage-1)&table=@ViewBag.FilterTable&action=@ViewBag.FilterAction&user=@ViewBag.FilterUser&dateFrom=@ViewBag.FilterDateFrom&dateTo=@ViewBag.FilterDateTo"
+                       class="btn btn-sm btn-outline-secondary py-0">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                }
+                @for (int pn = Math.Max(1, curPage - 2); pn <= Math.Min(totalPages, curPage + 2); pn++)
+                {
+                    @if (pn == curPage)
+                    {
+                        <a href="?page=@(pn)&table=@ViewBag.FilterTable&action=@ViewBag.FilterAction&user=@ViewBag.FilterUser&dateFrom=@ViewBag.FilterDateFrom&dateTo=@ViewBag.FilterDateTo"
+                           class="btn btn-sm btn-primary py-0">@pn</a>
+                    }
+                    else
+                    {
+                        <a href="?page=@(pn)&table=@ViewBag.FilterTable&action=@ViewBag.FilterAction&user=@ViewBag.FilterUser&dateFrom=@ViewBag.FilterDateFrom&dateTo=@ViewBag.FilterDateTo"
+                           class="btn btn-sm btn-outline-secondary py-0">@pn</a>
+                    }
+                }
+                @if (curPage < totalPages)
+                {
+                    <a href="?page=@(curPage+1)&table=@ViewBag.FilterTable&action=@ViewBag.FilterAction&user=@ViewBag.FilterUser&dateFrom=@ViewBag.FilterDateFrom&dateTo=@ViewBag.FilterDateTo"
+                       class="btn btn-sm btn-outline-secondary py-0">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                }
+            </div>
+        </div>
+    }
+</div>

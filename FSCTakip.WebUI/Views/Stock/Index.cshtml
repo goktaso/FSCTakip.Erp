@@ -7,6 +7,8 @@
     var warehouses = ViewBag.Warehouses    as List<Warehouse>    ?? new();
     int? selGroup  = ViewBag.ProductGroupId;
     int? selProd   = ViewBag.ProductId;
+    string stockCode = ViewBag.StockCode ?? "";
+    string erpCode   = ViewBag.ErpCode   ?? "";
 }
 
 @section TopbarPrimary {
@@ -61,6 +63,8 @@
                 <option value="@p.Id" selected="@(selProd == p.Id ? "selected" : null)">@p.ProductName</option>
             }
         </select>
+        <input type="text" name="stockCode" class="form-control form-control-sm" placeholder="Stok Kodu" value="@stockCode" style="max-width:140px;" />
+        <input type="text" name="erpCode"   class="form-control form-control-sm" placeholder="ERP Stok Kodu" value="@erpCode" style="max-width:140px;" />
         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Filtrele</button>
         <a href="/Stock/Index" class="btn btn-outline-secondary btn-sm">Temizle</a>
         <div class="ms-auto">
@@ -76,6 +80,7 @@
             <thead>
                 <tr>
                     <th>ÜRÜN KODU</th>
+                    <th>ERP KODU</th>
                     <th>ÜRÜN ADI</th>
                     <th>GRUP</th>
                     <th class="text-end">GİRİŞ</th>
@@ -89,7 +94,7 @@
             <tbody>
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="9">
+                    <tr><td colspan="10">
                         <div class="empty-state">
                             <div class="empty-icon"><i class="fas fa-warehouse"></i></div>
                             <h6>Henüz stok hareketi yok</h6>
@@ -104,6 +109,7 @@
                     string statusText  = net > 0 ? "Var" : "Yok";
                     <tr>
                         <td class="text-muted small">@row.Product.ProductCode</td>
+                        <td class="text-muted small">@(row.Product.ExternalCode ?? "—")</td>
                         <td><strong>@row.Product.ProductName</strong></td>
                         <td class="small text-muted">@(row.Product.ProductGroup?.GroupName ?? "—")</td>
                         <td class="text-end text-success fw-semibold">@row.GirisAdet.ToString("N0")</td>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ClosedXML.Excel;
 using FSCTakip.DataAccess.Data;
+using System;
 namespace FSCTakip.WebUI.Controllers
 {
     public class PaperController : BaseController
@@ -81,9 +82,21 @@ namespace FSCTakip.WebUI.Controllers
         {
             var item = await _context.PaperTypes.FindAsync(id);
             if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
-            _context.PaperTypes.Remove(item);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "Kağıt tipi silindi." });
+
+            var used = await _context.Products.AnyAsync(p => p.PaperTypeId == id);
+            if (used)
+                return Json(new { success = false, message = "Bu kağıt tipi ürünlerde kullanılmaktadır. Silmek yerine pasife alabilirsiniz." });
+
+            try
+            {
+                _context.PaperTypes.Remove(item);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Kağıt tipi silindi." });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu kağıt tipi silinemez." });
+            }
         }
 
         // --- [YENİ EKLENDİ] - Kağıt Tipi Durum Değiştirme Metodu ---
@@ -115,9 +128,21 @@ namespace FSCTakip.WebUI.Controllers
         {
             var item = await _context.PaperColors.FindAsync(id);
             if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
-            _context.PaperColors.Remove(item);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "Kağıt rengi silindi." });
+
+            var used = await _context.Products.AnyAsync(p => p.PaperColorId == id);
+            if (used)
+                return Json(new { success = false, message = "Bu renk ürünlerde kullanılmaktadır. Silmek yerine pasife alabilirsiniz." });
+
+            try
+            {
+                _context.PaperColors.Remove(item);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Kağıt rengi silindi." });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu renk silinemez." });
+            }
         }
 
         // --- [YENİ EKLENDİ] - Renk Durum Değiştirme Metodu ---
@@ -157,9 +182,22 @@ namespace FSCTakip.WebUI.Controllers
         {
             var item = await _context.FscTypes.FindAsync(id);
             if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
-            _context.FscTypes.Remove(item);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "FSC tipi silindi." });
+
+            var usedInProducts = await _context.Products.AnyAsync(p => p.FscTypeId == id);
+            var usedInLots     = await _context.FscLots.AnyAsync(l => l.FscTypeId == id);
+            if (usedInProducts || usedInLots)
+                return Json(new { success = false, message = "Bu FSC tipi ürün veya lot kayıtlarında kullanılmaktadır. Silmek yerine pasife alabilirsiniz." });
+
+            try
+            {
+                _context.FscTypes.Remove(item);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "FSC tipi silindi." });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu FSC tipi silinemez." });
+            }
         }
 
         // --- [YENİ EKLENDİ] - FSC Tipi Durum Değiştirme Metodu ---
@@ -219,9 +257,20 @@ namespace FSCTakip.WebUI.Controllers
             var item = await _context.PaperWidths.FindAsync(id);
             if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
 
-            _context.PaperWidths.Remove(item);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "Kağıt eni başarıyla silindi." });
+            var used = await _context.Products.AnyAsync(p => p.PaperWidthId == id);
+            if (used)
+                return Json(new { success = false, message = "Bu kağıt eni ürünlerde kullanılmaktadır. Silmek yerine pasife alabilirsiniz." });
+
+            try
+            {
+                _context.PaperWidths.Remove(item);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Kağıt eni silindi." });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu kağıt eni silinemez." });
+            }
         }
 
 
@@ -253,9 +302,21 @@ namespace FSCTakip.WebUI.Controllers
         {
             var item = await _context.PaperWeights.FindAsync(id);
             if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
-            _context.PaperWeights.Remove(item);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "Gramaj kaydı silindi." });
+
+            var used = await _context.Products.AnyAsync(p => p.PaperWeightId == id);
+            if (used)
+                return Json(new { success = false, message = "Bu gramaj ürünlerde kullanılmaktadır. Silmek yerine pasife alabilirsiniz." });
+
+            try
+            {
+                _context.PaperWeights.Remove(item);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Gramaj kaydı silindi." });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu gramaj değeri silinemez." });
+            }
         }
 
         // --- [YENİ EKLENDİ] - Gramaj Durum Değiştirme Metodu ---

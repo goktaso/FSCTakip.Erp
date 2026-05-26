@@ -100,9 +100,16 @@ namespace FSCTakip.WebUI.Controllers
             if (hasJobs) return Json(new { success = false, message = "Bu bağlantıya ait aktarım geçmişi mevcut, silinemez." });
             var c = await _context.EtlConnections.FindAsync(id);
             if (c == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
-            _context.EtlConnections.Remove(c);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true });
+            try
+            {
+                _context.EtlConnections.Remove(c);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu bağlantı silinemez." });
+            }
         }
 
         // ─── Aktarım Geçmişi ─────────────────────────────────────────────────
@@ -340,7 +347,7 @@ namespace FSCTakip.WebUI.Controllers
             {
                 ws = wb.AddWorksheet("HammaddeLot");
                 var defs = new (string, bool, string)[] {
-                    ("LotNo",          true,  "Tedarikçi tarafından verilen lot/parti numarası.\nÖr: 24H0537\nAynı LotNo ile birden fazla seri (bobin) satırı ekleyebilirsiniz."),
+                    ("PartiNo",          true,  "Tedarikçi tarafından verilen lot/parti numarası.\nÖr: 24H0537\nAynı LotNo ile birden fazla seri (bobin) satırı ekleyebilirsiniz."),
                     ("TedarikciKodu",  true,  "Sistemdeki tedarikçi kodu (TED-XXX formatı).\nGeçerli kodlar için Referans sayfasına bakın.\nKod yerine tam isim de kabul edilir."),
                     ("UrunKodu",       true,  "Hammadde ürün kodu.\nÖr: 10255 veya HM-001\nGeçerli kodlar için Referans sayfasına bakın."),
                     ("FscTipi",        true,  "FSC sertifika tipi. Aşağıdaki listeden seçin:\n" + string.Join("\n", fscTypes.Select(f => "• " + f.Name))),
@@ -391,7 +398,7 @@ namespace FSCTakip.WebUI.Controllers
                     ("Makine",         true,  "Makine adı veya kodu (sistemde tanımlı olmalı).\nGeçerli makineler için Referans sayfasına bakın."),
                     ("MamulKodu",      true,  "Üretilen mamul ürün kodu.\nÖr: 30001\nGeçerli kodlar için Referans sayfasına bakın."),
                     ("UretimMiktari",  true,  "Üretilen adet miktarı (tamsayı).\nÖr: 6600"),
-                    ("LotNo",          true,  "Tüketilen hammaddenin LOT numarası (sistemde kayıtlı olmalı).\nÖr: 24H0537"),
+                    ("PartiNo",          true,  "Tüketilen hammaddenin LOT numarası (sistemde kayıtlı olmalı).\nÖr: 24H0537"),
                     ("HammaddeKodu",   true,  "Tüketilen hammadde ürün kodu.\nÖr: 10255"),
                     ("KullanilanMiktar", true, "Tüketilen hammadde miktarı KG.\nOndalık: nokta veya virgül.\nÖr: 1500.00"),
                     ("Fire",           false, "Fire/atık miktarı KG. Boş bırakılabilir.\nÖr: 12.50"),
@@ -1084,7 +1091,7 @@ namespace FSCTakip.WebUI.Controllers
             // Algılama: başlık adlarına bak
             bool isSupplier  = hdrs.ContainsKey("TedarikciAdi");
             bool isCustomer  = hdrs.ContainsKey("MusteriAdi");
-            bool isHammadde  = hdrs.ContainsKey("LotNo") && hdrs.ContainsKey("SeriNo");
+            bool isHammadde  = hdrs.ContainsKey("PartiNo") && hdrs.ContainsKey("SeriNo");
 
             int ins = 0, upd = 0, skp = 0;
             var errors = new List<string>();
@@ -1251,13 +1258,13 @@ namespace FSCTakip.WebUI.Controllers
 
                 var groups = rows
                     .Select((r, idx) => new { Row = r, Idx = idx })
-                    .GroupBy(x => ColVal(x.Row, "LotNo"))
+                    .GroupBy(x => ColVal(x.Row, "PartiNo"))
                     .Where(g => !string.IsNullOrWhiteSpace(g.Key))
                     .ToList();
 
                 foreach (var group in groups)
                 {
-                    var lotNo    = group.Key;
+                    var partiNo  = group.Key;
                     var firstRow = group.First().Row;
                     var firstIdx = group.First().Idx;
                     try
@@ -1278,17 +1285,17 @@ namespace FSCTakip.WebUI.Controllers
                             f.Code.Equals(fscTipiStr, StringComparison.OrdinalIgnoreCase) ||
                             fscTipiStr.Contains(f.Code, StringComparison.OrdinalIgnoreCase));
 
-                        if (product  == null) { errors.Add($"Lot {lotNo}: Ürün bulunamadı '{stokKodu}' — ürün kartı oluşturulup tekrar deneyin."); skp += group.Count(); continue; }
-                        if (supplier == null) { errors.Add($"Lot {lotNo}: Tedarikçi bulunamadı '{tedarikciAdi}' — tedarikçi kaydı oluşturulup tekrar deneyin."); skp += group.Count(); continue; }
-                        if (fscType  == null) { errors.Add($"Lot {lotNo}: FSC Tipi bulunamadı '{fscTipiStr}'."); skp += group.Count(); continue; }
+                        if (product  == null) { errors.Add($"Parti {partiNo}: Ürün bulunamadı '{stokKodu}' — ürün kartı oluşturulup tekrar deneyin."); skp += group.Count(); continue; }
+                        if (supplier == null) { errors.Add($"Parti {partiNo}: Tedarikçi bulunamadı '{tedarikciAdi}' — tedarikçi kaydı oluşturulup tekrar deneyin."); skp += group.Count(); continue; }
+                        if (fscType  == null) { errors.Add($"Parti {partiNo}: FSC Tipi bulunamadı '{fscTipiStr}'."); skp += group.Count(); continue; }
 
-                        var lot = await _context.FscLots.FirstOrDefaultAsync(l => l.LotNo == lotNo);
+                        var lot = await _context.FscLots.FirstOrDefaultAsync(l => l.PartiNo == partiNo);
                         bool lotNew = lot == null;
                         if (lotNew)
                         {
                             lot = new FscLot
                             {
-                                LotNo       = lotNo,
+                                PartiNo       = partiNo,
                                 FscTypeId   = fscType.Id,
                                 SupplierId  = supplier.Id,
                                 ProductId   = product.Id,
@@ -1310,7 +1317,7 @@ namespace FSCTakip.WebUI.Controllers
                             var rowNum = item.Idx + 2;
                             try
                             {
-                                var seriNo = ColVal(row, "SeriNo").IfEmpty(lotNo);
+                                var seriNo = ColVal(row, "SeriNo").IfEmpty(partiNo);
                                 var miktar = ColDec(row, "Miktar_kg");
                                 if (miktar <= 0) { skp++; continue; }
 
@@ -1330,13 +1337,13 @@ namespace FSCTakip.WebUI.Controllers
                                     _context.StockMovements.Add(new StockMovement
                                     {
                                         Type          = MovementType.PurchaseEntry,
-                                        DocumentNo    = fisNo.IfEmpty(lotNo),
+                                        DocumentNo    = fisNo.IfEmpty(partiNo),
                                         DocumentDate  = tarih ?? DateTime.Today,
                                         ProductId     = product.Id,
                                         Quantity      = miktar,
                                         Unit          = product.Unit ?? "KG",
                                         ToWarehouseId = defWh?.Id,
-                                        Description   = $"ETL Lot: {lotNo} | Seri: {seriNo}",
+                                        Description   = $"ETL Parti: {partiNo} | Seri: {seriNo}",
                                         CreatedDate   = DateTime.Now,
                                         CreatedBy     = "ETL"
                                     });
@@ -1347,7 +1354,7 @@ namespace FSCTakip.WebUI.Controllers
                             catch (Exception ex) { errors.Add($"Satır {rowNum}: {ex.Message}"); }
                         }
                     }
-                    catch (Exception ex) { errors.Add($"Lot {lotNo}: {ex.Message}"); }
+                    catch (Exception ex) { errors.Add($"Parti {partiNo}: {ex.Message}"); }
                 }
                 return (ins, upd, skp, errors);
             }
@@ -1511,7 +1518,8 @@ namespace FSCTakip.WebUI.Controllers
                         email     = row.Cell(6).GetString().Trim();
                     }
 
-                    if (string.IsNullOrWhiteSpace(name)) { skp++; continue; }
+                    if (string.IsNullOrWhiteSpace(name) || name.Equals("NULL", StringComparison.OrdinalIgnoreCase)) { skp++; continue; }
+                    if (string.IsNullOrWhiteSpace(hariciKod) || hariciKod.Equals("NULL", StringComparison.OrdinalIgnoreCase)) hariciKod = "";
 
                     // Eşleştirme önceliği: HariciKod → DahiliKod → (yeni kayıt)
                     Supplier? existing = null;
@@ -1531,6 +1539,8 @@ namespace FSCTakip.WebUI.Controllers
                             SupplierCode  = string.IsNullOrWhiteSpace(dahiliKod) ? $"TED-{count:D3}" : dahiliKod,
                             ExternalCode  = string.IsNullOrWhiteSpace(hariciKod) ? null : hariciKod.ToUpperInvariant(),
                             Name          = name,
+                            TaxNumber     = "",
+                            TaxOffice     = "",
                             FscCode       = fscCode,
                             ContactPerson = contact,
                             Phone         = phone,
@@ -1680,7 +1690,7 @@ namespace FSCTakip.WebUI.Controllers
 
             foreach (var group in groups)
             {
-                var lotNo    = group.Key;
+                var partiNo  = group.Key;
                 var firstRow = group.First().Row;
                 var firstIdx = group.First().Idx;
                 try
@@ -1700,18 +1710,18 @@ namespace FSCTakip.WebUI.Controllers
                         fscTypeName.Contains(f.Code, StringComparison.OrdinalIgnoreCase) ||
                         f.Code.Equals(fscTypeName, StringComparison.OrdinalIgnoreCase));
 
-                    if (supplier == null) { errors.Add($"Satır {firstIdx+2} (Lot {lotNo}): Tedarikçi bulunamadı — '{supplierCode}'"); skp += group.Count(); continue; }
-                    if (product  == null) { errors.Add($"Satır {firstIdx+2} (Lot {lotNo}): Ürün bulunamadı — '{productCode}'");      skp += group.Count(); continue; }
-                    if (fscType  == null) { errors.Add($"Satır {firstIdx+2} (Lot {lotNo}): FSC Tipi bulunamadı — '{fscTypeName}'");   skp += group.Count(); continue; }
+                    if (supplier == null) { errors.Add($"Satır {firstIdx+2} (Parti {partiNo}): Tedarikçi bulunamadı — '{supplierCode}'"); skp += group.Count(); continue; }
+                    if (product  == null) { errors.Add($"Satır {firstIdx+2} (Parti {partiNo}): Ürün bulunamadı — '{productCode}'");      skp += group.Count(); continue; }
+                    if (fscType  == null) { errors.Add($"Satır {firstIdx+2} (Parti {partiNo}): FSC Tipi bulunamadı — '{fscTypeName}'");   skp += group.Count(); continue; }
 
-                    // Lot bul veya oluştur
-                    var lot = await _context.FscLots.FirstOrDefaultAsync(l => l.LotNo == lotNo);
+                    // Parti bul veya oluştur
+                    var lot = await _context.FscLots.FirstOrDefaultAsync(l => l.PartiNo == partiNo);
                     bool lotNew = lot == null;
                     if (lotNew)
                     {
                         lot = new FscLot
                         {
-                            LotNo        = lotNo,
+                            PartiNo      = partiNo,
                             FscTypeId    = fscType.Id,
                             SupplierId   = supplier.Id,
                             ProductId    = product.Id,
@@ -1735,7 +1745,7 @@ namespace FSCTakip.WebUI.Controllers
                         var rowNum = item.Idx + 2;
                         try
                         {
-                            var seriNo = row.Cell(5).GetString().Trim().IfEmpty(lotNo);
+                            var seriNo = row.Cell(5).GetString().Trim().IfEmpty(partiNo);
                             var miktar = ParseDecimal(row.Cell(6));
                             if (miktar <= 0) { skp++; continue; }
 
@@ -1756,13 +1766,13 @@ namespace FSCTakip.WebUI.Controllers
                                 _context.StockMovements.Add(new StockMovement
                                 {
                                     Type          = MovementType.PurchaseEntry,
-                                    DocumentNo    = irsNo.IfEmpty(lotNo),
+                                    DocumentNo    = irsNo.IfEmpty(partiNo),
                                     DocumentDate  = tarih ?? DateTime.Today,
                                     ProductId     = product.Id,
                                     Quantity      = miktar,
                                     Unit          = product.Unit ?? "KG",
                                     ToWarehouseId = defaultWarehouse?.Id,
-                                    Description   = $"Lot: {lotNo} | Seri: {seriNo}",
+                                    Description   = $"Parti: {partiNo} | Seri: {seriNo}",
                                     CreatedDate   = DateTime.Now,
                                     CreatedBy     = "ETL"
                                 });
@@ -1772,7 +1782,7 @@ namespace FSCTakip.WebUI.Controllers
                         catch (Exception ex) { errors.Add($"Satır {rowNum}: {ex.Message}"); }
                     }
                 }
-                catch (Exception ex) { errors.Add($"Lot {lotNo}: {ex.Message}"); }
+                catch (Exception ex) { errors.Add($"Parti {partiNo}: {ex.Message}"); }
             }
             return (ins, upd, skp, errors);
         }
@@ -1859,21 +1869,21 @@ namespace FSCTakip.WebUI.Controllers
                         var rowNum = item.Idx + 2;
                         try
                         {
-                            var lotNo        = row.Cell(6).GetString().Trim();
+                            var partiNo      = row.Cell(6).GetString().Trim();
                             var hammaddeKodu = row.Cell(7).GetString().Trim();
                             var kullMiktar   = ParseDecimal(row.Cell(8));
                             var fire         = ParseDecimal(row.Cell(9));
 
-                            if (string.IsNullOrWhiteSpace(lotNo) || kullMiktar <= 0) { skp++; continue; }
+                            if (string.IsNullOrWhiteSpace(partiNo) || kullMiktar <= 0) { skp++; continue; }
 
-                            // Lot ve seri bul
+                            // Parti ve seri bul
                             var lot = await _context.FscLots
                                 .Include(l => l.Serials)
-                                .FirstOrDefaultAsync(l => l.LotNo == lotNo);
+                                .FirstOrDefaultAsync(l => l.PartiNo == partiNo);
 
                             var serial = lot?.Serials.OrderByDescending(s => s.CurrentWeight).FirstOrDefault();
 
-                            if (serial == null) { errors.Add($"Satır {rowNum}: Lot/Seri bulunamadı — '{lotNo}'"); skp++; continue; }
+                            if (serial == null) { errors.Add($"Satır {rowNum}: Parti/Seri bulunamadı — '{partiNo}'"); skp++; continue; }
 
                             // ProductionDetail ekle
                             var alreadyExists = await _context.ProductionDetails

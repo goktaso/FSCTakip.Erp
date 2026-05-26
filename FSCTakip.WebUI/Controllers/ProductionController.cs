@@ -199,7 +199,7 @@ namespace FSCTakip.WebUI.Controllers
             var lot = serial.Lot;
             return Json(new { success = true, data = new {
                 lotId           = lot.Id,
-                lotNo           = lot.LotNo,
+                lotNo           = lot.PartiNo,
                 serialNo        = serial.SerialNo,
                 supplier        = lot.Supplier?.Name,
                 supplierCode    = lot.Supplier?.SupplierCode,
@@ -538,7 +538,7 @@ namespace FSCTakip.WebUI.Controllers
                     IsEmriNo     = d.WorkOrder?.WorkOrderNo,
                     Urun         = d.WorkOrder?.Product?.ProductName,
                     SerialNo     = d.FscSerial?.SerialNo,
-                    LotNo        = d.FscSerial?.Lot?.LotNo,
+                    PartiNo      = d.FscSerial?.Lot?.PartiNo,
                     Tedarikci    = d.FscSerial?.Lot?.Supplier?.Name,
                     Makine       = d.Machine?.Name,
                     TuketimKg    = d.ConsumedWeight,
@@ -630,9 +630,16 @@ namespace FSCTakip.WebUI.Controllers
         {
             var item = await _context.WasteManagements.FindAsync(id);
             if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
-            _context.WasteManagements.Remove(item);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true });
+            try
+            {
+                _context.WasteManagements.Remove(item);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu atık kaydı silinemez." });
+            }
         }
     }
 }

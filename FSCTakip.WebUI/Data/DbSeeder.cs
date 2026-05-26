@@ -174,7 +174,7 @@ namespace FSCTakip.WebUI.Data
             // ── 12. FSC Lotları ──────────────────────────────────────────────────
             var lot1 = new FscLot
             {
-                LotNo = "L2026-001", Supplier = sup1, FscTypeId = 2, Product = prod1,
+                PartiNo = "L2026-001", Supplier = sup1, FscTypeId = 2, Product = prod1,
                 ArrivalDate = new DateTime(2026, 2, 10),
                 InvoiceNo = "FAT-2026-0142", DispatchNo = "IRS-2026-0088",
                 TruckPlate = "34 ABC 001", InvoiceAmount = 125000, Currency = "TRY",
@@ -185,7 +185,7 @@ namespace FSCTakip.WebUI.Data
             };
             var lot2 = new FscLot
             {
-                LotNo = "L2026-002", Supplier = sup2, FscTypeId = 1, Product = prod2,
+                PartiNo = "L2026-002", Supplier = sup2, FscTypeId = 1, Product = prod2,
                 ArrivalDate = new DateTime(2026, 3, 5),
                 InvoiceNo = "FAT-2026-0201", DispatchNo = "IRS-2026-0104",
                 TruckPlate = "34 XYZ 002", InvoiceAmount = 98000, Currency = "TRY",

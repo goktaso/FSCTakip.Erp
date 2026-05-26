@@ -2,6 +2,7 @@
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
 namespace FSCTakip.WebUI.Controllers
 {
     public class MachineController : BaseController
@@ -70,9 +71,21 @@ namespace FSCTakip.WebUI.Controllers
             if (machine == null)
                 return Json(new { success = false, message = "Makine bulunamadı." });
 
-            _context.Machines.Remove(machine);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "Makine silindi." });
+            var usedInWorkOrders = await _context.WorkOrders.AnyAsync(w => w.MachineId == id);
+            var usedInProduction = await _context.ProductionDetails.AnyAsync(p => p.MachineId == id);
+            if (usedInWorkOrders || usedInProduction)
+                return Json(new { success = false, message = "Bu makine iş emirlerinde kullanılmaktadır. Silmek yerine pasife alabilirsiniz." });
+
+            try
+            {
+                _context.Machines.Remove(machine);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Makine silindi." });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu makine silinemez." });
+            }
         }
 
         public async Task<IActionResult> ExportMachines()

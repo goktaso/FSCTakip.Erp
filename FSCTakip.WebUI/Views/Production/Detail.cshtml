@@ -318,7 +318,7 @@
                                         style="background:none;border:none;cursor:pointer;"
                                         title="Evrak ve lot detayını görüntüle">
                                     <div style="font-size:12px;color:var(--accent);font-weight:600;">
-                                        @d.FscSerial?.Lot?.LotNo
+                                        @d.FscSerial?.Lot?.PartiNo
                                         <i class="fas fa-folder-open ms-1" style="font-size:10px;color:#9ca3af;"></i>
                                     </div>
                                     <div class="text-muted" style="font-size:11px;">@d.FscSerial?.Lot?.Supplier?.Name</div>
@@ -395,7 +395,7 @@
                 <div class="p-3 border-bottom" style="background:#f8fafc;">
                     <div class="row g-3" id="lotInfoGrid">
                         <div class="col-sm-4">
-                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Lot No</div>
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Parti No</div>
                             <div class="fw-semibold" id="ldLotNo">—</div>
                         </div>
                         <div class="col-sm-4">
@@ -501,18 +501,18 @@
                             <option value="">— Bobin Seçiniz —</option>
                             @{
                                 var byLot = serials.GroupBy(s => new {
-                                    LotNo    = s.Lot?.LotNo    ?? "—",
+                                    PartiNo  = s.Lot?.PartiNo  ?? "—",
                                     Supplier = s.Lot?.Supplier?.Name ?? "Bilinmiyor"
                                 });
                             }
                             @foreach (var g in byLot)
                             {
-                                <optgroup label="@g.Key.LotNo — @g.Key.Supplier">
+                                <optgroup label="@g.Key.PartiNo — @g.Key.Supplier">
                                     @foreach (var s in g)
                                     {
                                         <option value="@s.Id"
                                                 data-kalan="@s.CurrentWeight"
-                                                data-lotno="@g.Key.LotNo"
+                                                data-lotno="@g.Key.PartiNo"
                                                 data-supplier="@g.Key.Supplier">
                                             @s.SerialNo · Kalan: @s.CurrentWeight.ToString("N2") kg
                                         </option>
@@ -722,7 +722,7 @@ function showLotDocs(serialId) {
             if (!res.success) { showToast('Lot bilgisi alınamadı.', 'error'); return; }
             const d = res.data;
 
-            document.getElementById('lotDocsTitle').textContent   = `Lot: ${d.lotNo}`;
+            document.getElementById('lotDocsTitle').textContent   = `Parti: ${d.lotNo}`;
             document.getElementById('lotDocsSubtitle').textContent = `Bobin: ${d.serialNo}`;
 
             document.getElementById('ldLotNo').textContent       = d.lotNo    || '—';

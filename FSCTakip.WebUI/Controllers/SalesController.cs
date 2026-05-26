@@ -3,6 +3,7 @@ using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace FSCTakip.WebUI.Controllers
 {
@@ -204,9 +205,16 @@ namespace FSCTakip.WebUI.Controllers
             if (line.SalesOrder.Status == SalesOrderStatus.TeslimEdildi)
                 return Json(new { success = false, message = "Teslim edilmiş siparişten kalem silinemez" });
 
-            _context.SalesOrderLines.Remove(line);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "Kalem silindi" });
+            try
+            {
+                _context.SalesOrderLines.Remove(line);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Kalem silindi" });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu kalem silinemez." });
+            }
         }
 
         // POST /Sales/DeleteOrder/{id}
@@ -218,9 +226,16 @@ namespace FSCTakip.WebUI.Controllers
             if (order.Status == SalesOrderStatus.TeslimEdildi)
                 return Json(new { success = false, message = "Teslim edilmiş sipariş silinemez" });
 
-            _context.SalesOrders.Remove(order);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "Sipariş silindi" });
+            try
+            {
+                _context.SalesOrders.Remove(order);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Sipariş silindi" });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu sipariş silinemez." });
+            }
         }
 
         // POST /Sales/Dispatch/{id}  — Sevk Et: durum → TeslimEdildi + StockMovement

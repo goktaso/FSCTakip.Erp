@@ -2,6 +2,7 @@ using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace FSCTakip.WebUI.Controllers
 {
@@ -88,9 +89,16 @@ namespace FSCTakip.WebUI.Controllers
             if (used)
                 return Json(new { success = false, message = "Bu depo stok hareketlerinde kullanılmaktadır, silinemez." });
 
-            _context.Warehouses.Remove(item);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "Depo silindi." });
+            try
+            {
+                _context.Warehouses.Remove(item);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Depo silindi." });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu depo kullanıldığı için silinemez." });
+            }
         }
 
         [HttpPost]

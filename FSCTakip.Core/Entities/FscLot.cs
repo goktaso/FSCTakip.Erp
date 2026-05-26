@@ -5,13 +5,14 @@ namespace FSCTakip.Core.Entities
 {
     public class FscLot : BaseEntity
     {
-        public string LotNo { get; set; } = string.Empty;
+        /// <summary>Tedarikçi parti numarası (örn: 24H0604). Zorunlu.</summary>
+        public string PartiNo { get; set; } = string.Empty;
 
         public int FscTypeId { get; set; }
         public virtual FscType FscType { get; set; } = null!;
 
-        public int SupplierId { get; set; }
-        public virtual Supplier Supplier { get; set; } = null!;
+        public int? SupplierId { get; set; }
+        public virtual Supplier? Supplier { get; set; }
 
         // Hangi hammadde ürününe ait (stok hareketi için gerekli)
         public int? ProductId { get; set; }

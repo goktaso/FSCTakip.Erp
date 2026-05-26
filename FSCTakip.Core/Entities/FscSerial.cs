@@ -4,6 +4,8 @@
     {
         public int LotId { get; set; }
         public string SerialNo { get; set; } = string.Empty;
+        /// <summary>Bobin bazında lot numarası (opsiyonel). Tedarikçi bazı durumlarda bobin başına lot kodu verir.</summary>
+        public string? LotNo { get; set; }
         public decimal InitialWeight { get; set; }
         public decimal CurrentWeight { get; set; }
         public bool IsOpeningStock { get; set; }

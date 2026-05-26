@@ -130,9 +130,14 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th>Lot No</th>
+                <th>Parti No</th>
                 <th>Tedarikçi</th>
                 <th>FSC Tipi</th>
+                <th>Stok Kodu</th>
+                <th>Stok Adı</th>
+                <th>Gramaj</th>
+                <th>Kağıt Eni</th>
+                <th>Renk</th>
                 <th>Geliş Tarihi</th>
                 <th>Belge Numaraları</th>
                 <th class="text-center">Bobin</th>
@@ -145,7 +150,7 @@
             @if (!Model.Any())
             {
                 <tr>
-                    <td colspan="9">
+                    <td colspan="14">
                         <div class="empty-state">
                             <div class="empty-icon"><i class="fas fa-box-open"></i></div>
                             <h6>Henüz hammadde girişi yok</h6>
@@ -163,7 +168,7 @@
                 <tr>
                     <td>
                         <a href="/Purchase/Detail/@lot.Id" class="table-link fw-semibold">
-                            @lot.LotNo
+                            @lot.PartiNo
                         </a>
                     </td>
                     <td>
@@ -176,6 +181,55 @@
                         </div>
                     </td>
                     <td><span class="badge badge-green">@lot.FscType?.Name</span></td>
+                    <td class="small">
+                        @if (lot.Product != null)
+                        {
+                            @if (!string.IsNullOrEmpty(lot.Product.ExternalCode))
+                            {
+                                <div class="fw-semibold" style="font-size:12px;">@lot.Product.ExternalCode</div>
+                                <div class="text-muted" style="font-size:11px;">@lot.Product.ProductCode</div>
+                            }
+                            else
+                            {
+                                <div class="fw-semibold" style="font-size:12px;">@lot.Product.ProductCode</div>
+                            }
+                        }
+                        else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="small">
+                        @if (lot.Product != null)
+                        {
+                            <span>@lot.Product.ProductName</span>
+                        }
+                        else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="small text-muted text-center">
+                        @if (lot.Product?.PaperWeight != null)
+                        {
+                            <span class="badge" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;font-size:11px;">
+                                @lot.Product.PaperWeight.Value&nbsp;@lot.Product.PaperWeight.Unit
+                            </span>
+                        }
+                        else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="small text-muted text-center">
+                        @if (lot.Product?.PaperWidth != null)
+                        {
+                            <span class="badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:11px;">
+                                @lot.Product.PaperWidth.Value&nbsp;mm
+                            </span>
+                        }
+                        else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="small text-muted text-center">
+                        @if (lot.Product?.PaperColor != null)
+                        {
+                            <span class="badge" style="background:#fdf4ff;color:#7e22ce;border:1px solid #e9d5ff;font-size:11px;">
+                                @lot.Product.PaperColor.Name
+                            </span>
+                        }
+                        else { <span class="text-muted">—</span> }
+                    </td>
                     <td class="text-muted">@lot.ArrivalDate.ToString("dd.MM.yyyy")</td>
                     <td style="min-width:150px;">
                         @if (!string.IsNullOrEmpty(lot.DispatchNo))
@@ -282,6 +336,11 @@
 
                 <!-- ── BÖLÜM 1: Temel Bilgiler ─────────────────────────── -->
                 <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Parti No <span class="text-danger">*</span></label>
+                        <input type="text" id="partiNo" class="form-control" placeholder="Örn: 24H0604" autocomplete="off">
+                        <div class="form-text text-muted" style="font-size:11px;">Tedarikçinin verdiği parti/lot numarası</div>
+                    </div>
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Tedarikçi <span class="text-danger">*</span></label>
                         <div class="qa-group">
@@ -483,8 +542,8 @@ function openNewEntryModal() {
     _lotEditMode = false;
     resetLotForm();
     document.getElementById('lotModalTitle').textContent    = 'Yeni Hammadde Girişi';
-    document.getElementById('lotModalSubtitle').textContent = 'Lot numarası otomatik atanacak';
-    document.getElementById('lotModalHint').innerHTML       = '<i class="fas fa-info-circle me-1"></i>Lot numarası otomatik oluşturulur.';
+    document.getElementById('lotModalSubtitle').textContent = 'Parti numarasını tedarikçi belgesinden giriniz';
+    document.getElementById('lotModalHint').innerHTML       = '<i class="fas fa-info-circle me-1"></i>Parti No: tedarikçi fatura/irsaliyesindeki parti/seri numarası.';
     document.getElementById('bobinSection').style.display  = '';
     document.getElementById('editModeBobinNote').style.display = 'none';
     document.getElementById('equalModePanel').style.display = '';
@@ -494,7 +553,7 @@ function openNewEntryModal() {
 }
 
 function resetLotForm() {
-    ['lotId','truckPlate','dispatchNo','invoiceNo','invoiceAmount','lotNotes'].forEach(id => {
+    ['lotId','partiNo','truckPlate','dispatchNo','invoiceNo','invoiceAmount','lotNotes'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
@@ -528,6 +587,7 @@ function editLot(id) {
             const d = res.data;
             resetLotForm();
             document.getElementById('lotId').value            = d.id;
+            document.getElementById('partiNo').value          = d.partiNo || '';
             document.getElementById('arrivalDate').value      = d.arrivalDate;
             document.getElementById('supplierId').value       = d.supplierId;
             document.getElementById('fscTypeId').value        = d.fscTypeId;
@@ -538,8 +598,8 @@ function editLot(id) {
             document.getElementById('invoiceAmount').value    = d.invoiceAmount || '';
             document.getElementById('currency').value         = d.currency || 'TRY';
             document.getElementById('lotNotes').value         = d.notes || '';
-            document.getElementById('lotModalTitle').textContent    = 'Düzenle — Lot ' + d.lotNo;
-            document.getElementById('lotModalSubtitle').textContent = d.lotNo;
+            document.getElementById('lotModalTitle').textContent    = 'Düzenle — Parti ' + d.partiNo;
+            document.getElementById('lotModalSubtitle').textContent = d.partiNo;
             document.getElementById('lotModalHint').innerHTML       = '<i class="fas fa-pencil-alt me-1"></i>Belge bilgilerini ve lot detaylarını güncelleyebilirsiniz.';
             // Düzenleme modunda bobin alanını gizle
             document.getElementById('equalModePanel').style.display = 'none';
@@ -630,10 +690,16 @@ document.getElementById('supplierId').addEventListener('change', function () {
 
 /* ─── KAYDET ─────────────────────────────────────────────────── */
 async function saveLot() {
+    const partiNo     = document.getElementById('partiNo').value.trim();
     const supplierId  = document.getElementById('supplierId').value;
     const fscTypeId   = document.getElementById('fscTypeId').value;
     const arrivalDate = document.getElementById('arrivalDate').value;
 
+    if (!partiNo) {
+        showToast('Parti No zorunludur.', 'warning');
+        document.getElementById('partiNo').focus();
+        return;
+    }
     if (!supplierId || !fscTypeId || !arrivalDate) {
         showToast('Tedarikçi, FSC Tipi ve Geliş Tarihi zorunludur.', 'warning');
         return;
@@ -672,6 +738,7 @@ async function saveLot() {
     const fd = new FormData();
     const id = document.getElementById('lotId').value;
     if (id) fd.append('Id', id);
+    fd.append('PartiNo',     partiNo);
     fd.append('SupplierId',  supplierId);
     fd.append('FscTypeId',   fscTypeId);
     fd.append('ArrivalDate', arrivalDate);
@@ -696,7 +763,7 @@ async function saveLot() {
         if (json.success) {
             bootstrap.Modal.getInstance(document.getElementById('lotModal'))?.hide();
             const cnt  = json.serialCount > 0 ? ` · ${json.serialCount} bobin eklendi` : '';
-            showToast(`${json.lotNo} kaydedildi${cnt}.`, 'success');
+            showToast(`Parti ${json.partiNo} kaydedildi${cnt}.`, 'success');
             if (json.fscUyari) showToast(json.fscUyari, 'warning');
             setTimeout(() => location.reload(), 1200);
         } else {

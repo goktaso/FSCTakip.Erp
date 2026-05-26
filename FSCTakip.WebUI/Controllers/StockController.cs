@@ -11,7 +11,7 @@ namespace FSCTakip.WebUI.Controllers
         public StockController(AppDbContext context) : base(context) { }
 
         // GET /Stock/Index — ürün bazlı net stok özeti
-        public async Task<IActionResult> Index(int? productGroupId, int? productId)
+        public async Task<IActionResult> Index(int? productGroupId, int? productId, string? stockCode, string? erpCode)
         {
             var movements = await _context.StockMovements
                 .Include(m => m.Product).ThenInclude(p => p!.ProductGroup)
@@ -34,12 +34,18 @@ namespace FSCTakip.WebUI.Controllers
                 grouped = grouped.Where(r => r.Product.ProductGroupId == productGroupId).ToList();
             if (productId.HasValue)
                 grouped = grouped.Where(r => r.ProductId == productId).ToList();
+            if (!string.IsNullOrWhiteSpace(stockCode))
+                grouped = grouped.Where(r => r.Product.ProductCode.Contains(stockCode.Trim(), System.StringComparison.OrdinalIgnoreCase)).ToList();
+            if (!string.IsNullOrWhiteSpace(erpCode))
+                grouped = grouped.Where(r => r.Product.ExternalCode != null && r.Product.ExternalCode.Contains(erpCode.Trim(), System.StringComparison.OrdinalIgnoreCase)).ToList();
 
             ViewBag.ProductGroups = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
             ViewBag.Products      = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
             ViewBag.Warehouses    = await _context.Warehouses.Where(w => w.IsActive).OrderBy(w => w.Name).ToListAsync();
             ViewBag.ProductGroupId = productGroupId;
-            ViewBag.ProductId     = productId;
+            ViewBag.ProductId      = productId;
+            ViewBag.StockCode      = stockCode;
+            ViewBag.ErpCode        = erpCode;
 
             ViewBag.TotalProducts  = grouped.Count;
             ViewBag.InStock        = grouped.Count(r => r.NetAdet > 0);
@@ -53,7 +59,8 @@ namespace FSCTakip.WebUI.Controllers
         // GET /Stock/Movements — tüm hareket geçmişi
         public async Task<IActionResult> Movements(
             int? productId, MovementType? type,
-            DateTime? startDate, DateTime? endDate)
+            DateTime? startDate, DateTime? endDate,
+            string? stockCode)
         {
             var query = _context.StockMovements
                 .Include(m => m.Product)
@@ -65,6 +72,14 @@ namespace FSCTakip.WebUI.Controllers
             if (type.HasValue)      query = query.Where(m => m.Type == type.Value);
             if (startDate.HasValue) query = query.Where(m => m.DocumentDate >= startDate.Value);
             if (endDate.HasValue)   query = query.Where(m => m.DocumentDate <= endDate.Value.AddDays(1));
+            if (!string.IsNullOrWhiteSpace(stockCode))
+            {
+                var sc = stockCode.Trim();
+                query = query.Where(m => m.Product != null && (
+                    m.Product.ProductCode.Contains(sc) ||
+                    (m.Product.ExternalCode != null && m.Product.ExternalCode.Contains(sc)) ||
+                    m.Product.ProductName.Contains(sc)));
+            }
 
             var movements = await query.OrderByDescending(m => m.DocumentDate).ThenByDescending(m => m.Id).ToListAsync();
 
@@ -96,9 +111,10 @@ namespace FSCTakip.WebUI.Controllers
                 .ToDictionaryAsync(o => o.SalesOrderNo, StringComparer.OrdinalIgnoreCase);
             ViewBag.SalesOrderMap = salesOrderMap;
 
-            ViewBag.Products  = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
-            ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
-            ViewBag.EndDate   = endDate?.ToString("yyyy-MM-dd");
+            ViewBag.Products   = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
+            ViewBag.StartDate  = startDate?.ToString("yyyy-MM-dd");
+            ViewBag.EndDate    = endDate?.ToString("yyyy-MM-dd");
+            ViewBag.StockCode  = stockCode;
 
             return View(movements);
         }
@@ -190,7 +206,7 @@ namespace FSCTakip.WebUI.Controllers
             var serials = await query
                 .OrderBy(s => s.Lot.FscType.Name)
                 .ThenBy(s => s.Lot.Supplier.Name)
-                .ThenBy(s => s.Lot.LotNo)
+                .ThenBy(s => s.Lot.PartiNo)
                 .ToListAsync();
 
             // Özet kartlar
@@ -236,11 +252,11 @@ namespace FSCTakip.WebUI.Controllers
             var rows = await query
                 .OrderBy(s => s.Lot.FscType.Name)
                 .ThenBy(s => s.Lot.Supplier.Name)
-                .ThenBy(s => s.Lot.LotNo)
+                .ThenBy(s => s.Lot.PartiNo)
                 .Select(s => new
                 {
                     SeriNo         = s.SerialNo,
-                    LotNo          = s.Lot.LotNo,
+                    PartiNo        = s.Lot.PartiNo,
                     Urun           = s.Lot.Product != null ? s.Lot.Product.ProductName : "",
                     Tedarikci      = s.Lot.Supplier != null ? s.Lot.Supplier.Name : "",
                     FscTipi        = s.Lot.FscType != null ? s.Lot.FscType.Name : "",

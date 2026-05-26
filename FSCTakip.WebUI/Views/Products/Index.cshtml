@@ -2,24 +2,28 @@
 @{
     ViewData["Title"] = "Ürün Tanımları";
     var productGroups = ViewData["ProductGroups"] as SelectList ?? new SelectList(new List<SelectListItem>());
-    var fscTypes = ViewData["FscTypes"] as SelectList ?? new SelectList(new List<SelectListItem>());
-    var paperTypes = ViewData["PaperTypes"] as SelectList ?? new SelectList(new List<SelectListItem>());
-    var paperColors = ViewData["PaperColors"] as SelectList ?? new SelectList(new List<SelectListItem>());
+    var fscTypes      = ViewData["FscTypes"]      as SelectList ?? new SelectList(new List<SelectListItem>());
+    var paperTypes    = ViewData["PaperTypes"]    as SelectList ?? new SelectList(new List<SelectListItem>());
+    var paperColors   = ViewData["PaperColors"]   as SelectList ?? new SelectList(new List<SelectListItem>());
+    var paperWeights  = ViewData["PaperWeights"]  as SelectList ?? new SelectList(new List<SelectListItem>());
+    var paperWidths   = ViewData["PaperWidths"]   as SelectList ?? new SelectList(new List<SelectListItem>());
+    var suppliers     = ViewData["Suppliers"]     as SelectList ?? new SelectList(new List<SelectListItem>());
 
-    // ID Bazlı Listeler [cite: 2026-03-04]
-    var paperWeights = ViewData["PaperWeights"] as SelectList ?? new SelectList(new List<SelectListItem>());
-    var paperWidths = ViewData["PaperWidths"] as SelectList ?? new SelectList(new List<SelectListItem>());
-    var suppliers = ViewData["Suppliers"] as SelectList ?? new SelectList(new List<SelectListItem>());
+    int?   filterSupplier = ViewBag.SupplierId     as int?;
+    int?   filterGroup    = ViewBag.ProductGroupId as int?;
+    string filterSearch   = ViewBag.Search         as string ?? "";
 }
 
-@* Üst Aksiyon Çubuğu [cite: 2026-02-25] *@
+@* Üst Aksiyon Çubuğu *@
 <div class="row mb-3 align-items-center">
     <div class="col-md-6">
-        <h4 class="mb-0 font-weight-bold text-primary text-uppercase">Ürün Listesi</h4>
+        <h4 class="mb-0 font-weight-bold text-primary text-uppercase">Ürün Listesi
+            <small class="text-muted fw-normal ms-2" style="font-size:13px;">@Model.Count() kayıt</small>
+        </h4>
     </div>
     <div class="col-md-6 text-right">
         <button class="btn btn-outline-secondary btn-sm" onclick="$('#filterPanel').slideToggle()">
-            <i class="fas fa-filter mr-1"></i> Filtrele
+            <i class="fas fa-filter mr-1"></i> Filtrele @(filterSupplier.HasValue || filterGroup.HasValue || !string.IsNullOrEmpty(filterSearch) ? "●" : "")
         </button>
         <button class="btn btn-outline-success btn-sm ml-1" onclick="exportToExcel()">
             <i class="fas fa-file-excel mr-1"></i> Excel
@@ -30,20 +34,49 @@
     </div>
 </div>
 
-@* Filtre Paneli *@
-<div id="filterPanel" class="card mb-3 shadow-sm border-left-primary" style="display:none;">
+@* Filtre Paneli — server-side *@
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-primary"
+     style="@(filterSupplier.HasValue || filterGroup.HasValue || !string.IsNullOrEmpty(filterSearch) ? "" : "display:none;")">
     <div class="card-body py-3">
-        <div class="row align-items-end">
-            <div class="col-md-4">
-                <label class="small font-weight-bold text-uppercase">Ürün Ara (Kod/Ad/Grup/Tedarikçi)</label>
-                <input type="text" id="productSearch" class="form-control form-control-sm" placeholder="Arama yapın...">
+        <form method="get" action="/Products" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="small fw-bold text-uppercase">Ara (Kod / Ad)</label>
+                <input type="text" name="search" class="form-control form-control-sm"
+                       value="@filterSearch" placeholder="Kod veya ürün adı..." />
             </div>
-            <div class="col-md-2">
-                <button class="btn btn-primary btn-sm btn-block" onclick="filterProducts()">
-                    <i class="fas fa-search mr-1"></i> Sorgula
+            <div class="col-md-3">
+                <label class="small fw-bold text-uppercase">Tedarikçi</label>
+                <select name="supplierId" class="form-control form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var s in suppliers)
+                    {
+                        if (filterSupplier.HasValue && filterSupplier.Value.ToString() == s.Value)
+                        { <option value="@s.Value" selected>@s.Text</option> }
+                        else
+                        { <option value="@s.Value">@s.Text</option> }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="small fw-bold text-uppercase">Ürün Grubu</label>
+                <select name="productGroupId" class="form-control form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var g in productGroups)
+                    {
+                        if (filterGroup.HasValue && filterGroup.Value.ToString() == g.Value)
+                        { <option value="@g.Value" selected>@g.Text</option> }
+                        else
+                        { <option value="@g.Value">@g.Text</option> }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-search me-1"></i> Filtrele
                 </button>
+                <a href="/Products" class="btn btn-outline-secondary btn-sm">Temizle</a>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 
@@ -300,6 +333,9 @@
             });
         }
 
-        function exportToExcel() { window.location.href = '/Products/ExportIndex'; }
+        function exportToExcel() {
+            const params = new URLSearchParams(window.location.search);
+            window.location.href = '/Products/ExportIndex?' + params.toString();
+        }
     </script>
 }

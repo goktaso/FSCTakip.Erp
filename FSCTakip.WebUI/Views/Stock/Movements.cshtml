@@ -7,6 +7,7 @@
     var salesOrderMap  = ViewBag.SalesOrderMap  as Dictionary<string, SalesOrder>          ?? new();
     string? start      = ViewBag.StartDate;
     string? end        = ViewBag.EndDate;
+    string? stockCode  = ViewBag.StockCode as string;
 }
 
 <div class="page-header">
@@ -16,6 +17,9 @@
 <!-- Filter -->
 <div class="filter-card">
     <form method="get" action="/Stock/Movements" class="filter-form">
+        <input type="text" name="stockCode" class="form-control form-control-sm"
+               value="@stockCode" placeholder="Stok kodu / adı..." style="max-width:180px;"
+               title="Stok kodu (ERP/dahili) veya stok adı ile ara" />
         <select name="productId" class="form-control form-control-sm">
             <option value="">— Ürün —</option>
             @foreach (var p in products)

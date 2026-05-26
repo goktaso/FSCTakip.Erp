@@ -675,6 +675,7 @@
         "Reports"                                         => "rapor",
         "Product" or "Paper" or "Machine" or "Warehouse"
             or "Etl" or "Guide"                           => "tanim",
+        "Users" or "Groups" or "AuditLog"                 => "admin",
         _                                                 => "genel"
     };
 
@@ -828,6 +829,12 @@
                 </a>
             </div>
             <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="AuditPeriod"?"active":"")" href="/AuditPeriod">
+                    <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
+                    <span class="nav-label">Denetim Dönemleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
                 <a class="nav-link-item @(ctrl=="Reports"&&action=="BomAnalysis"?"active":"")" href="/Reports/BomAnalysis">
                     <span class="nav-icon"><i class="fas fa-sitemap"></i></span>
                     <span class="nav-label">BOM Analizi</span>
@@ -916,14 +923,52 @@
             </div>
         </div>
 
+        <!-- ── SİSTEM YÖNETİMİ ───────────────────────────────── -->
+        @if (Context.Session.GetString("IsAdmin") == "1")
+        {
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-admin" aria-expanded="@Exp("admin")">
+            <span>Sistem Yönetimi</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("admin")" id="sec-admin">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Users"?"active":"")" href="/Users">
+                    <span class="nav-icon"><i class="fas fa-users-cog"></i></span>
+                    <span class="nav-label">Kullanıcılar</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Groups"?"active":"")" href="/Groups">
+                    <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
+                    <span class="nav-label">Yetki Grupları</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="AuditLog"?"active":"")" href="/AuditLog">
+                    <span class="nav-icon"><i class="fas fa-history"></i></span>
+                    <span class="nav-label">Değişiklik Günlüğü</span>
+                </a>
+            </div>
+        </div>
+        }
+
     </nav>
 
     <div class="sidebar-footer">
         <div class="sidebar-user">
-            <div class="avatar">Ö</div>
+            @{
+                var sessionName = Context.Session.GetString("UserName") ?? "?";
+                var sessionUser = Context.Session.GetString("Username") ?? "";
+                var sessionIsAdmin = Context.Session.GetString("IsAdmin") == "1";
+                var avatarLetter  = sessionName.Length > 0 ? sessionName[0].ToString().ToUpper() : "?";
+            }
+            <div class="avatar">@avatarLetter</div>
             <div>
-                <div style="color:#fff;font-size:12.5px;font-weight:600;">Özay Göktaş</div>
-                <div style="font-size:10.5px;color:rgba(255,255,255,.4);">Admin</div>
+                <div style="color:#fff;font-size:12.5px;font-weight:600;">@sessionName</div>
+                <div style="font-size:10.5px;color:rgba(255,255,255,.4);">
+                    @(sessionIsAdmin ? "Admin" : "@" + sessionUser)
+                </div>
             </div>
         </div>
     </div>

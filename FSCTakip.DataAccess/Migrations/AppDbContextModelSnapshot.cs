@@ -299,7 +299,7 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<string>("InvoicePdfPath")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("LotNo")
+                    b.Property<string>("PartiNo")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -309,7 +309,7 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<int?>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<int>("SupplierId")
+                    b.Property<int?>("SupplierId")
                         .HasColumnType("int");
 
                     b.Property<string>("TruckPlate")
@@ -358,6 +358,9 @@ namespace FSCTakip.DataAccess.Migrations
 
                     b.Property<int>("LotId")
                         .HasColumnType("int");
+
+                    b.Property<string>("LotNo")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
@@ -1379,8 +1382,7 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasOne("FSCTakip.Core.Entities.Supplier", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("FscType");
 

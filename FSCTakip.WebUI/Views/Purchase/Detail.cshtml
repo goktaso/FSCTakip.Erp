@@ -1,6 +1,6 @@
 @model FSCTakip.Core.Entities.FscLot
 @{
-    ViewData["Title"] = $"Lot — {Model.LotNo}";
+    ViewData["Title"] = $"Parti — {Model.PartiNo}";
     var fscOk   = Model.Supplier?.IsFscActive == true && (Model.Supplier.FscExpiryDate == null || Model.Supplier.FscExpiryDate >= DateTime.Today);
     var toplamKg = Model.Serials.Sum(s => s.InitialWeight);
     var kalanKg  = Model.Serials.Sum(s => s.CurrentWeight);
@@ -24,11 +24,11 @@
         <!-- Lot Bilgi Kartı -->
         <div class="card mb-3">
             <div class="card-header-accent">
-                <i class="fas fa-box-open"></i> Lot Bilgileri
+                <i class="fas fa-box-open"></i> Parti Bilgileri
             </div>
             <div class="card-body" style="padding:20px;">
                 <div class="d-flex align-items-center gap-2 mb-3">
-                    <span style="font-size:22px;font-weight:700;color:var(--accent-dark);">@Model.LotNo</span>
+                    <span style="font-size:22px;font-weight:700;color:var(--accent-dark);">@Model.PartiNo</span>
                     @if (!fscOk)
                     {
                         <span class="badge badge-amber"><i class="fas fa-exclamation-triangle me-1"></i>FSC Geçersiz</span>
@@ -223,6 +223,7 @@
                     <thead>
                         <tr>
                             <th>Seri No</th>
+                            <th>Lot No</th>
                             <th class="text-end">Giriş (kg)</th>
                             <th class="text-end">Kalan (kg)</th>
                             <th style="width:120px;">Tüketim</th>
@@ -240,6 +241,7 @@
                             var durumCls = durum == "Aktif" ? "badge-green" : (durum == "Devir" ? "badge-blue" : "badge-gray");
                             <tr>
                                 <td class="fw-semibold">@s.SerialNo</td>
+                                <td class="small text-muted">@(s.LotNo ?? "—")</td>
                                 <td class="text-end">@s.InitialWeight.ToString("N2")</td>
                                 <td class="text-end fw-semibold" style="color:@(s.CurrentWeight > 0 ? "var(--accent-dark)" : "#9ca3af");">
                                     @s.CurrentWeight.ToString("N2")
@@ -307,7 +309,11 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Seri No <span class="text-muted fw-normal">(boş=otomatik)</span></label>
-                        <input type="text" id="serialNo" class="form-control" placeholder="@Model.LotNo-B01">
+                        <input type="text" id="serialNo" class="form-control" placeholder="@Model.PartiNo-B01">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Lot No <span class="text-muted fw-normal">(opsiyonel)</span></label>
+                        <input type="text" id="serialLotNo" class="form-control" placeholder="Bobin lot numarası">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Giriş Ağırlığı (kg) <span class="text-danger">*</span></label>
@@ -372,6 +378,7 @@ const lotId = @Model.Id;
 function openSerialModal(id) {
     document.getElementById('serialId').value = id;
     document.getElementById('serialNo').value = '';
+    document.getElementById('serialLotNo').value = '';
     document.getElementById('initialWeight').value = '';
     document.getElementById('isOpeningStock').checked = false;
     document.getElementById('serialNotes').value = '';
@@ -381,6 +388,7 @@ function openSerialModal(id) {
         fetch(`/Purchase/GetSerial/${id}`).then(r => r.json()).then(res => {
             if (!res.success) return;
             document.getElementById('serialNo').value = res.data.serialNo;
+            document.getElementById('serialLotNo').value = res.data.lotNo || '';
             document.getElementById('initialWeight').value = res.data.initialWeight;
             document.getElementById('isOpeningStock').checked = res.data.isOpeningStock;
             document.getElementById('serialNotes').value = res.data.notes || '';
@@ -402,6 +410,7 @@ function saveSerial() {
     const sid = document.getElementById('serialId').value;
     if (sid) fd.append('Id', sid);
     fd.append('SerialNo',       document.getElementById('serialNo').value);
+    fd.append('LotNo',          document.getElementById('serialLotNo').value);
     fd.append('InitialWeight',  weight);
     fd.append('IsOpeningStock', document.getElementById('isOpeningStock').checked);
     fd.append('Notes',          document.getElementById('serialNotes').value);

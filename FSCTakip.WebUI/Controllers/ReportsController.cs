@@ -79,7 +79,7 @@ namespace FSCTakip.WebUI.Controllers
                 var lots    = serials.Select(s => s!.Lot).Where(lot => lot != null).DistinctBy(lot => lot!.Id).ToList();
 
                 row.Serials = serials.Select(s => s!.SerialNo).Distinct().ToList();
-                row.LotNos  = lots.Select(lot => lot!.LotNo).ToList();
+                row.LotNos  = lots.Select(lot => lot!.PartiNo).ToList();
                 row.SupplierNames = lots.Select(lot => lot!.Supplier?.Name ?? "").Distinct().ToList();
                 row.SupplierFscCodes = lots.Select(lot => lot!.Supplier?.FscCode ?? "").Where(c => !string.IsNullOrEmpty(c)).Distinct().ToList();
                 row.FscTypes = lots.Select(lot => lot!.FscType?.Name ?? "").Distinct().ToList();
@@ -211,7 +211,7 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(l => l.Product)
                 .Include(l => l.Serials)
                 .Where(l => l.ArrivalDate >= sd && l.ArrivalDate < edNext)
-                .OrderBy(l => l.FscType.Name).ThenBy(l => l.Supplier.Name).ThenBy(l => l.ArrivalDate)
+                .OrderBy(l => l.FscType.Name).ThenBy(l => l.Supplier != null ? l.Supplier.Name : "").ThenBy(l => l.ArrivalDate)
                 .ToListAsync();
 
             var inputRows = lots.GroupBy(l => new { FscType = l.FscType?.Name ?? "—", FscCode = l.FscType?.Code ?? "—", Supplier = l.Supplier?.Name ?? "—", SupplierFsc = l.Supplier?.FscCode ?? "" })
@@ -225,7 +225,7 @@ namespace FSCTakip.WebUI.Controllers
                     TotalWeightKg   = g.Sum(l => l.Serials.Sum(s => s.InitialWeight)),
                     InvoiceNos      = string.Join(", ", g.Select(l => l.InvoiceNo).Where(n => !string.IsNullOrEmpty(n)).Distinct()),
                     DispatchNos     = string.Join(", ", g.Select(l => l.DispatchNo).Where(n => !string.IsNullOrEmpty(n)).Distinct()),
-                    LotNos          = string.Join(", ", g.Select(l => l.LotNo).Distinct())
+                    LotNos          = string.Join(", ", g.Select(l => l.PartiNo).Distinct())
                 }).ToList();
 
             // ── B: Üretim Tüketimi ───────────────────────────────────────────
@@ -243,7 +243,7 @@ namespace FSCTakip.WebUI.Controllers
                     WorkOrderNo   = g.Key.WoNo,
                     ProductName   = g.Key.ProductName,
                     ProductionDate= g.Key.ProductionDate,
-                    LotNos        = string.Join(", ", g.Select(d => d.FscSerial?.Lot?.LotNo).Where(s => s != null).Distinct()),
+                    LotNos        = string.Join(", ", g.Select(d => d.FscSerial?.Lot?.PartiNo).Where(s => s != null).Distinct()),
                     FscTypes      = string.Join(", ", g.Select(d => d.FscSerial?.Lot?.FscType?.Name).Where(s => s != null).Distinct()),
                     Suppliers     = string.Join(", ", g.Select(d => d.FscSerial?.Lot?.Supplier?.Name).Where(s => s != null).Distinct()),
                     ConsumedKg    = g.Sum(d => d.ConsumedWeight),
@@ -277,35 +277,60 @@ namespace FSCTakip.WebUI.Controllers
             }).ToList();
 
             // ── D: FSC Tipi Denge Özeti ─────────────────────────────────────
-            // Sistemdeki tüm seriler (dönemle sınırlı değil — stok pozisyonu için)
+            // Açılış bakiyesi: dönem BAŞINDAN önce gelen seriler, dönem öncesi tüketimle düzeltilmiş
+            var preSerials = await _context.FscSerials
+                .Include(s => s.Lot).ThenInclude(l => l.FscType)
+                .Include(s => s.ProductionDetails)
+                .Where(s => s.Lot.ArrivalDate < sd)
+                .ToListAsync();
+
+            var openingByType = preSerials
+                .GroupBy(s => s.Lot?.FscType?.Name ?? "—")
+                .ToDictionary(g => g.Key, g =>
+                    g.Sum(s => s.InitialWeight
+                        - s.ProductionDetails
+                            .Where(d => d.ProductionDate < sd)
+                            .Sum(d => d.ConsumedWeight + d.WasteWeight)));
+
+            // Canlı stok (CurrentWeight — bugünkü gerçek değer, bilgi amaçlı)
             var allSerials = await _context.FscSerials
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
                 .ToListAsync();
+
+            var currentStockByType = allSerials
+                .GroupBy(s => s.Lot?.FscType?.Name ?? "—")
+                .ToDictionary(g => g.Key, g => g.Sum(s => s.CurrentWeight));
 
             // Dönemde tüketilen miktar (üretim detaylarından)
             var consumedByType = prodDetails
                 .GroupBy(d => d.FscSerial?.Lot?.FscType?.Name ?? "—")
                 .ToDictionary(g => g.Key, g => (Consumed: g.Sum(d => d.ConsumedWeight), Waste: g.Sum(d => d.WasteWeight)));
 
-            var balanceRows = allSerials
-                .GroupBy(s => s.Lot?.FscType?.Name ?? "—")
-                .Select(g => {
-                    var type = g.Key;
+            // Tüm FSC tiplerini birleştir
+            var allFscTypes = lots.Select(l => l.FscType?.Name ?? "—")
+                .Union(preSerials.Select(s => s.Lot?.FscType?.Name ?? "—"))
+                .Union(prodDetails.Select(d => d.FscSerial?.Lot?.FscType?.Name ?? "—"))
+                .Distinct();
+
+            var balanceRows = allFscTypes.Select(type => {
+                    openingByType.TryGetValue(type, out var openingKg);
                     consumedByType.TryGetValue(type, out var cons);
-                    var inputKg    = lots.Where(l => l.FscType?.Name == type).Sum(l => l.Serials.Sum(s => s.InitialWeight));
-                    var consumedKg = cons.Consumed;
-                    var wasteKg    = cons.Waste;
-                    var stockKg    = g.Sum(s => s.CurrentWeight);
+                    currentStockByType.TryGetValue(type, out var currentStock);
+                    var inputKg   = lots.Where(l => l.FscType?.Name == type).Sum(l => l.Serials.Sum(s => s.InitialWeight));
+                    var closingKg = openingKg + inputKg - cons.Consumed - cons.Waste;
+                    if (closingKg < 0) closingKg = 0;
                     return new AuditBalanceRow {
-                        FscType    = type,
-                        InputKg    = inputKg,
-                        ConsumedKg = consumedKg,
-                        WasteKg    = wasteKg,
-                        StockKg    = stockKg,
-                        IsBalanced = (consumedKg + wasteKg) <= (inputKg + stockKg) + 0.01m
+                        FscType        = type,
+                        OpeningKg      = openingKg < 0 ? 0 : openingKg,
+                        InputKg        = inputKg,
+                        ConsumedKg     = cons.Consumed,
+                        WasteKg        = cons.Waste,
+                        ClosingKg      = closingKg,
+                        CurrentStockKg = currentStock,
+                        IsBalanced     = (cons.Consumed + cons.Waste) <= (openingKg + inputKg) + 0.01m
                     };
                 })
-                .Where(r => r.InputKg > 0 || r.ConsumedKg > 0 || r.StockKg > 0)
+                .Where(r => r.OpeningKg > 0 || r.InputKg > 0 || r.ConsumedKg > 0)
                 .OrderBy(r => r.FscType)
                 .ToList();
 
@@ -394,7 +419,7 @@ namespace FSCTakip.WebUI.Controllers
                 ws2.Cell(r2,1).Value = g.Key.ProductionDate.ToString("dd.MM.yyyy");
                 ws2.Cell(r2,2).Value = g.Key.WoNo;
                 ws2.Cell(r2,3).Value = g.Key.Product;
-                ws2.Cell(r2,4).Value = string.Join(", ", g.Select(d => d.FscSerial?.Lot?.LotNo).Where(s => s != null).Distinct());
+                ws2.Cell(r2,4).Value = string.Join(", ", g.Select(d => d.FscSerial?.Lot?.PartiNo).Where(s => s != null).Distinct());
                 ws2.Cell(r2,5).Value = string.Join(", ", g.Select(d => d.FscSerial?.Lot?.FscType?.Name).Where(s => s != null).Distinct());
                 ws2.Cell(r2,6).Value = string.Join(", ", g.Select(d => d.FscSerial?.Lot?.Supplier?.Name).Where(s => s != null).Distinct());
                 ws2.Cell(r2,7).Value = (double)g.Sum(d => d.ConsumedWeight);
@@ -432,32 +457,52 @@ namespace FSCTakip.WebUI.Controllers
             var ws4 = wb.AddWorksheet("FSC Denge Özeti");
             ws4.Cell(1,1).Value = $"Dönem: {sd:dd.MM.yyyy} — {ed:dd.MM.yyyy}";
             ws4.Cell(1,1).Style.Font.Bold = true;
-            string[] h4 = { "FSC Tipi", "Dönem Girişi (kg)", "Dönem Tüketimi (kg)", "Fire (kg)", "Mevcut Stok (kg)", "Durum" };
+            string[] h4 = { "FSC Tipi", "Açılış Bakiyesi (kg)", "Dönem Girişi (kg)", "Dönem Tüketimi (kg)", "Fire (kg)", "Kapanış Bakiyesi (kg)", "Canlı Stok (kg)", "Durum" };
             for (int i = 0; i < h4.Length; i++) {
                 ws4.Cell(2, i+1).Value = h4[i];
                 ws4.Cell(2, i+1).Style.Font.Bold = true;
                 ws4.Cell(2, i+1).Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
                 ws4.Cell(2, i+1).Style.Fill.BackgroundColor = headerBg;
             }
+            // Açılış bakiyesi (Export için)
+            var preSerials2 = await _context.FscSerials
+                .Include(s => s.Lot).ThenInclude(l => l.FscType)
+                .Include(s => s.ProductionDetails)
+                .Where(s => s.Lot.ArrivalDate < sd)
+                .ToListAsync();
+            var openingMap2 = preSerials2
+                .GroupBy(s => s.Lot?.FscType?.Name ?? "—")
+                .ToDictionary(g => g.Key, g =>
+                    g.Sum(s => s.InitialWeight - s.ProductionDetails
+                        .Where(d => d.ProductionDate < sd)
+                        .Sum(d => d.ConsumedWeight + d.WasteWeight)));
             var allSerials2 = await _context.FscSerials.Include(s => s.Lot).ThenInclude(l => l.FscType).ToListAsync();
             var consumedMap2 = prodDetails.GroupBy(d => d.FscSerial?.Lot?.FscType?.Name ?? "—")
                 .ToDictionary(g => g.Key, g => (Consumed: g.Sum(d => d.ConsumedWeight), Waste: g.Sum(d => d.WasteWeight)));
-            var fscTypes2 = allSerials2.Select(s => s.Lot?.FscType?.Name ?? "—").Union(lots.Select(l => l.FscType?.Name ?? "—")).Distinct();
+            var fscTypes2 = lots.Select(l => l.FscType?.Name ?? "—")
+                .Union(preSerials2.Select(s => s.Lot?.FscType?.Name ?? "—"))
+                .Union(prodDetails.Select(d => d.FscSerial?.Lot?.FscType?.Name ?? "—"))
+                .Distinct();
             int r4 = 3;
             foreach (var ft in fscTypes2.OrderBy(x => x)) {
                 var inputKg = lots.Where(l => l.FscType?.Name == ft).Sum(l => l.Serials.Sum(s => s.InitialWeight));
+                openingMap2.TryGetValue(ft, out var openingKg2);
+                if (openingKg2 < 0) openingKg2 = 0;
                 consumedMap2.TryGetValue(ft, out var cons);
                 var stockKg = allSerials2.Where(s => s.Lot?.FscType?.Name == ft).Sum(s => s.CurrentWeight);
-                var ok = (cons.Consumed + cons.Waste) <= (inputKg + stockKg) + 0.01m;
+                var closingKg2 = openingKg2 + inputKg - cons.Consumed - cons.Waste;
+                if (closingKg2 < 0) closingKg2 = 0;
+                var ok = (cons.Consumed + cons.Waste) <= (openingKg2 + inputKg) + 0.01m;
                 ws4.Cell(r4,1).Value = ft;
-                ws4.Cell(r4,2).Value = (double)inputKg;
-                ws4.Cell(r4,3).Value = (double)cons.Consumed;
-                ws4.Cell(r4,4).Value = (double)cons.Waste;
-                ws4.Cell(r4,5).Value = (double)stockKg;
-                ws4.Cell(r4,6).Value = ok ? "✓ Dengeli" : "⚠ Kontrol Et";
-                ws4.Cell(r4,6).Style.Font.FontColor = ok ? ClosedXML.Excel.XLColor.FromHtml("#166534") : ClosedXML.Excel.XLColor.FromHtml("#991b1b");
+                ws4.Cell(r4,2).Value = (double)openingKg2;
+                ws4.Cell(r4,3).Value = (double)inputKg;
+                ws4.Cell(r4,4).Value = (double)cons.Consumed;
+                ws4.Cell(r4,5).Value = (double)cons.Waste;
+                ws4.Cell(r4,6).Value = (double)closingKg2;
+                ws4.Cell(r4,7).Value = (double)stockKg;
+                ws4.Cell(r4,8).Value = ok ? "✓ Dengeli" : "⚠ Kontrol Et";
+                ws4.Cell(r4,8).Style.Font.FontColor = ok ? ClosedXML.Excel.XLColor.FromHtml("#166534") : ClosedXML.Excel.XLColor.FromHtml("#991b1b");
                 r4++;
-                if (inputKg > 0 || cons.Consumed > 0 || stockKg > 0) { /* skip empty */ }
             }
             ws4.Columns().AdjustToContents();
 
@@ -542,7 +587,7 @@ namespace FSCTakip.WebUI.Controllers
                     // Bu bileşene bağlı üretim detayları
                     var linked = w.ProductionDetails.Where(pd => pd.WorkOrderRecipeId == wr.Id).ToList();
                     var serials   = linked.Select(pd => pd.FscSerial?.SerialNo ?? "").Where(s => s != "").Distinct().ToList();
-                    var lots      = linked.Select(pd => pd.FscSerial?.Lot?.LotNo ?? "").Where(s => s != "").Distinct().ToList();
+                    var lots      = linked.Select(pd => pd.FscSerial?.Lot?.PartiNo ?? "").Where(s => s != "").Distinct().ToList();
                     var suppliers = linked.Select(pd => pd.FscSerial?.Lot?.Supplier?.Name ?? "").Where(s => s != "").Distinct().ToList();
                     var fscTypes  = linked.Select(pd => pd.FscSerial?.Lot?.FscType?.Name ?? "").Where(s => s != "").Distinct().ToList();
 
@@ -578,7 +623,7 @@ namespace FSCTakip.WebUI.Controllers
                         WasteKg       = unlinked.Sum(pd => pd.WasteWeight),
                         ProducedQty   = unlinked.Sum(pd => pd.ProducedQuantity),
                         SerialNos     = unlinked.Select(pd => pd.FscSerial?.SerialNo ?? "").Where(s => s != "").Distinct().ToList(),
-                        LotNos        = unlinked.Select(pd => pd.FscSerial?.Lot?.LotNo ?? "").Where(s => s != "").Distinct().ToList(),
+                        LotNos        = unlinked.Select(pd => pd.FscSerial?.Lot?.PartiNo ?? "").Where(s => s != "").Distinct().ToList(),
                         SupplierNames = unlinked.Select(pd => pd.FscSerial?.Lot?.Supplier?.Name ?? "").Where(s => s != "").Distinct().ToList(),
                         InputFscTypes = unlinked.Select(pd => pd.FscSerial?.Lot?.FscType?.Name ?? "").Where(s => s != "").Distinct().ToList(),
                         IsUnlinked    = true
@@ -664,7 +709,7 @@ namespace FSCTakip.WebUI.Controllers
                     foreach (var wr in w.WorkOrderRecipes)
                     {
                         var linked = w.ProductionDetails.Where(pd => pd.WorkOrderRecipeId == wr.Id).ToList();
-                        var lots = linked.Select(pd => pd.FscSerial?.Lot?.LotNo ?? "").Where(s => s != "").Distinct();
+                        var lots = linked.Select(pd => pd.FscSerial?.Lot?.PartiNo ?? "").Where(s => s != "").Distinct();
                         var suppliers = linked.Select(pd => pd.FscSerial?.Lot?.Supplier?.Name ?? "").Where(s => s != "").Distinct();
                         var ok = wr.PlannedQuantity == 0 || wr.ActualConsumedQuantity <= wr.PlannedQuantity * 1.10m;
 
@@ -892,12 +937,14 @@ namespace FSCTakip.WebUI.Controllers
 
     public class AuditBalanceRow
     {
-        public string  FscType    { get; set; } = "";
-        public decimal InputKg    { get; set; }
-        public decimal ConsumedKg { get; set; }
-        public decimal WasteKg    { get; set; }
-        public decimal StockKg    { get; set; }
-        public bool    IsBalanced { get; set; }
+        public string  FscType        { get; set; } = "";
+        public decimal OpeningKg      { get; set; }  // dönem başı devir bakiye
+        public decimal InputKg        { get; set; }  // dönem girişi
+        public decimal ConsumedKg     { get; set; }  // dönem tüketimi
+        public decimal WasteKg        { get; set; }  // dönem firesi
+        public decimal ClosingKg      { get; set; }  // dönem sonu kapanış (hesaplanan)
+        public decimal CurrentStockKg { get; set; }  // canlı stok (CurrentWeight)
+        public bool    IsBalanced     { get; set; }
     }
 
     public class LotTraceResult
