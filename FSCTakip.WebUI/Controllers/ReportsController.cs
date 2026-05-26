@@ -530,6 +530,23 @@ namespace FSCTakip.WebUI.Controllers
             return View(suppliers);
         }
 
+        // GET /Reports/CustomerFsc
+        public async Task<IActionResult> CustomerFsc()
+        {
+            var customers = await _context.Customers
+                .Where(c => c.IsActive)
+                .OrderBy(c => c.Name)
+                .ToListAsync();
+
+            var today = DateTime.Today;
+            ViewBag.Valid    = customers.Count(c => c.IsFscActive && (c.FscExpiryDate == null || c.FscExpiryDate > today.AddDays(30)));
+            ViewBag.Expiring = customers.Count(c => c.IsFscActive && c.FscExpiryDate.HasValue && c.FscExpiryDate <= today.AddDays(30) && c.FscExpiryDate > today);
+            ViewBag.Expired  = customers.Count(c => !c.IsFscActive || (c.FscExpiryDate.HasValue && c.FscExpiryDate <= today));
+            ViewBag.Today    = today;
+
+            return View(customers);
+        }
+
         // ── 6. BOM Bileşen Analizi ──────────────────────────────────────────────
         // GET /Reports/BomAnalysis
         public async Task<IActionResult> BomAnalysis(DateTime? startDate, DateTime? endDate, int? workOrderId)

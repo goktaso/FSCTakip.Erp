@@ -111,6 +111,24 @@ namespace FSCTakip.WebUI.Controllers
 
             ViewBag.LowStockSerials = lowStockSerials;
 
+            // ── Kilitli dönemler ─────────────────────────────────────────────────
+            var lockedPeriods = await _context.AuditPeriods
+                .Where(p => p.IsLocked)
+                .OrderByDescending(p => p.Year)
+                .ToListAsync();
+            ViewBag.LockedPeriods = lockedPeriods;
+
+            // ── Bu ay hammadde girişi (kg) ────────────────────────────────────────
+            var monthStart = new DateTime(today.Year, today.Month, 1);
+            ViewBag.ThisMonthInputKg = await _context.FscSerials
+                .Include(s => s.Lot)
+                .Where(s => s.Lot.ArrivalDate >= monthStart)
+                .SumAsync(s => (double?)s.InitialWeight) ?? 0.0;
+
+            ViewBag.ThisMonthProdKg = await _context.ProductionDetails
+                .Where(d => d.ProductionDate >= monthStart)
+                .SumAsync(d => (double?)d.ConsumedWeight) ?? 0.0;
+
             // ── Aktif iş emirleri ────────────────────────────────────────────────
             var activeWorkOrders = await _context.WorkOrders
                 .Include(w => w.Product)

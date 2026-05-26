@@ -238,6 +238,15 @@ namespace FSCTakip.WebUI.Controllers
         {
             try
             {
+                if (model.ConsumedWeight <= 0)
+                    return Json(new { success = false, message = "Tüketim miktarı sıfırdan büyük olmalıdır." });
+                if (model.WasteWeight < 0)
+                    return Json(new { success = false, message = "Fire miktarı negatif olamaz." });
+                if (model.ProducedQuantity <= 0)
+                    return Json(new { success = false, message = "Üretilen adet sıfırdan büyük olmalıdır." });
+                if (model.WasteWeight > model.ConsumedWeight)
+                    return Json(new { success = false, message = "Fire miktarı tüketim miktarını aşamaz." });
+
                 var serial = await _context.FscSerials
                     .Include(s => s.ProductionDetails)
                     .FirstOrDefaultAsync(s => s.Id == model.FscSerialId);
@@ -636,9 +645,13 @@ namespace FSCTakip.WebUI.Controllers
                 await _context.SaveChangesAsync();
                 return Json(new { success = true });
             }
-            catch (Exception)
+            catch (FSCTakip.Core.Entities.PeriodLockedException ex)
             {
-                return Json(new { success = false, message = "Bu atık kaydı silinemez." });
+                return Json(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Bu atık kaydı silinemez. {ex.Message}" });
             }
         }
     }

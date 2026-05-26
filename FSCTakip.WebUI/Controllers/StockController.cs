@@ -13,8 +13,22 @@ namespace FSCTakip.WebUI.Controllers
         // GET /Stock/Index — ürün bazlı net stok özeti
         public async Task<IActionResult> Index(int? productGroupId, int? productId, string? stockCode, string? erpCode)
         {
+            // Ürün filtrelerini DB'de uygula — tüm hareketleri belleğe çekme
+            var productQuery = _context.Products.AsQueryable();
+            if (productGroupId.HasValue)
+                productQuery = productQuery.Where(p => p.ProductGroupId == productGroupId.Value);
+            if (productId.HasValue)
+                productQuery = productQuery.Where(p => p.Id == productId.Value);
+            if (!string.IsNullOrWhiteSpace(stockCode))
+                productQuery = productQuery.Where(p => p.ProductCode.Contains(stockCode.Trim()));
+            if (!string.IsNullOrWhiteSpace(erpCode))
+                productQuery = productQuery.Where(p => p.ExternalCode != null && p.ExternalCode.Contains(erpCode.Trim()));
+
+            var filteredProductIds = await productQuery.Select(p => p.Id).ToListAsync();
+
             var movements = await _context.StockMovements
                 .Include(m => m.Product).ThenInclude(p => p!.ProductGroup)
+                .Where(m => filteredProductIds.Contains(m.ProductId))
                 .ToListAsync();
 
             var grouped = movements
@@ -29,15 +43,6 @@ namespace FSCTakip.WebUI.Controllers
                     LastMovementDate = g.Max(m => m.DocumentDate)
                 })
                 .ToList();
-
-            if (productGroupId.HasValue)
-                grouped = grouped.Where(r => r.Product.ProductGroupId == productGroupId).ToList();
-            if (productId.HasValue)
-                grouped = grouped.Where(r => r.ProductId == productId).ToList();
-            if (!string.IsNullOrWhiteSpace(stockCode))
-                grouped = grouped.Where(r => r.Product.ProductCode.Contains(stockCode.Trim(), System.StringComparison.OrdinalIgnoreCase)).ToList();
-            if (!string.IsNullOrWhiteSpace(erpCode))
-                grouped = grouped.Where(r => r.Product.ExternalCode != null && r.Product.ExternalCode.Contains(erpCode.Trim(), System.StringComparison.OrdinalIgnoreCase)).ToList();
 
             ViewBag.ProductGroups = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
             ViewBag.Products      = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
