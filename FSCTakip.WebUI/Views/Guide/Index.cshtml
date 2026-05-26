@@ -506,6 +506,26 @@
                 <span class="toc-num">32.</span> ETL Otomatik Import
                 <span class="toc-badge done">✓</span>
             </a>
+            <a class="toc-item" href="#kullanici-yonetimi" onclick="scrollTo('kullanici-yonetimi')">
+                <span class="toc-num">33.</span> Kullanıcı ve Yetki Yönetimi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#musteri-fsc" onclick="scrollTo('musteri-fsc')">
+                <span class="toc-num">34.</span> Müşteri FSC Lisans Durumu
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#uretim-plani" onclick="scrollTo('uretim-plani')">
+                <span class="toc-num">35.</span> Üretim Planı Takvimi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#fire-analizi" onclick="scrollTo('fire-analizi')">
+                <span class="toc-num">36.</span> Fire / Atık Analizi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#donem-kilidi" onclick="scrollTo('donem-kilidi')">
+                <span class="toc-num">37.</span> Dönem Kilidi
+                <span class="toc-badge done">✓</span>
+            </a>
         </div>
     </div>
 
@@ -519,11 +539,11 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>32 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis Sync → Denetim → İzlenebilirlik → BOM → ETL Excel → Hammadde Stoğu → ETL Import)</span>
+                <span>37 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis → Denetim → İzlenebilirlik → BOM → Hammadde Stoğu → ETL Import → RBAC → Müşteri FSC → Üretim Planı → Fire Analizi → Dönem Kilidi)</span>
             </div>
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓</span>
-                <span>v2.4 — ETL otomatik algıla import + Tedarikçi adres alanları</span>
+                <span>v3.0 — RBAC, Üretim Planı, Fire Analizi, Müşteri FSC, Dönem Kilidi, güvenlik iyileştirmeleri</span>
             </div>
             <div class="ms-auto text-muted" style="font-size:11px;">
                 <i class="fas fa-sync-alt me-1"></i> Her modül tamamlandıktan sonra güncellenir
@@ -583,7 +603,12 @@
             'BOM Bileşen Analizi': 'bom-analizi',
             'Netsis ETL Excel Dosyaları': 'netsis-etl-excel',
             'Hammadde Stoğu — Bobin Bazlı': 'hammadde-stogu',
-            'ETL Otomatik Algıla Import': 'etl-oto-import'
+            'ETL Otomatik Algıla Import': 'etl-oto-import',
+            'Kullanıcı ve Yetki Yönetimi': 'kullanici-yonetimi',
+            'Müşteri FSC Lisans Durumu': 'musteri-fsc',
+            'Üretim Planı Takvimi': 'uretim-plani',
+            'Fire / Atık Analizi': 'fire-analizi',
+            'Dönem Kilidi': 'donem-kilidi'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {
