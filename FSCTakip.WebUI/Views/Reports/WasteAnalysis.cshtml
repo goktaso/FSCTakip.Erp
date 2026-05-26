@@ -1,0 +1,183 @@
+@using FSCTakip.WebUI.Controllers
+@model WasteAnalysisModel
+@{
+    ViewData["Title"] = "Fire / Atık Analizi";
+    var machines       = ViewBag.Machines       as List<FSCTakip.Core.Entities.Machine>       ?? new();
+    var productGroups  = ViewBag.ProductGroups  as List<FSCTakip.Core.Entities.ProductGroup>  ?? new();
+    var culture        = new System.Globalization.CultureInfo("tr-TR");
+}
+
+@section TopbarActions {
+    <form method="get" class="d-flex gap-2 align-items-center">
+        <input type="date" name="startDate" class="form-control form-control-sm"
+               value="@Model.StartDate.ToString("yyyy-MM-dd")" style="width:140px;">
+        <span class="text-muted small">—</span>
+        <input type="date" name="endDate" class="form-control form-control-sm"
+               value="@Model.EndDate.ToString("yyyy-MM-dd")" style="width:140px;">
+        <select name="machineId" class="form-select form-select-sm" style="width:150px;">
+            <option value="">Tüm Makineler</option>
+            @foreach (var m in machines)
+            {
+                if (ViewBag.MachineId != null && (int)ViewBag.MachineId == m.Id)
+                { <option value="@m.Id" selected>@m.Name</option> }
+                else
+                { <option value="@m.Id">@m.Name</option> }
+            }
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm px-3">
+            <i class="fas fa-filter me-1"></i> Filtrele
+        </button>
+    </form>
+}
+
+<!-- Özet Kartları -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fas fa-weight-hanging"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.TotalConsumedKg.ToString("N0") kg</div>
+            <div class="stat-label">Toplam Tüketim</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-trash-alt"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.TotalWasteKg.ToString("N0") kg</div>
+            <div class="stat-label">Üretim Kaynaklı Fire</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon @(Model.OverallFireRate > 5 ? "red" : Model.OverallFireRate > 3 ? "amber" : "green")">
+            <i class="fas fa-percentage"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value">%@Model.OverallFireRate.ToString("N1")</div>
+            <div class="stat-label">Genel Fire Oranı</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-recycle"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.TotalWasteRecordKg.ToString("N0") kg</div>
+            <div class="stat-label">Atık Yönetim Kaydı</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Makine Bazında Fire -->
+    <div class="col-md-6">
+        <div class="table-card h-100">
+            <div class="p-3 border-bottom">
+                <strong style="font-size:14px;"><i class="fas fa-cog me-2 text-muted"></i>Makine Bazında Fire Oranı</strong>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>MAKİNE</th>
+                            <th class="text-end">TÜKETİM</th>
+                            <th class="text-end">FİRE</th>
+                            <th class="text-end">ORAN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.ByMachine.Any())
+                        {
+                            <tr><td colspan="4" class="text-center text-muted py-4">Bu dönemde veri yok.</td></tr>
+                        }
+                        @foreach (var row in Model.ByMachine)
+                        {
+                            var rateClass = row.FireRate > 5 ? "text-danger fw-bold" : row.FireRate > 3 ? "text-warning fw-semibold" : "text-success";
+                            <tr>
+                                <td><strong>@row.MachineName</strong><br><span class="text-muted small">@row.RecordCount kayıt</span></td>
+                                <td class="text-end small">@row.TotalConsumedKg.ToString("N0") kg</td>
+                                <td class="text-end small">@row.TotalWasteKg.ToString("N0") kg</td>
+                                <td class="text-end small @rateClass">%@row.FireRate.ToString("N1")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Atık Kategorisi -->
+    <div class="col-md-6">
+        <div class="table-card h-100">
+            <div class="p-3 border-bottom">
+                <strong style="font-size:14px;"><i class="fas fa-tags me-2 text-muted"></i>Atık Yönetim Kategorisi</strong>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>KATEGORİ</th>
+                            <th class="text-end">MİKTAR</th>
+                            <th class="text-end">KAYIT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.ByCategory.Any())
+                        {
+                            <tr><td colspan="3" class="text-center text-muted py-4">Bu dönemde veri yok.</td></tr>
+                        }
+                        @foreach (var row in Model.ByCategory)
+                        {
+                            <tr>
+                                <td>@row.Category</td>
+                                <td class="text-end small fw-semibold">@row.TotalKg.ToString("N0") kg</td>
+                                <td class="text-end small text-muted">@row.RecordCount</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Aylık Trend -->
+@if (Model.MonthlyTrend.Any())
+{
+    <div class="table-card mt-3">
+        <div class="p-3 border-bottom">
+            <strong style="font-size:14px;"><i class="fas fa-chart-line me-2 text-muted"></i>Aylık Fire Trendi</strong>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>AY</th>
+                        <th class="text-end">TÜKETİM (kg)</th>
+                        <th class="text-end">FİRE (kg)</th>
+                        <th class="text-end">ORAN</th>
+                        <th>GÖRSEL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var maxWaste = Model.MonthlyTrend.Max(r => r.TotalWasteKg);
+                    }
+                    @foreach (var row in Model.MonthlyTrend)
+                    {
+                        var rateClass = row.FireRate > 5 ? "text-danger fw-bold" : row.FireRate > 3 ? "text-warning fw-semibold" : "text-muted";
+                        var barWidth  = maxWaste > 0 ? (double)row.TotalWasteKg / (double)maxWaste * 100 : 0;
+                        var monthName = new DateTime(row.Year, row.Month, 1).ToString("MMM yyyy", culture);
+                        <tr>
+                            <td class="fw-semibold">@monthName</td>
+                            <td class="text-end small">@row.TotalConsumedKg.ToString("N0")</td>
+                            <td class="text-end small">@row.TotalWasteKg.ToString("N0")</td>
+                            <td class="text-end small @rateClass">%@row.FireRate.ToString("N1")</td>
+                            <td style="min-width:120px;">
+                                <div style="background:#fee2e2;height:12px;border-radius:4px;width:@barWidth.ToString("F0")%;min-width:4px;"></div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+> **Bilgi:** Fire oranı %3'ün altında **yeşil**, %3–5 arası **turuncu**, %5 üzeri **kırmızı** olarak işaretlenir. FSC CoC denetiminde fire kayıtları ile üretim detaylarının tutarlı olması gerekir.

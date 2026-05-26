@@ -875,6 +875,94 @@ namespace FSCTakip.WebUI.Controllers
             ViewData["Title"] = $"Tam İzlenebilirlik — {order.SalesOrderNo}";
             return View(model);
         }
+
+        // ── 8. Fire / Atık Derinlemesine Raporu ─────────────────────────────────
+        // GET /Reports/WasteAnalysis
+        public async Task<IActionResult> WasteAnalysis(DateTime? startDate, DateTime? endDate, int? machineId, int? productGroupId)
+        {
+            var sd     = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
+            var ed     = endDate   ?? DateTime.Today;
+            var edNext = ed.AddDays(1);
+
+            // Üretim detayından fire verileri
+            var prodDetails = await _context.ProductionDetails
+                .Include(d => d.WorkOrder).ThenInclude(w => w!.Machine)
+                .Include(d => d.WorkOrder).ThenInclude(w => w!.Product).ThenInclude(p => p!.ProductGroup)
+                .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.FscType)
+                .Where(d => d.ProductionDate >= sd && d.ProductionDate < edNext)
+                .ToListAsync();
+
+            if (machineId.HasValue)
+                prodDetails = prodDetails.Where(d => d.WorkOrder != null && d.WorkOrder.MachineId == machineId.Value).ToList();
+            if (productGroupId.HasValue)
+                prodDetails = prodDetails.Where(d => d.WorkOrder?.Product?.ProductGroupId == productGroupId.Value).ToList();
+
+            // WasteManagement kayıtları
+            var wasteRecords = await _context.WasteManagements
+                .Include(w => w.WorkOrder).ThenInclude(wo => wo!.Machine)
+                .Where(w => w.DisposalDate >= sd && w.DisposalDate < edNext)
+                .ToListAsync();
+
+            // Makine bazında fire özeti
+            var byMachine = prodDetails
+                .Where(d => d.WorkOrder?.Machine != null)
+                .GroupBy(d => new { MachineId = d.WorkOrder!.MachineId, MachineName = d.WorkOrder!.Machine!.Name })
+                .Select(g => new WasteByMachineRow
+                {
+                    MachineName     = g.Key.MachineName,
+                    TotalConsumedKg = g.Sum(d => d.ConsumedWeight),
+                    TotalWasteKg    = g.Sum(d => d.WasteWeight),
+                    TotalProducedQty = g.Sum(d => d.ProducedQuantity),
+                    RecordCount     = g.Count()
+                })
+                .OrderByDescending(r => r.FireRate)
+                .ToList();
+
+            // Aylık fire trendi
+            var monthlyTrend = prodDetails
+                .GroupBy(d => new { d.ProductionDate.Year, d.ProductionDate.Month })
+                .Select(g => new WasteMonthlyRow
+                {
+                    Year            = g.Key.Year,
+                    Month           = g.Key.Month,
+                    TotalConsumedKg = g.Sum(d => d.ConsumedWeight),
+                    TotalWasteKg    = g.Sum(d => d.WasteWeight)
+                })
+                .OrderBy(r => r.Year).ThenBy(r => r.Month)
+                .ToList();
+
+            // Kategori bazında atık özeti (WasteManagement tablosundan)
+            var byCategory = wasteRecords
+                .GroupBy(w => w.Category)
+                .Select(g => new WasteByCategoryRow
+                {
+                    Category    = g.Key.ToString().Replace("Artigi","Artığı").Replace("Hasari","Hasarı").Replace("Hatasi","Hatası"),
+                    TotalKg     = g.Sum(w => w.Quantity),
+                    RecordCount = g.Count()
+                })
+                .OrderByDescending(r => r.TotalKg)
+                .ToList();
+
+            var model = new WasteAnalysisModel
+            {
+                StartDate      = sd,
+                EndDate        = ed,
+                TotalConsumedKg = prodDetails.Sum(d => d.ConsumedWeight),
+                TotalWasteKg   = prodDetails.Sum(d => d.WasteWeight),
+                TotalWasteRecordKg = wasteRecords.Sum(w => w.Quantity),
+                ByMachine      = byMachine,
+                MonthlyTrend   = monthlyTrend,
+                ByCategory     = byCategory
+            };
+
+            ViewBag.Machines      = await _context.Machines.Where(m => m.IsActive).OrderBy(m => m.Name).ToListAsync();
+            ViewBag.ProductGroups = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
+            ViewBag.MachineId     = machineId;
+            ViewBag.ProductGroupId = productGroupId;
+
+            ViewData["Title"] = "Fire / Atık Analizi";
+            return View(model);
+        }
     }
 
     // ── View Model Sınıfları ──────────────────────────────────────────────────
@@ -1061,5 +1149,46 @@ namespace FSCTakip.WebUI.Controllers
         public decimal FireRate      => ConsumedKg > 0 ? WasteKg / ConsumedKg * 100 : 0;
         public bool    IsOverPlan    => PlannedKg > 0 && ConsumedKg > PlannedKg * 1.10m;
         public bool    IsNearPlan    => PlannedKg > 0 && ConsumedKg >= PlannedKg * 0.90m;
+    }
+
+    // ── WasteAnalysis View Models ──────────────────────────────────────────────
+    public class WasteAnalysisModel
+    {
+        public DateTime StartDate           { get; set; }
+        public DateTime EndDate             { get; set; }
+        public decimal  TotalConsumedKg     { get; set; }
+        public decimal  TotalWasteKg        { get; set; }
+        public decimal  TotalWasteRecordKg  { get; set; }
+        public List<WasteByMachineRow>   ByMachine    { get; set; } = new();
+        public List<WasteMonthlyRow>     MonthlyTrend { get; set; } = new();
+        public List<WasteByCategoryRow>  ByCategory   { get; set; } = new();
+
+        public decimal OverallFireRate => TotalConsumedKg > 0 ? TotalWasteKg / TotalConsumedKg * 100 : 0;
+    }
+
+    public class WasteByMachineRow
+    {
+        public string  MachineName      { get; set; } = "";
+        public decimal TotalConsumedKg  { get; set; }
+        public decimal TotalWasteKg     { get; set; }
+        public decimal TotalProducedQty { get; set; }
+        public int     RecordCount      { get; set; }
+        public decimal FireRate         => TotalConsumedKg > 0 ? TotalWasteKg / TotalConsumedKg * 100 : 0;
+    }
+
+    public class WasteMonthlyRow
+    {
+        public int     Year            { get; set; }
+        public int     Month           { get; set; }
+        public decimal TotalConsumedKg { get; set; }
+        public decimal TotalWasteKg    { get; set; }
+        public decimal FireRate        => TotalConsumedKg > 0 ? TotalWasteKg / TotalConsumedKg * 100 : 0;
+    }
+
+    public class WasteByCategoryRow
+    {
+        public string  Category    { get; set; } = "";
+        public decimal TotalKg     { get; set; }
+        public int     RecordCount { get; set; }
     }
 }

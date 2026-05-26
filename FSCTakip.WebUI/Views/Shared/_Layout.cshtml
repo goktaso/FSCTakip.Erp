@@ -670,7 +670,7 @@
 
     // Hangi sidebar bölümü aktif?
     var activeSection = ctrl switch {
-        "Purchase" or "Production" or "Sales" or "Stock" => "fsc",
+        "Purchase" or "Production" or "Sales" or "Stock" or "Planning" => "fsc",
         "Customers" or "Suppliers" or "Products"          => "ticari",
         "Reports"                                         => "rapor",
         "Product" or "Paper" or "Machine" or "Warehouse"
@@ -724,6 +724,12 @@
                 <a class="nav-link-item @(ctrl=="Purchase"?"active":"")" href="/Purchase/Index">
                     <span class="nav-icon"><i class="fas fa-truck-loading"></i></span>
                     <span class="nav-label">Hammadde Girişi</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Planning"?"active":"")" href="/Planning">
+                    <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
+                    <span class="nav-label">Üretim Planı</span>
                 </a>
             </div>
             <div class="nav-item">
@@ -826,6 +832,12 @@
                 <a class="nav-link-item @(ctrl=="Reports"&&action=="CustomerFsc"?"active":"")" href="/Reports/CustomerFsc">
                     <span class="nav-icon"><i class="fas fa-id-card"></i></span>
                     <span class="nav-label">Müşteri FSC</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="WasteAnalysis"?"active":"")" href="/Reports/WasteAnalysis">
+                    <span class="nav-icon"><i class="fas fa-trash-alt"></i></span>
+                    <span class="nav-label">Fire Analizi</span>
                 </a>
             </div>
             <div class="nav-item">
