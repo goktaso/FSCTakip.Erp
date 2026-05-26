@@ -1,0 +1,632 @@
+@{
+    ViewData["Title"] = "Test Senaryosu";
+}
+
+<style>
+    .ts-shell { display:flex; gap:0; min-height:calc(100vh - 56px - 40px); }
+
+    /* Sidebar */
+    .ts-nav { width:240px; flex-shrink:0; position:sticky; top:20px; align-self:flex-start;
+              background:#fff; border:1px solid var(--border); border-radius:var(--card-radius);
+              box-shadow:var(--shadow-sm); overflow:hidden; }
+    .ts-nav-header { background:linear-gradient(135deg,#1e3d14,#2d5a1e); color:#fff;
+                     padding:12px 16px; font-size:12px; font-weight:600; letter-spacing:.05em; }
+    .ts-nav-list { padding:8px 0; max-height:calc(100vh - 160px); overflow-y:auto; }
+    .ts-phase-link { display:block; padding:7px 16px; font-size:12.5px; color:#374151;
+                     text-decoration:none; border-left:3px solid transparent; transition:all .15s; cursor:pointer; }
+    .ts-phase-link:hover { background:#f8faff; color:var(--accent); border-left-color:#bfdbfe; }
+    .ts-phase-link.active { background:var(--accent-light); color:var(--accent); border-left-color:var(--accent); font-weight:600; }
+    .ts-phase-link .ph-num { color:var(--text-muted); font-size:11px; margin-right:6px; }
+    .ts-progress-wrap { padding:12px 16px; border-top:1px solid var(--border); }
+    .ts-progress-label { font-size:11px; color:var(--text-muted); margin-bottom:5px; display:flex; justify-content:space-between; }
+    .ts-progress-bar { height:6px; background:#e5e7eb; border-radius:3px; overflow:hidden; }
+    .ts-progress-fill { height:100%; background:linear-gradient(90deg,#1e3d14,#4ade80); border-radius:3px; transition:width .4s ease; }
+
+    /* Content */
+    .ts-content { flex:1; min-width:0; padding-left:24px; }
+
+    /* Phase card */
+    .phase-card { background:#fff; border:1px solid var(--border); border-radius:var(--card-radius);
+                  box-shadow:var(--shadow-sm); margin-bottom:24px; overflow:hidden; }
+    .phase-header { padding:16px 20px; display:flex; align-items:center; gap:14px;
+                    background:linear-gradient(135deg,#f8faff,#eff6ff); border-bottom:1px solid var(--border); }
+    .phase-num { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#1d4ed8,#3b82f6);
+                 color:#fff; display:flex; align-items:center; justify-content:center;
+                 font-weight:700; font-size:16px; flex-shrink:0; }
+    .phase-title { font-size:16px; font-weight:700; color:#111827; }
+    .phase-subtitle { font-size:12px; color:#6b7280; margin-top:2px; }
+    .phase-body { padding:20px; }
+
+    /* Step */
+    .step { display:flex; gap:14px; margin-bottom:20px; padding-bottom:20px; border-bottom:1px dashed #e5e7eb; }
+    .step:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+    .step-check { flex-shrink:0; width:24px; height:24px; border-radius:6px; border:2px solid #d1d5db;
+                  display:flex; align-items:center; justify-content:center; cursor:pointer;
+                  transition:all .2s; background:#fff; }
+    .step-check.done { background:#16a34a; border-color:#16a34a; }
+    .step-check.done::after { content:'✓'; color:#fff; font-size:13px; font-weight:700; }
+    .step-body { flex:1; min-width:0; }
+    .step-title { font-size:13.5px; font-weight:600; color:#111827; margin-bottom:4px; }
+    .step-desc { font-size:12.5px; color:#374151; line-height:1.6; }
+    .step-action { margin-top:8px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px;
+                   padding:8px 12px; font-size:12px; }
+    .step-action strong { color:#1d4ed8; }
+
+    /* Expected result */
+    .expected { margin-top:10px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 12px; }
+    .expected-title { font-size:11px; font-weight:600; color:#166534; display:flex; align-items:center; gap:5px; margin-bottom:5px; }
+    .expected-body { font-size:12px; color:#14532d; }
+
+    /* Screen mockup inline */
+    .screen-mock { margin-top:10px; background:#f8faff; border:1px solid #e2e8f0; border-radius:8px;
+                   padding:10px; font-size:11px; }
+    .mock-bar { background:linear-gradient(135deg,#1a2744,#243566); color:#fff; border-radius:5px;
+                padding:5px 10px; margin-bottom:6px; display:flex; align-items:center; gap:6px; font-size:11px; }
+    .mock-badge-g { background:#dcfce7; color:#166534; border-radius:4px; padding:1px 6px; font-size:10px; font-weight:600; }
+    .mock-badge-b { background:#dbeafe; color:#1e40af; border-radius:4px; padding:1px 6px; font-size:10px; font-weight:600; }
+    .mock-badge-y { background:#fef3c7; color:#92400e; border-radius:4px; padding:1px 6px; font-size:10px; font-weight:600; }
+    .mock-badge-r { background:#fee2e2; color:#991b1b; border-radius:4px; padding:1px 6px; font-size:10px; font-weight:600; }
+    .mock-row { display:flex; gap:8px; align-items:center; padding:3px 0; border-bottom:1px solid #e5e7eb; flex-wrap:wrap; }
+    .mock-row:last-child { border-bottom:none; }
+    .mock-lbl { color:#6b7280; font-size:10.5px; width:120px; flex-shrink:0; }
+    .mock-val { font-weight:600; font-size:11px; }
+
+    /* Summary badge */
+    .ts-summary { display:none; }
+    .phase-done .ts-summary { display:flex; }
+
+    /* Completion banner */
+    .completion-banner { display:none; background:linear-gradient(135deg,#14532d,#166534);
+                         color:#fff; border-radius:12px; padding:24px; text-align:center; margin-top:20px; }
+</style>
+
+<div class="ts-shell">
+
+    <!-- Sidebar nav -->
+    <div class="ts-nav">
+        <div class="ts-nav-header"><i class="fas fa-flask me-2"></i>Test Senaryosu</div>
+        <div class="ts-nav-list" id="phaseNav">
+            <a class="ts-phase-link active" onclick="goPhase(1)"><span class="ph-num">1.</span> Giriş & Dashboard</a>
+            <a class="ts-phase-link" onclick="goPhase(2)"><span class="ph-num">2.</span> Tedarikçi & Hammadde</a>
+            <a class="ts-phase-link" onclick="goPhase(3)"><span class="ph-num">3.</span> Üretim İş Emri</a>
+            <a class="ts-phase-link" onclick="goPhase(4)"><span class="ph-num">4.</span> Satış Siparişi</a>
+            <a class="ts-phase-link" onclick="goPhase(5)"><span class="ph-num">5.</span> Stok Kontrol</a>
+            <a class="ts-phase-link" onclick="goPhase(6)"><span class="ph-num">6.</span> FSC Raporlar</a>
+        </div>
+        <div class="ts-progress-wrap">
+            <div class="ts-progress-label">
+                <span>İlerleme</span>
+                <span id="progLabel">0 / 24</span>
+            </div>
+            <div class="ts-progress-bar">
+                <div class="ts-progress-fill" id="progFill" style="width:0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="ts-content">
+
+        <!-- Banner -->
+        <div class="table-card mb-3" style="background:linear-gradient(135deg,#1e3d14,#2d5a1e);color:#fff;border:none;">
+            <div class="p-4 d-flex align-items-center gap-4">
+                <div style="font-size:40px;">🧪</div>
+                <div>
+                    <h5 class="mb-1" style="color:#fff;">FSC Takip ERP — Tam Sistem Test Senaryosu</h5>
+                    <p class="mb-0" style="color:#a3e635;font-size:13px;">
+                        Bu senaryo, hammadde girişinden satış sevkiyatına kadar <strong>tüm FSC zincirini</strong> test eder.
+                        Her adımda kutucuğu işaretleyin ve ekranda ne göreceğinizi öğrenin.
+                    </p>
+                </div>
+                <div class="ms-auto text-center">
+                    <div style="font-size:28px;font-weight:700;" id="bigPct">0%</div>
+                    <div style="font-size:11px;color:#a3e635;">Tamamlandı</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── FAZA 1: GİRİŞ ────────────────────────────────────────────────── -->
+        <div class="phase-card" id="phase1">
+            <div class="phase-header">
+                <div class="phase-num">1</div>
+                <div>
+                    <div class="phase-title">Sisteme Giriş & Dashboard İncelemesi</div>
+                    <div class="phase-subtitle">Ön koşul: Uygulama çalışıyor, demo veriler yüklü</div>
+                </div>
+            </div>
+            <div class="phase-body">
+
+                <div class="step" id="s1_1">
+                    <div class="step-check" onclick="toggle('s1_1')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Uygulamayı başlatın</div>
+                        <div class="step-desc">Terminalde <code>dotnet run</code> komutunu çalıştırın veya Visual Studio'da F5 tuşuna basın. Tarayıcıda <code>https://localhost:PORT</code> adresine gidin.</div>
+                        <div class="step-action"><strong>Yapılacak:</strong> Login sayfasına yönlendirildiniz mi? Yeşil renkli "FSC Takip ERP" başlığını görüyor musunuz?</div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">Koyu mavi gradient login kartı — Kullanıcı adı, şifre alanları ve "Giriş Yap" butonu. Sol üstte FSC logosu.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s1_2">
+                    <div class="step-check" onclick="toggle('s1_2')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Giriş yapın</div>
+                        <div class="step-desc">Kullanıcı adı ve şifrenizi girerek sisteme giriş yapın.</div>
+                        <div class="step-action"><strong>Yapılacak:</strong> Giriş formunu doldurun ve "Giriş Yap" butonuna tıklayın.</div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">Dashboard sayfasına yönlendirilirsiniz. Sol menü (koyu yeşil) açık görünür.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s1_3">
+                    <div class="step-check" onclick="toggle('s1_3')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Dashboard'u inceleyin</div>
+                        <div class="step-desc">Demo veriler yüklendiyse Dashboard'da gerçek sayılar görünür.</div>
+                        <div class="step-action"><strong>Yapılacak:</strong> Stat kartlarındaki sayıları kontrol edin.</div>
+                        <div class="screen-mock">
+                            <div class="mock-bar"><i class="fas fa-tachometer-alt me-1"></i> Dashboard</div>
+                            <div class="mock-row"><div class="mock-lbl">FSC Lot Girişi</div><div class="mock-val">2</div><div style="font-size:10px;color:#6b7280;">L2026-001, L2026-002</div></div>
+                            <div class="mock-row"><div class="mock-lbl">Üretimde</div><div class="mock-val">1</div><div style="font-size:10px;color:#6b7280;">IE2026-003 aktif</div></div>
+                            <div class="mock-row"><div class="mock-lbl">Bekleyen Sipariş</div><div class="mock-val">1</div><div style="font-size:10px;color:#6b7280;">SIP2026-003 taslak</div></div>
+                            <div class="mock-row"><div class="mock-lbl">Aktif Müşteri</div><div class="mock-val">3</div><div class="mock-badge-g">Cimento Fab. + 2 diğer</div></div>
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">FSC uyarı kutusu: "Seluloz Ticaret Ltd. — 29 gün kaldı" uyarısı görünür (FscExpiryDate 15.06.2026). Son stok hareketleri tablosunda 6 satır.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s1_4">
+                    <div class="step-check" onclick="toggle('s1_4')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Sol menüyü keşfedin</div>
+                        <div class="step-desc">Sol menüde tüm modülleri görün: Operasyonel (Hammadde, İş Emirleri, Satış, Stok), Ticari (Müşteriler, Tedarikçiler, Ürünler), FSC Raporlar.</div>
+                        <div class="step-action"><strong>Yapılacak:</strong> Hamburgere tıklayarak menüyü kapatıp açın. Tüm bölümleri gözlemleyin.</div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">Menü kapalıyken yalnızca ikonlar görünür. Açıkken her menü öğesinin yanında açıklayıcı metin var.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── FAZA 2: TEDARİKÇİ & HAMMADDE ──────────────────────────────────── -->
+        <div class="phase-card" id="phase2">
+            <div class="phase-header">
+                <div class="phase-num" style="background:linear-gradient(135deg,#92400e,#b45309);">2</div>
+                <div>
+                    <div class="phase-title">Tedarikçi İncelemesi & Yeni Hammadde Lot Girişi</div>
+                    <div class="phase-subtitle">Ön koşul: Faz 1 tamamlandı</div>
+                </div>
+            </div>
+            <div class="phase-body">
+
+                <div class="step" id="s2_1">
+                    <div class="step-check" onclick="toggle('s2_1')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Tedarikçiler listesini görüntüleyin</div>
+                        <div class="step-desc">Sol menüden <strong>Ticari → Tedarikçiler</strong> sayfasını açın.</div>
+                        <div class="screen-mock">
+                            <div class="mock-bar"><i class="fas fa-truck me-1"></i> Tedarikçiler</div>
+                            <div class="mock-row"><span style="font-weight:600;">TED-001</span><span style="flex:1;margin-left:8px;">KRAFT KAGIT SAN. A.S.</span><span class="mock-badge-g">FSC-C123456</span><span style="margin-left:6px;font-size:10.5px;">31.12.2026</span><span style="margin-left:8px;color:#6b7280;font-size:10px;">228 gün</span></div>
+                            <div class="mock-row" style="background:#fffbeb;"><span style="font-weight:600;">TED-002</span><span style="flex:1;margin-left:8px;">SELULOZ TICARET LTD.</span><span class="mock-badge-y">FSC-C789012</span><span style="margin-left:6px;font-size:10.5px;color:#d97706;">15.06.2026</span><span style="margin-left:8px;color:#d97706;font-size:10px;font-weight:600;">⚠ 29 gün</span></div>
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">2 tedarikçi satırı. TED-002 sarı arka planla vurgulanmış — FSC sertifikası yakında bitiyor.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s2_2">
+                    <div class="step-check" onclick="toggle('s2_2')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Hammadde Girişleri listesini görüntüleyin</div>
+                        <div class="step-desc">Sol menüden <strong>Operasyonel → Hammadde Girişi</strong> sayfasını açın.</div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">2 lot kaydı: L2026-001 (Kraft Kagit) ve L2026-002 (Seluloz). Her satırda tedarikçi adı, geliş tarihi, fatura/irsaliye numarası ve seri sayısı.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s2_3">
+                    <div class="step-check" onclick="toggle('s2_3')"></div>
+                    <div class="step-body">
+                        <div class="step-title">L2026-001 detayına girin ve serileri görün</div>
+                        <div class="step-desc">L2026-001 satırında detay simgesine (<i class="fas fa-eye"></i>) tıklayın. Bobin/Seri listesine bakın.</div>
+                        <div class="screen-mock">
+                            <div class="mock-bar"><i class="fas fa-layer-group me-1"></i> L2026-001 Detayı</div>
+                            <div class="mock-row"><span class="mock-lbl">Seri No</span><span class="mock-lbl" style="width:90px;">Başlangıç</span><span class="mock-lbl" style="width:80px;">Kalan</span><span class="mock-lbl">Durum</span></div>
+                            <div class="mock-row"><span style="font-weight:600;font-size:11px;">S2026-001-01</span><span style="width:90px;font-size:11px;">2.500 kg</span><span style="width:80px;font-size:11px;color:#16a34a;">800 kg</span><span class="mock-badge-y">Kullanımda</span></div>
+                            <div class="mock-row"><span style="font-weight:600;font-size:11px;">S2026-001-02</span><span style="width:90px;font-size:11px;">2.500 kg</span><span style="width:80px;font-size:11px;color:#6b7280;">0 kg</span><span class="mock-badge-r">Tükendi</span></div>
+                            <div class="mock-row"><span style="font-weight:600;font-size:11px;">S2026-001-03</span><span style="width:90px;font-size:11px;">2.500 kg</span><span style="width:80px;font-size:11px;color:#16a34a;">2.500 kg</span><span class="mock-badge-g">Tam</span></div>
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">4 seri satırı. S2026-001-02 "Tükendi" (kalan 0 kg), S2026-001-03 ve S2026-001-04 "Stokta" durumda.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s2_4">
+                    <div class="step-check" onclick="toggle('s2_4')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Yeni bir hammadde lot girişi yapın</div>
+                        <div class="step-desc">Hammadde Girişi listesinden <strong>+ Yeni Lot Ekle</strong> butonuna tıklayın. Formu doldurun.</div>
+                        <div class="step-action">
+                            <strong>Örnek veri:</strong> Tedarikçi: TED-001 | FSC Tipi: FSC-MIX | Ürün: HM-001 |
+                            Geliş Tarihi: Bugün | İrsaliye No: TEST-001 | Fatura No: FTEST-001
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">"Lot kaydedildi" yeşil toast mesajı. Listede yeni satır: <span class="mock-badge-b">L2026-003</span> otomatik numarasıyla eklendi.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── FAZA 3: ÜRETİM ─────────────────────────────────────────────────── -->
+        <div class="phase-card" id="phase3">
+            <div class="phase-header">
+                <div class="phase-num" style="background:linear-gradient(135deg,#5b21b6,#7c3aed);">3</div>
+                <div>
+                    <div class="phase-title">Üretim — İş Emri Oluşturma & Tamamlama</div>
+                    <div class="phase-subtitle">Ön koşul: Hammadde lot ve seri kaydı mevcut</div>
+                </div>
+            </div>
+            <div class="phase-body">
+
+                <div class="step" id="s3_1">
+                    <div class="step-check" onclick="toggle('s3_1')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Mevcut iş emirlerini inceleyin</div>
+                        <div class="step-desc">Sol menüden <strong>Operasyonel → İş Emirleri</strong> sayfasını açın.</div>
+                        <div class="screen-mock">
+                            <div class="mock-bar"><i class="fas fa-industry me-1"></i> İş Emirleri</div>
+                            <div class="mock-row"><span style="font-weight:600;width:100px;">IE2026-001</span><span style="flex:1;">KRAFT CUVALI 50KG</span><span>14.800 adet</span><span class="mock-badge-g ms-2">Tamamlandı</span></div>
+                            <div class="mock-row"><span style="font-weight:600;width:100px;">IE2026-002</span><span style="flex:1;">VENTIL TORBA 25KG</span><span>9.600 adet</span><span class="mock-badge-g ms-2">Tamamlandı</span></div>
+                            <div class="mock-row" style="background:#fffbeb;"><span style="font-weight:600;width:100px;">IE2026-003</span><span style="flex:1;">KRAFT CUVALI 50KG</span><span>0 / 20.000</span><span class="mock-badge-y ms-2">Üretimde</span></div>
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">3 iş emri. Stat kartları: "1 Üretimde", "2 Tamamlandı".</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s3_2">
+                    <div class="step-check" onclick="toggle('s3_2')"></div>
+                    <div class="step-body">
+                        <div class="step-title">IE2026-003 detayına girin</div>
+                        <div class="step-desc">IE2026-003 satırında detay simgesine tıklayın. Üretim detayları sekmesini görün.</div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">Sol panelde iş emri bilgileri: Ürün "KRAFT CUVALI 50KG", Planlanan 20.000 adet, Durum "Üretimde". Sağ panelde üretim detayları tablosu boş.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s3_3">
+                    <div class="step-check" onclick="toggle('s3_3')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Üretim detayı ekleyin (hammadde tüketimi)</div>
+                        <div class="step-desc">Detay sayfasında <strong>+ Üretim Detayı Ekle</strong> butonuna tıklayın.</div>
+                        <div class="step-action">
+                            <strong>Örnek veri:</strong> Seri: S2026-001-03 | Üretim Tarihi: Bugün |
+                            Tüketilen: 1.200 kg | Fire: 60 kg | Üretilen: 5.200 adet
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">Detay tablosunda yeni satır eklendi. S2026-001-03 serisinin kalan ağırlığı 2.500 → 1.300 kg olarak güncellendi. İş emri "Gerçekleşen: 5.200 adet" gösterir.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s3_4">
+                    <div class="step-check" onclick="toggle('s3_4')"></div>
+                    <div class="step-body">
+                        <div class="step-title">İş emrini tamamlandı olarak işaretleyin</div>
+                        <div class="step-desc">İş emri detay sayfasında <strong>Tamamlandı</strong> butonu/durumu değiştirerek güncelleme yapın.</div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">Durum rozeti yeşile döndü: <span class="mock-badge-g">Tamamlandı</span>. Dashboard'da "Üretimde" sayısı 1'den 0'a düştü.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── FAZA 4: SATIŞ ──────────────────────────────────────────────────── -->
+        <div class="phase-card" id="phase4">
+            <div class="phase-header">
+                <div class="phase-num" style="background:linear-gradient(135deg,#0369a1,#0284c7);">4</div>
+                <div>
+                    <div class="phase-title">Satış Siparişi Oluşturma & Sevkiyat</div>
+                    <div class="phase-subtitle">Ön koşul: En az 1 tamamlanmış iş emri mevcut</div>
+                </div>
+            </div>
+            <div class="phase-body">
+
+                <div class="step" id="s4_1">
+                    <div class="step-check" onclick="toggle('s4_1')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Satış Siparişleri listesini görüntüleyin</div>
+                        <div class="step-desc">Sol menüden <strong>Operasyonel → Satış / Sevkiyat</strong> sayfasını açın.</div>
+                        <div class="screen-mock">
+                            <div class="mock-bar"><i class="fas fa-file-invoice me-1"></i> Satış Siparişleri</div>
+                            <div class="mock-row"><span style="font-weight:600;">SIP2026-001</span><span style="flex:1;margin-left:8px;">CIMENTO FABRIKASI A.S.</span><span>59.200 ₺</span><span class="mock-badge-g ms-2">Teslim Edildi</span></div>
+                            <div class="mock-row"><span style="font-weight:600;">SIP2026-002</span><span style="flex:1;margin-left:8px;">TARIM URUNLERI LTD.</span><span>27.840 ₺</span><span class="mock-badge-g ms-2">Teslim Edildi</span></div>
+                            <div class="mock-row" style="background:#eff6ff;"><span style="font-weight:600;">SIP2026-003</span><span style="flex:1;margin-left:8px;">KRAFT TEKSTIL SAN.</span><span>—</span><span class="mock-badge-y ms-2">Taslak</span></div>
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">3 sipariş. Stat kartları: "2 Teslim Edildi", "1 Bekleyen".</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s4_2">
+                    <div class="step-check" onclick="toggle('s4_2')"></div>
+                    <div class="step-body">
+                        <div class="step-title">SIP2026-003 detayına girin ve kalem ekleyin</div>
+                        <div class="step-desc">SIP2026-003 sipariş numarasına tıklayın. Detay sayfasında <strong>+ Kalem Ekle</strong> butonuna tıklayın.</div>
+                        <div class="step-action">
+                            <strong>Örnek kalem:</strong> Ürün: KRAFT CUVALI 50KG | İş Emri: IE2026-003 (FSC CoC) | Miktar: 5.000 | Birim Fiyat: 7,80 | Birim: Adet
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">Kalem tablosunda 🏆 rozeti ile yeni satır. FSC CoC göstergesi yeşile döndü: "1/1 kalem iş emrine bağlı". Toplam tutar: 39.000 ₺.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s4_3">
+                    <div class="step-check" onclick="toggle('s4_3')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Sevkiyat işlemini gerçekleştirin</div>
+                        <div class="step-desc">Detay sayfasında yeşil <strong>Sevk Et</strong> butonuna tıklayın. Açılan formda bilgileri doldurun.</div>
+                        <div class="step-action">
+                            <strong>Örnek:</strong> Sevk Tarihi: Bugün | İrsaliye No: SEV-2026-003 | Plaka: 34 JKL 789
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">Sipariş durumu <span class="mock-badge-g">Teslim Edildi</span> olarak güncellendi. Stok hareketlerinde yeni "Satış Çıkışı" satırı otomatik oluştu.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s4_4">
+                    <div class="step-check" onclick="toggle('s4_4')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Teslim edilmiş siparişe müdahale deneyin</div>
+                        <div class="step-desc">SIP2026-003 detayında kalem eklemeyi veya silmeyi deneyin.</div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">Kırmızı hata mesajı: "Teslim edilmiş siparişe kalem eklenemez." Sistem güvenlik engelini devreye soktu.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── FAZA 5: STOK ───────────────────────────────────────────────────── -->
+        <div class="phase-card" id="phase5">
+            <div class="phase-header">
+                <div class="phase-num" style="background:linear-gradient(135deg,#166534,#16a34a);">5</div>
+                <div>
+                    <div class="phase-title">Stok Durumu & Hareket Geçmişi Kontrolü</div>
+                    <div class="phase-subtitle">Ön koşul: En az 1 satın alma + 1 üretim + 1 satış yapıldı</div>
+                </div>
+            </div>
+            <div class="phase-body">
+
+                <div class="step" id="s5_1">
+                    <div class="step-check" onclick="toggle('s5_1')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Stok Durumu sayfasını açın</div>
+                        <div class="step-desc">Sol menüden <strong>Operasyonel → Stok Durumu</strong> sayfasını açın.</div>
+                        <div class="screen-mock">
+                            <div class="mock-bar"><i class="fas fa-warehouse me-1"></i> Stok Durumu</div>
+                            <div class="mock-row"><span style="font-size:10.5px;width:80px;">HM-001</span><span style="flex:1;font-weight:600;">KRAFT KAGIT 80GR BOBIN</span><span style="color:#16a34a;font-weight:600;">+10.000</span><span style="margin:0 4px;color:#6b7280;">−</span><span style="color:#dc2626;font-weight:600;">0</span><span style="margin:0 4px;color:#6b7280;">=</span><span style="font-weight:700;">10.000 Kg</span><span class="mock-badge-g ms-2">Var</span></div>
+                            <div class="mock-row"><span style="font-size:10.5px;width:80px;">MM-001</span><span style="flex:1;font-weight:600;">KRAFT CUVALI 50KG</span><span style="color:#16a34a;font-weight:600;">+14.800</span><span style="margin:0 4px;color:#6b7280;">−</span><span style="color:#dc2626;font-weight:600;">8.000</span><span style="margin:0 4px;color:#6b7280;">=</span><span style="font-weight:700;">6.800 Adet</span><span class="mock-badge-g ms-2">Var</span></div>
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">4 ürün satırı (2 hammadde + 2 mamul). Net stok = Giriş − Çıkış hesabıyla gösterilir. Tüm ürünler "Var" durumda.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s5_2">
+                    <div class="step-check" onclick="toggle('s5_2')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Stok Hareketleri sayfasını açın ve filtreleyin</div>
+                        <div class="step-desc">Sol menüden <strong>Stok Hareketleri</strong> sayfasını açın. Hareket tipini "Satış Çıkışı" olarak filtreleyin.</div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">Yalnızca kırmızı "Satış" etiketli satırlar görünür: SIP2026-001 (8.000 adet) ve SIP2026-002 (4.800 adet). Her birinin "İş Emri" sütununda FSC linki var.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s5_3">
+                    <div class="step-check" onclick="toggle('s5_3')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Depo transferi yapın</div>
+                        <div class="step-desc">Stok Durumu sayfasında <strong>⇄ Depo Transferi</strong> butonuna tıklayın.</div>
+                        <div class="step-action">
+                            <strong>Örnek:</strong> Ürün: KRAFT CUVALI 50KG | Çıkış: Mamul Deposu | Giriş: Hammadde Deposu | Miktar: 500 | Tarih: Bugün
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">"Transfer kaydedildi: TRF2026-001" mesajı. Stok hareketlerinde sarı "Transfer" etiketli yeni satır. Net stok değişmedi (transfer etkilemez).</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s5_4">
+                    <div class="step-check" onclick="toggle('s5_4')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Excel dışa aktarımını test edin</div>
+                        <div class="step-desc">Stok Durumu sayfasında <strong>Excel</strong> butonuna tıklayın.</div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body"><code>StokDurumu_DDMMYYYY.xlsx</code> dosyası indirilir. İçinde ürün kodu, adı, giriş, çıkış, net stok sütunları mevcut.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── FAZA 6: FSC RAPORLAR ───────────────────────────────────────────── -->
+        <div class="phase-card" id="phase6">
+            <div class="phase-header">
+                <div class="phase-num" style="background:linear-gradient(135deg,#1e3d14,#2d5a1e);">6</div>
+                <div>
+                    <div class="phase-title">FSC Raporlar — Denetim Hazırlığı</div>
+                    <div class="phase-subtitle">Ön koşul: Tüm önceki fazlar tamamlandı</div>
+                </div>
+            </div>
+            <div class="phase-body">
+
+                <div class="step" id="s6_1">
+                    <div class="step-check" onclick="toggle('s6_1')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Chain of Custody raporunu görüntüleyin</div>
+                        <div class="step-desc">Sol menüden <strong>FSC Raporlar → Chain of Custody</strong> sayfasını açın.</div>
+                        <div class="screen-mock">
+                            <div class="mock-bar"><i class="fas fa-link me-1"></i> FSC Chain of Custody Raporu</div>
+                            <div class="mock-row"><span class="mock-badge-g">✓ Tam</span><span style="flex:1;margin-left:8px;font-size:11px;">SIP2026-001 | CIMENTO FAB. | 8.000 Adet</span><span style="font-size:10.5px;font-weight:600;">IE2026-001</span><span class="mock-badge-b ms-2">L2026-001</span><span style="font-size:10.5px;margin-left:6px;">KRAFT KAGIT SAN.</span></div>
+                            <div class="mock-row"><span class="mock-badge-g">✓ Tam</span><span style="flex:1;margin-left:8px;font-size:11px;">SIP2026-002 | TARIM LTD. | 4.800 Adet</span><span style="font-size:10.5px;font-weight:600;">IE2026-002</span><span class="mock-badge-b ms-2">L2026-002</span><span style="font-size:10.5px;margin-left:6px;">SELULOZ LTD.</span></div>
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">Her teslim edilmiş satış kalemi için Tedarikçi → Lot → İş Emri → Müşteri zinciri. "Zincir Tamamlanma" yüzdesi görünür. SIP2026-003 için lot bağlantısı varsa ✓ Tam, yoksa ❌ Eksik.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s6_2">
+                    <div class="step-check" onclick="toggle('s6_2')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Lot Takip raporunu kullanın</div>
+                        <div class="step-desc">Sol menüden <strong>Lot Takip</strong> sayfasını açın. Listeden <strong>L2026-001</strong> lotunu seçin ve "Takip Et" butonuna tıklayın.</div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">4 adımlı zincir kartı görünür: Tedarikçi KRAFT KAGIT → Lot L2026-001 (4 seri) → 1 İş Emri → 1 Sipariş. İlgili satışlar tablosunda SIP2026-001 linki tıklanabilir.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s6_3">
+                    <div class="step-check" onclick="toggle('s6_3')"></div>
+                    <div class="step-body">
+                        <div class="step-title">Tedarikçi FSC Sertifika durumunu kontrol edin</div>
+                        <div class="step-desc">Sol menüden <strong>Tedarikçi FSC</strong> sayfasını açın.</div>
+                        <div class="screen-mock">
+                            <div class="mock-bar"><i class="fas fa-certificate me-1"></i> Tedarikçi FSC Sertifika Durumu</div>
+                            <div class="mock-row"><span style="font-size:11px;font-weight:600;">KRAFT KAGIT SAN. A.S.</span><span class="mock-badge-g ms-2">FSC-C123456</span><span style="margin-left:8px;font-size:10.5px;">31.12.2026</span><span style="margin-left:8px;font-size:10.5px;">228 gün</span><span class="mock-badge-g ms-2">Geçerli</span></div>
+                            <div class="mock-row" style="background:#fffbeb;"><span style="font-size:11px;font-weight:600;">SELULOZ TICARET LTD.</span><span class="mock-badge-y ms-2">FSC-C789012</span><span style="margin-left:8px;font-size:10.5px;color:#d97706;">15.06.2026</span><span style="margin-left:8px;font-size:10.5px;font-weight:600;color:#dc2626;">29 gün</span><span class="mock-badge-y ms-2">Yakında Bitiyor</span></div>
+                        </div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body">TED-002 sarı arka planla vurgulanmış. "29 gün" kırmızı renkte. Stat kartı: "1 Yakında Bitiyor".</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="s6_4">
+                    <div class="step-check" onclick="toggle('s6_4')"></div>
+                    <div class="step-body">
+                        <div class="step-title">CoC raporunu Excel'e aktarın</div>
+                        <div class="step-desc">Chain of Custody sayfasında <strong>Excel</strong> butonuna tıklayın.</div>
+                        <div class="expected">
+                            <div class="expected-title"><i class="fas fa-eye"></i> Ekranda ne görürsünüz?</div>
+                            <div class="expected-body"><code>FSC_CoCRaporu_DDMMYYYY.xlsx</code> dosyası indirilir. 14 sütun: SevkTarihi, SiparisNo, Musteri, MusteriFSC, Urun, Miktar, Birim, IsEmri, Lotlar, Seriler, Tedarikciler, TedarikFSC, FSCTipleri, ZincirDurumu.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Tamamlanma Banner -->
+        <div class="completion-banner" id="completionBanner">
+            <div style="font-size:48px;margin-bottom:8px;">🎉</div>
+            <h4 style="color:#fff;">Tebrikler! Tüm test adımları tamamlandı.</h4>
+            <p style="color:#a3e635;">FSC Takip ERP sisteminin hammaddeden satışa tüm sürecini başarıyla test ettiniz.
+            Sistem artık canlı kullanıma hazırdır.</p>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const TOTAL = 24;
+    let done = new Set(JSON.parse(localStorage.getItem('ts_done') || '[]'));
+
+    function toggle(id) {
+        if (done.has(id)) done.delete(id);
+        else done.add(id);
+        localStorage.setItem('ts_done', JSON.stringify([...done]));
+        render();
+    }
+
+    function render() {
+        document.querySelectorAll('.step').forEach(el => {
+            const check = el.querySelector('.step-check');
+            if (done.has(el.id)) check.classList.add('done');
+            else check.classList.remove('done');
+        });
+        const pct = Math.round(done.size * 100 / TOTAL);
+        document.getElementById('progFill').style.width = pct + '%';
+        document.getElementById('progLabel').textContent = done.size + ' / ' + TOTAL;
+        document.getElementById('bigPct').textContent = pct + '%';
+        document.getElementById('completionBanner').style.display = done.size >= TOTAL ? 'block' : 'none';
+
+        // Nav active phase
+        const phases = [1,2,3,4,5,6];
+        const links  = document.querySelectorAll('.ts-phase-link');
+        phases.forEach((p, i) => {
+            const ids  = Array.from({length:4}, (_,j) => `s${p}_${j+1}`);
+            const all  = ids.every(id => done.has(id));
+            const some = ids.some(id => done.has(id));
+            links[i].style.color = all ? '#16a34a' : some ? '#d97706' : '';
+        });
+    }
+
+    function goPhase(n) {
+        const el = document.getElementById('phase' + n);
+        if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+        document.querySelectorAll('.ts-phase-link').forEach((l,i) => l.classList.toggle('active', i === n-1));
+    }
+
+    // Scroll spy
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                const num = e.target.id.replace('phase','');
+                document.querySelectorAll('.ts-phase-link').forEach((l,i) => l.classList.toggle('active', i === parseInt(num)-1));
+            }
+        });
+    }, { rootMargin:'-20% 0% -70% 0%', threshold:0 });
+    document.querySelectorAll('.phase-card').forEach(el => observer.observe(el));
+
+    render();
+</script>
+}

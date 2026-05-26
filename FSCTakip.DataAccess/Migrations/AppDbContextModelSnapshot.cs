@@ -118,6 +118,10 @@ namespace FSCTakip.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ExternalCode")
+                        .HasColumnType("nvarchar(100)")
+                        .HasMaxLength(100);
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -162,7 +166,7 @@ namespace FSCTakip.DataAccess.Migrations
                     b.ToTable("Customers");
                 });
 
-            modelBuilder.Entity("FSCTakip.Core.Entities.FscLot", b =>
+            modelBuilder.Entity("FSCTakip.Core.Entities.EtlConnection", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -177,31 +181,167 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("DispatchNo")
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastSyncAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastSyncStatus")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("DispatchPdfPath")
+                    b.Property<string>("Settings")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EtlConnections");
+                });
+
+            modelBuilder.Entity("FSCTakip.Core.Entities.EtlJob", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ErrorCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ErrorDetails")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("EtlConnectionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("InsertedCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("JobType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SkippedCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SourceFile")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TotalRecords")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UpdatedCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EtlConnectionId");
+
+                    b.ToTable("EtlJobs");
+                });
+
+            modelBuilder.Entity("FSCTakip.Core.Entities.FscLot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ArrivalDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DispatchNo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DispatchPdfPath")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("FscTypeId")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("InvoiceAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("InvoiceNo")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("InvoicePdfPath")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PartiNo")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("LotNo")
-                        .IsRequired()
+                    b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("SupplierId")
+                    b.Property<int?>("ProductId")
                         .HasColumnType("int");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TruckPlate")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -212,6 +352,8 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("FscTypeId");
+
+                    b.HasIndex("ProductId");
 
                     b.HasIndex("SupplierId");
 
@@ -244,6 +386,12 @@ namespace FSCTakip.DataAccess.Migrations
 
                     b.Property<int>("LotId")
                         .HasColumnType("int");
+
+                    b.Property<string>("LotNo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SerialNo")
                         .IsRequired()
@@ -537,6 +685,10 @@ namespace FSCTakip.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ExternalCode")
+                        .HasColumnType("nvarchar(100)")
+                        .HasMaxLength(100);
+
                     b.Property<int?>("ProductGroupId")
                         .HasColumnType("int");
 
@@ -676,9 +828,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<decimal>("ConsumedWeight")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("ConversionRate")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -692,6 +841,9 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<int>("MachineId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<decimal>("ProducedQuantity")
                         .HasColumnType("decimal(18,2)");
 
@@ -704,13 +856,13 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("UsedIn")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("WasteWeight")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("WorkOrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("WorkOrderRecipeId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -721,7 +873,139 @@ namespace FSCTakip.DataAccess.Migrations
 
                     b.HasIndex("WorkOrderId");
 
+                    b.HasIndex("WorkOrderRecipeId");
+
                     b.ToTable("ProductionDetails");
+                });
+
+            modelBuilder.Entity("FSCTakip.Core.Entities.SalesOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DeliveryAddress")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExternalOrderNo")
+                        .HasColumnType("nvarchar(100)")
+                        .HasMaxLength(100);
+
+                    b.Property<DateTime?>("DispatchDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DispatchNo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DispatchPdfPath")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("InvoiceAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("InvoiceNo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InvoicePdfPath")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("OrderDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PlateNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SalesOrderNo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.ToTable("SalesOrders");
+                });
+
+            modelBuilder.Entity("FSCTakip.Core.Entities.SalesOrderLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("SalesOrderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("WorkOrderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SalesOrderId");
+
+                    b.HasIndex("WorkOrderId");
+
+                    b.ToTable("SalesOrderLines");
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.StockMovement", b =>
@@ -811,6 +1095,14 @@ namespace FSCTakip.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ContactPerson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -848,6 +1140,18 @@ namespace FSCTakip.DataAccess.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SupplierCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExternalCode")
+                        .HasColumnType("nvarchar(100)")
+                        .HasMaxLength(100);
+
+                    b.Property<string>("TaxNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TaxOffice")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -943,6 +1247,9 @@ namespace FSCTakip.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -957,8 +1264,21 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<DateTime>("DisposalDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("DisposalMethod")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DisposedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -970,7 +1290,12 @@ namespace FSCTakip.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("WorkOrderId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("WorkOrderId");
 
                     b.ToTable("WasteManagements");
                 });
@@ -983,6 +1308,12 @@ namespace FSCTakip.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal>("ActualQuantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -993,19 +1324,27 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<int?>("CustomerId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("bit");
+                    b.Property<int>("MachineId")
+                        .HasColumnType("int");
 
-                    b.Property<string>("MachineId")
-                        .IsRequired()
+                    b.Property<string>("ExternalOrderNo")
+                        .HasColumnType("nvarchar(100)")
+                        .HasMaxLength(100);
+
+                    b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("PlannedDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("PlannedQuantity")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("ProductCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -1020,6 +1359,10 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("MachineId");
+
+                    b.HasIndex("ProductId");
 
                     b.ToTable("WorkOrders");
                 });
@@ -1043,13 +1386,15 @@ namespace FSCTakip.DataAccess.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("FscSerialId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("PlannedQuantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ProducedQuantity")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ProductId")
@@ -1060,6 +1405,9 @@ namespace FSCTakip.DataAccess.Migrations
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("WasteQuantity")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("WorkOrderId")
                         .HasColumnType("int");
@@ -1075,6 +1423,15 @@ namespace FSCTakip.DataAccess.Migrations
                     b.ToTable("WorkOrderRecipes");
                 });
 
+            modelBuilder.Entity("FSCTakip.Core.Entities.EtlJob", b =>
+                {
+                    b.HasOne("FSCTakip.Core.Entities.EtlConnection", "EtlConnection")
+                        .WithMany()
+                        .HasForeignKey("EtlConnectionId");
+
+                    b.Navigation("EtlConnection");
+                });
+
             modelBuilder.Entity("FSCTakip.Core.Entities.FscLot", b =>
                 {
                     b.HasOne("FSCTakip.Core.Entities.FscType", "FscType")
@@ -1083,13 +1440,18 @@ namespace FSCTakip.DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("FSCTakip.Core.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId");
+
                     b.HasOne("FSCTakip.Core.Entities.Supplier", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("FscType");
+
+                    b.Navigation("Product");
 
                     b.Navigation("Supplier");
                 });
@@ -1183,26 +1545,70 @@ namespace FSCTakip.DataAccess.Migrations
             modelBuilder.Entity("FSCTakip.Core.Entities.ProductionDetail", b =>
                 {
                     b.HasOne("FSCTakip.Core.Entities.FscSerial", "FscSerial")
-                        .WithMany()
+                        .WithMany("ProductionDetails")
                         .HasForeignKey("FscSerialId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("FSCTakip.Core.Entities.Machine", "Machine")
                         .WithMany()
                         .HasForeignKey("MachineId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("FSCTakip.Core.Entities.WorkOrder", "WorkOrder")
                         .WithMany("ProductionDetails")
                         .HasForeignKey("WorkOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("FSCTakip.Core.Entities.WorkOrderRecipe", "WorkOrderRecipe")
+                        .WithMany()
+                        .HasForeignKey("WorkOrderRecipeId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("FscSerial");
 
                     b.Navigation("Machine");
+
+                    b.Navigation("WorkOrder");
+
+                    b.Navigation("WorkOrderRecipe");
+                });
+
+            modelBuilder.Entity("FSCTakip.Core.Entities.SalesOrder", b =>
+                {
+                    b.HasOne("FSCTakip.Core.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("FSCTakip.Core.Entities.SalesOrderLine", b =>
+                {
+                    b.HasOne("FSCTakip.Core.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FSCTakip.Core.Entities.SalesOrder", "SalesOrder")
+                        .WithMany("Lines")
+                        .HasForeignKey("SalesOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FSCTakip.Core.Entities.WorkOrder", "WorkOrder")
+                        .WithMany()
+                        .HasForeignKey("WorkOrderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SalesOrder");
 
                     b.Navigation("WorkOrder");
                 });
@@ -1230,27 +1636,54 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Navigation("WorkOrder");
                 });
 
+            modelBuilder.Entity("FSCTakip.Core.Entities.WasteManagement", b =>
+                {
+                    b.HasOne("FSCTakip.Core.Entities.WorkOrder", "WorkOrder")
+                        .WithMany()
+                        .HasForeignKey("WorkOrderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("WorkOrder");
+                });
+
             modelBuilder.Entity("FSCTakip.Core.Entities.WorkOrder", b =>
                 {
                     b.HasOne("FSCTakip.Core.Entities.Customer", null)
                         .WithMany("WorkOrders")
                         .HasForeignKey("CustomerId");
+
+                    b.HasOne("FSCTakip.Core.Entities.Machine", "Machine")
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FSCTakip.Core.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Machine");
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.WorkOrderRecipe", b =>
                 {
                     b.HasOne("FSCTakip.Core.Entities.FscSerial", "FscSerial")
                         .WithMany()
-                        .HasForeignKey("FscSerialId");
+                        .HasForeignKey("FscSerialId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("FSCTakip.Core.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("FSCTakip.Core.Entities.WorkOrder", "WorkOrder")
-                        .WithMany()
+                        .WithMany("WorkOrderRecipes")
                         .HasForeignKey("WorkOrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1274,6 +1707,11 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Navigation("Serials");
                 });
 
+            modelBuilder.Entity("FSCTakip.Core.Entities.FscSerial", b =>
+                {
+                    b.Navigation("ProductionDetails");
+                });
+
             modelBuilder.Entity("FSCTakip.Core.Entities.PaperColor", b =>
                 {
                     b.Navigation("Products");
@@ -1286,9 +1724,16 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Navigation("ParentRecipes");
                 });
 
+            modelBuilder.Entity("FSCTakip.Core.Entities.SalesOrder", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
             modelBuilder.Entity("FSCTakip.Core.Entities.WorkOrder", b =>
                 {
                     b.Navigation("ProductionDetails");
+
+                    b.Navigation("WorkOrderRecipes");
                 });
 #pragma warning restore 612, 618
         }

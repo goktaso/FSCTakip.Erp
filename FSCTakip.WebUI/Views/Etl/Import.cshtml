@@ -1,0 +1,287 @@
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "Excel Aktarımı";
+    var connections = ViewBag.Connections as List<EtlConnection> ?? new();
+}
+
+@section TopbarActions {
+    <a href="/Etl/Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> ETL Paneli
+    </a>
+}
+
+<div class="row g-4">
+
+    <!-- Sol Panel — Form -->
+    <div class="col-md-5">
+        <div class="table-card p-4">
+            <h6 class="fw-semibold mb-3"><i class="fas fa-file-upload me-2 text-primary"></i>Aktarım Ayarları</h6>
+
+            <!-- Aktarım Türü -->
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">Aktarım Türü <span class="text-danger">*</span></label>
+                <select id="jobType" class="form-select" onchange="onJobTypeChange()">
+                    <option value="">— Seçiniz —</option>
+                    <optgroup label="── FSC İşlem Kayıtları ──">
+                        <option value="LotImport">🟢 Hammadde Lot Girişi</option>
+                        <option value="UretimImport">🔵 Üretim Kaydı</option>
+                        <option value="SatisImport">🟠 Satış / Sevkiyat</option>
+                    </optgroup>
+                    <optgroup label="── Netsis ETL Dosyası ──">
+                        <option value="EtlImport">⭐ ETL Otomatik Algıla (Tedarikçi / Müşteri / Hammadde)</option>
+                    </optgroup>
+                    <optgroup label="── Tanım Tabloları ──">
+                        <option value="ProductImport">Ürün Aktarımı</option>
+                        <option value="SupplierImport">Tedarikçi Aktarımı</option>
+                        <option value="CustomerImport">Müşteri Aktarımı</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Bağlantı Profili -->
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">Bağlantı Profili <span class="text-muted fw-normal">(isteğe bağlı)</span></label>
+                <select id="connectionId" class="form-select">
+                    <option value="">— Manuel Yükleme —</option>
+                    @foreach (var c in connections)
+                    {
+                        <option value="@c.Id">@c.Name (@c.Type)</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Dosya -->
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">Excel Dosyası <span class="text-danger">*</span></label>
+                <input type="file" id="excelFile" class="form-control" accept=".xlsx,.xls" onchange="onFileChange()">
+                <div class="form-text">Yalnızca .xlsx formatı. İlk satır başlık olmalıdır.</div>
+            </div>
+
+            <!-- Şablon İndir -->
+            <div id="templateLinks" style="display:none;" class="mb-3">
+                <div class="p-3 rounded" style="background:#f8fafc; border:1px dashed #d1d5db;">
+                    <div class="small fw-semibold mb-2"><i class="fas fa-download me-1 text-success"></i>Şablon İndir</div>
+                    <a id="templateLink" href="#" class="btn btn-outline-success btn-sm" target="_blank">
+                        <i class="fas fa-file-excel me-1"></i> <span id="templateText">Şablonu İndir</span>
+                    </a>
+                    <div class="text-muted mt-2" style="font-size:11px;" id="templateHint"></div>
+                </div>
+            </div>
+
+            <!-- Önizle -->
+            <button class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="previewFile()" id="btnPreview" disabled>
+                <i class="fas fa-eye me-1"></i> Önizle
+            </button>
+            <button class="btn btn-primary btn-sm w-100" onclick="executeImport()" id="btnExecute" disabled>
+                <i class="fas fa-play me-1"></i> Aktarımı Başlat
+            </button>
+        </div>
+    </div>
+
+    <!-- Sağ Panel — Önizleme / Sonuç -->
+    <div class="col-md-7">
+
+        <!-- Başlangıç durumu -->
+        <div id="panelStart" class="table-card p-5 text-center">
+            <div style="width:64px;height:64px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+                <i class="fas fa-file-upload" style="font-size:28px;color:#3b82f6;"></i>
+            </div>
+            <div class="fw-semibold mb-1">Aktarım türünü seçin ve dosya yükleyin</div>
+            <div class="text-muted small">Dosyayı önizleyerek kolonları doğrulayın, ardından aktarımı başlatın.</div>
+        </div>
+
+        <!-- Önizleme tablosu -->
+        <div id="panelPreview" class="table-card" style="display:none;">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fas fa-table text-primary"></i>
+                <strong class="small">Dosya Önizleme</strong>
+                <span id="previewInfo" class="text-muted small ms-auto"></span>
+            </div>
+            <div class="table-responsive" style="max-height:360px; overflow-y:auto;">
+                <table class="data-table" id="previewTable">
+                    <thead id="previewHead"></thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Yükleniyor -->
+        <div id="panelLoading" class="table-card p-5 text-center" style="display:none;">
+            <div class="spinner-border text-primary mb-3" style="width:48px;height:48px;"></div>
+            <div class="fw-semibold">Aktarım yapılıyor...</div>
+            <div class="text-muted small mt-1">Lütfen bekleyin, sayfayı kapatmayın.</div>
+        </div>
+
+        <!-- Sonuç -->
+        <div id="panelResult" class="table-card p-4" style="display:none;">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <i id="resultIcon" class="fas fa-check-circle text-success" style="font-size:20px;"></i>
+                <h6 class="fw-semibold mb-0" id="resultTitle">Aktarım Tamamlandı</h6>
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-3 text-center p-2 rounded" style="background:#f8fafc; border:1px solid #e5e7eb;">
+                    <div class="fw-bold" id="rTotal" style="font-size:22px;">0</div>
+                    <div class="text-muted" style="font-size:11px;">Toplam</div>
+                </div>
+                <div class="col-3 text-center p-2 rounded" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+                    <div class="fw-bold text-success" id="rInserted" style="font-size:22px;">0</div>
+                    <div class="text-muted" style="font-size:11px;">Eklendi</div>
+                </div>
+                <div class="col-3 text-center p-2 rounded" style="background:#eff6ff; border:1px solid #bfdbfe;">
+                    <div class="fw-bold text-primary" id="rUpdated" style="font-size:22px;">0</div>
+                    <div class="text-muted" style="font-size:11px;">Güncellendi</div>
+                </div>
+                <div class="col-3 text-center p-2 rounded" style="background:#fef2f2; border:1px solid #fecaca;">
+                    <div class="fw-bold text-danger" id="rErrors" style="font-size:22px;">0</div>
+                    <div class="text-muted" style="font-size:11px;">Hata</div>
+                </div>
+            </div>
+            <div id="errorDetails" style="display:none;">
+                <div class="small fw-semibold text-danger mb-1"><i class="fas fa-exclamation-triangle me-1"></i>Hata Detayları</div>
+                <pre id="errorList" class="p-3 rounded" style="background:#fef2f2;font-size:11px;max-height:150px;overflow-y:auto;color:#991b1b;"></pre>
+            </div>
+            <button class="btn btn-outline-primary btn-sm mt-2" onclick="resetForm()">
+                <i class="fas fa-redo me-1"></i> Yeni Aktarım
+            </button>
+            <a href="/Etl/History" class="btn btn-outline-secondary btn-sm mt-2 ms-1">
+                <i class="fas fa-history me-1"></i> Geçmişi Gör
+            </a>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const typeInfo = {
+    EtlImport:      { label: 'ETL Otomatik',  cols: ['(başlık satırı otomatik algılanır)'], hint: 'Netsis ETL Excel dosyalarını (ETL_Tedarikciler / ETL_Musteriler / ETL_HammaddeGirisleri) doğrudan içe aktarır. Başlık satırı okunarak Tedarikçi mi, Müşteri mi, Hammadde mi olduğu otomatik belirlenir. Şablon indirmenize gerek yok — ETL sayfasından indirdiğiniz dosyayı buraya yükleyin.' },
+    LotImport:      { label: 'Hammadde Lot',  cols: ['PartiNo','TedarikciKodu','UrunKodu','FscTipi','SeriNo','Miktar','AlisIrsaliyeNo','AlisFaturaNo','GirisTarihi','Plaka','Notlar'], hint: 'PartiNo tekrarlanırsa aynı partiye birden fazla seri eklenir. FscTipi: FSC 100% / FSC_MIX / FSC RECYCLED vb.' },
+    UretimImport:   { label: 'Üretim',        cols: ['UretimNo','Tarih','Makine','MamulKodu','UretimMiktari','PartiNo','HammaddeKodu','KullanilanMiktar','Fire','Notlar'], hint: 'UretimNo tekrarlanırsa aynı üretim fişine birden fazla hammadde tüketimi eklenir. PartiNo sistemde kayıtlı olmalıdır.' },
+    SatisImport:    { label: 'Satış',         cols: ['SatisNo','Tarih','MusteriKodu','UrunKodu','Miktar','BirimFiyat','IrsaliyeNo','FaturaNo','Notlar'], hint: 'SatisNo tekrarlanırsa aynı satışa birden fazla ürün eklenir. MusteriKodu sistemde kayıtlı olmalıdır.' },
+    ProductImport:  { label: 'Ürün',          cols: ['UrunKodu','UrunAdi','Birim','GrupAdi','IsActive'], hint: 'UrunKodu mevcut ise günceller, yoksa ekler. GrupAdi sistem ile eşleşmelidir.' },
+    SupplierImport: { label: 'Tedarikçi',     cols: ['TedarikciKodu','TedarikciAdi','FscKodu','ContactPerson','Telefon','Email'], hint: 'TedarikciKodu mevcut ise günceller. Kod boş ise otomatik TED-NNN üretilir.' },
+    CustomerImport: { label: 'Müşteri',       cols: ['MusteriKodu','MusteriAdi','VergiNo','VergiDairesi','Sehir','Telefon','Email'], hint: 'MusteriKodu mevcut ise günceller. Kod boş ise otomatik MHS-NNN üretilir.' }
+};
+
+function onJobTypeChange() {
+    const t = document.getElementById('jobType').value;
+    const tl = document.getElementById('templateLinks');
+    if (!t) { tl.style.display = 'none'; return; }
+    tl.style.display = '';
+    document.getElementById('templateLink').href = `/Etl/DownloadTemplate?type=${t}`;
+    document.getElementById('templateText').textContent = `${typeInfo[t].label} Şablonunu İndir`;
+    document.getElementById('templateHint').textContent = `Kolonlar: ${typeInfo[t].cols.join(', ')}`;
+    checkReady();
+}
+
+function onFileChange() { checkReady(); }
+
+function checkReady() {
+    const t = document.getElementById('jobType').value;
+    const f = document.getElementById('excelFile').files[0];
+    const ok = t && f;
+    document.getElementById('btnPreview').disabled  = !ok;
+    document.getElementById('btnExecute').disabled  = !ok;
+}
+
+function previewFile() {
+    const file = document.getElementById('excelFile').files[0];
+    const type = document.getElementById('jobType').value;
+    if (!file || !type) return;
+
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('jobType', type);
+
+    document.getElementById('panelStart').style.display   = 'none';
+    document.getElementById('panelPreview').style.display = 'none';
+    document.getElementById('panelLoading').style.display = '';
+    document.getElementById('panelResult').style.display  = 'none';
+
+    fetch('/Etl/ImportPreview', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => {
+            document.getElementById('panelLoading').style.display  = 'none';
+            if (!res.success) { alert(res.message); document.getElementById('panelStart').style.display = ''; return; }
+
+            const thead = document.getElementById('previewHead');
+            const tbody = document.getElementById('previewBody');
+            thead.innerHTML = '<tr>' + res.headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+            tbody.innerHTML = res.preview.map(r =>
+                '<tr>' + r.map(c => `<td class="small">${c}</td>`).join('') + '</tr>'
+            ).join('');
+            document.getElementById('previewInfo').textContent = `${res.totalRows} satır (ilk 10 gösteriliyor)`;
+            document.getElementById('panelPreview').style.display = '';
+        });
+}
+
+function executeImport() {
+    const file = document.getElementById('excelFile').files[0];
+    const type = document.getElementById('jobType').value;
+    const connId = document.getElementById('connectionId').value;
+    if (!file || !type) { alert('Aktarım türü ve dosya seçilmelidir.'); return; }
+    if (!confirm(`"${typeInfo[type]?.label ?? type}" aktarımını başlatmak istiyor musunuz?`)) return;
+
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('jobType', type);
+    if (connId) fd.append('connectionId', connId);
+
+    document.getElementById('panelStart').style.display   = 'none';
+    document.getElementById('panelPreview').style.display = 'none';
+    document.getElementById('panelLoading').style.display = '';
+    document.getElementById('panelResult').style.display  = 'none';
+    document.getElementById('btnPreview').disabled  = true;
+    document.getElementById('btnExecute').disabled  = true;
+
+    fetch('/Etl/ImportExecute', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => {
+            document.getElementById('panelLoading').style.display = 'none';
+            document.getElementById('panelResult').style.display  = '';
+
+            const total = res.inserted + res.updated + res.skippedCount + res.errorCount;
+            document.getElementById('rTotal').textContent    = res.inserted + res.updated + (res.skippedCount ?? 0) + res.errorCount;
+            document.getElementById('rInserted').textContent = res.inserted;
+            document.getElementById('rUpdated').textContent  = res.updated;
+            document.getElementById('rErrors').textContent   = res.errorCount;
+
+            const isSuccess = res.success && res.errorCount === 0;
+            document.getElementById('resultIcon').className = isSuccess
+                ? 'fas fa-check-circle text-success'
+                : 'fas fa-exclamation-circle text-warning';
+            document.getElementById('resultTitle').textContent = isSuccess
+                ? 'Aktarım Başarıyla Tamamlandı'
+                : 'Aktarım Kısmen Tamamlandı';
+
+            const errDiv  = document.getElementById('errorDetails');
+            const errList = document.getElementById('errorList');
+            if (res.errors && res.errors.length > 0) {
+                errList.textContent = res.errors.join('\n');
+                errDiv.style.display = '';
+            } else {
+                errDiv.style.display = 'none';
+            }
+        })
+        .catch(() => {
+            document.getElementById('panelLoading').style.display = 'none';
+            document.getElementById('panelStart').style.display   = '';
+            document.getElementById('btnPreview').disabled  = false;
+            document.getElementById('btnExecute').disabled  = false;
+            alert('Aktarım sırasında bir hata oluştu.');
+        });
+}
+
+function resetForm() {
+    document.getElementById('jobType').value    = '';
+    document.getElementById('excelFile').value  = '';
+    document.getElementById('connectionId').value = '';
+    document.getElementById('templateLinks').style.display = 'none';
+    document.getElementById('btnPreview').disabled = true;
+    document.getElementById('btnExecute').disabled = true;
+    document.getElementById('panelResult').style.display  = 'none';
+    document.getElementById('panelPreview').style.display = 'none';
+    document.getElementById('panelStart').style.display   = '';
+}
+</script>
+}

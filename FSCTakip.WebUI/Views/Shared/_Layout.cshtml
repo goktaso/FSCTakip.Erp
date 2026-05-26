@@ -2,369 +2,1752 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>@ViewData["Title"] - FSC ERP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"] - FSC Takip ERP</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css">
-    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
 
     <style>
+        :root {
+            --sidebar-bg:      #1a2744;
+            --sidebar-hover:   rgba(255,255,255,.07);
+            --sidebar-active:  rgba(25,118,210,.22);
+            --accent:          #1976d2;
+            --accent-dark:     #1565c0;
+            --accent-light:    #e3f2fd;
+            --topbar-h:        56px;
+            --sidebar-w:       250px;
+            --sidebar-w-col:   64px;
+            --card-radius:     10px;
+            --shadow-sm:       0 1px 4px rgba(0,0,0,.08);
+            --shadow-md:       0 4px 16px rgba(0,0,0,.12);
+            --text-muted:      #6b7280;
+            --border:          #e5e7eb;
+            --bg-page:         #f0f2f5;
+            --table-header-bg: #1a2744;
+            --table-header-color: #fff;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
         body {
             margin: 0;
-            background: #f4f7f6;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            font-size: 14px;
+            background: var(--bg-page);
+            color: #111827;
             overflow-x: hidden;
         }
 
-        .main-wrapper {
-            display: flex;
-            height: 100vh;
-            position: relative;
-        }
-
-        /* --- SIDEBAR - Yapı korundu, renkler FSC yeşili yapıldı --- */
+        /* ── SIDEBAR ───────────────────────────────────── */
         .sidebar {
-            width: 260px;
-            min-width: 260px;
-            background: #1e3d14; /* Mavi-gri yerine Koyu Orman Yeşili */
-            color: white;
-            display: flex;
-            flex-direction: column;
-            transition: all 0.3s;
+            position: fixed; top: 0; left: 0;
+            width: var(--sidebar-w);
+            height: 100vh;
+            background: var(--sidebar-bg);
+            display: flex; flex-direction: column;
+            transition: width .25s cubic-bezier(.4,0,.2,1);
             z-index: 1050;
-        }
-
-            .sidebar.collapsed {
-                width: 70px;
-                min-width: 70px;
-            }
-
-                .sidebar.collapsed .sidebar-header h4, .sidebar.collapsed .menu-label, .sidebar.collapsed .nav-link span, .sidebar.collapsed .nav-link .float-right {
-                    display: none !important;
-                }
-
-                .sidebar.collapsed .collapse {
-                    display: none !important;
-                }
-
-        .sidebar-header {
-            padding: 20px;
-            background: #142a0d; /* Başlık alanı daha koyu yeşil */
-            text-align: center;
-        }
-
-        .menu-label {
-            padding: 15px 20px 5px 20px;
-            font-size: 0.7rem;
-            color: #8da386; /* Yazılar yeşilimsi gri */
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .nav-link {
-            color: #bdc3c7;
-            padding: 12px 20px;
-            display: block;
-            text-decoration: none !important;
-            transition: 0.2s;
-            cursor: pointer;
-        }
-
-            .nav-link:hover {
-                background: #2c5e1a; /* Hover yeşili */
-                color: #ffffff;
-            }
-
-            .nav-link.active {
-                background: #4ca637; /* Aktif sayfa yeşili */
-                color: white !important;
-            }
-
-            .nav-link i {
-                width: 25px;
-                color: #4ca637; /* İkonlar açık yeşil */
-            }
-
-            .nav-link.active i {
-                color: white !important;
-            }
-
-        .collapse-inner {
-            background: #142a0d;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .collapse-item {
-            padding: 10px 20px 10px 50px;
-            color: #bdc3c7 !important;
-            font-size: 0.85rem;
-            text-decoration: none !important;
-            display: block;
-        }
-
-            .collapse-item:hover {
-                background: #243342;
-                color: #4ca637 !important;
-            }
-
-            .collapse-item.active {
-                color: white !important;
-                font-weight: bold;
-                background: #4ca637;
-            }
-
-        /* --- CONTENT AREA & BUTONLAR - Senin orijinal renklerin korundu --- */
-        .content-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            width: 100%;
             overflow: hidden;
         }
+        .sidebar.collapsed { width: var(--sidebar-w-col); }
 
-        .page-header {
-            background: white;
-            padding: 10px 20px;
-            border-bottom: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        .sidebar-logo {
+            display: flex; align-items: center; gap: 10px;
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            white-space: nowrap; overflow: hidden;
+            text-decoration: none;
+            background: rgba(0,0,0,.15);
+        }
+        .sidebar-logo .logo-icon {
+            width: 34px; height: 34px; border-radius: 8px;
+            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 15px; color: #fff;
+        }
+        .sidebar-logo .logo-text { color: #fff; font-weight: 700; font-size: 15px; line-height: 1.2; }
+        .sidebar-logo .logo-sub  { color: rgba(255,255,255,.45); font-size: 10px; font-weight: 400; letter-spacing:.03em; }
+        .sidebar.collapsed .logo-text,
+        .sidebar.collapsed .logo-sub { display: none; }
+
+        .sidebar-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px 0; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
+
+        .nav-section {
+            padding: 14px 16px 4px;
+            font-size: 10px; font-weight: 600; letter-spacing: .1em;
+            color: rgba(255,255,255,.28); text-transform: uppercase;
+            white-space: nowrap; overflow: hidden;
+        }
+        .sidebar.collapsed .nav-section { opacity: 0; height: 0; padding: 0; }
+
+        .nav-item { margin: 1px 6px; }
+        .nav-link-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 10px; border-radius: 7px;
+            color: rgba(255,255,255,.65); font-size: 13.5px; font-weight: 500;
+            text-decoration: none; white-space: nowrap; overflow: hidden;
+            transition: background .15s, color .15s;
+            cursor: pointer; border: none; background: none; width: 100%; text-align: left;
+        }
+        .nav-link-item:hover { background: var(--sidebar-hover); color: #fff; }
+        .nav-link-item.active {
+            background: var(--sidebar-active);
+            color: #fff;
+            box-shadow: inset 3px 0 0 var(--accent);
+        }
+        .nav-link-item .nav-icon {
+            width: 22px; text-align: center; font-size: 14px; flex-shrink: 0;
+            color: rgba(255,255,255,.45);
+        }
+        .nav-link-item.active .nav-icon,
+        .nav-link-item:hover .nav-icon { color: #60a5fa; }
+        .nav-link-item .nav-label { flex: 1; }
+        .nav-link-item .nav-arrow {
+            font-size: 10px; transition: transform .2s;
+            color: rgba(255,255,255,.3);
+        }
+        .nav-link-item[aria-expanded="true"] .nav-arrow { transform: rotate(90deg); }
+        .sidebar.collapsed .nav-label,
+        .sidebar.collapsed .nav-arrow { display: none; }
+
+        .nav-sub { padding-left: 12px; }
+        .nav-sub .nav-item { margin: 1px 0; }
+        .nav-sub .nav-link-item {
+            font-size: 13px; font-weight: 400;
+            padding: 7px 10px;
+            color: rgba(255,255,255,.5);
+        }
+        .nav-sub .nav-link-item::before {
+            content: ''; width: 5px; height: 5px; border-radius: 50%;
+            background: rgba(255,255,255,.2); flex-shrink: 0;
+        }
+        .nav-sub .nav-link-item.active::before,
+        .nav-sub .nav-link-item:hover::before { background: #60a5fa; }
+        .sidebar.collapsed .nav-sub { display: none; }
+
+        /* ── COLLAPSIBLE NAV SECTIONS ──────────────────────────── */
+        .nav-section-toggle {
+            width: 100%; display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px 4px;
+            background: none; border: none; cursor: pointer;
+            font-size: 10px; font-weight: 600; letter-spacing: .1em;
+            color: rgba(255,255,255,.30); text-transform: uppercase;
+            white-space: nowrap; overflow: hidden;
+            transition: color .15s; line-height: 1.4;
+        }
+        .nav-section-toggle:hover { color: rgba(255,255,255,.52); }
+        .nav-section-toggle:focus { outline: none; box-shadow: none; }
+        .nav-section-arrow {
+            font-size: 9px; flex-shrink: 0; margin-left: 4px;
+            color: rgba(255,255,255,.22);
+            transition: transform .22s ease;
+        }
+        .nav-section-toggle[aria-expanded="true"] .nav-section-arrow { transform: rotate(90deg); }
+        /* İkon-only modda başlıklar gizlenir, tüm öğeler görünür kalır */
+        .sidebar.collapsed .nav-section-toggle {
+            opacity: 0; height: 0; padding: 0; pointer-events: none; overflow: hidden;
+        }
+        .sidebar.collapsed .nav-section-collapse { display: block !important; }
+
+        .sidebar-footer {
+            padding: 10px 12px;
+            border-top: 1px solid rgba(255,255,255,.08);
+            white-space: nowrap; overflow: hidden;
+            background: rgba(0,0,0,.15);
+        }
+        .sidebar-user {
+            display: flex; align-items: center; gap: 10px;
+            color: rgba(255,255,255,.6); font-size: 12px;
+        }
+        .sidebar-user .avatar {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; color: #fff; font-weight: 700; flex-shrink: 0;
+        }
+        .sidebar.collapsed .sidebar-user span { display: none; }
+
+        /* ── TOPBAR ────────────────────────────────────── */
+        .topbar {
+            position: fixed; top: 0;
+            left: var(--sidebar-w); right: 0;
+            height: var(--topbar-h);
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center;
+            padding: 0 18px; gap: 10px;
+            transition: left .25s cubic-bezier(.4,0,.2,1);
+            z-index: 1000; box-shadow: 0 1px 6px rgba(0,0,0,.07);
+        }
+        .sidebar.collapsed ~ .page-shell .topbar { left: var(--sidebar-w-col); }
+
+        .topbar-toggle {
+            width: 34px; height: 34px; border-radius: 7px;
+            border: 1px solid var(--border); background: transparent;
+            display: flex; align-items: center; justify-content: center;
+            color: #374151; cursor: pointer; flex-shrink: 0;
+            transition: background .15s;
+        }
+        .topbar-toggle:hover { background: var(--accent-light); color: var(--accent); }
+
+        .topbar-title { font-size: 15px; font-weight: 600; color: #111827; }
+        .topbar-breadcrumb { font-size: 11.5px; color: var(--text-muted); }
+
+        .topbar-user {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 10px; border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #fafafa;
+        }
+        .topbar-user .user-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; color: #fff;
+        }
+        .topbar-user .user-name { font-size: 12.5px; font-weight: 600; color: #111827; }
+        .topbar-user .user-role { font-size: 11px; color: var(--text-muted); }
+
+        .topbar-actions { display: flex; align-items: center; gap: 6px; }
+        .topbar-btn {
+            height: 32px; padding: 0 13px; border-radius: 7px; font-size: 12.5px;
+            font-weight: 500; display: inline-flex; align-items: center; gap: 6px;
+            border: 1px solid var(--border); background: #fff; color: #374151;
+            cursor: pointer; text-decoration: none; transition: all .15s;
+        }
+        .topbar-btn:hover { background: var(--bg-page); color: #111827; }
+        .topbar-btn.btn-primary-custom {
+            background: var(--accent); border-color: var(--accent); color: #fff;
+        }
+        .topbar-btn.btn-primary-custom:hover { background: var(--accent-dark); color: #fff; }
+        .topbar-btn.btn-excel { color: #166534; border-color: #bbf7d0; background: #f0fdf4; }
+        .topbar-btn.btn-excel:hover { background: #dcfce7; color: #166534; }
+        .topbar-btn.btn-pdf { color: #991b1b; border-color: #fecaca; background: #fff5f5; }
+        .topbar-btn.btn-pdf:hover { background: #fee2e2; color: #991b1b; }
+        .topbar-btn.btn-filter { color: #92400e; border-color: #fde68a; background: #fffbeb; }
+        .topbar-btn.btn-filter:hover { background: #fef3c7; color: #92400e; }
+        .btn-logout {
+            width: 32px; height: 32px; border-radius: 7px; padding: 0;
+            border: 1px solid #fecaca; background: #fff5f5; color: #dc2626;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all .15s; font-size: 13px;
+        }
+        .btn-logout:hover { background: #fee2e2; }
+
+        /* Topbar birincil aksiyon butonu */
+        .topbar-primary { display: flex; align-items: center; }
+        .btn-topbar-add {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 0 20px; height: 36px; border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            color: #fff !important; border: none; cursor: pointer;
+            font-size: 13.5px; font-weight: 600; letter-spacing: .01em;
+            box-shadow: 0 2px 8px rgba(25,118,210,.35);
+            transition: all .18s; text-decoration: none; white-space: nowrap;
+        }
+        .btn-topbar-add:hover {
+            background: linear-gradient(135deg, var(--accent-dark) 0%, #0d47a1 100%);
+            box-shadow: 0 4px 14px rgba(25,118,210,.45);
+            transform: translateY(-1px); color: #fff;
+        }
+        .btn-topbar-add .btn-add-icon {
+            width: 20px; height: 20px; border-radius: 5px;
+            background: rgba(255,255,255,.22);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; flex-shrink: 0;
         }
 
-        .header-top {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 10px;
+        /* ── PAGE SHELL ────────────────────────────────── */
+        .page-shell {
+            margin-left: var(--sidebar-w);
+            transition: margin-left .25s cubic-bezier(.4,0,.2,1);
         }
-
-        #hamburgerBtn {
-            background: #1e3d14; /* Hamburger butonu sidebar ile uyumlu yeşil */
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 5px;
-            scrollbar-width: none;
-        }
-
-        /* Senin orijinal buton renklerin (Turuncu, Yeşil, Mavi, Mor) dokunulmadı */
-        .btn-filter {
-            background-color: #f39c12;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
-        }
-
-        .btn-excel {
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
-        }
-
-        .btn-print {
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
-        }
-
-        .btn-add {
-            background-color: #8e44ad;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
-        }
+        .sidebar.collapsed ~ .page-shell { margin-left: var(--sidebar-w-col); }
 
         .page-body {
-            padding: 20px;
-            overflow-y: auto;
-            flex: 1;
+            padding: 20px 22px 32px;
+            margin-top: var(--topbar-h);
+            min-height: calc(100vh - var(--topbar-h));
         }
 
-        .overlay {
-            display: none;
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1040;
+        /* ── CARDS ─────────────────────────────────────── */
+        .card {
+            border: 1px solid var(--border) !important;
+            border-radius: var(--card-radius) !important;
+            box-shadow: var(--shadow-sm);
+        }
+        .card-header-accent, .card-header-blue {
+            background: linear-gradient(135deg, #1a2744 0%, #243566 100%);
+            color: #fff; padding: 13px 18px;
+            border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+            font-weight: 600; font-size: 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .card-header-green {
+            background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+            color: #fff; padding: 13px 18px;
+            border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+            font-weight: 600; font-size: 14px;
+            display: flex; align-items: center; gap: 8px;
         }
 
-            .overlay.active {
-                display: block;
-            }
-
-        @@media (max-width: 992px) {
-            .sidebar {
-                position: fixed;
-                left: -260px;
-                height: 100%;
-            }
-
-                .sidebar.active {
-                    left: 0;
-                }
+        /* ── STAT CARDS ────────────────────────────────── */
+        .stat-card {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 16px 18px;
+            display: flex; align-items: center; gap: 14px;
+            box-shadow: var(--shadow-sm); transition: box-shadow .2s, transform .2s;
         }
+        .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+        .stat-icon {
+            width: 44px; height: 44px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 17px; flex-shrink: 0;
+        }
+        .stat-icon.blue   { background: #dbeafe; color: #1d4ed8; }
+        .stat-icon.green  { background: #dcfce7; color: #166534; }
+        .stat-icon.amber  { background: #fef3c7; color: #92400e; }
+        .stat-icon.red    { background: #fee2e2; color: #991b1b; }
+        .stat-icon.purple { background: #ede9fe; color: #5b21b6; }
+        .stat-icon.navy   { background: #e0e7ff; color: #3730a3; }
+        .stat-value { font-size: 22px; font-weight: 700; color: #111827; line-height: 1; }
+        .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+        .stat-trend { font-size: 11px; font-weight: 500; }
+        .stat-trend.up   { color: #16a34a; }
+        .stat-trend.down { color: #dc2626; }
+
+        /* ── TABLE ─────────────────────────────────────── */
+        .table-card { border-radius: var(--card-radius); overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+        .table { margin: 0; }
+        .table thead th {
+            background: var(--table-header-bg); color: var(--table-header-color);
+            font-size: 11.5px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: .05em; padding: 11px 14px;
+            border-bottom: none; white-space: nowrap; border-color: rgba(255,255,255,.1);
+        }
+        .table thead th:first-child { border-radius: 0; }
+        .table-filter-row th {
+            background: #f1f5f9 !important; color: #374151 !important;
+            padding: 6px 8px !important; border-bottom: 1px solid var(--border) !important;
+            font-size: 11px !important; text-transform: none !important; letter-spacing: 0 !important;
+        }
+        .table-filter-row th select,
+        .table-filter-row th input {
+            width: 100%; font-size: 11px; padding: 3px 6px;
+            border: 1px solid #d1d5db; border-radius: 4px; background: #fff;
+        }
+        .table tbody tr { transition: background .1s; }
+        .table tbody tr:hover { background: #f8faff; }
+        .table tbody td { padding: 10px 14px; border-color: #f1f5f9; vertical-align: middle; }
+        .table tbody tr:last-child td { border-bottom: none; }
+        .table-link { color: var(--accent); text-decoration: none; font-weight: 500; }
+        .table-link:hover { color: var(--accent-dark); text-decoration: underline; }
+
+        /* ── BADGES ────────────────────────────────────── */
+        .badge { font-weight: 500; font-size: 11px; padding: 3px 9px; border-radius: 20px; }
+        .badge-green  { background: #dcfce7; color: #166534; }
+        .badge-red    { background: #fee2e2; color: #991b1b; }
+        .badge-amber  { background: #fef3c7; color: #92400e; }
+        .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+        .badge-gray   { background: #f3f4f6; color: #374151; }
+        .badge-purple { background: #ede9fe; color: #5b21b6; }
+        .badge-navy   { background: #e0e7ff; color: #3730a3; }
+
+        /* ── FILTER PANEL ──────────────────────────────── */
+        .filter-panel {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 14px 18px;
+            margin-bottom: 14px; box-shadow: var(--shadow-sm);
+            border-left: 3px solid var(--accent);
+        }
+
+        /* ── MODAL ─────────────────────────────────────── */
+        .modal-content { border: none !important; border-radius: 12px !important; box-shadow: 0 20px 60px rgba(0,0,0,.18) !important; overflow: hidden; }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border) !important; }
+        .modal-header.dark { background: var(--sidebar-bg); color: #fff; }
+        .modal-header.dark .btn-close { filter: invert(1) opacity(.7); }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--border) !important; }
+
+        .form-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+        .form-control, .form-select {
+            border-radius: 7px; border: 1px solid #d1d5db;
+            font-size: 13.5px; padding: 7px 11px;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent); box-shadow: 0 0 0 3px rgba(25,118,210,.15);
+        }
+        .input-group-text {
+            background: #f9fafb; border-color: #d1d5db;
+            color: var(--text-muted); font-size: 13px;
+        }
+
+        /* ── BUTTONS ───────────────────────────────────── */
+        .btn { border-radius: 7px; font-size: 13.5px; font-weight: 500; }
+        .btn-primary { background: var(--accent); border-color: var(--accent); }
+        .btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+        .btn-success { background: #16a34a; border-color: #16a34a; }
+        .btn-success:hover { background: #15803d; border-color: #15803d; }
+        .btn-sm { border-radius: 6px; font-size: 12px; }
+
+        /* ── PROGRESS ──────────────────────────────────── */
+        .progress { border-radius: 20px; background: #e9ecef; height: 6px; }
+        .progress-bar { border-radius: 20px; transition: width .4s ease; }
+
+        /* ── MOBILE ────────────────────────────────────── */
+        @@media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: var(--sidebar-w) !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .page-shell { margin-left: 0 !important; }
+            .topbar { left: 0 !important; }
+            .page-body { padding: 14px; }
+            .topbar-user { display: none; }
+        }
+
+        /* ── OVERLAY ───────────────────────────────────── */
+        .sidebar-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.45); z-index: 1049;
+        }
+        .sidebar-overlay.active { display: block; }
+
+        /* ── SCROLLBAR ─────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c1c8d4; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* ── ANIMATIONS ────────────────────────────────── */
+        .fade-in { animation: fadeIn .3s ease; }
+        @@keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+
+        /* ── BELGE NO LİNKİ ────────────────────────────── */
+        .doc-num-btn {
+            background: none; border: none; padding: 0; cursor: pointer;
+            font-size: inherit; font-weight: 600; color: #1a2744;
+            text-decoration: underline; text-decoration-style: dotted;
+            text-underline-offset: 3px; transition: color .15s;
+        }
+        .doc-num-btn:hover { color: var(--accent); text-decoration-style: solid; }
+
+        /* ── STATS GRID ────────────────────────────────── */
+        .stats-grid {
+            display: grid;
+            gap: 14px;
+        }
+
+        /* ── DATA TABLE ────────────────────────────────── */
+        .data-table {
+            width: 100%; border-collapse: collapse; font-size: 13px; margin: 0;
+        }
+        .data-table thead tr {
+            background: var(--table-header-bg);
+        }
+        .data-table thead th {
+            color: var(--table-header-color); font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: .06em;
+            padding: 11px 14px; white-space: nowrap; border: none;
+        }
+        .data-table tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background .12s;
+        }
+        .data-table tbody tr:nth-child(even) { background: #fafbfd; }
+        .data-table tbody tr:hover { background: #eff6ff !important; }
+        .data-table tbody tr:last-child { border-bottom: none; }
+        .data-table tbody td {
+            padding: 10px 14px; vertical-align: middle; color: #374151;
+        }
+        .data-table tfoot td {
+            padding: 10px 14px; background: #f1f5f9;
+            border-top: 2px solid #e2e8f0; font-weight: 600; font-size: 12px;
+        }
+
+        /* ── EMPTY STATE ───────────────────────────────── */
+        .empty-state {
+            padding: 56px 20px; text-align: center;
+        }
+        .empty-state .empty-icon {
+            width: 64px; height: 64px; border-radius: 16px;
+            background: #f1f5f9; display: inline-flex;
+            align-items: center; justify-content: center;
+            font-size: 28px; color: #94a3b8; margin-bottom: 14px;
+        }
+        .empty-state h6 { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+        .empty-state p { color: var(--text-muted); font-size: 12.5px; margin: 0; }
+        .empty-state i { font-size: 40px; color: #d1d5db; margin-bottom: 12px; display: block; }
+
+        /* ── TOAST ─────────────────────────────────────── */
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; }
+
+        /* ── PAGE TITLE BAR ────────────────────────────── */
+        .page-title-bar {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 12px 18px;
+            margin-bottom: 16px; box-shadow: var(--shadow-sm);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .page-title-bar .ptb-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: var(--accent-light); color: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+        }
+        .page-title-bar .ptb-title { font-size: 15px; font-weight: 700; color: #111827; }
+        .page-title-bar .ptb-sub { font-size: 12px; color: var(--text-muted); }
+        .page-title-bar .ptb-badge {
+            background: var(--accent); color: #fff;
+            font-size: 11px; font-weight: 600; padding: 2px 9px;
+            border-radius: 20px;
+        }
+
+        /* ── INFO CARD (açıklama kartı) ─────────────────── */
+        .info-card {
+            background: #f8faff; border: 1px solid #dbeafe;
+            border-radius: 10px; padding: 12px 16px;
+            display: flex; gap: 10px; align-items: flex-start;
+        }
+        .info-card.warning { background: #fffbeb; border-color: #fde68a; }
+        .info-card.danger  { background: #fef2f2; border-color: #fecaca; }
+        .info-card.success { background: #f0fdf4; border-color: #bbf7d0; }
+        .info-card i { font-size: 15px; margin-top: 1px; flex-shrink: 0; }
+
+        /* ── SECTION HEADER ────────────────────────────── */
+        .section-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 12px 16px; border-bottom: 1px solid var(--border);
+            background: #fff;
+        }
+        .section-header .sh-icon {
+            width: 30px; height: 30px; border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; flex-shrink: 0;
+        }
+        .section-header .sh-title { font-size: 13px; font-weight: 600; color: #1e293b; }
+        .section-header .sh-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+        .section-header .sh-actions { margin-left: auto; display: flex; gap: 6px; }
+
+        /* ── DETAIL ROW ────────────────────────────────── */
+        .detail-row {
+            display: flex; padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9; font-size: 13px;
+            align-items: flex-start;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row .dr-label {
+            width: 140px; flex-shrink: 0;
+            color: var(--text-muted); font-size: 12px;
+        }
+        .detail-row .dr-value { font-weight: 500; color: #1e293b; flex: 1; }
+
+        /* ── FSC BADGE ──────────────────────────────────── */
+        .fsc-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+        }
+        .fsc-badge.active  { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .fsc-badge.warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .fsc-badge.expired { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+        /* ── PROGRESS STACKED BAR ───────────────────────── */
+        .stock-bar {
+            height: 6px; border-radius: 4px; background: #e5e7eb;
+            overflow: hidden; min-width: 60px;
+        }
+        .stock-bar-fill {
+            height: 100%; border-radius: 4px;
+            transition: width .4s cubic-bezier(.4,0,.2,1);
+        }
+
+        /* ── NAV TABS IMPROVED ──────────────────────────── */
+        .nav-tabs .nav-link {
+            color: #6b7280; font-size: 13px; font-weight: 500;
+            padding: 8px 16px; border-radius: 8px 8px 0 0;
+            border: 1px solid transparent; transition: all .15s;
+        }
+        .nav-tabs .nav-link:hover { color: var(--accent); background: #f0f4ff; }
+        .nav-tabs .nav-link.active {
+            color: var(--accent); background: #fff;
+            border-color: var(--border) var(--border) #fff;
+            font-weight: 600;
+        }
+
+        /* ── TOPBAR PAGE TITLE ──────────────────────────── */
+        .topbar-page-title {
+            font-size: 14px; font-weight: 600; color: #1e293b; letter-spacing: -.01em;
+        }
+
+        /* ── QUICK ACTION CARD ──────────────────────────── */
+        .quick-action {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 12px; border-radius: 8px;
+            border: 1px solid var(--border); background: #fff;
+            text-decoration: none; color: #374151; font-size: 12.5px;
+            transition: all .15s; cursor: pointer;
+        }
+        .quick-action:hover {
+            border-color: var(--accent); background: #eff6ff;
+            color: var(--accent); transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(25,118,210,.12);
+        }
+        .quick-action i { font-size: 14px; flex-shrink: 0; }
+
+        /* ── PAGE HEADER ────────────────────────────────── */
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 18px; padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .page-title {
+            font-size: 17px; font-weight: 700; color: #1e293b;
+            margin: 0; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* ── FILTER CARD / FORM ─────────────────────────── */
+        .filter-card {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 12px 16px;
+            margin-bottom: 14px; box-shadow: var(--shadow-sm);
+            border-left: 3px solid var(--accent);
+        }
+        .filter-form {
+            display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+        }
+        .filter-form .form-control,
+        .filter-form .form-select { min-width: 140px; }
+
+        /* ── BOOTSTRAP BADGE OVERRIDE ───────────────────── */
+        .badge-success  { background: #dcfce7 !important; color: #166534 !important; }
+        .badge-danger   { background: #fee2e2 !important; color: #991b1b !important; }
+        .badge-warning  { background: #fef3c7 !important; color: #92400e !important; }
+        .badge-info     { background: #dbeafe !important; color: #1d4ed8 !important; }
+        .badge-primary  { background: #dbeafe !important; color: #1d4ed8 !important; }
+        .badge-secondary{ background: #f3f4f6 !important; color: #374151 !important; }
+        /* soft variants (no !important — used inline alongside .badge) */
+        .badge-success-soft  { background: #dcfce7; color: #166534; }
+        .badge-danger-soft   { background: #fee2e2; color: #991b1b; }
+        .badge-warning-soft  { background: #fef3c7; color: #92400e; }
+        .badge-info-soft     { background: #dbeafe; color: #1d4ed8; }
+        .badge-secondary-soft{ background: #f3f4f6; color: #374151; }
+        .badge-amber         { background: #fef3c7 !important; color: #92400e !important; }
+
+        /* ── STOCK BAR COLORS ───────────────────────────── */
+        .bg-success-soft { background: #16a34a; }
+        .bg-warning-soft { background: #d97706; }
+        .bg-danger-soft  { background: #dc2626; }
+
+        /* ── QUICK-ADD INLINE BUTTON ─────────────────────── */
+        .qa-group { display: flex; gap: 4px; align-items: stretch; }
+        .qa-group > select,
+        .qa-group > .form-select { flex: 1; min-width: 0; }
+        .qa-btn {
+            width: 32px; min-width: 32px;
+            border-radius: 6px;
+            border: 1.5px dashed #93c5fd;
+            background: #eff6ff; color: #1d4ed8;
+            cursor: pointer; font-size: 12px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all .15s; padding: 0; line-height: 1;
+        }
+        .qa-btn:hover { background: #dbeafe; border-style: solid; border-color: #1d4ed8; transform: none; }
+        .qa-btn:active { background: #bfdbfe; }
+        /* QuickAdd modal header color band */
+        .qa-modal-header { border-radius: 0; padding: 14px 20px; }
     </style>
 </head>
 <body>
 
-    <div class="overlay" id="sidebarOverlay"></div>
+@{
+    var ctrl   = ViewContext.RouteData.Values["Controller"]?.ToString() ?? "";
+    var action = ViewContext.RouteData.Values["Action"]?.ToString() ?? "";
 
-    <div class="main-wrapper">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <h4 class="mb-0 text-white border-bottom pb-2">FSC ERP</h4>
-                <small class="text-info font-weight-bold">LOCAL SERVER | 2026</small>
+    // Hangi sidebar bölümü aktif?
+    var activeSection = ctrl switch {
+        "Purchase" or "Production" or "Sales" or "Stock" => "fsc",
+        "Customers" or "Suppliers" or "Products"          => "ticari",
+        "Reports"                                         => "rapor",
+        "Product" or "Paper" or "Machine" or "Warehouse"
+            or "Etl" or "Guide"                           => "tanim",
+        "Users" or "Groups" or "AuditLog"                 => "admin",
+        _                                                 => "genel"
+    };
+
+    string Sec(string id) => activeSection == id ? "show" : "";
+    string Exp(string id) => activeSection == id ? "true" : "false";
+}
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ── SIDEBAR ─────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+
+    <a class="sidebar-logo" href="/Home/Index">
+        <div class="logo-icon"><i class="fas fa-leaf"></i></div>
+        <div>
+            <div class="logo-text">FSC Takip ERP</div>
+            <div class="logo-sub">Kraft Kağıt İzlenebilirlik</div>
+        </div>
+    </a>
+
+    <nav class="sidebar-nav">
+
+        <!-- ── GENEL ─────────────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-genel" aria-expanded="@Exp("genel")">
+            <span>Genel</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("genel")" id="sec-genel">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Home"?"active":"")" href="/Home/Index">
+                    <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
+                    <span class="nav-label">Dashboard</span>
+                </a>
             </div>
+        </div>
 
-            <nav class="sidebar-menu overflow-auto">
-                <div class="menu-label">GENEL</div>
-                <a href="/Home/Index" class="nav-link"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+        <!-- ── FSC İŞLEMLERİ ──────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-fsc" aria-expanded="@Exp("fsc")">
+            <span>FSC İşlemleri</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("fsc")" id="sec-fsc">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Purchase"?"active":"")" href="/Purchase/Index">
+                    <span class="nav-icon"><i class="fas fa-truck-loading"></i></span>
+                    <span class="nav-label">Hammadde Girişi</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Production"&&action=="Index"?"active":"")" href="/Production/Index">
+                    <span class="nav-icon"><i class="fas fa-industry"></i></span>
+                    <span class="nav-label">İş Emirleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Production"&&action=="WasteReport"?"active":"")" href="/Production/WasteReport">
+                    <span class="nav-icon"><i class="fas fa-burn"></i></span>
+                    <span class="nav-label">Fire Raporu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Production"&&action=="WasteManagement"?"active":"")" href="/Production/WasteManagement">
+                    <span class="nav-icon"><i class="fas fa-trash-alt"></i></span>
+                    <span class="nav-label">İmha Kayıtları</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Sales"?"active":"")" href="/Sales/Index">
+                    <span class="nav-icon"><i class="fas fa-shipping-fast"></i></span>
+                    <span class="nav-label">Satış / Sevkiyat</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="RawMaterial"?"active":"")" href="/Stock/RawMaterial">
+                    <span class="nav-icon"><i class="fas fa-scroll"></i></span>
+                    <span class="nav-label">Hammadde Stoğu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="Index"?"active":"")" href="/Stock/Index">
+                    <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
+                    <span class="nav-label">Stok Durumu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="Movements"?"active":"")" href="/Stock/Movements">
+                    <span class="nav-icon"><i class="fas fa-exchange-alt"></i></span>
+                    <span class="nav-label">Stok Hareketleri</span>
+                </a>
+            </div>
+        </div>
 
-                <div class="menu-label">OPERASYONEL</div>
-                <a href="/Planning/Index" class="nav-link"><i class="fas fa-calendar-alt"></i> <span>Üretim Planlama</span></a>
-                <a href="/Stock/Index" class="nav-link"><i class="fas fa-warehouse"></i> <span>Stok Yönetimi</span></a>
-                <a href="/Shipping/Index" class="nav-link"><i class="fas fa-shipping-fast"></i> <span>Sevkiyat Paneli</span></a>
+        <!-- ── TİCARİ ──────────────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-ticari" aria-expanded="@Exp("ticari")">
+            <span>Ticari</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("ticari")" id="sec-ticari">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Customers"?"active":"")" href="/Customers/Index">
+                    <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+                    <span class="nav-label">Müşteriler</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Suppliers"?"active":"")" href="/Suppliers/Index">
+                    <span class="nav-icon"><i class="fas fa-truck"></i></span>
+                    <span class="nav-label">Tedarikçiler</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Products"?"active":"")" href="/Products/Index">
+                    <span class="nav-icon"><i class="fas fa-box-open"></i></span>
+                    <span class="nav-label">Ürünler</span>
+                </a>
+            </div>
+        </div>
 
-                <div class="menu-label">TİCARİ</div>
-                <a href="/Customers/Index" class="nav-link"><i class="fas fa-user-tie"></i> <span>Müşteriler</span></a>
-                <a href="/Suppliers/Index" class="nav-link"><i class="fas fa-truck"></i> <span>Tedarikçiler</span></a>
-                <a href="/Products/Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Products" ? "active" : "")"><i class="fas fa-box"></i> <span>Ürünler</span></a>
+        <!-- ── FSC RAPORLAR ───────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-rapor" aria-expanded="@Exp("rapor")">
+            <span>FSC Raporlar</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("rapor")" id="sec-rapor">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="ChainOfCustody"?"active":"")" href="/Reports/ChainOfCustody">
+                    <span class="nav-icon"><i class="fas fa-link"></i></span>
+                    <span class="nav-label">Chain of Custody</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="LotTrace"?"active":"")" href="/Reports/LotTrace">
+                    <span class="nav-icon"><i class="fas fa-search"></i></span>
+                    <span class="nav-label">Lot Takip</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="SupplierFsc"?"active":"")" href="/Reports/SupplierFsc">
+                    <span class="nav-icon"><i class="fas fa-certificate"></i></span>
+                    <span class="nav-label">Tedarikçi FSC</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="AuditReport"?"active":"")" href="/Reports/AuditReport">
+                    <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+                    <span class="nav-label">Denetim Özeti</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="AuditPeriod"?"active":"")" href="/AuditPeriod">
+                    <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
+                    <span class="nav-label">Denetim Dönemleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="BomAnalysis"?"active":"")" href="/Reports/BomAnalysis">
+                    <span class="nav-icon"><i class="fas fa-sitemap"></i></span>
+                    <span class="nav-label">BOM Analizi</span>
+                </a>
+            </div>
+        </div>
 
-                <div class="menu-label">SİSTEM AYARLARI</div>
+        <!-- ── TANIMLAMALAR ──────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-tanim" aria-expanded="@Exp("tanim")">
+            <span>Tanımlamalar</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("tanim")" id="sec-tanim">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Product"&&action=="BagTypes"?"active":"")" href="/Product/BagTypes">
+                    <span class="nav-icon"><i class="fas fa-shopping-bag"></i></span>
+                    <span class="nav-label">Torba Tipleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Product"&&action=="Groups"?"active":"")" href="/Product/Groups">
+                    <span class="nav-icon"><i class="fas fa-layer-group"></i></span>
+                    <span class="nav-label">Ürün Grupları</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Types"?"active":"")" href="/Paper/Types">
+                    <span class="nav-icon"><i class="fas fa-scroll"></i></span>
+                    <span class="nav-label">Kağıt Tipleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Colors"?"active":"")" href="/Paper/Colors">
+                    <span class="nav-icon"><i class="fas fa-palette"></i></span>
+                    <span class="nav-label">Kağıt Renkleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Weights"?"active":"")" href="/Paper/Weights">
+                    <span class="nav-icon"><i class="fas fa-balance-scale"></i></span>
+                    <span class="nav-label">Gramajlar</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Widths"?"active":"")" href="/Paper/Widths">
+                    <span class="nav-icon"><i class="fas fa-ruler-horizontal"></i></span>
+                    <span class="nav-label">Kağıt Enleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="FscTypes"?"active":"")" href="/Paper/FscTypes">
+                    <span class="nav-icon"><i class="fas fa-leaf"></i></span>
+                    <span class="nav-label">FSC Tipleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Machine"?"active":"")" href="/Machine/Machines">
+                    <span class="nav-icon"><i class="fas fa-cogs"></i></span>
+                    <span class="nav-label">Makineler</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Warehouse"?"active":"")" href="/Warehouse/Index">
+                    <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
+                    <span class="nav-label">Depolar</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Etl"?"active":"")" href="/Etl/Index">
+                    <span class="nav-icon"><i class="fas fa-sync-alt"></i></span>
+                    <span class="nav-label">ERP Entegrasyon</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Guide"&&action=="Index"?"active":"")" href="/Guide/Index">
+                    <span class="nav-icon"><i class="fas fa-book-open"></i></span>
+                    <span class="nav-label">Kullanım Kılavuzu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Guide"&&action=="TestScenario"?"active":"")" href="/Guide/TestScenario">
+                    <span class="nav-icon"><i class="fas fa-flask"></i></span>
+                    <span class="nav-label">Test Senaryosu</span>
+                </a>
+            </div>
+        </div>
 
+        <!-- ── SİSTEM YÖNETİMİ ───────────────────────────────── -->
+        @if (Context.Session.GetString("IsAdmin") == "1")
+        {
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-admin" aria-expanded="@Exp("admin")">
+            <span>Sistem Yönetimi</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("admin")" id="sec-admin">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Users"?"active":"")" href="/Users">
+                    <span class="nav-icon"><i class="fas fa-users-cog"></i></span>
+                    <span class="nav-label">Kullanıcılar</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Groups"?"active":"")" href="/Groups">
+                    <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
+                    <span class="nav-label">Yetki Grupları</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="AuditLog"?"active":"")" href="/AuditLog">
+                    <span class="nav-icon"><i class="fas fa-history"></i></span>
+                    <span class="nav-label">Değişiklik Günlüğü</span>
+                </a>
+            </div>
+        </div>
+        }
 
-                <div class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSettings">
-                        <i class="fas fa-cogs"></i> <span>Genel Tanımlar</span>
-                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
-                    </a>
-                    <div id="collapseSettings" class="collapse @(new[] { "AuditPeriod", "Units" }.Contains(ViewContext.RouteData.Values["Controller"]?.ToString()) ? "show" : "")">
-                        <div class="collapse-inner">
-                            @* Denetleme Periyodları *@
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AuditPeriod" ? "active" : "")"
-                               href="/AuditPeriod/Index">
-                                <i class="fas fa-calendar-check mr-2"></i> Denetleme Periyodları
-                            </a>
+    </nav>
 
-                            @* Birim Tanımları *@
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Units" ? "active" : "")"
-                               href="/Units/Index">
-                                <i class="fas fa-layer-group mr-2"></i> Birim Tanımları
-                            </a>
-                        </div>
-                    </div>
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            @{
+                var sessionName = Context.Session.GetString("UserName") ?? "?";
+                var sessionUser = Context.Session.GetString("Username") ?? "";
+                var sessionIsAdmin = Context.Session.GetString("IsAdmin") == "1";
+                var avatarLetter  = sessionName.Length > 0 ? sessionName[0].ToString().ToUpper() : "?";
+            }
+            <div class="avatar">@avatarLetter</div>
+            <div>
+                <div style="color:#fff;font-size:12.5px;font-weight:600;">@sessionName</div>
+                <div style="font-size:10.5px;color:rgba(255,255,255,.4);">
+                    @(sessionIsAdmin ? "Admin" : "@" + sessionUser)
                 </div>
-
-
-
-
-                <div class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTorba">
-                        <i class="fas fa-shopping-bag"></i> <span>Torba Tanımları</span>
-                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
-                    </a>
-                    <div id="collapseTorba" class="collapse @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Product" ? "show" : "")">
-                        <div class="collapse-inner">
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "BagTypes" ? "active" : "")" href="/Product/BagTypes">Torba Tipleri</a>
-                            <a class="collapse-item" href="/Product/Groups">Ürün Grupları</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#paperSet">
-                        <i class="fas fa-scroll"></i> <span>Kağıt Ayarları</span>
-                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
-                    </a>
-                    <div id="paperSet" class="collapse @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Paper" ? "show" : "")">
-                        <div class="collapse-inner">
-                            <a class="collapse-item" href="/Paper/Types">Kağıt Tipleri</a>
-                            <a class="collapse-item" href="/Paper/Colors">Kağıt Renkleri</a>
-                            <a class="collapse-item" href="/Paper/Weights">Gramajlar</a>
-                            <a class="collapse-item" href="/Paper/Widths">Kağıt Enleri</a>
-                            <a class="collapse-item" href="/Paper/FscTypes">FSC Tipleri</a>
-                        </div>
-                    </div>
-                </div>
-
-                <a href="/Machine/Machines" class="nav-link"><i class="fas fa-industry"></i> <span>Makineler</span></a>
-
-            </nav>
-        </aside>
-
-        <main class="content-area">
-            <header class="page-header">
-                <div class="header-top">
-                    <button id="hamburgerBtn" type="button"><i class="fas fa-bars"></i></button>
-                    <h2 class="h5 mb-0 font-weight-bold text-dark">@ViewData["Title"]</h2>
-                </div>
-
-                <div class="action-buttons">
-                    <button class="btn-filter" onclick="toggleFilter()"><i class="fas fa-filter"></i> Filtrele</button>
-                    <button class="btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
-                    <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Yazdır</button>
-                    <button class="btn-add" id="globalAddBtn"><i class="fas fa-plus-circle"></i> Yeni Ekle</button>
-                </div>
-            </header>
-
-            <section class="page-body">
-                @RenderBody()
-            </section>
-        </main>
+            </div>
+        </div>
     </div>
+</aside>
 
-    <script src="~/lib/jquery/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- ── PAGE SHELL ───────────────────────────────────────── -->
+<div class="page-shell" id="pageShell">
 
-    <script>
-        $(document).ready(function() {
-            // Sidebar Toggle
-            $('#hamburgerBtn').click(function() {
-                if ($(window).width() > 992) { $('#sidebar').toggleClass('collapsed'); }
-                else { $('#sidebar').toggleClass('active'); $('#sidebarOverlay').toggleClass('active'); }
-            });
+    <!-- TOPBAR -->
+    <header class="topbar" id="topbar">
+        <button class="topbar-toggle" id="sidebarToggle" title="Menüyü aç/kapat">
+            <i class="fas fa-bars" style="font-size:13px;"></i>
+        </button>
 
-            $('#sidebarOverlay').click(function() { $('#sidebar').removeClass('active'); $(this).removeClass('active'); });
-
-            // Global Yeni Ekle
-            $('#globalAddBtn').click(function() {
-                if (typeof openAddModal === "function") { openAddModal(); }
-                else { Swal.fire('Bilgi', 'Bu sayfa için ekleme fonksiyonu henüz tanımlanmadı.', 'info'); }
-            });
-        });
-
-        function toggleFilter() {
-            let panel = $('#filterPanel');
-            if(panel.length > 0) panel.slideToggle('fast');
-            else Swal.fire({ icon: 'info', title: 'Filtre', text: 'Bu sayfada aktif bir filtre paneli bulunamadı.', timer: 2000 });
+        <!-- Birincil aksiyon butonu (sol, belirgin) -->
+        @if (IsSectionDefined("TopbarPrimary"))
+        {
+            <div class="topbar-primary me-3">
+                @await RenderSectionAsync("TopbarPrimary", required: false)
+            </div>
         }
 
-        function exportToExcel() {
-            let action = '@ViewContext.RouteData.Values["Action"]';
-            let controller = '@ViewContext.RouteData.Values["Controller"]';
-            window.location.href = `/${controller}/Export${action}`;
-        }
-    </script>
+        <div class="flex-fill">
+            <div class="topbar-title">@ViewData["Title"]</div>
+        </div>
 
-    @await RenderSectionAsync("Scripts", required: false)
+        <!-- Sayfa bazlı aksiyonlar -->
+        <div class="topbar-actions" id="topbarActions">
+            @await RenderSectionAsync("TopbarActions", required: false)
+        </div>
+
+        <!-- Kullanıcı bilgisi -->
+        <div class="topbar-user ms-2">
+            <div class="user-avatar">Ö</div>
+            <div class="d-none d-md-block">
+                <div class="user-name">Özay Göktaş</div>
+                <div class="user-role">Admin / Yönetici</div>
+            </div>
+        </div>
+
+        <button class="btn-logout ms-1" title="Çıkış Yap">
+            <i class="fas fa-power-off"></i>
+        </button>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main class="page-body fade-in">
+        @RenderBody()
+    </main>
+
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ── GLOBAL PDF GÖRÜNTÜLEYICI MODAL ──────────────────────────── -->
+<div class="modal fade" id="pdfViewerModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:92vw;">
+        <div class="modal-content" style="height:88vh;display:flex;flex-direction:column;">
+            <div class="modal-header dark py-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-file-pdf" style="color:#f87171;font-size:15px;"></i>
+                    <h5 class="modal-title fw-semibold mb-0 fs-6" id="pdfViewerTitle">Belge</h5>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a id="pdfViewerLink" href="#" target="_blank"
+                       class="btn btn-sm btn-outline-light" style="font-size:12px;padding:3px 10px;">
+                        <i class="fas fa-external-link-alt me-1"></i> Yeni Sekmede Aç
+                    </a>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            style="filter:invert(1) opacity(.7);"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0" style="flex:1;overflow:hidden;">
+                <iframe id="pdfViewerFrame" src=""
+                        style="width:100%;height:100%;border:none;display:block;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── GLOBAL QUICK-ADD MODAL ───────────────────────────────────── -->
+<div class="modal fade" id="quickAddModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+        <div class="modal-content">
+            <div class="modal-header qa-modal-header" id="qaHeader" style="background:#1a2744;color:#fff;">
+                <div class="d-flex align-items-center gap-2">
+                    <div id="qaHeaderIcon" style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" id="qaTitle" style="font-size:14px;">Yeni Kayıt</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaClose"></button>
+            </div>
+            <div class="modal-body p-4" id="qaBody">
+                <!-- Dinamik form alanları buraya gelir -->
+            </div>
+            <div class="modal-footer border-top" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaCancelBtn">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" id="qaSaveBtn">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── QA: TEDARİKÇİ TAM FORM MODALI ──────────────────────────────── -->
+<div class="modal fade" id="qaSupplierModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#1a2744;color:#fff;border-radius:10px 10px 0 0;padding:14px 20px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" style="font-size:14px;">Yeni Tedarikçi Ekle</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaSupplierClose"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Tedarikçi Ünvanı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaSuppName" placeholder="Büyük harf ile girilir" style="text-transform:uppercase;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Tedarikçi Kodu</label>
+                        <input type="text" class="form-control" id="qaSuppCode" readonly style="background:#f8fafc;color:#6b7280;" placeholder="Otomatik">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Yetkili Kişi</label>
+                        <input type="text" class="form-control" id="qaSuppContact">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Telefon <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaSuppPhone" placeholder="5xxxxxxxxx">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">E-Posta</label>
+                        <input type="text" class="form-control" id="qaSuppEmail" placeholder="ornek@firma.com" style="text-transform:lowercase;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Şehir</label>
+                        <input type="text" class="form-control" id="qaSuppCity">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Adres</label>
+                        <input type="text" class="form-control" id="qaSuppAddress">
+                    </div>
+                    <div class="col-md-4">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Vergi Dairesi</label>
+                                <input type="text" class="form-control" id="qaSuppTaxOffice">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Vergi No</label>
+                                <input type="text" class="form-control" id="qaSuppTaxNumber" maxlength="11">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <i class="fas fa-certificate text-success"></i>
+                                <span class="fw-semibold" style="font-size:13px;color:#166534;">FSC Sertifika Bilgileri</span>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">FSC Sertifika No</label>
+                                    <input type="text" class="form-control" id="qaSuppFscCode" placeholder="FSC-C123456">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Sertifika Bitiş Tarihi</label>
+                                    <input type="date" class="form-control" id="qaSuppFscDate">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaSupplierCancel">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" id="qaSupplierSave">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── QA: MÜŞTERİ TAM FORM MODALI ───────────────────────────────── -->
+<div class="modal fade" id="qaCustomerModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#1a2744;color:#fff;border-radius:10px 10px 0 0;padding:14px 20px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" style="font-size:14px;">Yeni Müşteri Ekle</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaCustomerClose"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Müşteri Ünvanı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaCustName" placeholder="Büyük harf ile girilir" style="text-transform:uppercase;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Müşteri Kodu</label>
+                        <input type="text" class="form-control" id="qaCustCode" readonly style="background:#f8fafc;color:#6b7280;" placeholder="Otomatik">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Vergi Dairesi</label>
+                        <input type="text" class="form-control" id="qaCustTaxOffice">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Vergi Numarası</label>
+                        <input type="text" class="form-control" id="qaCustTaxNumber" maxlength="11">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Telefon <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaCustPhone" placeholder="5xxxxxxxxx">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">E-Posta</label>
+                        <input type="text" class="form-control" id="qaCustEmail" placeholder="ornek@firma.com" style="text-transform:lowercase;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Şehir</label>
+                        <input type="text" class="form-control" id="qaCustCity">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Adres</label>
+                        <input type="text" class="form-control" id="qaCustAddress">
+                    </div>
+                    <div class="col-12">
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <i class="fas fa-certificate text-success"></i>
+                                <span class="fw-semibold" style="font-size:13px;color:#166534;">FSC Lisans Bilgileri</span>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">FSC Lisans Kodu</label>
+                                    <input type="text" class="form-control" id="qaCustFscCode" placeholder="FSC-C123456">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Sertifika Bitiş Tarihi</label>
+                                    <input type="date" class="form-control" id="qaCustFscDate">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaCustomerCancel">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" id="qaCustomerSave">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── QA: FSC TİPİ TAM FORM MODALI ──────────────────────────────── -->
+<div class="modal fade" id="qaFscTypeModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#166534;color:#fff;border-radius:10px 10px 0 0;padding:14px 20px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-certificate"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" style="font-size:14px;">Yeni FSC Sertifika Tipi Ekle</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaFscTypeClose"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Sertifika Adı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaFscName" placeholder="Örn: Mix">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Kısa Kod <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaFscCode" placeholder="Örn: FSC-MIX" style="text-transform:uppercase;">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Açıklama</label>
+                        <textarea class="form-control" rows="2" id="qaFscDescription"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="qaFscIsActive" checked>
+                            <label class="form-check-label small fw-semibold" for="qaFscIsActive">Aktif</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaFscTypeCancel">İptal</button>
+                <button type="button" class="btn btn-success btn-sm px-4" id="qaFscTypeSave">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="~/lib/jquery/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+(function () {
+    const sidebar  = document.getElementById('sidebar');
+    const overlay  = document.getElementById('sidebarOverlay');
+    const toggle   = document.getElementById('sidebarToggle');
+    const isMobile = () => window.innerWidth <= 768;
+
+    toggle.addEventListener('click', () => {
+        if (isMobile()) {
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('active');
+        } else {
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+    });
+
+    overlay.addEventListener('click', () => {
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('active');
+    });
+
+    if (!isMobile() && localStorage.getItem('sidebarCollapsed') === 'true') {
+        sidebar.classList.add('collapsed');
+    }
+})();
+
+// ── NAV SECTION COLLAPSE — localStorage ile durum kalıcı ────────────────
+(function () {
+    const KEY      = 'navSecState';
+    const sections = ['sec-genel', 'sec-fsc', 'sec-ticari', 'sec-rapor', 'sec-tanim'];
+
+    // Kayıtlı durumu oku
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+
+    sections.forEach(id => {
+        const el  = document.getElementById(id);
+        const btn = document.querySelector(`[data-bs-target="#${id}"]`);
+        if (!el || !btn) return;
+
+        // Eğer localStorage'da kayıt varsa sunucu-side durumunu geçersiz kıl
+        if (id in saved) {
+            if (saved[id]) {
+                el.classList.add('show');
+                btn.setAttribute('aria-expanded', 'true');
+            } else {
+                el.classList.remove('show');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        // Toggle olaylarını dinle ve kaydet
+        el.addEventListener('shown.bs.collapse',  () => saveSec(id, true));
+        el.addEventListener('hidden.bs.collapse', () => saveSec(id, false));
+    });
+
+    function saveSec(id, open) {
+        let s = {};
+        try { s = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+        s[id] = open;
+        localStorage.setItem(KEY, JSON.stringify(s));
+    }
+})();
+
+// ── Global PDF Viewer ────────────────────────────────────────────────────
+var _pdfModal = null;
+function showPdf(url, title) {
+    var el = document.getElementById('pdfViewerModal');
+    if (!el) { window.open(url, '_blank'); return; }
+    document.getElementById('pdfViewerTitle').textContent = title || 'Belge';
+    document.getElementById('pdfViewerFrame').src = url;
+    document.getElementById('pdfViewerLink').href = url;
+    if (!_pdfModal) _pdfModal = new bootstrap.Modal(el);
+    _pdfModal.show();
+}
+document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('pdfViewerModal');
+    if (el) el.addEventListener('hide.bs.modal', function () {
+        document.getElementById('pdfViewerFrame').src = '';
+    });
+});
+
+function showToast(msg, type = 'success') {
+    const icons  = { success:'check-circle', error:'times-circle', warning:'exclamation-triangle', info:'info-circle' };
+    const colors = { success:'#166534', error:'#991b1b', warning:'#92400e', info:'#1d4ed8' };
+    const bg     = { success:'#f0fdf4', error:'#fef2f2', warning:'#fffbeb', info:'#eff6ff' };
+    const id = 'toast-' + Date.now();
+    const el = document.createElement('div');
+    el.id = id;
+    el.style.cssText = `background:${bg[type]};border:1px solid ${colors[type]}33;border-left:4px solid ${colors[type]};
+        border-radius:10px;padding:11px 15px;margin-top:7px;display:flex;align-items:center;gap:10px;
+        min-width:280px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeIn .25s ease;font-size:13.5px;`;
+    el.innerHTML = `<i class="fas fa-${icons[type]}" style="color:${colors[type]};font-size:15px;"></i>
+        <span style="color:#111827;flex:1;">${msg}</span>
+        <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:15px;">×</button>`;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => el.remove(), 4500);
+}
+
+function toggleFilter() {
+    const p = document.getElementById('filterPanel');
+    if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+function openAddModal() {
+    const fn = window.openAddModalFn;
+    if (typeof fn === 'function') fn();
+    else showToast('Bu sayfa için ekleme formu tanımlanmadı.', 'info');
+}
+function exportToExcel() {
+    const ctrl   = '@ViewContext.RouteData.Values["Controller"]';
+    const action = '@ViewContext.RouteData.Values["Action"]';
+    window.location.href = `/${ctrl}/Export${action}`;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   GLOBAL QUICK-ADD SİSTEMİ
+   Kullanım: openQuickAdd('supplier', 'supplierId')
+   Her kayıt türü için form alanları ve endpoint aşağıda tanımlı.
+══════════════════════════════════════════════════════════════════ */
+const QA_CONFIGS = {
+    supplier: {
+        title: 'Yeni Tedarikçi', icon: 'fas fa-truck', color: '#1565c0',
+        url: '/Suppliers/QuickAdd',
+        fields: [
+            { name:'Name',      label:'Tedarikçi Ünvanı',   req:true,  upper:true },
+            { name:'Phone',     label:'Telefon',             ph:'5xxxxxxxxx' },
+            { name:'TaxNumber', label:'Vergi Numarası',      maxlen:11 }
+        ]
+    },
+    customer: {
+        title: 'Yeni Müşteri', icon: 'fas fa-user-tie', color: '#1565c0',
+        url: '/Customers/QuickAdd',
+        fields: [
+            { name:'Name',  label:'Müşteri Ünvanı', req:true, upper:true },
+            { name:'Phone', label:'Telefon',         ph:'5xxxxxxxxx' }
+        ]
+    },
+    fsctype: {
+        title: 'Yeni FSC Tipi', icon: 'fas fa-certificate', color: '#166534',
+        url: '/Paper/QuickAddFscType',
+        fields: [
+            { name:'Name', label:'FSC Tipi (örn: FSC-MIX, FSC-100)', req:true, upper:true }
+        ]
+    },
+    productgroup: {
+        title: 'Yeni Ürün Grubu', icon: 'fas fa-layer-group', color: '#5b21b6',
+        url: '/Product/QuickAddGroup',
+        fields: [
+            { name:'GroupName', label:'Grup Adı',             req:true, upper:true },
+            { name:'GroupCode', label:'Grup Kodu (sayı)',     type:'number', min:1 }
+        ]
+    },
+    papercolor: {
+        title: 'Yeni Kağıt Rengi', icon: 'fas fa-palette', color: '#92400e',
+        url: '/Paper/QuickAddColor',
+        fields: [
+            { name:'Name', label:'Renk Adı', req:true, upper:true }
+        ]
+    },
+    paperweight: {
+        title: 'Yeni Gramaj', icon: 'fas fa-balance-scale', color: '#0e7490',
+        url: '/Paper/QuickAddWeight',
+        fields: [
+            { name:'Value', label:'Gramaj (gr/m²)', type:'number', req:true, min:1, step:'1' },
+            { name:'Unit',  label:'Birim',           type:'static', val:'gr/m²' }
+        ]
+    },
+    paperwidth: {
+        title: 'Yeni Kağıt Eni', icon: 'fas fa-arrows-alt-h', color: '#0e7490',
+        url: '/Paper/QuickAddWidth',
+        fields: [
+            { name:'Code',  label:'En Kodu (örn: B80)',  req:true, upper:true },
+            { name:'Value', label:'En Değeri (mm)',       type:'number', req:true, min:1 }
+        ]
+    },
+    papertype: {
+        title: 'Yeni Kağıt Tipi', icon: 'fas fa-file-alt', color: '#374151',
+        url: '/Paper/QuickAddPaperType',
+        fields: [
+            { name:'Name', label:'Kağıt Tipi Adı', req:true, upper:true }
+        ]
+    },
+    machine: {
+        title: 'Yeni Makine', icon: 'fas fa-cogs', color: '#374151',
+        url: '/Machine/QuickAdd',
+        fields: [
+            { name:'Name', label:'Makine Adı', req:true, upper:true }
+        ]
+    },
+    warehouse: {
+        title: 'Yeni Depo', icon: 'fas fa-warehouse', color: '#374151',
+        url: '/Warehouse/QuickAdd',
+        fields: [
+            { name:'Name', label:'Depo Adı', req:true, upper:true }
+        ]
+    }
+};
+
+// ── FULL-FORM MODALS: Tedarikçi / Müşteri / FSC Tipi ──────────────────
+// Her modalın kendi singleton + target select ID'si
+
+var _qaFullModals = {};
+var _qaFullTargetId = {};
+
+function _getOrCreateModal(id) {
+    if (!_qaFullModals[id]) {
+        _qaFullModals[id] = new bootstrap.Modal(document.getElementById(id));
+    }
+    return _qaFullModals[id];
+}
+
+function _resetAndOpenFullModal(modalId, targetSelectId) {
+    _qaFullTargetId[modalId] = targetSelectId;
+    // Tüm input/textarea temizle
+    document.querySelectorAll('#' + modalId + ' input:not([readonly]):not([type="checkbox"]), #' + modalId + ' textarea').forEach(el => {
+        el.value = '';
+        el.classList.remove('is-invalid');
+    });
+    // Checkbox'ları sıfırla
+    document.querySelectorAll('#' + modalId + ' input[type="checkbox"]').forEach(el => { el.checked = true; });
+    _getOrCreateModal(modalId).show();
+    setTimeout(() => {
+        const first = document.querySelector('#' + modalId + ' input:not([readonly])');
+        if (first) first.focus();
+    }, 350);
+}
+
+async function _saveFullModal(modalId, url, buildFd, btnId, labelBase) {
+    const fd  = buildFd();
+    if (!fd) return; // validation failed
+    const btn = document.getElementById(btnId);
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Kaydediliyor...';
+    try {
+        const res  = await fetch(url, { method: 'POST', body: fd });
+        const json = await res.json();
+        if (json.success) {
+            const targetId = _qaFullTargetId[modalId];
+            const sel = document.getElementById(targetId);
+            if (sel) {
+                const opt = new Option(json.text, json.id, true, true);
+                sel.appendChild(opt);
+                sel.value = json.id;
+                sel.dispatchEvent(new Event('change'));
+            }
+            _getOrCreateModal(modalId).hide();
+            showToast(labelBase + ': "' + json.text + '" eklendi.', 'success');
+        } else {
+            showToast(json.message || 'Kayıt hatası.', 'error');
+        }
+    } catch(e) {
+        showToast('Bağlantı hatası.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> Kaydet & Seç';
+    }
+}
+
+// ── TEDARİKÇİ TAM FORM ────────────────────────────────────────────────
+(function () {
+    document.getElementById('qaSupplierClose')?.addEventListener('click', () => _getOrCreateModal('qaSupplierModal').hide());
+    document.getElementById('qaSupplierCancel')?.addEventListener('click', () => _getOrCreateModal('qaSupplierModal').hide());
+    document.getElementById('qaSupplierSave')?.addEventListener('click', () => {
+        const name  = document.getElementById('qaSuppName').value.trim();
+        const phone = document.getElementById('qaSuppPhone').value.trim();
+        if (!name) { document.getElementById('qaSuppName').classList.add('is-invalid'); return; }
+        if (!phone) { document.getElementById('qaSuppPhone').classList.add('is-invalid'); return; }
+        document.getElementById('qaSuppName').classList.remove('is-invalid');
+        document.getElementById('qaSuppPhone').classList.remove('is-invalid');
+
+        _saveFullModal('qaSupplierModal', '/Suppliers/QuickAdd', () => {
+            const fd = new FormData();
+            fd.append('Name',          name.toUpperCase());
+            fd.append('ContactPerson', document.getElementById('qaSuppContact').value.trim());
+            fd.append('Phone',         phone);
+            fd.append('Email',         document.getElementById('qaSuppEmail').value.trim());
+            fd.append('City',          document.getElementById('qaSuppCity').value.trim());
+            fd.append('Address',       document.getElementById('qaSuppAddress').value.trim());
+            fd.append('TaxOffice',     document.getElementById('qaSuppTaxOffice').value.trim());
+            fd.append('TaxNumber',     document.getElementById('qaSuppTaxNumber').value.trim());
+            fd.append('FscCode',       document.getElementById('qaSuppFscCode').value.trim());
+            fd.append('FscExpiryDate', document.getElementById('qaSuppFscDate').value);
+            return fd;
+        }, 'qaSupplierSave', 'Tedarikçi');
+    });
+})();
+
+// ── MÜŞTERİ TAM FORM ──────────────────────────────────────────────────
+(function () {
+    document.getElementById('qaCustomerClose')?.addEventListener('click', () => _getOrCreateModal('qaCustomerModal').hide());
+    document.getElementById('qaCustomerCancel')?.addEventListener('click', () => _getOrCreateModal('qaCustomerModal').hide());
+    document.getElementById('qaCustomerSave')?.addEventListener('click', () => {
+        const name  = document.getElementById('qaCustName').value.trim();
+        const phone = document.getElementById('qaCustPhone').value.trim();
+        if (!name) { document.getElementById('qaCustName').classList.add('is-invalid'); return; }
+        if (!phone) { document.getElementById('qaCustPhone').classList.add('is-invalid'); return; }
+        document.getElementById('qaCustName').classList.remove('is-invalid');
+        document.getElementById('qaCustPhone').classList.remove('is-invalid');
+
+        _saveFullModal('qaCustomerModal', '/Customers/QuickAdd', () => {
+            const fd = new FormData();
+            fd.append('Name',           name.toUpperCase());
+            fd.append('Phone',          phone);
+            fd.append('Email',          document.getElementById('qaCustEmail').value.trim());
+            fd.append('TaxOffice',      document.getElementById('qaCustTaxOffice').value.trim());
+            fd.append('TaxNumber',      document.getElementById('qaCustTaxNumber').value.trim());
+            fd.append('City',           document.getElementById('qaCustCity').value.trim());
+            fd.append('Address',        document.getElementById('qaCustAddress').value.trim());
+            fd.append('FscLicenseCode', document.getElementById('qaCustFscCode').value.trim());
+            fd.append('FscExpiryDate',  document.getElementById('qaCustFscDate').value);
+            return fd;
+        }, 'qaCustomerSave', 'Müşteri');
+    });
+})();
+
+// ── FSC TİPİ TAM FORM ─────────────────────────────────────────────────
+(function () {
+    document.getElementById('qaFscTypeClose')?.addEventListener('click', () => _getOrCreateModal('qaFscTypeModal').hide());
+    document.getElementById('qaFscTypeCancel')?.addEventListener('click', () => _getOrCreateModal('qaFscTypeModal').hide());
+    document.getElementById('qaFscTypeSave')?.addEventListener('click', () => {
+        const name = document.getElementById('qaFscName').value.trim();
+        const code = document.getElementById('qaFscCode').value.trim();
+        let valid = true;
+        if (!name) { document.getElementById('qaFscName').classList.add('is-invalid'); valid = false; }
+        else document.getElementById('qaFscName').classList.remove('is-invalid');
+        if (!code) { document.getElementById('qaFscCode').classList.add('is-invalid'); valid = false; }
+        else document.getElementById('qaFscCode').classList.remove('is-invalid');
+        if (!valid) return;
+
+        _saveFullModal('qaFscTypeModal', '/Paper/QuickAddFscType', () => {
+            const fd = new FormData();
+            fd.append('Name',        name);
+            fd.append('Code',        code.toUpperCase());
+            fd.append('Description', document.getElementById('qaFscDescription').value.trim());
+            fd.append('IsActive',    document.getElementById('qaFscIsActive').checked ? 'true' : 'false');
+            return fd;
+        }, 'qaFscTypeSave', 'FSC Tipi');
+    });
+})();
+
+// ── GENEL QUICK-ADD ROUTER ─────────────────────────────────────────────
+// supplier / customer / fsctype → tam form modalları
+// Diğerleri → basit jenerik modal
+
+var _qaModal = null;
+var _qaTargetSelectId = null;
+var _qaCurrentConfig = null;
+
+function openQuickAdd(type, targetSelectId) {
+    // Tam form modal türleri
+    if (type === 'supplier') { _resetAndOpenFullModal('qaSupplierModal', targetSelectId); return; }
+    if (type === 'customer') { _resetAndOpenFullModal('qaCustomerModal', targetSelectId); return; }
+    if (type === 'fsctype')  { _resetAndOpenFullModal('qaFscTypeModal',  targetSelectId); return; }
+
+    // Jenerik basit modal (diğerleri)
+    const cfg = QA_CONFIGS[type];
+    if (!cfg) { console.error('QuickAdd: unknown type', type); return; }
+    _qaTargetSelectId = targetSelectId;
+    _qaCurrentConfig  = cfg;
+
+    // Header
+    document.getElementById('qaTitle').textContent = cfg.title;
+    const icon = document.getElementById('qaHeaderIcon');
+    icon.innerHTML = `<i class="${cfg.icon}"></i>`;
+    document.getElementById('qaHeader').style.background = cfg.color;
+
+    // Form alanlarını oluştur
+    let html = '<div class="row g-3">';
+    cfg.fields.forEach(f => {
+        if (f.type === 'static') {
+            html += `<div class="col-6">
+                <label class="form-label small fw-semibold">${f.label}</label>
+                <input type="text" class="form-control form-control-sm" value="${f.val||''}" readonly style="background:#f8fafc;">
+                <input type="hidden" name="${f.name}" value="${f.val||''}">
+            </div>`;
+        } else if (f.type === 'number') {
+            html += `<div class="col-6">
+                <label class="form-label small fw-semibold">${f.label}${f.req?'<span class="text-danger ms-1">*</span>':''}</label>
+                <input type="number" class="form-control form-control-sm" name="${f.name}"
+                       ${f.min!==undefined?'min="'+f.min+'"':''} ${f.step?'step="'+f.step+'"':'step="1"'}
+                       ${f.req?'required':''}>
+            </div>`;
+        } else {
+            html += `<div class="col-12">
+                <label class="form-label small fw-semibold">${f.label}${f.req?'<span class="text-danger ms-1">*</span>':''}</label>
+                <input type="text" class="form-control form-control-sm" name="${f.name}"
+                       ${f.ph?'placeholder="'+f.ph+'"':''} ${f.maxlen?'maxlength="'+f.maxlen+'"':''}
+                       ${f.req?'required':''} ${f.upper?'style="text-transform:uppercase;"':''}>
+            </div>`;
+        }
+    });
+    html += '</div>';
+    document.getElementById('qaBody').innerHTML = html;
+
+    if (!_qaModal) {
+        const el = document.getElementById('quickAddModal');
+        _qaModal = new bootstrap.Modal(el);
+        document.getElementById('qaClose').addEventListener('click',  () => _qaModal.hide());
+        document.getElementById('qaCancelBtn').addEventListener('click', () => _qaModal.hide());
+        document.getElementById('qaSaveBtn').addEventListener('click', saveQuickAdd);
+    }
+    _qaModal.show();
+    setTimeout(() => { const inp = document.querySelector('#qaBody input:not([readonly])'); if(inp) inp.focus(); }, 350);
+}
+
+async function saveQuickAdd() {
+    const cfg = _qaCurrentConfig;
+    const body = document.getElementById('qaBody');
+
+    const inputs = body.querySelectorAll('input[required]');
+    let valid = true;
+    inputs.forEach(i => { if (!i.value.trim()) { i.classList.add('is-invalid'); valid = false; } else { i.classList.remove('is-invalid'); } });
+    if (!valid) return;
+
+    body.querySelectorAll('input[style*="uppercase"]').forEach(i => { i.value = i.value.toUpperCase(); });
+
+    const fd = new FormData();
+    body.querySelectorAll('input[name]').forEach(i => fd.append(i.name, i.value.trim()));
+
+    const btn = document.getElementById('qaSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Kaydediliyor...';
+
+    try {
+        const res  = await fetch(cfg.url, { method:'POST', body: fd });
+        const json = await res.json();
+        if (json.success) {
+            const sel = document.getElementById(_qaTargetSelectId);
+            if (sel) {
+                const opt = new Option(json.text, json.id, true, true);
+                sel.appendChild(opt);
+                sel.value = json.id;
+                sel.dispatchEvent(new Event('change'));
+            }
+            _qaModal.hide();
+            showToast(`${cfg.title.replace('Yeni ','')}: "${json.text}" eklendi.`, 'success');
+        } else {
+            showToast(json.message || 'Kayıt hatası.', 'error');
+        }
+    } catch(e) {
+        showToast('Bağlantı hatası.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> Kaydet & Seç';
+    }
+}
+</script>
+
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

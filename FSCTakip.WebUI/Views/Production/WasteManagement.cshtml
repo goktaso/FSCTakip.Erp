@@ -1,0 +1,272 @@
+@model List<FSCTakip.Core.Entities.WasteManagement>
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "İmha / Atık Kayıtları";
+    var workOrders = ViewBag.WorkOrders as List<WorkOrder> ?? new();
+}
+
+@section TopbarPrimary {
+    <button class="btn btn-primary btn-sm px-3" onclick="openModal(0)">
+        <i class="fas fa-plus me-1"></i> Yeni İmha Kaydı
+    </button>
+}
+@section TopbarActions {
+    <a href="/Production/WasteReport" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-burn me-1"></i> Fire Raporu
+    </a>
+}
+
+<!-- Özet -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:16px;">
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-trash-alt"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.Count</div>
+            <div class="stat-label">Toplam Kayıt</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fas fa-weight-hanging"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.Sum(w => w.Quantity).ToString("N1")</div>
+            <div class="stat-label">Toplam Miktar (kg)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-calendar-check"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@(Model.Any() ? Model.Max(w => w.DisposalDate).ToString("dd.MM.yy") : "—")</div>
+            <div class="stat-label">Son İmha Tarihi</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tablo -->
+<div class="table-card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width:110px;">ATIK KODU</th>
+                    <th>AÇIKLAMA</th>
+                    <th>KATEGORİ</th>
+                    <th>İŞ EMRİ</th>
+                    <th class="text-end">MİKTAR</th>
+                    <th>BİRİM</th>
+                    <th>İMHA YÖNTEMİ</th>
+                    <th>İMHA TARİHİ</th>
+                    <th class="text-center" style="width:90px;">İŞLEM</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="9" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox me-2"></i>Henüz imha kaydı yok.
+                    </td></tr>
+                }
+                @foreach (var item in Model)
+                {
+                    string catLabel = item.Category switch {
+                        WasteCategory.KesimArtigi   => "Kesim Artığı",
+                        WasteCategory.BaskiArtigi   => "Baskı Artığı",
+                        WasteCategory.IslanmaHasari => "Islak/Nem Hasarı",
+                        WasteCategory.NakliyeHasari => "Nakliye Hasarı",
+                        WasteCategory.MakineHatasi  => "Makine Hatası",
+                        _ => "Diğer"
+                    };
+                    <tr>
+                        <td><code class="text-primary fw-semibold" style="font-size:11px;">@item.WasteCode</code></td>
+                        <td style="font-size:12px;">@item.Description</td>
+                        <td>
+                            <span class="badge badge-warning" style="font-size:10px;">@catLabel</span>
+                        </td>
+                        <td style="font-size:12px;">
+                            @if (item.WorkOrder != null)
+                            {
+                                <a href="/Production/Detail/@item.WorkOrderId" style="color:#1d4ed8;">
+                                    @item.WorkOrder.WorkOrderNo
+                                </a>
+                                <div class="text-muted" style="font-size:11px;">@item.WorkOrder.Product?.ProductName</div>
+                            }
+                            else { <span class="text-muted">—</span> }
+                        </td>
+                        <td class="text-end fw-semibold">@item.Quantity.ToString("N2")</td>
+                        <td class="text-muted">@item.Unit</td>
+                        <td style="font-size:12px;">@(item.DisposalMethod ?? "—")</td>
+                        <td class="text-muted">@item.DisposalDate.ToString("dd.MM.yyyy")</td>
+                        <td class="text-center">
+                            <button class="btn btn-icon btn-outline-primary" title="Düzenle" onclick="openModal(@item.Id)">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-icon btn-outline-danger" title="Sil" onclick="deleteItem(@item.Id)">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="formModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold mb-0" id="modalTitle">
+                    <i class="fas fa-trash-alt me-2 text-warning"></i>İmha Kaydı
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="itemId">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Bağlı İş Emri (Opsiyonel)</label>
+                        <select id="workOrderId" class="form-select">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var wo in workOrders)
+                            {
+                                <option value="@wo.Id">@wo.WorkOrderNo — @wo.Product?.ProductName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Atık Kategorisi <span class="text-danger">*</span></label>
+                        <select id="category" class="form-select">
+                            <option value="1">Kesim Artığı</option>
+                            <option value="2">Baskı Artığı</option>
+                            <option value="3">Islak/Nem Hasarı</option>
+                            <option value="4">Nakliye Hasarı</option>
+                            <option value="5">Makine Hatası</option>
+                            <option value="99">Diğer</option>
+                        </select>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label small fw-semibold">Açıklama <span class="text-danger">*</span></label>
+                        <input type="text" id="description" class="form-control" placeholder="Atık/fire kaynağı açıklaması" maxlength="250">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Miktar <span class="text-danger">*</span></label>
+                        <input type="number" id="quantity" class="form-control" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Birim</label>
+                        <select id="unit" class="form-select">
+                            <option value="kg">kg</option>
+                            <option value="Adet">Adet</option>
+                            <option value="m²">m²</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">İmha Tarihi <span class="text-danger">*</span></label>
+                        <input type="date" id="disposalDate" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">İmha Yöntemi</label>
+                        <select id="disposalMethod" class="form-select">
+                            <option value="">— Seçiniz —</option>
+                            <option value="İmha">İmha</option>
+                            <option value="Geri Dönüşüm">Geri Dönüşüm</option>
+                            <option value="Satış">Satış (Hurda)</option>
+                            <option value="Bağış">Bağış</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">İmhayı Yapan</label>
+                        <input type="text" id="disposedBy" class="form-control" placeholder="Personel / Firma adı" maxlength="100">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label small fw-semibold">Notlar</label>
+                        <textarea id="notes" class="form-control" rows="2" placeholder="Ek açıklama..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" onclick="saveItem()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let _modal;
+
+function openModal(id) {
+    document.getElementById('itemId').value       = id;
+    document.getElementById('workOrderId').value  = '';
+    document.getElementById('category').value     = '99';
+    document.getElementById('description').value  = '';
+    document.getElementById('quantity').value     = '';
+    document.getElementById('unit').value         = 'kg';
+    document.getElementById('disposalDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('disposalMethod').value = '';
+    document.getElementById('disposedBy').value   = '';
+    document.getElementById('notes').value        = '';
+
+    document.getElementById('modalTitle').innerHTML = id === 0
+        ? '<i class="fas fa-plus me-2 text-warning"></i>Yeni İmha Kaydı'
+        : '<i class="fas fa-edit me-2 text-warning"></i>İmha Kaydı Düzenle';
+
+    if (id > 0) {
+        fetch(`/Production/GetWaste?id=${id}`)
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) return;
+                const d = res.data;
+                document.getElementById('workOrderId').value    = d.workOrderId ?? '';
+                document.getElementById('category').value       = d.category;
+                document.getElementById('description').value    = d.description;
+                document.getElementById('quantity').value       = d.quantity;
+                document.getElementById('unit').value           = d.unit;
+                document.getElementById('disposalDate').value   = d.disposalDate;
+                document.getElementById('disposalMethod').value = d.disposalMethod ?? '';
+                document.getElementById('disposedBy').value     = d.disposedBy ?? '';
+                document.getElementById('notes').value          = d.notes ?? '';
+            });
+    }
+
+    _modal = new bootstrap.Modal(document.getElementById('formModal'));
+    _modal.show();
+}
+
+function saveItem() {
+    const desc = document.getElementById('description').value.trim();
+    const qty  = parseFloat(document.getElementById('quantity').value);
+    if (!desc)     { alert('Açıklama zorunludur.');      return; }
+    if (isNaN(qty) || qty <= 0) { alert('Miktar giriniz.'); return; }
+
+    const fd = new FormData();
+    fd.append('Id',             document.getElementById('itemId').value);
+    fd.append('WorkOrderId',    document.getElementById('workOrderId').value || '');
+    fd.append('Category',       document.getElementById('category').value);
+    fd.append('Description',    desc);
+    fd.append('Quantity',       qty);
+    fd.append('Unit',           document.getElementById('unit').value);
+    fd.append('DisposalDate',   document.getElementById('disposalDate').value);
+    fd.append('DisposalMethod', document.getElementById('disposalMethod').value);
+    fd.append('DisposedBy',     document.getElementById('disposedBy').value);
+    fd.append('Notes',          document.getElementById('notes').value);
+
+    fetch('/Production/SaveWaste', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) { _modal.hide(); location.reload(); }
+            else alert(res.message);
+        });
+}
+
+function deleteItem(id) {
+    if (!confirm('Bu imha kaydını silmek istiyor musunuz?')) return;
+    fetch(`/Production/DeleteWaste?id=${id}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(res => { if (res.success) location.reload(); else alert(res.message); });
+}
+</script>
+}

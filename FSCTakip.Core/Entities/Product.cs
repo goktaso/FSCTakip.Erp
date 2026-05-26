@@ -9,6 +9,8 @@ namespace FSCTakip.Core.Entities
         public virtual ProductGroup? ProductGroup { get; set; }
 
         public string ProductCode { get; set; } = string.Empty;
+        /// <summary>Harici ERP'deki stok kodu (örn. Netsis STOK_KODU). ETL eşleştirmede birincil anahtar.</summary>
+        public string? ExternalCode { get; set; }
         public string ProductName { get; set; } = string.Empty;
         public int UnitId { get; set; } // Veritabanında ID tutacak
 

@@ -1,4 +1,4 @@
-@model IEnumerable<FSCTakip.Core.Entities.Machine>
+﻿@model IEnumerable<FSCTakip.Core.Entities.Machine>
 @{
     ViewData["Title"] = "Makine Tanımlamaları";
 }
@@ -34,8 +34,8 @@
                 <label class="small font-weight-bold text-uppercase">Makine Türü</label>
                 <select class="form-control form-control-sm" id="machineTypeFilter">
                     <option value="">Tümü</option>
-                    <option value="Printing">Matbaa</option>
-                    <option value="Cutting">Kesim</option>
+                    <option value="Printing">Baskı</option>
+                    <option value="Cutting">Torba</option>
                     <option value="Slitting">Dilimleme</option>
                 </select>
             </div>
@@ -110,7 +110,7 @@
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-secondary text-white">
                 <h6 class="modal-title font-weight-bold"><i class="fas fa-industry mr-2"></i>Makine Formu</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Machine" asp-action="SaveMachine" method="post">
                 <div class="modal-body">
@@ -139,7 +139,7 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light p-2">
-                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Kapat</button>
                     <button type="submit" class="btn btn-secondary btn-sm px-4 text-white">Kaydet</button>
                 </div>
             </form>
@@ -188,7 +188,7 @@
             $('#machineType').val('Printing');
             $('#isActiveSwitch').prop('checked', true);
             $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Makine Ekle');
-            $('#machineModal').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('machineModal')).show();
         }
 
         function editMachine(id, name, code, type, isActive) {
@@ -198,7 +198,7 @@
             $('#machineType').val(type);
             $('#isActiveSwitch').prop('checked', isActive);
             $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Makine Düzenle');
-            $('#machineModal').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('machineModal')).show();
         }
 
         function deleteMachine(id) {

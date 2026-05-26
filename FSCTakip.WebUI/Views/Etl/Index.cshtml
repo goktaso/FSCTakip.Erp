@@ -1,0 +1,165 @@
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "ERP Entegrasyonu";
+    var recentJobs = ViewBag.RecentJobs as List<EtlJob> ?? new();
+}
+
+@section TopbarPrimary {
+    <a href="/Etl/Import" class="btn btn-primary btn-sm px-3">
+        <i class="fas fa-file-upload me-1"></i> Excel Aktarımı
+    </a>
+}
+@section TopbarActions {
+    <a href="/Etl/NetsisSync" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-database me-1"></i> Netsis Sync
+    </a>
+    <a href="/Etl/Connections" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-plug me-1"></i> Bağlantılar
+    </a>
+    <a href="/Etl/History" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-history me-1"></i> Geçmiş
+    </a>
+}
+
+<!-- İstatistik Kartlar -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:16px;">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-plug"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.TotalConnections</div>
+            <div class="stat-label">Bağlantı Profili</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.ActiveConnections</div>
+            <div class="stat-label">Aktif Bağlantı</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fas fa-exchange-alt"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.TotalJobs</div>
+            <div class="stat-label">Toplam Aktarım</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-thumbs-up"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.SuccessJobs</div>
+            <div class="stat-label">Başarılı</div>
+        </div>
+    </div>
+</div>
+
+<!-- Hızlı Erişim -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <a href="/Etl/Import" class="text-decoration-none">
+            <div class="table-card p-4 h-100 d-flex align-items-start gap-3" style="cursor:pointer; transition:.2s;" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
+                <div style="width:44px;height:44px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-file-excel" style="color:#1d4ed8;font-size:18px;"></i>
+                </div>
+                <div>
+                    <div class="fw-semibold mb-1">Excel Aktarımı</div>
+                    <div class="text-muted small">Ürün, tedarikçi veya müşteri verilerini Excel dosyasından içe aktarın.</div>
+                    <span class="badge badge-success mt-2">Aktif</span>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="/Etl/Connections" class="text-decoration-none">
+            <div class="table-card p-4 h-100 d-flex align-items-start gap-3" style="cursor:pointer; transition:.2s;" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
+                <div style="width:44px;height:44px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-plug" style="color:#16a34a;font-size:18px;"></i>
+                </div>
+                <div>
+                    <div class="fw-semibold mb-1">Bağlantı Yönetimi</div>
+                    <div class="text-muted small">ERP sistemi bağlantı profillerini tanımlayın ve yönetin.</div>
+                    <span class="badge badge-success mt-2">Aktif</span>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="/Etl/NetsisSync" class="text-decoration-none">
+            <div class="table-card p-4 h-100 d-flex align-items-start gap-3" style="cursor:pointer; transition:.2s;" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
+                <div style="width:44px;height:44px;border-radius:10px;background:#faf5ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-database" style="color:#7c3aed;font-size:18px;"></i>
+                </div>
+                <div>
+                    <div class="fw-semibold mb-1">Netsis Senkronizasyonu</div>
+                    <div class="text-muted small">Netsis ERP'den ürün, tedarikçi ve müşteri verilerini otomatik çekin.</div>
+                    <span class="badge badge-success mt-2">Aktif</span>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Son Aktarımlar -->
+<div class="table-card">
+    <div class="p-3 border-bottom d-flex align-items-center gap-2">
+        <i class="fas fa-history text-primary"></i>
+        <strong class="small">Son Aktarımlar</strong>
+        <a href="/Etl/History" class="ms-auto btn btn-outline-secondary btn-sm">Tümü</a>
+    </div>
+    @if (!recentJobs.Any())
+    {
+        <div class="p-5 text-center text-muted small">Henüz aktarım yapılmamış.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>TÜR</th>
+                        <th>KAYNAK</th>
+                        <th>DOSYA</th>
+                        <th class="text-center">TOPLAM</th>
+                        <th class="text-center">EKLENDİ</th>
+                        <th class="text-center">GÜNCELLENDİ</th>
+                        <th class="text-center">HATA</th>
+                        <th>DURUM</th>
+                        <th>TARİH</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var j in recentJobs)
+                    {
+                        <tr>
+                            <td><strong>@JobTypeLabel(j.JobType)</strong></td>
+                            <td class="text-muted small">@(j.EtlConnection?.Name ?? j.Source)</td>
+                            <td class="text-muted small" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="@j.SourceFile">@j.SourceFile</td>
+                            <td class="text-center">@j.TotalRecords</td>
+                            <td class="text-center text-success fw-semibold">@j.InsertedCount</td>
+                            <td class="text-center text-primary fw-semibold">@j.UpdatedCount</td>
+                            <td class="text-center @(j.ErrorCount > 0 ? "text-danger fw-semibold" : "text-muted")">@j.ErrorCount</td>
+                            <td>@StatusBadge(j.Status)</td>
+                            <td class="text-muted small">@j.StartedAt.ToString("dd.MM.yy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@functions {
+    string JobTypeLabel(string t) => t switch {
+        "ProductImport"  => "Ürün Aktarımı",
+        "SupplierImport" => "Tedarikçi Aktarımı",
+        "CustomerImport" => "Müşteri Aktarımı",
+        _ => t
+    };
+
+    Microsoft.AspNetCore.Html.HtmlString StatusBadge(string s) => new(s switch {
+        "Completed" => "<span class=\"badge badge-success\">Tamamlandı</span>",
+        "Partial"   => "<span class=\"badge badge-warning\">Kısmi</span>",
+        "Failed"    => "<span class=\"badge\" style=\"background:#fee2e2;color:#991b1b;\">Hatalı</span>",
+        _           => "<span class=\"badge badge-warning\">Çalışıyor</span>"
+    });
+}

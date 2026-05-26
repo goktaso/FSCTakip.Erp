@@ -1,139 +1,276 @@
 @model IEnumerable<FSCTakip.Core.Entities.Customer>
+@{
+    ViewData["Title"] = "Müşteriler";
+    var total  = Model?.Count() ?? 0;
+    var active = Model?.Count(c => c.IsActive) ?? 0;
+    var fscOk  = Model?.Count(c => c.IsFscActive && c.FscExpiryDate.HasValue && c.FscExpiryDate.Value > DateTime.Today) ?? 0;
+    var expiring = Model?.Count(c => c.FscExpiryDate.HasValue && c.FscExpiryDate.Value <= DateTime.Today.AddDays(90) && c.FscExpiryDate.Value > DateTime.Today) ?? 0;
+}
 
-@* --- ÜST PANEL: Standart Buton Formatı --- *@
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-users mr-2 text-info"></i>Müşteri Listesi</h5>
-    <div>
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
-            <i class="fas fa-filter"></i> Filtrele
-        </button>
-        <button type="button" class="btn btn-sm btn-outline-success">
-            <i class="fas fa-file-excel"></i> Excel
-        </button>
-        <button type="button" class="btn btn-sm btn-outline-dark" onclick="window.print()">
-            <i class="fas fa-print"></i> Yazdır
-        </button>
-        <button type="button" class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
-            <i class="fas fa-plus"></i> Yeni Müşteri Ekle
-        </button>
+@section TopbarPrimary {
+    <button class="btn-topbar-add" onclick="openAddModal()">
+        <span class="btn-add-icon"><i class="fas fa-plus"></i></span>
+        Yeni Müşteri
+    </button>
+}
+@section TopbarActions {
+    <button class="topbar-btn btn-filter" onclick="$('#filterPanel').slideToggle()">
+        <i class="fas fa-filter"></i> Filtrele
+    </button>
+    <button class="topbar-btn btn-excel" onclick="location.href='/Customers/ExportCustomers'">
+        <i class="fas fa-file-excel"></i> Excel
+    </button>
+}
+
+<!-- Stat Kartları -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-user-tie"></i></div>
+            <div>
+                <div class="stat-value">@total</div>
+                <div class="stat-label">Toplam Müşteri</div>
+            </div>
+        </div>
     </div>
-</div>
-
-@* --- TABLO --- *@
-<div class="card shadow-sm border-0">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
-                    <tr>
-                        <th>Müşteri Ünvanı / Adres</th>
-                        <th>Vergi Bilgisi</th>
-                        <th>İletişim</th>
-                        <th>FSC Detayları</th>
-                        <th class="text-center">Durum</th>
-                        <th class="text-right">İşlemler</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model != null && Model.Any())
-                    {
-                        @foreach (var item in Model)
-                        {
-                            <tr>
-                                <td>
-                                    <strong class="text-info">@(item.Name ?? "-")</strong><br />
-                                    <small class="text-muted">@(item.Address ?? "-") / @(item.City ?? "-")</small>
-                                </td>
-                                <td><small>@(item.TaxOffice ?? "-") / @(item.TaxNumber ?? "-")</small></td>
-                                <td>
-                                    <small>@item.Phone</small><br />
-                                    @* E-posta adresini zorla küçük harf gösteriyoruz *@
-                                    <small class="text-primary" style="text-transform: lowercase !important;">@item.Email</small>
-                                </td>
-                                <td>
-                                    <span class="badge @(item.IsFscActive ? "badge-info" : "badge-warning")">@(item.FscLicenseCode ?? "YOK")</span><br />
-                                    <small>@(item.FscExpiryDate?.ToString("dd.MM.yyyy") ?? "-")</small>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">@(item.IsActive ? "Aktif" : "Pasif")</span>
-                                </td>
-                                <td class="text-right">
-                                    <button class="btn btn-sm btn-outline-info" onclick="editCustomer(@item.Id)"><i class="fas fa-edit"></i></button>
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div class="stat-value">@active</div>
+                <div class="stat-label">Aktif Müşteri</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon @(fscOk > 0 ? "green" : "red")"><i class="fas fa-certificate"></i></div>
+            <div>
+                <div class="stat-value">@fscOk</div>
+                <div class="stat-label">FSC Aktif</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon @(expiring > 0 ? "amber" : "green")"><i class="fas fa-clock"></i></div>
+            <div>
+                <div class="stat-value">@expiring</div>
+                <div class="stat-label">90 Günde Bitiyor</div>
+                @if (expiring > 0)
+                {
+                    <div style="font-size:10px;color:#f59e0b;">⚠ Sertifika uyarısı</div>
+                }
+            </div>
         </div>
     </div>
 </div>
 
-@* --- MODAL: TÜM ALANLAR --- *@
+<!-- Filtre Paneli -->
+<div id="filterPanel" class="filter-panel mb-3" style="display:none;">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-5">
+            <label class="form-label">Müşteri Ara</label>
+            <input type="text" id="customerSearch" class="form-control form-control-sm"
+                   placeholder="İsim, kod veya FSC no ile arayın..." oninput="filterCustomers()">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">FSC Durumu</label>
+            <select id="fscFilter" class="form-select form-select-sm" onchange="filterCustomers()">
+                <option value="">— Tümü —</option>
+                <option value="active">FSC Aktif</option>
+                <option value="inactive">FSC Pasif</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-outline-secondary btn-sm w-100" onclick="clearFilter()">
+                <i class="fas fa-times me-1"></i> Temizle
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Tablo -->
+<div class="table-card">
+    <table class="data-table" id="customersTable">
+        <thead>
+            <tr>
+                <th>MÜŞTERİ / ADRES</th>
+                <th>VERGİ BİLGİSİ</th>
+                <th>İLETİŞİM</th>
+                <th>FSC LİSANS</th>
+                <th class="text-center">DURUM</th>
+                <th class="text-center">İŞLEM</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model == null || !Model.Any())
+            {
+                <tr><td colspan="6">
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="fas fa-user-tie"></i></div>
+                        <h6>Henüz müşteri kaydı yok</h6>
+                        <p><strong>+ Yeni Müşteri</strong> butonu ile ilk müşterinizi ekleyin.</p>
+                    </div>
+                </td></tr>
+            }
+            @foreach (var item in Model ?? Enumerable.Empty<FSCTakip.Core.Entities.Customer>())
+            {
+                var fscDays  = item.FscExpiryDate.HasValue ? (int)(item.FscExpiryDate.Value - DateTime.Today).TotalDays : (int?)null;
+                var fscClass = item.IsFscActive && fscDays.HasValue && fscDays.Value > 30 ? "fsc-badge active"
+                             : fscDays.HasValue && fscDays.Value <= 0 ? "fsc-badge expired"
+                             : item.IsFscActive ? "fsc-badge warning" : "fsc-badge expired";
+                <tr>
+                    <td>
+                        <div class="fw-semibold" style="font-size:13px;color:#1d4ed8;">@(item.Name ?? "—")</div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:1px;">
+                            <span title="Dahili kod">@item.CustomerCode</span>
+                            @if (!string.IsNullOrEmpty(item.ExternalCode))
+                            {
+                                <span class="ms-2" title="Harici ERP kodu"><i class="fas fa-link me-1"></i>@item.ExternalCode</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(item.City) || !string.IsNullOrEmpty(item.Address))
+                        {
+                            <div class="text-muted" style="font-size:11px;">
+                                <i class="fas fa-map-marker-alt me-1"></i>@(item.Address ?? "")@(!string.IsNullOrEmpty(item.City) ? " / " + item.City : "")
+                            </div>
+                        }
+                    </td>
+                    <td>
+                        <div style="font-size:12px;font-weight:500;">@(item.TaxOffice ?? "—")</div>
+                        <div class="text-muted" style="font-size:11px;">@(item.TaxNumber ?? "—")</div>
+                    </td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(item.Phone))
+                        {
+                            <div style="font-size:12px;"><i class="fas fa-phone me-1 text-muted"></i>@item.Phone</div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.Email))
+                        {
+                            <div style="font-size:11px;color:#1d4ed8;text-transform:lowercase;">
+                                <i class="fas fa-envelope me-1 text-muted"></i>@item.Email
+                            </div>
+                        }
+                    </td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(item.FscLicenseCode))
+                        {
+                            <span class="@fscClass">
+                                <i class="fas fa-certificate"></i> @item.FscLicenseCode
+                            </span>
+                            <div class="text-muted" style="font-size:11px;margin-top:3px;">
+                                @if (fscDays.HasValue)
+                                {
+                                    @(fscDays.Value <= 0 ? "⚠ Süresi geçti" : fscDays.Value <= 30 ? $"⚠ {fscDays.Value} gün kaldı" : $"✓ {item.FscExpiryDate!.Value:dd.MM.yyyy}")
+                                }
+                                else { <text>Tarih yok</text> }
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="text-muted" style="font-size:12px;">—</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        <span class="badge @(item.IsActive ? "badge-green" : "badge-gray")">
+                            @(item.IsActive ? "Aktif" : "Pasif")
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm" title="Düzenle" onclick="editCustomer(@item.Id)"
+                                style="padding:4px 10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Müşteri Modal -->
 <div class="modal fade" id="customerModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-secondary text-white">
-                <h6 class="modal-title font-weight-bold">Müşteri Formu</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-user-tie" style="color:#93c5fd;font-size:15px;"></i>
+                    <h5 class="modal-title fw-semibold mb-0 fs-6" id="customerModalTitle">Müşteri Formu</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Customers" asp-action="Save" method="post" id="customerForm">
                 <div class="modal-body">
                     <input type="hidden" name="Id" id="custId" value="0" />
-                    <div class="row">
-                        <div class="col-md-8 form-group">
-                            <label class="small font-weight-bold">MÜŞTERİ ÜNVANI *</label>
-                            <input type="text" class="form-control text-uppercase" name="Name" id="custName" required>
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Müşteri Ünvanı <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="Name" id="custName" required
+                                   style="text-transform:uppercase;" placeholder="Büyük harf ile girilir">
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label class="small font-weight-bold">MÜŞTERİ KODU</label>
-                            <input type="text" class="form-control bg-light" name="CustomerCode" id="custCode" readonly>
+                        <div class="col-md-2">
+                            <label class="form-label">Dahili Kod</label>
+                            <input type="text" class="form-control" name="CustomerCode" id="custCode"
+                                   readonly style="background:#f8fafc;color:#6b7280;" placeholder="Otomatik">
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold">VERGİ DAİRESİ / NO</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" name="TaxOffice" id="custTaxOffice" placeholder="Daire">
-                                <input type="text" class="form-control" name="TaxNumber" id="custTaxNumber" placeholder="No">
-                            </div>
+                        <div class="col-md-2">
+                            <label class="form-label" title="Netsis / ERP kayıt kodu (CARI_KOD)">Harici Kod <i class="fas fa-info-circle text-muted" style="font-size:10px;"></i></label>
+                            <input type="text" class="form-control" name="ExternalCode" id="custExtCode"
+                                   placeholder="Örn: M-00015" style="text-transform:uppercase;">
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold">TELEFON *</label>
-                            <input type="text" class="form-control" name="Phone" id="custPhone" required>
+                        <div class="col-md-6">
+                            <label class="form-label">Vergi Dairesi</label>
+                            <input type="text" class="form-control" name="TaxOffice" id="custTaxOffice">
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold">E-POSTA</label>
-                            @* Input içine yazılan her şeyi görsel olarak anında küçültür *@
-                            <input type="text" class="form-control" name="Email" id="custEmail" style="text-transform: lowercase;">
+                        <div class="col-md-6">
+                            <label class="form-label">Vergi Numarası</label>
+                            <input type="text" class="form-control" name="TaxNumber" id="custTaxNumber" maxlength="11">
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold">ŞEHİR</label>
+                        <div class="col-md-6">
+                            <label class="form-label">Telefon <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="Phone" id="custPhone" required placeholder="5xxxxxxxxx">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">E-Posta</label>
+                            <input type="text" class="form-control" name="Email" id="custEmail"
+                                   placeholder="ornek@firma.com" style="text-transform:lowercase;">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Şehir</label>
                             <input type="text" class="form-control" name="City" id="custCity">
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12 form-group">
-                            <label class="small font-weight-bold">ADRES</label>
-                            <textarea class="form-control" name="Address" id="custAddress" rows="2"></textarea>
+                        <div class="col-md-8">
+                            <label class="form-label">Adres</label>
+                            <input type="text" class="form-control" name="Address" id="custAddress">
                         </div>
-                    </div>
-                    <div class="row bg-light p-2 rounded border mx-1">
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold">FSC LİSANS KODU</label>
-                            <input type="text" class="form-control" name="FscLicenseCode" id="custFscCode">
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold">SERTİFİKA BİTİŞ</label>
-                            <input type="date" class="form-control" name="FscExpiryDate" id="custFscDate">
+                        <!-- FSC Bölümü -->
+                        <div class="col-12">
+                            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;">
+                                <div class="d-flex align-items-center gap-2 mb-3">
+                                    <i class="fas fa-certificate text-success"></i>
+                                    <span class="fw-semibold" style="font-size:13px;color:#166534;">FSC Lisans Bilgileri</span>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label">FSC Lisans Kodu</label>
+                                        <input type="text" class="form-control" name="FscLicenseCode" id="custFscCode"
+                                               placeholder="FSC-C123456">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Sertifika Bitiş Tarihi</label>
+                                        <input type="date" class="form-control" name="FscExpiryDate" id="custFscDate">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light" data-dismiss="modal">Kapat</button>
-                    <button type="submit" class="btn btn-secondary px-4">Kaydet</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4">
+                        <i class="fas fa-save me-1"></i> Kaydet
+                    </button>
                 </div>
             </form>
         </div>
@@ -141,46 +278,60 @@
 </div>
 
 @section Scripts {
-    <script>
-        $(document).ready(function () {
-            // E-posta Küçük Harf ve Türkçe Karakter Düzeltme [cite: 2026-03-04]
-            $('#custEmail').on('input blur', function () {
-                let inputVal = $(this).val();
-                let fixedVal = inputVal
-                    .replace(/İ/g, 'i')
-                    .replace(/I/g, 'ı')
-                    .toLowerCase()
-                    .trim();
-
-                if (inputVal !== fixedVal) {
-                    $(this).val(fixedVal);
-                }
-            });
+<script>
+    function filterCustomers() {
+        var search = (document.getElementById('customerSearch').value || '').toLowerCase();
+        var fscVal = document.getElementById('fscFilter').value;
+        document.querySelectorAll('#customersTable tbody tr').forEach(function(tr) {
+            var text  = tr.textContent.toLowerCase();
+            var badge = tr.querySelector('.fsc-badge');
+            var fscOk = fscVal === '' ? true
+                      : fscVal === 'active'   ? (badge && badge.classList.contains('active'))
+                      : (badge && !badge.classList.contains('active'));
+            tr.style.display = (text.includes(search) && fscOk) ? '' : 'none';
         });
+    }
 
-        function openAddModal() {
-            $('#customerForm')[0].reset();
-            $('#custId').val(0);
-            $('#customerModal').modal('show');
-        }
+    function clearFilter() {
+        document.getElementById('customerSearch').value = '';
+        document.getElementById('fscFilter').value = '';
+        filterCustomers();
+    }
 
-        function editCustomer(id) {
-            $.get('/Customers/GetCustomer/' + id, function (res) {
-                if (res.success) {
-                    $('#custId').val(res.data.id);
-                    $('#custName').val(res.data.name);
-                    $('#custCode').val(res.data.customerCode);
-                    $('#custTaxOffice').val(res.data.taxOffice);
-                    $('#custTaxNumber').val(res.data.taxNumber);
-                    $('#custPhone').val(res.data.phone);
-                    $('#custEmail').val(res.data.email);
-                    $('#custCity').val(res.data.city);
-                    $('#custAddress').val(res.data.address);
-                    $('#custFscCode').val(res.data.fscLicenseCode);
-                    if(res.data.fscExpiryDate) $('#custFscDate').val(res.data.fscExpiryDate.split('T')[0]);
-                    $('#customerModal').modal('show');
-                }
-            });
-        }
-    </script>
+    function openAddModal() {
+        document.getElementById('customerForm').reset();
+        document.getElementById('custId').value = 0;
+        document.getElementById('customerModalTitle').textContent = 'Yeni Müşteri Ekle';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('customerModal')).show();
+    }
+
+    function editCustomer(id) {
+        $.get('/Customers/GetCustomer/' + id, function (res) {
+            if (res.success) {
+                document.getElementById('custId').value    = res.data.id;
+                document.getElementById('custName').value  = res.data.name;
+                document.getElementById('custCode').value    = res.data.customerCode;
+                document.getElementById('custExtCode').value = res.data.externalCode || '';
+                document.getElementById('custTaxOffice').value = res.data.taxOffice || '';
+                document.getElementById('custTaxNumber').value = res.data.taxNumber || '';
+                document.getElementById('custPhone').value = res.data.phone || '';
+                document.getElementById('custEmail').value = res.data.email || '';
+                document.getElementById('custCity').value  = res.data.city  || '';
+                document.getElementById('custAddress').value = res.data.address || '';
+                document.getElementById('custFscCode').value = res.data.fscLicenseCode || '';
+                if (res.data.fscExpiryDate)
+                    document.getElementById('custFscDate').value = res.data.fscExpiryDate.split('T')[0];
+                document.getElementById('customerModalTitle').textContent = 'Müşteri Düzenle';
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('customerModal')).show();
+            }
+        });
+    }
+
+    document.getElementById('custEmail')?.addEventListener('blur', function() {
+        this.value = this.value.replace(/İ/g,'i').replace(/I/g,'ı').toLowerCase().trim();
+    });
+    document.getElementById('custPhone')?.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g,'').slice(0,11);
+    });
+</script>
 }

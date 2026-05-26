@@ -1,4 +1,4 @@
-@model IEnumerable<FSCTakip.Core.Entities.BagType>
+﻿@model IEnumerable<FSCTakip.Core.Entities.BagType>
 @{
     ViewData["Title"] = "Torba Tipi Tanımları";
 }
@@ -93,7 +93,7 @@
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-secondary text-white">
                 <h6 class="modal-title font-weight-bold"><i class="fas fa-shopping-bag mr-2"></i>Torba Tipi Formu</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-action="SaveBagType" method="post">
                 <div class="modal-body">
@@ -112,7 +112,7 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light p-2">
-                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Vazgeç</button>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Vazgeç</button>
                     <button type="submit" class="btn btn-secondary btn-sm px-4 text-white">Kaydet</button>
                 </div>
             </form>
@@ -135,7 +135,7 @@
             $('#bagCode').val('');
             $('#bagDesc').val('');
             $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Torba Tipi');
-            $('#bagTypeModal').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('bagTypeModal')).show();
         }
 
         function editBagType(id, name, code, desc) {
@@ -144,7 +144,7 @@
             $('#bagCode').val(code);
             $('#bagDesc').val(desc);
             $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Torba Tipi Düzenle');
-            $('#bagTypeModal').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('bagTypeModal')).show();
         }
 
         function toggleStatus(id) {

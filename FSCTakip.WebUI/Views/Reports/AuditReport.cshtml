@@ -1,0 +1,521 @@
+@model AuditReportModel
+@{
+    ViewData["Title"] = "Denetim Özet Raporu";
+    var sd = Model.StartDate.ToString("dd.MM.yyyy");
+    var ed = Model.EndDate.ToString("dd.MM.yyyy");
+
+    var toplamAcilis   = Model.BalanceRows.Sum(r => r.OpeningKg);
+    var toplamGiris    = Model.InputRows.Sum(r => r.TotalWeightKg);
+    var toplamTuketim  = Model.ProductionRows.Sum(r => r.ConsumedKg);
+    var toplamFire     = Model.ProductionRows.Sum(r => r.WasteKg);
+    var toplamKapanis  = Model.BalanceRows.Sum(r => r.ClosingKg);
+    var toplamSatis    = Model.SalesRows.Sum(r => r.Quantity);
+    var cocTam         = Model.SalesRows.Count(r => r.CocComplete);
+    var cocEksik       = Model.SalesRows.Count(r => !r.CocComplete);
+    var dengeli        = Model.BalanceRows.All(r => r.IsBalanced);
+    var isCurrentPeriod = Model.EndDate.Date >= DateTime.Today.AddDays(-1);
+}
+
+@section TopbarActions {
+    <a href="/Reports/ExportAuditReport?startDate=@Model.StartDate.ToString("yyyy-MM-dd")&endDate=@Model.EndDate.ToString("yyyy-MM-dd")"
+       class="btn btn-outline-success btn-sm">
+        <i class="fas fa-file-excel me-1"></i> Excel İndir
+    </a>
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-print me-1"></i> Yazdır
+    </button>
+}
+
+<!-- Dönem Filtresi -->
+<div class="table-card p-3 mb-3">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <span style="width:30px;height:30px;border-radius:8px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-shield-alt" style="color:#1d4ed8;font-size:13px;"></i>
+        </span>
+        <div>
+            <strong style="font-size:13px;">Denetim Dönemi Seçimi</strong>
+            <div class="text-muted" style="font-size:11px;">Kayıtlı dönemlerden seçin veya manuel tarih girin</div>
+        </div>
+        <a href="/AuditPeriod" class="btn btn-outline-secondary btn-sm ms-auto" style="font-size:11px;">
+            <i class="fas fa-cog me-1"></i>Dönemleri Yönet
+        </a>
+    </div>
+
+    <!-- Kayıtlı Dönem Seçimi -->
+    <div class="mb-3">
+        <label class="form-label small fw-semibold mb-1">
+            <i class="fas fa-list-ul me-1 text-muted"></i>Kayıtlı Denetim Dönemleri
+        </label>
+        <select id="periodSelect" class="form-select form-select-sm" onchange="applyPeriod()" style="max-width:500px;">
+            <option value="">— Manuel tarih girin —</option>
+        </select>
+    </div>
+
+    <form method="get" action="/Reports/AuditReport" class="d-flex align-items-end gap-3 flex-wrap">
+        <div>
+            <label class="form-label small fw-semibold mb-1">
+                <i class="fas fa-calendar-minus me-1 text-muted"></i>Dönem Başlangıcı
+            </label>
+            <input type="date" name="startDate" id="startDateInput" class="form-control form-control-sm"
+                   value="@Model.StartDate.ToString("yyyy-MM-dd")" style="width:180px;">
+        </div>
+        <div class="text-muted align-self-center pt-3 px-1">→</div>
+        <div>
+            <label class="form-label small fw-semibold mb-1">
+                <i class="fas fa-calendar-check me-1 text-muted"></i>Dönem Bitişi (Denetim Tarihi)
+            </label>
+            <input type="date" name="endDate" id="endDateInput" class="form-control form-control-sm"
+                   value="@Model.EndDate.ToString("yyyy-MM-dd")" style="width:180px;">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm px-4">
+            <i class="fas fa-search me-1"></i> Rapor Oluştur
+        </button>
+        <div class="ms-auto text-muted small align-self-center">
+            <i class="fas fa-calendar-alt me-1"></i>
+            Görüntülenen Dönem: <strong>@sd — @ed</strong>
+        </div>
+    </form>
+</div>
+
+<!-- Özet Kartlar -->
+<div class="stats-grid" style="grid-template-columns:repeat(6,1fr); margin-bottom:16px;">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ede9fe;"><i class="fas fa-history" style="color:#7c3aed;"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@toplamAcilis.ToString("N0")</div>
+            <div class="stat-label">Açılış Bakiyesi (kg)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-layer-group"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@toplamGiris.ToString("N0")</div>
+            <div class="stat-label">Dönem Girişi (kg)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fas fa-industry"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@toplamTuketim.ToString("N0")</div>
+            <div class="stat-label">Üretim Tüketimi (kg)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fee2e2;"><i class="fas fa-burn" style="color:#dc2626;"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@toplamFire.ToString("N0")</div>
+            <div class="stat-label">Fire (kg)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-archive"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@toplamKapanis.ToString("N0")</div>
+            <div class="stat-label">Kapanış Bakiyesi (kg)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon @(dengeli ? "green" : "red")" style="@(dengeli ? "" : "background:#fee2e2;")">
+            <i class="fas @(dengeli ? "fa-check-double" : "fa-exclamation-triangle")"
+               style="@(dengeli ? "" : "color:#dc2626;")"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value" style="color:@(dengeli ? "#166534" : "#dc2626");">
+                @(dengeli ? "Dengeli" : "Kontrol!")
+            </div>
+            <div class="stat-label">FSC Denge Durumu</div>
+        </div>
+    </div>
+</div>
+
+<!-- Denge Formülü Bilgi Çubuğu -->
+<div class="p-2 rounded mb-3 d-flex align-items-center gap-2 flex-wrap" style="background:#f0f9ff;border:1px solid #bae6fd;font-size:12px;">
+    <i class="fas fa-info-circle" style="color:#0369a1;"></i>
+    <span class="text-muted">Denge Formülü:</span>
+    <strong style="color:#7c3aed;">@toplamAcilis.ToString("N0") kg</strong>
+    <span class="text-muted">(Açılış)</span>
+    <span class="text-muted mx-1">+</span>
+    <strong style="color:#1d4ed8;">@toplamGiris.ToString("N0") kg</strong>
+    <span class="text-muted">(Giriş)</span>
+    <span class="text-muted mx-1">=</span>
+    <strong>@toplamTuketim.ToString("N0") kg</strong>
+    <span class="text-muted">(Tüketim)</span>
+    <span class="text-muted mx-1">+</span>
+    <strong class="text-danger">@toplamFire.ToString("N0") kg</strong>
+    <span class="text-muted">(Fire)</span>
+    <span class="text-muted mx-1">+</span>
+    <strong class="text-success">@toplamKapanis.ToString("N0") kg</strong>
+    <span class="text-muted">(Kapanış)</span>
+    @{
+        var sol = toplamAcilis + toplamGiris;
+        var sag = toplamTuketim + toplamFire + toplamKapanis;
+        var fark = sol - sag;
+    }
+    @if (Math.Abs(fark) < 1m)
+    {
+        <span class="badge badge-success ms-auto"><i class="fas fa-check me-1"></i>Denge Tamam</span>
+    }
+    else
+    {
+        <span class="badge ms-auto" style="background:#fee2e2;color:#991b1b;">
+            <i class="fas fa-exclamation-triangle me-1"></i>Fark: @fark.ToString("N2") kg
+        </span>
+    }
+</div>
+
+<!-- FSC Denge Özeti — EN ÖNEMLİ BÖLÜM -->
+<div class="table-card mb-4">
+    <div class="p-3 border-bottom d-flex align-items-center gap-2">
+        <span style="width:32px;height:32px;border-radius:8px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-balance-scale" style="color:#166534;font-size:14px;"></i>
+        </span>
+        <div>
+            <strong style="font-size:14px;">FSC Denge Özeti</strong>
+            <div class="text-muted" style="font-size:11px;">Giriş — Tüketim — Stok dengesi (FSC tipi bazında)</div>
+        </div>
+        @if (!dengeli)
+        {
+            <span class="badge ms-auto" style="background:#fee2e2;color:#991b1b;font-size:11px;">
+                <i class="fas fa-exclamation-triangle me-1"></i>Denge Hatası Var
+            </span>
+        }
+        else
+        {
+            <span class="badge badge-success ms-auto"><i class="fas fa-check me-1"></i>Tüm Tipler Dengeli</span>
+        }
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>FSC TİPİ</th>
+                    <th class="text-end" style="color:#7c3aed;">AÇILIŞ BAKİYESİ (kg)</th>
+                    <th class="text-end" style="color:#1d4ed8;">DÖNEM GİRİŞİ (kg)</th>
+                    <th class="text-end">DÖNEM TÜKETİMİ (kg)</th>
+                    <th class="text-end text-danger">FİRE (kg)</th>
+                    <th class="text-end text-success">KAPANIŞ BAKİYESİ (kg)</th>
+                    @if (isCurrentPeriod)
+                    {
+                        <th class="text-end text-muted" style="font-size:10px;">CANLİ STOK (kg)</th>
+                    }
+                    <th class="text-center">DURUM</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.BalanceRows.Any())
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-4">Dönemde veri bulunamadı.</td></tr>
+                }
+                @foreach (var b in Model.BalanceRows)
+                {
+                    <tr style="@(b.IsBalanced ? "" : "background:#fef2f2;")">
+                        <td>
+                            <span class="badge badge-success">@b.FscType</span>
+                        </td>
+                        <td class="text-end fw-semibold" style="color:#7c3aed;">@b.OpeningKg.ToString("N2")</td>
+                        <td class="text-end fw-semibold text-primary">@b.InputKg.ToString("N2")</td>
+                        <td class="text-end fw-semibold">@b.ConsumedKg.ToString("N2")</td>
+                        <td class="text-end text-danger">@b.WasteKg.ToString("N2")</td>
+                        <td class="text-end fw-semibold text-success">@b.ClosingKg.ToString("N2")</td>
+                        @if (isCurrentPeriod)
+                        {
+                            <td class="text-end text-muted small">@b.CurrentStockKg.ToString("N2")</td>
+                        }
+                        <td class="text-center">
+                            @if (b.IsBalanced)
+                            {
+                                <span class="badge badge-success"><i class="fas fa-check me-1"></i>Dengeli</span>
+                            }
+                            else
+                            {
+                                <span class="badge" style="background:#fee2e2;color:#991b1b;">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Kontrol Et
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.BalanceRows.Any())
+            {
+                <tfoot>
+                    <tr style="background:#f8fafc;font-weight:700;font-size:12.5px;">
+                        <td class="text-muted">TOPLAM</td>
+                        <td class="text-end" style="color:#7c3aed;">@Model.BalanceRows.Sum(r => r.OpeningKg).ToString("N2")</td>
+                        <td class="text-end text-primary">@Model.BalanceRows.Sum(r => r.InputKg).ToString("N2")</td>
+                        <td class="text-end">@Model.BalanceRows.Sum(r => r.ConsumedKg).ToString("N2")</td>
+                        <td class="text-end text-danger">@Model.BalanceRows.Sum(r => r.WasteKg).ToString("N2")</td>
+                        <td class="text-end text-success">@Model.BalanceRows.Sum(r => r.ClosingKg).ToString("N2")</td>
+                        @if (isCurrentPeriod)
+                        {
+                            <td class="text-end text-muted small">@Model.BalanceRows.Sum(r => r.CurrentStockKg).ToString("N2")</td>
+                        }
+                        <td></td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+</div>
+@if (isCurrentPeriod && Model.BalanceRows.Any())
+{
+    <div class="mb-3" style="font-size:11px;color:#6b7280;">
+        <i class="fas fa-info-circle me-1"></i>
+        <em>Canlı Stok, bugünkü gerçek stok miktarını gösterir. Kapanış Bakiyesi ise dönem matematik hesabıdır (Açılış + Giriş − Tüketim − Fire). İki değer arasındaki fark, sayım farklarını veya sistem dışı hareketleri işaret edebilir.</em>
+    </div>
+}
+
+<!-- Hammadde Girişleri -->
+<div class="table-card mb-4">
+    <div class="p-3 border-bottom d-flex align-items-center gap-2">
+        <span style="width:28px;height:28px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-boxes" style="color:#1d4ed8;font-size:12px;"></i>
+        </span>
+        <strong style="font-size:13px;">Hammadde Girişleri</strong>
+        <span class="badge badge-blue ms-1">@Model.InputRows.Count grup · @toplamGiris.ToString("N0") kg</span>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>FSC TİPİ</th>
+                    <th>TEDARİKÇİ</th>
+                    <th>TEDARİKÇİ FSC KODU</th>
+                    <th class="text-center">LOT</th>
+                    <th class="text-center">BOBİN</th>
+                    <th class="text-end">TOPLAM (kg)</th>
+                    <th>FATURA / İRSALİYE</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.InputRows.Any())
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-4">Dönemde hammadde girişi bulunamadı.</td></tr>
+                }
+                @foreach (var r in Model.InputRows)
+                {
+                    <tr>
+                        <td><span class="badge badge-success">@r.FscType</span></td>
+                        <td class="fw-semibold">@r.Supplier</td>
+                        <td class="text-muted small">@(r.SupplierFscCode.Length > 0 ? r.SupplierFscCode : "—")</td>
+                        <td class="text-center">@r.LotCount</td>
+                        <td class="text-center">@r.SerialCount</td>
+                        <td class="text-end fw-semibold text-primary">@r.TotalWeightKg.ToString("N2")</td>
+                        <td class="text-muted small" style="font-size:11px;">
+                            @if (!string.IsNullOrEmpty(r.InvoiceNos))
+                            {
+                                <div><i class="fas fa-file-invoice me-1" style="color:#1d4ed8;"></i>@r.InvoiceNos</div>
+                            }
+                            @if (!string.IsNullOrEmpty(r.DispatchNos))
+                            {
+                                <div><i class="fas fa-truck me-1" style="color:#16a34a;"></i>@r.DispatchNos</div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Üretim Tüketimi -->
+<div class="table-card mb-4">
+    <div class="p-3 border-bottom d-flex align-items-center gap-2">
+        <span style="width:28px;height:28px;border-radius:8px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-industry" style="color:#92400e;font-size:12px;"></i>
+        </span>
+        <strong style="font-size:13px;">Üretim Tüketimi</strong>
+        <span class="badge badge-amber ms-1">@Model.ProductionRows.Count üretim · @toplamTuketim.ToString("N0") kg tüketim</span>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>TARİH</th>
+                    <th>İŞ EMRİ</th>
+                    <th>MAMUL</th>
+                    <th>KULLANILAN LOT(LAR)</th>
+                    <th>FSC TİP(LERİ)</th>
+                    <th class="text-end">TÜKETİM (kg)</th>
+                    <th class="text-end">FİRE (kg)</th>
+                    <th class="text-end">ÜRETİM (adet)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.ProductionRows.Any())
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">Dönemde üretim kaydı bulunamadı.</td></tr>
+                }
+                @foreach (var r in Model.ProductionRows)
+                {
+                    <tr>
+                        <td class="text-muted small">@r.ProductionDate.ToString("dd.MM.yyyy")</td>
+                        <td>
+                            <a href="/Production/Index" class="table-link fw-semibold">@r.WorkOrderNo</a>
+                        </td>
+                        <td>@r.ProductName</td>
+                        <td class="text-muted small">@r.LotNos</td>
+                        <td><span class="badge badge-success" style="font-size:10px;">@r.FscTypes</span></td>
+                        <td class="text-end fw-semibold">@r.ConsumedKg.ToString("N2")</td>
+                        <td class="text-end @(r.WasteKg > 0 ? "text-danger" : "text-muted")">@r.WasteKg.ToString("N2")</td>
+                        <td class="text-end">@r.ProducedQty.ToString("N0")</td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.ProductionRows.Any())
+            {
+                <tfoot>
+                    <tr style="background:#f8fafc;font-weight:700;font-size:12.5px;">
+                        <td colspan="5" class="text-muted">TOPLAM</td>
+                        <td class="text-end">@toplamTuketim.ToString("N2")</td>
+                        <td class="text-end text-danger">@toplamFire.ToString("N2")</td>
+                        <td class="text-end">@Model.ProductionRows.Sum(r => r.ProducedQty).ToString("N0")</td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+</div>
+
+<!-- Satış Sevkiyatları -->
+<div class="table-card mb-4">
+    <div class="p-3 border-bottom d-flex align-items-center gap-2">
+        <span style="width:28px;height:28px;border-radius:8px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-truck" style="color:#166534;font-size:12px;"></i>
+        </span>
+        <strong style="font-size:13px;">Satış Sevkiyatları</strong>
+        <span class="badge badge-success ms-1">@Model.SalesRows.Count kalem</span>
+        @if (cocEksik > 0)
+        {
+            <span class="badge ms-1" style="background:#fee2e2;color:#991b1b;">
+                <i class="fas fa-exclamation-triangle me-1"></i>@cocEksik kalemde CoC eksik
+            </span>
+        }
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>SEVK TARİHİ</th>
+                    <th>SİPARİŞ NO</th>
+                    <th>MÜŞTERİ</th>
+                    <th>MÜŞTERİ FSC</th>
+                    <th>ÜRÜN</th>
+                    <th class="text-end">MİKTAR</th>
+                    <th>BİRİM</th>
+                    <th>İŞ EMRİ</th>
+                    <th class="text-center">COC</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.SalesRows.Any())
+                {
+                    <tr><td colspan="9" class="text-center text-muted py-4">Dönemde sevkiyat bulunamadı.</td></tr>
+                }
+                @foreach (var r in Model.SalesRows)
+                {
+                    <tr style="@(!r.CocComplete ? "background:#fffbeb;" : "")">
+                        <td class="text-muted small">@r.DispatchDate.ToString("dd.MM.yyyy")</td>
+                        <td class="fw-semibold small">@r.SalesOrderNo</td>
+                        <td>
+                            <div style="font-size:13px;">@r.Customer</div>
+                            @if (r.CustomerIsFsc)
+                            {
+                                <span style="font-size:10px;color:#166534;"><i class="fas fa-certificate me-1"></i>FSC</span>
+                            }
+                        </td>
+                        <td class="text-muted small">@(r.CustomerFscLicense ?? "—")</td>
+                        <td class="small">@r.ProductName</td>
+                        <td class="text-end fw-semibold">@r.Quantity.ToString("N0")</td>
+                        <td class="text-muted small">@r.Unit</td>
+                        <td class="small">
+                            @if (r.WorkOrderNo != null)
+                            {
+                                <a href="/Production/Index" class="table-link">@r.WorkOrderNo</a>
+                            }
+                            else { <span class="text-muted">—</span> }
+                        </td>
+                        <td class="text-center">
+                            @if (r.CocComplete)
+                            {
+                                <span class="badge badge-success" style="font-size:10px;"><i class="fas fa-check"></i> Tam</span>
+                            }
+                            else
+                            {
+                                <span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;">
+                                    <i class="fas fa-minus"></i> Eksik
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.SalesRows.Any())
+            {
+                <tfoot>
+                    <tr style="background:#f8fafc;font-weight:700;font-size:12.5px;">
+                        <td colspan="5" class="text-muted">TOPLAM</td>
+                        <td class="text-end">@toplamSatis.ToString("N0")</td>
+                        <td colspan="2"></td>
+                        <td class="text-center small">
+                            <span class="text-success">@cocTam ✓</span>
+                            @if (cocEksik > 0) { <span class="text-warning ms-1">@cocEksik ⚠</span> }
+                        </td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+</div>
+
+<!-- Denetim Notu -->
+<div class="p-3 rounded" style="background:#f0fdf4; border:1px solid #bbf7d0; font-size:12.5px;">
+    <div class="fw-semibold text-success mb-2"><i class="fas fa-shield-alt me-2"></i>Denetim Notu</div>
+    <p class="mb-1">Bu rapor <strong>@sd — @ed</strong> dönemini kapsamaktadır.</p>
+    <p class="mb-2">
+        <strong>FSC Denge Hesabı:</strong>
+        Açılış Bakiyesi (<em>bir önceki denetim dönemi kapanışından devir</em>)
+        + Dönem Girişi = Dönem Tüketimi + Fire + Kapanış Bakiyesi.
+    </p>
+    <p class="mb-1">
+        FSC CoC denetiminde denetçilere sunulacak veriler:
+        <strong>Hammadde Girişleri</strong> (tedarikçi FSC kodu + fatura/irsaliye),
+        <strong>Üretim Tüketimi</strong> (hangi lot kullanıldı),
+        <strong>Sevkiyat</strong> (müşteri + iş emri bağlantısı) ve
+        <strong>Denge Özeti</strong> (Açılış + Giriş ≥ Tüketim + Fire + Kapanış).
+    </p>
+    <p class="mb-0 text-muted">
+        Geçmiş denetim dönemlerini görüntülemek için üstteki dropdown'dan kayıtlı dönemi seçin ya da tarihleri manuel girin.
+        <a href="/AuditPeriod" class="text-success">Dönem yönetimi</a> ekranından yeni dönem ekleyebilirsiniz.
+        Excel indir butonu, seçilen dönemin tüm verilerini arşivlemek için kullanılabilir.
+    </p>
+</div>
+
+@section Scripts {
+<script>
+    // Kayıtlı dönemleri yükle ve aktif dönemi seç
+    (function loadPeriods() {
+        var curStart = '@Model.StartDate.ToString("yyyy-MM-dd")';
+        var curEnd   = '@Model.EndDate.ToString("yyyy-MM-dd")';
+        $.get('/AuditPeriod/GetAll', function(data) {
+            var sel = document.getElementById('periodSelect');
+            data.forEach(function(p) {
+                var opt = document.createElement('option');
+                opt.value = JSON.stringify({ s: p.startDate, e: p.endDate });
+                opt.textContent = p.label;
+                if (p.startDate === curStart && p.endDate === curEnd)
+                    opt.selected = true;
+                sel.appendChild(opt);
+            });
+        });
+    })();
+
+    function applyPeriod() {
+        var val = document.getElementById('periodSelect').value;
+        if (!val) return;
+        var d = JSON.parse(val);
+        document.getElementById('startDateInput').value = d.s;
+        document.getElementById('endDateInput').value   = d.e;
+    }
+</script>
+}

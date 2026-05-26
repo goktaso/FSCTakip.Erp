@@ -1,4 +1,4 @@
-@model IEnumerable<FSCTakip.Core.Entities.PaperWeight>
+﻿@model IEnumerable<FSCTakip.Core.Entities.PaperWeight>
 @{
     ViewData["Title"] = "Kağıt Gramaj Tanımları";
 }
@@ -98,7 +98,7 @@
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-secondary text-white">
                 <h6 class="modal-title font-weight-bold">Yeni Gramaj Tanımla</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Paper" asp-action="SaveWeight" method="post">
                 <div class="modal-body">
@@ -117,7 +117,7 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light p-2">
-                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Kapat</button>
                     <button type="submit" class="btn btn-secondary btn-sm text-white px-3">Kaydet</button>
                 </div>
             </form>
@@ -156,7 +156,7 @@
             $('#weightValue').val('');
             $('#isActiveSwitch').prop('checked', true);
             $('.modal-title').text('Yeni Gramaj Tanımla');
-            $('#weightModal').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('weightModal')).show();
         }
 
         function editWeight(id, value, unit, isActive) {
@@ -165,7 +165,7 @@
             $('#weightUnit').val(unit);
             $('#isActiveSwitch').prop('checked', isActive);
             $('.modal-title').text('Gramaj Düzenle');
-            $('#weightModal').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('weightModal')).show();
         }
 
         function deleteWeight(id) {

@@ -1,0 +1,216 @@
+@model List<FSCTakip.Core.Entities.StockMovement>
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "Stok Hareketleri";
+    var products       = ViewBag.Products       as List<Product>                           ?? new();
+    var purchaseLotMap = ViewBag.PurchaseLotMap as Dictionary<string, FscLot>              ?? new();
+    var salesOrderMap  = ViewBag.SalesOrderMap  as Dictionary<string, SalesOrder>          ?? new();
+    string? start      = ViewBag.StartDate;
+    string? end        = ViewBag.EndDate;
+    string? stockCode  = ViewBag.StockCode as string;
+}
+
+<div class="page-header">
+    <h4 class="page-title"><i class="fas fa-exchange-alt me-2 text-primary"></i>Stok Hareketleri</h4>
+</div>
+
+<!-- Filter -->
+<div class="filter-card">
+    <form method="get" action="/Stock/Movements" class="filter-form">
+        <input type="text" name="stockCode" class="form-control form-control-sm"
+               value="@stockCode" placeholder="Stok kodu / adı..." style="max-width:180px;"
+               title="Stok kodu (ERP/dahili) veya stok adı ile ara" />
+        <select name="productId" class="form-control form-control-sm">
+            <option value="">— Ürün —</option>
+            @foreach (var p in products)
+            {
+                <option value="@p.Id">@p.ProductName</option>
+            }
+        </select>
+        <select name="type" class="form-control form-control-sm">
+            <option value="">— Hareket Tipi —</option>
+            <option value="4">Satın Alma Girişi</option>
+            <option value="1">Üretim Girişi</option>
+            <option value="3">Satış Çıkışı</option>
+            <option value="2">Depo Transferi</option>
+        </select>
+        <input type="date" name="startDate" class="form-control form-control-sm" value="@start" title="Başlangıç" />
+        <input type="date" name="endDate"   class="form-control form-control-sm" value="@end"   title="Bitiş" />
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Filtrele</button>
+        <a href="/Stock/Movements" class="btn btn-outline-secondary btn-sm">Temizle</a>
+        <div class="ms-auto">
+            <a href="/Stock/ExportMovements" class="btn btn-success btn-sm"><i class="fas fa-file-excel me-1"></i>Excel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>TARİH</th>
+                    <th>TİP</th>
+                    <th>ÜRÜN</th>
+                    <th class="text-end">MİKTAR</th>
+                    <th>BİRİM</th>
+                    <th>BELGELER</th>
+                    <th>MÜŞTERİ / AÇIKLAMA</th>
+                    <th>PLAKA</th>
+                    <th>İŞ EMRİ</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="9">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-exchange-alt"></i></div>
+                            <h6>Stok hareketi bulunamadı</h6>
+                            <p>Seçilen filtre kriterlerine uygun hareket kaydı yok.</p>
+                        </div>
+                    </td></tr>
+                }
+                @foreach (var m in Model)
+                {
+                    string tipClass = m.Type switch {
+                        MovementType.PurchaseEntry     => "badge-info",
+                        MovementType.ProductionEntry   => "badge-primary",
+                        MovementType.SalesDispatch     => "badge-danger",
+                        MovementType.WarehouseTransfer => "badge-warning",
+                        _ => "badge-secondary"
+                    };
+                    string tipText = m.Type switch {
+                        MovementType.PurchaseEntry     => "Satın Alma",
+                        MovementType.ProductionEntry   => "Üretim",
+                        MovementType.SalesDispatch     => "Satış",
+                        MovementType.WarehouseTransfer => "Transfer",
+                        _ => m.Type.ToString()
+                    };
+                    bool isGiris = m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry;
+
+                    // Belge bilgisi — alış için FscLot, satış için SalesOrder
+                    FscLot?    purchaseLot  = null;
+                    SalesOrder? salesOrder  = null;
+                    if (m.Type == MovementType.PurchaseEntry && m.DocumentNo != null)
+                        purchaseLotMap.TryGetValue(m.DocumentNo, out purchaseLot);
+                    if (m.Type == MovementType.SalesDispatch && m.DocumentNo != null)
+                        salesOrderMap.TryGetValue(m.DocumentNo, out salesOrder);
+
+                    <tr>
+                        <td class="small text-muted">@m.DocumentDate.ToString("dd.MM.yyyy")</td>
+                        <td><span class="badge @tipClass">@tipText</span></td>
+                        <td><strong class="small">@(m.Product?.ProductName ?? "—")</strong></td>
+                        <td class="text-end fw-semibold @(isGiris ? "text-success" : m.Type == MovementType.SalesDispatch ? "text-danger" : "")">
+                            @(isGiris ? "+" : m.Type == MovementType.SalesDispatch ? "-" : "")@m.Quantity.ToString("N0")
+                        </td>
+                        <td class="small text-muted">@m.Unit</td>
+                        <td>
+                            @* --- Alış hareketi: irsaliye + fatura PDF --- *@
+                            @if (purchaseLot != null)
+                            {
+                                @if (!string.IsNullOrEmpty(purchaseLot.DispatchNo))
+                                {
+                                    <div class="small mb-1">
+                                        <i class="fas fa-truck me-1 text-muted" title="İrsaliye"></i>
+                                        @if (!string.IsNullOrEmpty(purchaseLot.DispatchPdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@purchaseLot.DispatchPdfPath','İrsaliye — @purchaseLot.DispatchNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@purchaseLot.DispatchNo
+                                            </button>
+                                        }
+                                        else { <span>@purchaseLot.DispatchNo</span> }
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(purchaseLot.InvoiceNo))
+                                {
+                                    <div class="small">
+                                        <i class="fas fa-file-invoice me-1 text-muted" title="Fatura"></i>
+                                        @if (!string.IsNullOrEmpty(purchaseLot.InvoicePdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@purchaseLot.InvoicePdfPath','Fatura — @purchaseLot.InvoiceNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@purchaseLot.InvoiceNo
+                                            </button>
+                                        }
+                                        else { <span>@purchaseLot.InvoiceNo</span> }
+                                    </div>
+                                }
+                                @if (string.IsNullOrEmpty(purchaseLot.DispatchNo) && string.IsNullOrEmpty(purchaseLot.InvoiceNo))
+                                {
+                                    <span class="small text-muted">@(m.DocumentNo ?? "—")</span>
+                                }
+                            }
+                            @* --- Satış hareketi: irsaliye + fatura PDF --- *@
+                            else if (salesOrder != null)
+                            {
+                                <div class="small mb-1 fw-semibold text-muted" style="font-size:10px;">@salesOrder.SalesOrderNo</div>
+                                @if (!string.IsNullOrEmpty(salesOrder.DispatchNo))
+                                {
+                                    <div class="small mb-1">
+                                        <i class="fas fa-truck me-1 text-muted" title="İrsaliye"></i>
+                                        @if (!string.IsNullOrEmpty(salesOrder.DispatchPdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@salesOrder.DispatchPdfPath','İrsaliye — @salesOrder.DispatchNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@salesOrder.DispatchNo
+                                            </button>
+                                        }
+                                        else { <span>@salesOrder.DispatchNo</span> }
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(salesOrder.InvoiceNo))
+                                {
+                                    <div class="small">
+                                        <i class="fas fa-file-invoice me-1 text-muted" title="Fatura"></i>
+                                        @if (!string.IsNullOrEmpty(salesOrder.InvoicePdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@salesOrder.InvoicePdfPath','Fatura — @salesOrder.InvoiceNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@salesOrder.InvoiceNo
+                                            </button>
+                                        }
+                                        else { <span>@salesOrder.InvoiceNo</span> }
+                                    </div>
+                                }
+                            }
+                            @* --- Diğer hareketler: sadece belge no --- *@
+                            else
+                            {
+                                <span class="small fw-semibold">@(m.DocumentNo ?? "—")</span>
+                            }
+                        </td>
+                        <td class="small text-muted">
+                            @if (m.Customer != null) { <span>@m.Customer.Name</span> }
+                            else if (!string.IsNullOrEmpty(m.Description)) { <span>@m.Description</span> }
+                            else { <span>—</span> }
+                        </td>
+                        <td class="small text-muted">@(m.PlateNumber ?? "—")</td>
+                        <td class="small text-muted">
+                            @if (m.WorkOrderId.HasValue)
+                            {
+                                <a href="/Production/Detail/@m.WorkOrderId" class="text-primary">
+                                    <i class="fas fa-link me-1"></i>IE-@m.WorkOrderId
+                                </a>
+                            }
+                            else { <span>—</span> }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.Any())
+    {
+        <div class="table-footer d-flex justify-content-between align-items-center px-3 py-2 border-top small text-muted">
+            <span>@Model.Count kayıt</span>
+            <span>
+                Toplam Giriş: <strong class="text-success">
+                    @Model.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity).ToString("N0")
+                </strong>
+                &nbsp;|&nbsp;
+                Toplam Çıkış: <strong class="text-danger">
+                    @Model.Where(m => m.Type == MovementType.SalesDispatch).Sum(m => m.Quantity).ToString("N0")
+                </strong>
+            </span>
+        </div>
+    }
+</div>

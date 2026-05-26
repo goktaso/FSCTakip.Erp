@@ -1,4 +1,4 @@
-@model IEnumerable<FSCTakip.Core.Entities.PaperType>
+﻿@model IEnumerable<FSCTakip.Core.Entities.PaperType>
 @{
     ViewData["Title"] = "Kağıt Tipi Tanımları";
 }
@@ -103,7 +103,7 @@
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-secondary text-white">
                 <h6 class="modal-title font-weight-bold">Kağıt Tipi Formu</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Paper" asp-action="SaveType" method="post">
                 <div class="modal-body">
@@ -122,7 +122,7 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light p-2">
-                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Kapat</button>
                     <button type="submit" class="btn btn-secondary btn-sm px-3 text-white">Kaydet</button>
                 </div>
             </form>
@@ -163,7 +163,7 @@
             $('#typeShortCode').val('');
             $('#isActiveSwitch').prop('checked', true);
             $('.modal-title').text('Yeni Kağıt Tipi');
-            $('#addTypeModal').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('addTypeModal')).show();
         }
 
         function editType(id, name, shortCode, isActive) {
@@ -172,7 +172,7 @@
             $('#typeShortCode').val(shortCode);
             $('#isActiveSwitch').prop('checked', isActive);
             $('.modal-title').text('Kağıt Tipi Düzenle');
-            $('#addTypeModal').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('addTypeModal')).show();
         }
 
         function deleteType(id) {

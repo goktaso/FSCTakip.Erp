@@ -1,0 +1,612 @@
+@model TraceabilityModel
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = $"Tam İzlenebilirlik — {Model.Order.SalesOrderNo}";
+
+    var statusText = Model.Order.Status switch {
+        SalesOrderStatus.Taslak       => "Taslak",
+        SalesOrderStatus.TeslimEdildi => "Teslim Edildi",
+        SalesOrderStatus.Iptal        => "İptal",
+        _ => "—"
+    };
+    var statusBadge = Model.Order.Status switch {
+        SalesOrderStatus.Taslak       => "badge-amber",
+        SalesOrderStatus.TeslimEdildi => "badge-green",
+        SalesOrderStatus.Iptal        => "badge-red",
+        _ => "badge-gray"
+    };
+}
+
+<style>
+    /* ── Zincir Bağlantı Çizgileri ── */
+    .chain-wrapper { position: relative; }
+
+    .chain-level {
+        position: relative;
+        margin-left: 0;
+    }
+    .chain-level + .chain-level::before {
+        content: '';
+        display: block;
+        width: 2px;
+        height: 20px;
+        background: linear-gradient(to bottom, #1e3d14, #4ade80);
+        margin-left: 24px;
+        margin-bottom: 0;
+    }
+
+    .chain-card {
+        border: 1.5px solid #e5e7eb;
+        border-radius: 10px;
+        background: #fff;
+        margin-bottom: 0;
+        position: relative;
+        overflow: hidden;
+    }
+    .chain-card::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 4px;
+    }
+    .chain-card.level-sales::before    { background: #1e3d14; }
+    .chain-card.level-line::before     { background: #3b82f6; }
+    .chain-card.level-wo::before       { background: #8b5cf6; }
+    .chain-card.level-lot::before      { background: #f59e0b; }
+    .chain-card.level-lot.fsc-ok::before  { background: #16a34a; }
+    .chain-card.level-lot.fsc-bad::before { background: #dc2626; }
+
+    .chain-card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        cursor: pointer;
+        user-select: none;
+    }
+    .chain-card-header:hover { background: #f3f4f6; }
+
+    .chain-icon {
+        width: 32px; height: 32px;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+    .ci-sales  { background: #dcfce7; color: #166534; }
+    .ci-line   { background: #dbeafe; color: #1d4ed8; }
+    .ci-wo     { background: #ede9fe; color: #7c3aed; }
+    .ci-lot    { background: #fef3c7; color: #92400e; }
+    .ci-serial { background: #f3f4f6; color: #374151; }
+
+    .chain-body { padding: 14px 16px; }
+
+    .connector-line {
+        display: flex;
+        align-items: flex-start;
+        gap: 0;
+        padding-left: 24px;
+    }
+    .connector-v {
+        width: 2px;
+        min-height: 24px;
+        background: linear-gradient(to bottom, #d1d5db, #9ca3af);
+        margin-left: 15px;
+        margin-right: 0;
+        flex-shrink: 0;
+    }
+
+    .serial-table { font-size: 12px; }
+    .serial-table th { background: #f9fafb; font-weight: 600; color: #374151; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+    .stat-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .chain-summary { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+    .lot-docs a { font-size: 12px; }
+
+    /* Collapse arrow */
+    .collapse-arrow { transition: transform 0.2s; display: inline-block; }
+    .collapsed .collapse-arrow { transform: rotate(-90deg); }
+
+    @@media print {
+        .topbar-action-area, .no-print { display: none !important; }
+        .chain-card-header { cursor: default; }
+        .collapse:not(.show) { display: block !important; }
+    }
+</style>
+
+@section TopbarActions {
+    <a href="/Sales/Detail/@Model.Order.Id" class="topbar-btn">
+        <i class="fas fa-arrow-left me-1"></i> Sipariş Detayı
+    </a>
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-print me-1"></i> Yazdır
+    </button>
+}
+
+<!-- ── Özet Başlık Kartı ────────────────────────────────────────────────────── -->
+<div class="chain-summary">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="chain-icon ci-sales" style="width:44px;height:44px;border-radius:12px;font-size:20px;">
+                <i class="fas fa-search"></i>
+            </div>
+            <div>
+                <div style="font-size:18px;font-weight:700;color:#111827;">
+                    @Model.Order.SalesOrderNo
+                    <span class="badge @statusBadge ms-2" style="font-size:12px;">@statusText</span>
+                </div>
+                <div style="font-size:13px;color:#6b7280;">
+                    <i class="fas fa-building me-1"></i>@Model.Order.Customer?.Name
+                    @if (Model.Order.Customer?.IsFscActive == true)
+                    {
+                        <span class="badge badge-green ms-2" style="font-size:10px;">FSC @Model.Order.Customer?.FscLicenseCode</span>
+                    }
+                    &nbsp;·&nbsp;
+                    <i class="fas fa-calendar me-1"></i>@Model.Order.OrderDate.ToString("dd.MM.yyyy")
+                    @if (Model.Order.DispatchDate.HasValue)
+                    {
+                        <span>&nbsp;·&nbsp;<i class="fas fa-truck me-1"></i>Sevk: @Model.Order.DispatchDate.Value.ToString("dd.MM.yyyy")</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- FSC Zincir Durumu -->
+        @if (Model.ChainComplete)
+        {
+            <div class="stat-pill" style="background:#dcfce7;color:#166534;font-size:14px;padding:8px 16px;">
+                <i class="fas fa-check-circle"></i> FSC Zinciri Tam — CoC Uyumlu
+            </div>
+        }
+        else
+        {
+            <div class="stat-pill" style="background:#fee2e2;color:#991b1b;font-size:14px;padding:8px 16px;">
+                <i class="fas fa-exclamation-triangle"></i> FSC Zinciri Eksik
+            </div>
+        }
+    </div>
+
+    <!-- İstatistikler -->
+    <div class="d-flex flex-wrap gap-3 mt-3 pt-3" style="border-top:1px solid #e5e7eb;">
+        <div class="stat-pill" style="background:#ede9fe;color:#7c3aed;">
+            <i class="fas fa-list-check"></i> @Model.Lines.Count Ürün Kalemi
+        </div>
+        <div class="stat-pill" style="background:#fef3c7;color:#92400e;">
+            <i class="fas fa-layer-group"></i> @Model.TotalLots Lot
+        </div>
+        <div class="stat-pill" style="background:#dbeafe;color:#1d4ed8;">
+            <i class="fas fa-barcode"></i> @Model.TotalSerials Bobin/Seri
+        </div>
+        <div class="stat-pill" style="background:#f0fdf4;color:#166534;">
+            <i class="fas fa-weight-hanging"></i> @Model.TotalConsumedKg.ToString("N0") kg Hammadde
+        </div>
+        @if (Model.TotalWasteKg > 0)
+        {
+            <div class="stat-pill" style="background:#fef2f2;color:#dc2626;">
+                <i class="fas fa-trash-alt"></i> @Model.TotalWasteKg.ToString("N0") kg Fire
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ── Zincir Görünümü ─────────────────────────────────────────────────────── -->
+@if (!Model.Lines.Any())
+{
+    <div class="alert alert-warning">
+        <i class="fas fa-info-circle me-2"></i>Bu siparişe ait ürün kalemi bulunamadı.
+    </div>
+}
+
+@{ int lineIdx = 0; }
+@foreach (var lm in Model.Lines)
+{
+    lineIdx++;
+    var lineId = $"line-{lineIdx}";
+    var lineProduct = lm.Line.Product;
+
+    <div class="chain-level mb-3">
+
+        <!-- ── ÜRÜN KALEMİ ─────────────────────────────────────────────────── -->
+        <div class="chain-card level-line">
+            <div class="chain-card-header" onclick="toggleCollapse('@lineId')">
+                <div class="chain-icon ci-line">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div style="font-weight:600;font-size:14px;">@(lineProduct?.ProductName ?? "—")</div>
+                    <div style="font-size:12px;color:#6b7280;">
+                        @lm.Line.Quantity.ToString("N0") @lm.Line.Unit
+                        @if (lm.Line.UnitPrice > 0)
+                        {
+                            <span>&nbsp;·&nbsp;@lm.Line.UnitPrice.ToString("N2") @lm.Line.SalesOrder?.Currency</span>
+                        }
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    @if (lm.HasFullChain)
+                    {
+                        <span class="stat-pill" style="background:#dcfce7;color:#166534;">
+                            <i class="fas fa-check-circle"></i> FSC Tam
+                        </span>
+                    }
+                    else if (!lm.LotGroups.Any())
+                    {
+                        <span class="stat-pill" style="background:#fef3c7;color:#92400e;">
+                            <i class="fas fa-unlink"></i> İş Emri Yok
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="stat-pill" style="background:#fee2e2;color:#991b1b;">
+                            <i class="fas fa-exclamation-triangle"></i> Eksik
+                        </span>
+                    }
+                    <i class="fas fa-chevron-down collapse-arrow" id="arrow-@lineId" style="color:#9ca3af;font-size:12px;"></i>
+                </div>
+            </div>
+
+            <div class="collapse show" id="@lineId">
+                <div class="chain-body">
+
+                    @if (lm.WorkOrder == null)
+                    {
+                        <div class="alert alert-warning py-2 mb-0" style="font-size:13px;">
+                            <i class="fas fa-unlink me-2"></i>Bu kalemin bağlı iş emri bulunmuyor — FSC CoC zinciri tamamlanamıyor.
+                        </div>
+                    }
+                    else
+                    {
+                        @* ── İŞ EMRİ ── *@
+                        var wo = lm.WorkOrder!;
+                        var woStatusText = wo.Status switch {
+                            WorkOrderStatus.Taslak     => "Taslak",
+                            WorkOrderStatus.Uretimde   => "Üretimde",
+                            WorkOrderStatus.Tamamlandi => "Tamamlandı",
+                            WorkOrderStatus.Iptal      => "İptal",
+                            _ => "—"
+                        };
+                        var woStatusBadge = wo.Status switch {
+                            WorkOrderStatus.Taslak     => "badge-amber",
+                            WorkOrderStatus.Uretimde   => "badge-blue",
+                            WorkOrderStatus.Tamamlandi => "badge-green",
+                            WorkOrderStatus.Iptal      => "badge-red",
+                            _ => "badge-gray"
+                        };
+                        var woColId = $"wo-{lineIdx}";
+
+                        <!-- Konnektör çizgi -->
+                        <div style="display:flex;align-items:flex-start;padding-left:12px;">
+                            <div style="width:2px;height:16px;background:linear-gradient(to bottom,#3b82f6,#8b5cf6);margin-right:0;flex-shrink:0;"></div>
+                        </div>
+
+                        <div class="chain-card level-wo" style="margin-left:28px;">
+                            <div class="chain-card-header" onclick="toggleCollapse('@woColId')">
+                                <div class="chain-icon ci-wo">
+                                    <i class="fas fa-industry"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div style="font-weight:600;font-size:14px;">
+                                        İş Emri: @wo.WorkOrderNo
+                                        <span class="badge @woStatusBadge ms-2" style="font-size:10px;">@woStatusText</span>
+                                    </div>
+                                    <div style="font-size:12px;color:#6b7280;">
+                                        <i class="fas fa-cog me-1"></i>@wo.Machine?.Name
+                                        &nbsp;·&nbsp;
+                                        <i class="fas fa-calendar me-1"></i>Planlanan: @wo.PlannedDate.ToString("dd.MM.yyyy")
+                                        @if (wo.CompletedDate.HasValue)
+                                        {
+                                            <span>&nbsp;·&nbsp;Tamamlanan: @wo.CompletedDate.Value.ToString("dd.MM.yyyy")</span>
+                                        }
+                                        &nbsp;·&nbsp;Planlanan: @wo.PlannedQuantity.ToString("N0") adet
+                                        @if (wo.ActualQuantity > 0)
+                                        {
+                                            <span>&nbsp;/ Gerçekleşen: @wo.ActualQuantity.ToString("N0") adet</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div>
+                                    <a href="/Production/Detail/@wo.Id" onclick="event.stopPropagation()" class="btn btn-outline-secondary btn-sm" style="font-size:11px;">
+                                        <i class="fas fa-external-link-alt me-1"></i> Üretim Fişi
+                                    </a>
+                                    <i class="fas fa-chevron-down collapse-arrow ms-2" id="arrow-@woColId" style="color:#9ca3af;font-size:12px;"></i>
+                                </div>
+                            </div>
+
+                            <div class="collapse show" id="@woColId">
+                                <div class="chain-body">
+
+                                    @if (!lm.LotGroups.Any())
+                                    {
+                                        <div class="alert alert-warning py-2 mb-0" style="font-size:13px;">
+                                            <i class="fas fa-exclamation-circle me-2"></i>Bu iş emrinde kayıtlı hammadde tüketimi bulunamadı.
+                                        </div>
+                                    }
+
+                                    <!-- Tüketim Özeti -->
+                                    @if (lm.TotalConsumedKg > 0)
+                                    {
+                                        <div class="d-flex gap-3 mb-3 flex-wrap">
+                                            <span class="stat-pill" style="background:#f0fdf4;color:#166534;">
+                                                <i class="fas fa-weight-hanging"></i> @lm.TotalConsumedKg.ToString("N2") kg Tüketim
+                                            </span>
+                                            @if (lm.TotalWasteKg > 0)
+                                            {
+                                                <span class="stat-pill" style="background:#fef2f2;color:#dc2626;">
+                                                    <i class="fas fa-trash-alt"></i> @lm.TotalWasteKg.ToString("N2") kg Fire
+                                                </span>
+                                            }
+                                            <span class="stat-pill" style="background:#fef3c7;color:#92400e;">
+                                                <i class="fas fa-layer-group"></i> @lm.LotGroups.Count Lot · @lm.LotGroups.Sum(g => g.Serials.Count) Bobin
+                                            </span>
+                                        </div>
+                                    }
+
+                                    <!-- ── LOT GRUPLARI ───────────────────────────────────────── -->
+                                    @{ int lotIdx = 0; }
+                                    @foreach (var lg in lm.LotGroups)
+                                    {
+                                        lotIdx++;
+                                        var lot = lg.Lot;
+                                        var supplier = lot.Supplier;
+                                        var lotCardClass = lg.SupplierFscValid ? "fsc-ok" : "fsc-bad";
+                                        var lotColId = $"lot-{lineIdx}-{lotIdx}";
+                                        var expiryWarn = supplier?.FscExpiryDate.HasValue == true && supplier.FscExpiryDate.Value <= DateTime.Today.AddDays(60);
+
+                                        <!-- Konnektör -->
+                                        <div style="display:flex;align-items:flex-start;padding-left:12px;margin-bottom:2px;">
+                                            <div style="width:2px;height:16px;background:linear-gradient(to bottom,#8b5cf6,#f59e0b);flex-shrink:0;"></div>
+                                        </div>
+
+                                        <div class="chain-card level-lot @lotCardClass" style="margin-left:28px;margin-bottom:8px;">
+                                            <div class="chain-card-header" onclick="toggleCollapse('@lotColId')">
+                                                <div class="chain-icon ci-lot">
+                                                    <i class="fas fa-layer-group"></i>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <div style="font-weight:600;font-size:14px;">
+                                                        PARTİ: @lot.PartiNo
+                                                        @if (lot.FscType != null)
+                                                        {
+                                                            <span class="badge badge-green ms-2" style="font-size:10px;">@lot.FscType.Name</span>
+                                                        }
+                                                    </div>
+                                                    <div style="font-size:12px;color:#6b7280;">
+                                                        <i class="fas fa-truck-loading me-1"></i>@(supplier?.Name ?? "—")
+                                                        @if (!string.IsNullOrEmpty(supplier?.FscCode))
+                                                        {
+                                                            <span>&nbsp;·&nbsp;<i class="fas fa-certificate me-1"></i>@supplier.FscCode</span>
+                                                        }
+                                                        &nbsp;·&nbsp;
+                                                        <i class="fas fa-calendar me-1"></i>Giriş: @lot.ArrivalDate.ToString("dd.MM.yyyy")
+                                                        &nbsp;·&nbsp;
+                                                        <i class="fas fa-weight-hanging me-1"></i>@lg.ConsumedKg.ToString("N2") kg
+                                                    </div>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    @if (lg.SupplierFscValid)
+                                                    {
+                                                        <span class="stat-pill" style="background:#dcfce7;color:#166534;font-size:11px;">
+                                                            <i class="fas fa-shield-alt"></i> FSC Geçerli
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="stat-pill" style="background:#fee2e2;color:#991b1b;font-size:11px;">
+                                                            <i class="fas fa-times-circle"></i> FSC Sorunlu
+                                                        </span>
+                                                    }
+                                                    @if (expiryWarn)
+                                                    {
+                                                        <span class="stat-pill" style="background:#fef3c7;color:#92400e;font-size:11px;">
+                                                            <i class="fas fa-clock"></i> Yakında Sona Eriyor
+                                                        </span>
+                                                    }
+                                                    <i class="fas fa-chevron-down collapse-arrow ms-1" id="arrow-@lotColId" style="color:#9ca3af;font-size:12px;"></i>
+                                                </div>
+                                            </div>
+
+                                            <div class="collapse show" id="@lotColId">
+                                                <div class="chain-body pt-2">
+
+                                                    <!-- Lot Detayları -->
+                                                    <div class="row g-2 mb-3">
+                                                        <div class="col-md-6">
+                                                            <div style="background:#f9fafb;border-radius:8px;padding:10px;font-size:12px;">
+                                                                <div class="fw-semibold mb-2" style="color:#374151;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">
+                                                                    <i class="fas fa-info-circle me-1"></i> Lot Bilgileri
+                                                                </div>
+                                                                <table style="width:100%;border-collapse:collapse;">
+                                                                    <tr>
+                                                                        <td style="color:#6b7280;width:45%;padding:2px 0;">FSC Tipi</td>
+                                                                        <td style="font-weight:600;">@(lot.FscType?.Name ?? "—") <span style="color:#6b7280;font-weight:400;">(@(lot.FscType?.Code ?? ""))</span></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td style="color:#6b7280;padding:2px 0;">Tedarikçi</td>
+                                                                        <td style="font-weight:600;">@(supplier?.Name ?? "—")</td>
+                                                                    </tr>
+                                                                    @if (!string.IsNullOrEmpty(supplier?.FscCode))
+                                                                    {
+                                                                        <tr>
+                                                                            <td style="color:#6b7280;padding:2px 0;">FSC Kodu</td>
+                                                                            <td style="font-weight:600;color:#166534;">@supplier.FscCode</td>
+                                                                        </tr>
+                                                                    }
+                                                                    @if (supplier?.FscExpiryDate.HasValue == true)
+                                                                    {
+                                                                        <tr>
+                                                                            <td style="color:#6b7280;padding:2px 0;">Sertifika Bitiş</td>
+                                                                            <td style="font-weight:600;color:@(supplier.FscExpiryDate.Value < DateTime.Today ? "#dc2626" : "#166534");">
+                                                                                @supplier.FscExpiryDate.Value.ToString("dd.MM.yyyy")
+                                                                                @if (supplier.FscExpiryDate.Value < DateTime.Today)
+                                                                                {
+                                                                                    <span style="color:#dc2626;"> ⚠ Süresi Dolmuş</span>
+                                                                                }
+                                                                            </td>
+                                                                        </tr>
+                                                                    }
+                                                                    <tr>
+                                                                        <td style="color:#6b7280;padding:2px 0;">Giriş Tarihi</td>
+                                                                        <td>@lot.ArrivalDate.ToString("dd.MM.yyyy")</td>
+                                                                    </tr>
+                                                                    @if (!string.IsNullOrEmpty(lot.TruckPlate))
+                                                                    {
+                                                                        <tr>
+                                                                            <td style="color:#6b7280;padding:2px 0;">Araç Plakası</td>
+                                                                            <td>@lot.TruckPlate</td>
+                                                                        </tr>
+                                                                    }
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <!-- Evrak Linkleri -->
+                                                            <div style="background:#f9fafb;border-radius:8px;padding:10px;font-size:12px;height:100%;">
+                                                                <div class="fw-semibold mb-2" style="color:#374151;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">
+                                                                    <i class="fas fa-folder-open me-1"></i> Evraklar
+                                                                </div>
+                                                                @if (!string.IsNullOrEmpty(lot.InvoiceNo) || !string.IsNullOrEmpty(lot.InvoicePdfPath))
+                                                                {
+                                                                    <div class="mb-2">
+                                                                        <div style="color:#6b7280;">Fatura: <span style="color:#111827;font-weight:600;">@(lot.InvoiceNo ?? "—")</span></div>
+                                                                        @if (!string.IsNullOrEmpty(lot.InvoicePdfPath))
+                                                                        {
+                                                                            <a href="/@lot.InvoicePdfPath" target="_blank" class="lot-docs" style="color:#2563eb;">
+                                                                                <i class="fas fa-file-pdf me-1" style="color:#dc2626;"></i> PDF Görüntüle
+                                                                            </a>
+                                                                        }
+                                                                    </div>
+                                                                }
+                                                                @if (!string.IsNullOrEmpty(lot.DispatchNo) || !string.IsNullOrEmpty(lot.DispatchPdfPath))
+                                                                {
+                                                                    <div class="mb-2">
+                                                                        <div style="color:#6b7280;">İrsaliye: <span style="color:#111827;font-weight:600;">@(lot.DispatchNo ?? "—")</span></div>
+                                                                        @if (!string.IsNullOrEmpty(lot.DispatchPdfPath))
+                                                                        {
+                                                                            <a href="/@lot.DispatchPdfPath" target="_blank" class="lot-docs" style="color:#2563eb;">
+                                                                                <i class="fas fa-file-pdf me-1" style="color:#dc2626;"></i> PDF Görüntüle
+                                                                            </a>
+                                                                        }
+                                                                    </div>
+                                                                }
+                                                                @if (string.IsNullOrEmpty(lot.InvoiceNo) && string.IsNullOrEmpty(lot.DispatchNo))
+                                                                {
+                                                                    <div style="color:#9ca3af;font-style:italic;">Evrak kaydı yok</div>
+                                                                }
+                                                                <div class="mt-2 pt-2" style="border-top:1px solid #e5e7eb;">
+                                                                    <a href="/Purchase/Detail/@lot.Id" style="color:#2563eb;font-size:11px;">
+                                                                        <i class="fas fa-external-link-alt me-1"></i> Lot Detayına Git
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- ── BOBİN/SERİ TABLOSU ─────────────────────────────────── -->
+                                                    <div style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">
+                                                        <i class="fas fa-barcode me-1"></i> Tüketilen Bobinler (@lg.Serials.Count adet)
+                                                    </div>
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm table-hover serial-table mb-0" style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th class="ps-3">Seri No</th>
+                                                                    <th class="text-end">Tüketim (kg)</th>
+                                                                    <th class="text-end">Fire (kg)</th>
+                                                                    <th class="text-end">Üretim (adet)</th>
+                                                                    <th>Üretim Tarihi</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach (var sr in lg.Serials)
+                                                                {
+                                                                    <tr>
+                                                                        <td class="ps-3 fw-semibold" style="color:var(--accent);">@sr.Serial.SerialNo</td>
+                                                                        <td class="text-end">@sr.ConsumedKg.ToString("N2")</td>
+                                                                        <td class="text-end" style="color:@(sr.WasteKg > 0 ? "#dc2626" : "#9ca3af");">@sr.WasteKg.ToString("N2")</td>
+                                                                        <td class="text-end">@sr.ProducedQty.ToString("N0")</td>
+                                                                        <td>@sr.ProductionDate.ToString("dd.MM.yyyy")</td>
+                                                                    </tr>
+                                                                }
+                                                                <tr style="background:#f9fafb;font-weight:700;border-top:2px solid #e5e7eb;">
+                                                                    <td class="ps-3">TOPLAM</td>
+                                                                    <td class="text-end">@lg.ConsumedKg.ToString("N2")</td>
+                                                                    <td class="text-end" style="color:#dc2626;">@lg.WasteKg.ToString("N2")</td>
+                                                                    <td class="text-end">@lg.Serials.Sum(s => s.ProducedQty).ToString("N0")</td>
+                                                                    <td></td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ── Denetim Notu ──────────────────────────────────────────────────────────── -->
+<div class="alert" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:13px;margin-top:8px;">
+    <div class="d-flex gap-3 align-items-start">
+        <i class="fas fa-info-circle mt-1" style="color:#166534;font-size:16px;flex-shrink:0;"></i>
+        <div>
+            <div class="fw-semibold mb-1" style="color:#166534;">FSC CoC (Chain of Custody) İzlenebilirlik Notu</div>
+            <p class="mb-1">Bu sayfa, seçilen satış siparişindeki her ürün kalemi için hammadde lot'larına kadar tüm tedarik zincirini görsel olarak ortaya koyar.</p>
+            <p class="mb-0">
+                FSC CoC belgelendirmesi için: her sevk edilen ürünün <strong>hangi onaylı FSC lotundan</strong> üretildiği
+                ve tedarikçi FSC sertifikasının <strong>geçerli olduğu</strong> kanıtlanmalıdır.
+                @if (Model.ChainComplete)
+                {
+                    <span style="color:#166534;font-weight:600;">Bu sipariş için tüm zincir eksiksiz ve FSC uyumludur.</span>
+                }
+                else
+                {
+                    <span style="color:#991b1b;font-weight:600;">Bu siparişte eksik veya sorunlu bağlantılar bulunmaktadır — lütfen iş emri bağlantılarını kontrol ediniz.</span>
+                }
+            </p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function toggleCollapse(id) {
+    const el   = document.getElementById(id);
+    const arrow = document.getElementById('arrow-' + id);
+    if (!el) return;
+    const isShown = el.classList.contains('show');
+    if (isShown) {
+        el.classList.remove('show');
+        el.style.display = 'none';
+        if (arrow) arrow.style.transform = 'rotate(-90deg)';
+    } else {
+        el.classList.add('show');
+        el.style.display = '';
+        if (arrow) arrow.style.transform = '';
+    }
+}
+
+// Hepsini Daralt / Genişlet butonları için
+function expandAll()  { document.querySelectorAll('.collapse').forEach(el => { el.classList.add('show'); el.style.display=''; }); document.querySelectorAll('.collapse-arrow').forEach(a => a.style.transform=''); }
+function collapseAll(){ document.querySelectorAll('.collapse').forEach(el => { el.classList.remove('show'); el.style.display='none'; }); document.querySelectorAll('.collapse-arrow').forEach(a => a.style.transform='rotate(-90deg)'); }
+</script>
+}

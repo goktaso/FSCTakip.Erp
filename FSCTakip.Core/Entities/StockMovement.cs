@@ -18,7 +18,7 @@ namespace FSCTakip.Core.Entities
 
         // --- ERP SİSTEMİ İLE EŞLEŞME (ENTEGRASYON) ---
         // Gerçek ERP'deki benzersiz ID ve Evrak No
-        public int ErpReferenceId { get; set; }
+        public int? ErpReferenceId { get; set; }
         public string DocumentNo { get; set; }
         public DateTime DocumentDate { get; set; }
 
@@ -38,14 +38,14 @@ namespace FSCTakip.Core.Entities
         public int? CustomerId { get; set; }
         public virtual Customer Customer { get; set; }
 
-        public string PlateNumber { get; set; }   // Araç Plakası
-        public string DeliveryAddress { get; set; } // Teslim Adresi
+        public string? PlateNumber { get; set; }   // Araç Plakası
+        public string? DeliveryAddress { get; set; } // Teslim Adresi
 
         // --- İZLENEBİLİRLİK (FSC İÇİN) ---
         // Bu hareket hangi iş emrinden kaynaklandı?
         public int? WorkOrderId { get; set; }
         public virtual WorkOrder WorkOrder { get; set; }
 
-        public string Description { get; set; } // "Acil sevkiyat", "Numune" vb. notlar
+        public string? Description { get; set; } // "Acil sevkiyat", "Numune" vb. notlar
     }
 }

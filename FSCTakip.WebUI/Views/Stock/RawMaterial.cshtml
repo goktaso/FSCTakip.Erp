@@ -1,0 +1,308 @@
+@model List<FSCTakip.Core.Entities.FscSerial>
+@{
+    ViewData["Title"] = "Hammadde Stoğu";
+    var fscTypeId  = ViewBag.FscTypeId  as int?;
+    var supplierId = ViewBag.SupplierId as int?;
+    var productId  = ViewBag.ProductId  as int?;
+    bool showEmpty = ViewBag.ShowEmpty ?? false;
+    decimal totalKg     = ViewBag.TotalKg     ?? 0m;
+    int totalBobins     = ViewBag.TotalBobins ?? 0;
+    int totalLots       = ViewBag.TotalLots   ?? 0;
+    var byFscType       = ViewBag.ByFscType   as dynamic;
+}
+
+<!-- Topbar -->
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <a href="/Purchase/Index" class="topbar-btn">
+            <i class="fas fa-truck-loading me-1"></i> Hammadde Girişi
+        </a>
+        <span class="text-muted" style="font-size:12px;">Hammadde Stoğu</span>
+    </div>
+    <div class="d-flex gap-2 ms-auto">
+        <button class="topbar-btn" id="btnFilter">
+            <i class="fas fa-filter"></i> Filtrele
+        </button>
+        <a href="/Stock/ExportRawMaterial?fscTypeId=@fscTypeId&supplierId=@supplierId&productId=@productId&showEmpty=@showEmpty"
+           class="topbar-btn btn-excel">
+            <i class="fas fa-file-excel"></i> Excel
+        </a>
+        <span class="topbar-user">
+            <i class="fas fa-user-circle"></i>
+            @(User.Identity?.Name ?? "Kullanıcı")
+        </span>
+    </div>
+</div>
+
+<!-- Filtre paneli -->
+<div class="filter-panel" id="filterPanel" style="display:none;">
+    <form method="get" action="/Stock/RawMaterial">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="filter-label">FSC Tipi</label>
+                <select name="fscTypeId" class="form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var f in (ViewBag.FscTypes as List<FSCTakip.Core.Entities.FscType> ?? new()))
+                    {
+                        if (fscTypeId == f.Id) { <option value="@f.Id" selected="selected">@f.Name</option> }
+                        else { <option value="@f.Id">@f.Name</option> }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="filter-label">Tedarikçi</label>
+                <select name="supplierId" class="form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var s in (ViewBag.Suppliers as List<FSCTakip.Core.Entities.Supplier> ?? new()))
+                    {
+                        if (supplierId == s.Id) { <option value="@s.Id" selected="selected">@s.Name</option> }
+                        else { <option value="@s.Id">@s.Name</option> }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="filter-label">Stok / Ürün</label>
+                <select name="productId" class="form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var p in (ViewBag.Products as List<FSCTakip.Core.Entities.Product> ?? new()))
+                    {
+                        if (productId == p.Id) { <option value="@p.Id" selected="selected">@p.ProductName</option> }
+                        else { <option value="@p.Id">@p.ProductName</option> }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-center gap-2 pt-3">
+                <input type="checkbox" name="showEmpty" id="chkEmpty" value="true" @(showEmpty ? "checked" : "") class="form-check-input">
+                <label for="chkEmpty" class="filter-label mb-0">Tükenenler dahil</label>
+            </div>
+            <div class="col-md-1 d-flex gap-1">
+                <button type="submit" class="topbar-btn w-100">Uygula</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Özet kartlar — FSC tipi bazında -->
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#dcfce7;color:#166534;">
+                <i class="fas fa-weight-hanging"></i>
+            </div>
+            <div class="stat-body">
+                <div class="stat-val">@totalKg.ToString("N0") kg</div>
+                <div class="stat-lbl">Toplam Kalan Ağırlık</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#dbeafe;color:#1d4ed8;">
+                <i class="fas fa-scroll"></i>
+            </div>
+            <div class="stat-body">
+                <div class="stat-val">@totalBobins</div>
+                <div class="stat-lbl">Bobin / Seri</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#fef3c7;color:#92400e;">
+                <i class="fas fa-boxes"></i>
+            </div>
+            <div class="stat-body">
+                <div class="stat-val">@totalLots</div>
+                <div class="stat-lbl">Lot Sayısı</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#ede9fe;color:#5b21b6;">
+                <i class="fas fa-leaf"></i>
+            </div>
+            <div class="stat-body">
+                @{
+                    var fsc100Kg = 0m;
+                    if (byFscType != null)
+                    {
+                        foreach (var row in byFscType)
+                        {
+                            string name = row.FscType?.ToString() ?? "";
+                            if (name.Contains("100")) { fsc100Kg += (decimal)row.TotalKg; }
+                        }
+                    }
+                }
+                <div class="stat-val">@fsc100Kg.ToString("N0") kg</div>
+                <div class="stat-lbl">FSC-100 Stoku</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FSC Tipi Dağılım Bant Çizelgesi -->
+@if (byFscType != null)
+{
+    <div class="table-card p-3 mb-3">
+        <div class="fw-semibold small mb-2"><i class="fas fa-chart-bar me-2 text-success"></i>FSC Tipi Dağılımı</div>
+        <div class="d-flex gap-2 flex-wrap">
+            @foreach (var row in byFscType)
+            {
+                decimal pct = totalKg > 0 ? (decimal)row.TotalKg / totalKg * 100 : 0;
+                string badgeColor = ((string)row.FscType).Contains("100") ? "#dcfce7" :
+                                    ((string)row.FscType).Contains("MIX") ? "#dbeafe" :
+                                    ((string)row.FscType).Contains("RECYCLED") ? "#fef3c7" : "#f3f4f6";
+                string textColor  = ((string)row.FscType).Contains("100") ? "#166534" :
+                                    ((string)row.FscType).Contains("MIX") ? "#1d4ed8" :
+                                    ((string)row.FscType).Contains("RECYCLED") ? "#92400e" : "#374151";
+                <div class="d-flex align-items-center gap-2 px-3 py-2 rounded" style="background:@badgeColor;color:@textColor;min-width:180px;">
+                    <div>
+                        <div class="fw-semibold" style="font-size:13px;">@row.FscType</div>
+                        <div style="font-size:11px;">@(((decimal)row.TotalKg).ToString("N0")) kg · @row.Count bobin</div>
+                    </div>
+                    <div class="ms-auto fw-bold" style="font-size:14px;">%@pct.ToString("F1")</div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- Ana Tablo -->
+<div class="table-card">
+    <div class="table-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-scroll text-success"></i>
+            <span>Hammadde Bobin Listesi</span>
+            <span class="badge-blue badge">@Model.Count kayıt</span>
+        </div>
+        @if (fscTypeId.HasValue || supplierId.HasValue || productId.HasValue)
+        {
+            <a href="/Stock/RawMaterial" class="topbar-btn">
+                <i class="fas fa-times"></i> Filtreyi Temizle
+            </a>
+        }
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Seri No</th>
+                    <th>Lot No</th>
+                    <th>Parti No</th>
+                    <th>Stok Adı</th>
+                    <th>Tedarikçi</th>
+                    <th>FSC Tipi</th>
+                    <th class="text-end">Giriş (kg)</th>
+                    <th class="text-end">Kalan (kg)</th>
+                    <th>Tüketim %</th>
+                    <th>Tarih</th>
+                    <th>A/D</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="11" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox me-2"></i>Kayıt bulunamadı
+                        </td>
+                    </tr>
+                }
+                @foreach (var s in Model)
+                {
+                    decimal pct = s.InitialWeight > 0 ? (s.InitialWeight - s.CurrentWeight) / s.InitialWeight * 100 : 0;
+                    string rowClass = s.CurrentWeight <= 0 ? "table-secondary opacity-50" : "";
+                    string fscBadge = (s.Lot?.FscType?.Name ?? "").Contains("100") ? "badge-success-soft" :
+                                      (s.Lot?.FscType?.Name ?? "").Contains("MIX") ? "badge-info-soft" :
+                                      "badge-secondary-soft";
+                    <tr class="@rowClass">
+                        <td>
+                            <a href="/Purchase/Detail/@s.LotId" class="fw-semibold text-decoration-none">
+                                @s.SerialNo
+                            </a>
+                            @if (s.IsOpeningStock)
+                            {
+                                <span class="badge badge-secondary-soft ms-1" style="font-size:9px;">Devir</span>
+                            }
+                        </td>
+                        <td class="small text-muted">@(s.LotNo ?? "—")</td>
+                        <td>
+                            <a href="/Purchase/Detail/@s.LotId" class="text-decoration-none text-muted">
+                                @s.Lot?.PartiNo
+                            </a>
+                        </td>
+                        <td>@(s.Lot?.Product?.ProductName ?? "—")</td>
+                        <td>
+                            <span class="text-truncate d-inline-block" style="max-width:130px;" title="@(s.Lot?.Supplier?.Name)">
+                                @(s.Lot?.Supplier?.Name ?? "—")
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge @fscBadge">@(s.Lot?.FscType?.Name ?? "—")</span>
+                        </td>
+                        <td class="text-end">@s.InitialWeight.ToString("N1")</td>
+                        <td class="text-end fw-semibold @(s.CurrentWeight <= 0 ? "text-muted" : "text-success")">
+                            @s.CurrentWeight.ToString("N1")
+                        </td>
+                        <td style="min-width:90px;">
+                            <div class="d-flex align-items-center gap-1">
+                                <div style="height:4px;background:#e5e7eb;border-radius:3px;flex:1;overflow:hidden;">
+                                    <div style="height:100%;width:@pct.ToString("F0")%;background:@(pct > 90 ? "#ef4444" : pct > 50 ? "#f59e0b" : "#22c55e");border-radius:3px;"></div>
+                                </div>
+                                <span style="font-size:11px;color:#6b7280;min-width:28px;">@pct.ToString("F0")%</span>
+                            </div>
+                        </td>
+                        <td class="text-muted small">@s.Lot?.ArrivalDate.ToString("dd.MM.yyyy")</td>
+                        <td>
+                            @if (s.CurrentWeight <= 0)
+                            {
+                                <span class="badge badge-secondary-soft">Tükendi</span>
+                            }
+                            else if (s.CurrentWeight < s.InitialWeight * 0.1m)
+                            {
+                                <span class="badge badge-warning-soft">Az Kaldı</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-success-soft">Mevcut</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.Any())
+            {
+                <tfoot>
+                    <tr class="fw-semibold" style="background:#f0fdf4;">
+                        <td colspan="5" class="text-end">Toplam:</td>
+                        <td class="text-end">@Model.Sum(s => s.InitialWeight).ToString("N1") kg</td>
+                        <td class="text-end text-success">@Model.Sum(s => s.CurrentWeight).ToString("N1") kg</td>
+                        <td colspan="3"></td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Filtre paneli toggle
+    document.getElementById('btnFilter')?.addEventListener('click', function() {
+        const panel = document.getElementById('filterPanel');
+        if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Aktif filtre varsa paneli açık tut
+    @if (fscTypeId.HasValue || supplierId.HasValue || productId.HasValue || showEmpty)
+    {
+        <text>
+        document.addEventListener('DOMContentLoaded', function() {
+            const panel = document.getElementById('filterPanel');
+            if (panel) panel.style.display = 'block';
+        });
+        </text>
+    }
+</script>
+}

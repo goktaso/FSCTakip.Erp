@@ -2,25 +2,28 @@
 @{
     ViewData["Title"] = "Ürün Tanımları";
     var productGroups = ViewData["ProductGroups"] as SelectList ?? new SelectList(new List<SelectListItem>());
-    var fscTypes = ViewData["FscTypes"] as SelectList ?? new SelectList(new List<SelectListItem>());
-    var paperTypes = ViewData["PaperTypes"] as SelectList ?? new SelectList(new List<SelectListItem>());
-    var paperColors = ViewData["PaperColors"] as SelectList ?? new SelectList(new List<SelectListItem>());
+    var fscTypes      = ViewData["FscTypes"]      as SelectList ?? new SelectList(new List<SelectListItem>());
+    var paperTypes    = ViewData["PaperTypes"]    as SelectList ?? new SelectList(new List<SelectListItem>());
+    var paperColors   = ViewData["PaperColors"]   as SelectList ?? new SelectList(new List<SelectListItem>());
+    var paperWeights  = ViewData["PaperWeights"]  as SelectList ?? new SelectList(new List<SelectListItem>());
+    var paperWidths   = ViewData["PaperWidths"]   as SelectList ?? new SelectList(new List<SelectListItem>());
+    var suppliers     = ViewData["Suppliers"]     as SelectList ?? new SelectList(new List<SelectListItem>());
 
-    // GÜNCELLENDİ: Birim Listesi ve Diğerleri
-    var units = ViewData["Units"] as SelectList ?? new SelectList(new List<SelectListItem>());
-    var paperWeights = ViewData["PaperWeights"] as SelectList ?? new SelectList(new List<SelectListItem>());
-    var paperWidths = ViewData["PaperWidths"] as SelectList ?? new SelectList(new List<SelectListItem>());
-    var suppliers = ViewData["Suppliers"] as SelectList ?? new SelectList(new List<SelectListItem>());
+    int?   filterSupplier = ViewBag.SupplierId     as int?;
+    int?   filterGroup    = ViewBag.ProductGroupId as int?;
+    string filterSearch   = ViewBag.Search         as string ?? "";
 }
 
 @* Üst Aksiyon Çubuğu *@
 <div class="row mb-3 align-items-center">
     <div class="col-md-6">
-        <h4 class="mb-0 font-weight-bold text-primary text-uppercase">Ürün Listesi</h4>
+        <h4 class="mb-0 font-weight-bold text-primary text-uppercase">Ürün Listesi
+            <small class="text-muted fw-normal ms-2" style="font-size:13px;">@Model.Count() kayıt</small>
+        </h4>
     </div>
     <div class="col-md-6 text-right">
         <button class="btn btn-outline-secondary btn-sm" onclick="$('#filterPanel').slideToggle()">
-            <i class="fas fa-filter mr-1"></i> Filtrele
+            <i class="fas fa-filter mr-1"></i> Filtrele @(filterSupplier.HasValue || filterGroup.HasValue || !string.IsNullOrEmpty(filterSearch) ? "●" : "")
         </button>
         <button class="btn btn-outline-success btn-sm ml-1" onclick="exportToExcel()">
             <i class="fas fa-file-excel mr-1"></i> Excel
@@ -31,20 +34,49 @@
     </div>
 </div>
 
-@* Filtre Paneli *@
-<div id="filterPanel" class="card mb-3 shadow-sm border-left-primary" style="display:none;">
+@* Filtre Paneli — server-side *@
+<div id="filterPanel" class="card mb-3 shadow-sm border-left-primary"
+     style="@(filterSupplier.HasValue || filterGroup.HasValue || !string.IsNullOrEmpty(filterSearch) ? "" : "display:none;")">
     <div class="card-body py-3">
-        <div class="row align-items-end">
-            <div class="col-md-4">
-                <label class="small font-weight-bold text-uppercase">Ürün Ara (Kod/Ad/Grup/Tedarikçi)</label>
-                <input type="text" id="productSearch" class="form-control form-control-sm" placeholder="Arama yapın...">
+        <form method="get" action="/Products" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="small fw-bold text-uppercase">Ara (Kod / Ad)</label>
+                <input type="text" name="search" class="form-control form-control-sm"
+                       value="@filterSearch" placeholder="Kod veya ürün adı..." />
             </div>
-            <div class="col-md-2">
-                <button class="btn btn-primary btn-sm btn-block" onclick="filterProducts()">
-                    <i class="fas fa-search mr-1"></i> Sorgula
+            <div class="col-md-3">
+                <label class="small fw-bold text-uppercase">Tedarikçi</label>
+                <select name="supplierId" class="form-control form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var s in suppliers)
+                    {
+                        if (filterSupplier.HasValue && filterSupplier.Value.ToString() == s.Value)
+                        { <option value="@s.Value" selected>@s.Text</option> }
+                        else
+                        { <option value="@s.Value">@s.Text</option> }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="small fw-bold text-uppercase">Ürün Grubu</label>
+                <select name="productGroupId" class="form-control form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    @foreach (var g in productGroups)
+                    {
+                        if (filterGroup.HasValue && filterGroup.Value.ToString() == g.Value)
+                        { <option value="@g.Value" selected>@g.Text</option> }
+                        else
+                        { <option value="@g.Value">@g.Text</option> }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-search me-1"></i> Filtrele
                 </button>
+                <a href="/Products" class="btn btn-outline-secondary btn-sm">Temizle</a>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 
@@ -74,10 +106,16 @@
                         foreach (var item in Model)
                         {
                             <tr>
-                                <td><strong class="text-primary">@item.ProductCode</strong></td>
+                                <td>
+                                    <strong class="text-primary">@item.ProductCode</strong>
+                                    @if (!string.IsNullOrEmpty(item.ExternalCode))
+                                    {
+                                        <div class="text-muted" style="font-size:10px;" title="Harici ERP Kodu"><i class="fas fa-link me-1"></i>@item.ExternalCode</div>
+                                    }
+                                </td>
                                 <td class="small font-weight-bold">@item.ProductName</td>
                                 <td><span class="text-muted small">@(item.Supplier?.Name ?? "-")</span></td>
-                                <td><span class="badge badge-light border">@(item.ProductGroup?.GroupName ?? "-")</span></td>
+                                <td><span class="badge badge-blue" style="font-size:11px;">@(item.ProductGroup?.GroupName ?? "-")</span></td>
                                 <td>@(item.PaperColor?.Name ?? "-")</td>
                                 <td>@(item.PaperWeight != null ? $"{item.PaperWeight.Value} {item.PaperWeight.Unit}" : "-")</td>
                                 <td>@(item.PaperWidth != null ? $"{item.PaperWidth.Value} {item.PaperWidth.Unit}" : "-")</td>
@@ -93,6 +131,22 @@
                                     <button class="btn btn-sm btn-outline-primary" onclick="editProduct(@item.Id)" title="Düzenle">
                                         <i class="fas fa-edit"></i>
                                     </button>
+                                    @{
+                                        var groupName = item.ProductGroup?.GroupName ?? "";
+                                        bool isHammadde = groupName.Contains("Hammadde", StringComparison.OrdinalIgnoreCase);
+                                    }
+                                    @if (!isHammadde)
+                                    {
+                                        <a href="/Products/Recipe/@item.Id" class="btn btn-sm btn-outline-success" title="Reçete / BOM">
+                                            <i class="fas fa-list-ul"></i>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary" disabled title="Hammadde için reçete gerekmez">
+                                            <i class="fas fa-list-ul"></i>
+                                        </button>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -109,135 +163,110 @@
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold"><i class="fas fa-box mr-2"></i>Ürün Formu</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Products" asp-action="Save" method="post">
                 <div class="modal-body">
                     <input type="hidden" name="Id" id="productId" value="0" />
 
-                    <div class="row">
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Ürün Grubu <span class="text-danger">*</span></label>
-                                <select name="ProductGroupId" id="productGroupId" class="form-control" required>
+                            <label class="form-label small fw-semibold">Ürün Grubu <span class="text-danger">*</span></label>
+                            <div class="qa-group">
+                                <select name="ProductGroupId" id="productGroupId" class="form-control form-select" required>
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var g in productGroups)
-                                    {
-                                        <option value="@g.Value">@g.Text</option>
-                                    }
+                                    { <option value="@g.Value">@g.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('productgroup','productGroupId')" title="Yeni Ürün Grubu Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Tedarikçi</label>
-                                <select name="SupplierId" id="supplierId" class="form-control">
+                            <label class="form-label small fw-semibold">Tedarikçi</label>
+                            <div class="qa-group">
+                                <select name="SupplierId" id="supplierId" class="form-control form-select">
                                     <option value="">-- Tedarikçi Seçiniz --</option>
                                     @foreach (var s in suppliers)
-                                    {
-                                        <option value="@s.Value">@s.Text</option>
-                                    }
+                                    { <option value="@s.Value">@s.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('supplier','supplierId')" title="Yeni Tedarikçi Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Ürün Kodu</label>
-                                <input type="text" id="productCode" class="form-control bg-light" readonly placeholder="Otomatik" />
-                            </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Dahili Kod</label>
+                            <input type="text" id="productCode" class="form-control bg-light" readonly placeholder="Otomatik" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold" title="Netsis / ERP stok kodu (STOK_KODU)">Harici Kod <i class="fas fa-info-circle text-muted" style="font-size:10px;"></i></label>
+                            <input type="text" name="ExternalCode" id="productExtCode" class="form-control text-uppercase" placeholder="Örn: 001.01.001">
                         </div>
                         <div class="col-md-8">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Ürün Adı <span class="text-danger">*</span></label>
-                                <input type="text" name="ProductName" id="productName" class="form-control text-uppercase" required />
-                            </div>
+                            <label class="form-label small fw-semibold">Ürün Adı <span class="text-danger">*</span></label>
+                            <input type="text" name="ProductName" id="productName" class="form-control text-uppercase" required />
                         </div>
-                    </div>
-
-                    <div class="row">
                         <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Kağıt Rengi</label>
-                                <select name="PaperColorId" id="paperColorId" class="form-control">
+                            <label class="form-label small fw-semibold">Kağıt Rengi</label>
+                            <div class="qa-group">
+                                <select name="PaperColorId" id="paperColorId" class="form-control form-select">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var c in paperColors)
-                                    {
-                                        <option value="@c.Value">@c.Text</option>
-                                    }
+                                    { <option value="@c.Value">@c.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('papercolor','paperColorId')" title="Yeni Renk Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Gramaj (gr) </label>
-                                <select name="PaperWeightId" id="paperWeightId" class="form-control">
+                            <label class="form-label small fw-semibold">Gramaj (gr/m²)</label>
+                            <div class="qa-group">
+                                <select name="PaperWeightId" id="paperWeightId" class="form-control form-select">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var w in paperWeights)
-                                    {
-                                        <option value="@w.Value">@w.Text</option>
-                                    }
+                                    { <option value="@w.Value">@w.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('paperweight','paperWeightId')" title="Yeni Gramaj Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">En (cm) </label>
-                                <select name="PaperWidthId" id="paperWidthId" class="form-control">
+                            <label class="form-label small fw-semibold">Kağıt Eni (mm)</label>
+                            <div class="qa-group">
+                                <select name="PaperWidthId" id="paperWidthId" class="form-control form-select">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var w in paperWidths)
-                                    {
-                                        <option value="@w.Value">@w.Text</option>
-                                    }
+                                    { <option value="@w.Value">@w.Text</option> }
                                 </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Birim <span class="text-danger">*</span></label>
-                                @* GÜNCELLENDİ: Input Yerine Select *@
-                                <select name="UnitId" id="unitId" class="form-control" required>
-                                    <option value="">-- Birim Seçiniz --</option>
-                                    @foreach (var u in units)
-                                    {
-                                        <option value="@u.Value">@u.Text</option>
-                                    }
-                                </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('paperwidth','paperWidthId')" title="Yeni En Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">FSC Tipi</label>
-                                <select name="FscTypeId" id="fscTypeId" class="form-control">
+                            <label class="form-label small fw-semibold">Birim</label>
+                            <input type="text" name="Unit" id="unit" class="form-control text-uppercase" value="ADET" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">FSC Tipi</label>
+                            <div class="qa-group">
+                                <select name="FscTypeId" id="fscTypeId" class="form-control form-select">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var f in fscTypes)
-                                    {
-                                        <option value="@f.Value">@f.Text</option>
-                                    }
+                                    { <option value="@f.Value">@f.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('fsctype','fscTypeId')" title="Yeni FSC Tipi Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold">Kağıt Tipi</label>
-                                <select name="PaperTypeId" id="paperTypeId" class="form-control">
+                            <label class="form-label small fw-semibold">Kağıt Tipi</label>
+                            <div class="qa-group">
+                                <select name="PaperTypeId" id="paperTypeId" class="form-control form-select">
                                     <option value="">-- Seçiniz --</option>
                                     @foreach (var p in paperTypes)
-                                    {
-                                        <option value="@p.Value">@p.Text</option>
-                                    }
+                                    { <option value="@p.Value">@p.Text</option> }
                                 </select>
+                                <button type="button" class="qa-btn" onclick="openQuickAdd('papertype','paperTypeId')" title="Yeni Kağıt Tipi Ekle"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Vazgeç</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
                     <button type="submit" class="btn btn-primary btn-sm px-4">Kaydet</button>
                 </div>
             </form>
@@ -247,48 +276,53 @@
 
 @section Scripts {
     <script>
+        const _productModal = new bootstrap.Modal(document.getElementById('productModal'));
+
         function openAddModal() {
-            $('#productId').val(0);
-            $('#productGroupId').val('');
-            $('#supplierId').val('');
-            $('#productCode').val('');
-            $('#productName').val('');
-            $('#paperColorId').val('');
-            $('#paperWeightId').val('');
-            $('#paperWidthId').val('');
-            $('#unitId').val(''); // GÜNCELLENDİ
-            $('#fscTypeId').val('');
-            $('#paperTypeId').val('');
-            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Ürün Ekle');
-            $('#productModal').modal('show');
+            document.getElementById('productId').value       = '0';
+            document.getElementById('productGroupId').value  = '';
+            document.getElementById('supplierId').value      = '';
+            document.getElementById('productCode').value     = '';
+            document.getElementById('productName').value     = '';
+            document.getElementById('paperColorId').value    = '';
+            document.getElementById('paperWeightId').value   = '';
+            document.getElementById('paperWidthId').value    = '';
+            document.getElementById('fscTypeId').value       = '';
+            document.getElementById('paperTypeId').value     = '';
+            document.querySelector('.modal-title').innerHTML = '<i class="fas fa-plus me-2"></i>Yeni Ürün Ekle';
+            _productModal.show();
         }
 
         function editProduct(id) {
-            $.get('/Products/GetProduct', { id: id }, function(data) {
-                if (data.success) {
-                    $('#productId').val(data.id);
-                    $('#productGroupId').val(data.productGroupId || '');
-                    $('#supplierId').val(data.supplierId || '');
-                    $('#productCode').val(data.productCode);
-                    $('#productName').val(data.productName);
-                    $('#paperColorId').val(data.paperColorId || '');
-                    $('#paperWeightId').val(data.paperWeightId || '');
-                    $('#paperWidthId').val(data.paperWidthId || '');
-                    $('#unitId').val(data.unitId || ''); // GÜNCELLENDİ: unit yerine unitId
-                    $('#fscTypeId').val(data.fscTypeId || '');
-                    $('#paperTypeId').val(data.paperTypeId || '');
-                    $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Ürün Düzenle');
-                    $('#productModal').modal('show');
-                }
-            });
+            fetch(`/Products/GetProduct?id=${id}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) return;
+                    document.getElementById('productId').value      = data.id;
+                    document.getElementById('productGroupId').value = data.productGroupId || '';
+                    document.getElementById('supplierId').value     = data.supplierId || '';
+                    document.getElementById('productCode').value    = data.productCode;
+                    document.getElementById('productExtCode').value = data.externalCode || '';
+                    document.getElementById('productName').value    = data.productName;
+                    document.getElementById('paperColorId').value   = data.paperColorId || '';
+                    document.getElementById('paperWeightId').value  = data.paperWeightId || '';
+                    document.getElementById('paperWidthId').value   = data.paperWidthId || '';
+                    document.getElementById('unit').value           = data.unit;
+                    document.getElementById('fscTypeId').value      = data.fscTypeId || '';
+                    document.getElementById('paperTypeId').value    = data.paperTypeId || '';
+                    document.querySelector('.modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>Ürün Düzenle';
+                    _productModal.show();
+                });
         }
 
         function toggleProduct(id) {
-            $.post('/Products/ToggleStatus', { id: id }, function(res) {
-                if (res.success) {
-                    const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
-                    toast.fire({ icon: 'success', title: 'Güncellendi' });
-                }
+            fetch('/Products/ToggleStatus', {
+                method: 'POST',
+                body: (() => { const f = new FormData(); f.append('id', id); return f; })()
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) showToast('Durum güncellendi.', 'success');
             });
         }
 
@@ -299,6 +333,9 @@
             });
         }
 
-        function exportToExcel() { window.location.href = '/Products/ExportIndex'; }
+        function exportToExcel() {
+            const params = new URLSearchParams(window.location.search);
+            window.location.href = '/Products/ExportIndex?' + params.toString();
+        }
     </script>
 }

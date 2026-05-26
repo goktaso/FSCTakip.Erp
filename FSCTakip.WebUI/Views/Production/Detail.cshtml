@@ -1,0 +1,1031 @@
+@model FSCTakip.Core.Entities.WorkOrder
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = $"İş Emri — {Model.WorkOrderNo}";
+    var serials           = ViewBag.AvailableSerials as List<FscSerial>       ?? new();
+    var machines          = ViewBag.Machines          as List<Machine>         ?? new();
+    var recipeComponents  = ViewBag.RecipeComponents  as List<ProductRecipe>   ?? new();
+    var workOrderRecipes  = ViewBag.WorkOrderRecipes  as List<WorkOrderRecipe> ?? new();
+
+    var toplamTuketim  = Model.ProductionDetails.Sum(d => d.ConsumedWeight);
+    var toplamFire     = Model.ProductionDetails.Sum(d => d.WasteWeight);
+    var toplamUretim   = Model.ProductionDetails.Sum(d => d.ProducedQuantity);
+    var fireOran       = toplamTuketim > 0 ? toplamFire / toplamTuketim * 100 : 0;
+
+    var (statusClass, statusLabel) = Model.Status switch {
+        WorkOrderStatus.Taslak     => ("badge-gray",  "Taslak"),
+        WorkOrderStatus.Uretimde   => ("badge-amber", "Üretimde"),
+        WorkOrderStatus.Tamamlandi => ("badge-green", "Tamamlandı"),
+        WorkOrderStatus.Iptal      => ("badge-red",   "İptal"),
+        _ => ("badge-gray", "—")
+    };
+}
+
+@section TopbarActions {
+    <a href="/Production/Index" class="topbar-btn">
+        <i class="fas fa-arrow-left"></i> Listeye Dön
+    </a>
+    @if (Model.Status == WorkOrderStatus.Uretimde || Model.Status == WorkOrderStatus.Taslak)
+    {
+        <button class="topbar-btn btn-primary-custom" onclick="openAddDetailFn()">
+            <i class="fas fa-plus"></i> Tüketim Gir
+        </button>
+    }
+    @if (Model.Status == WorkOrderStatus.Uretimde)
+    {
+        <button class="topbar-btn" style="background:#f0fdf4;color:#166534;border-color:#bbf7d0;"
+                onclick="completeWO(@Model.Id, '@Model.WorkOrderNo')">
+            <i class="fas fa-check-circle"></i> Tamamla
+        </button>
+    }
+}
+
+<div class="row g-3">
+
+    <!-- Sol panel: iş emri bilgileri -->
+    <div class="col-lg-4">
+
+        <!-- Bilgi kartı -->
+        <div class="card mb-3">
+            <div class="card-header-accent">
+                <i class="fas fa-industry"></i>
+                <span>İş Emri Bilgileri</span>
+                <span class="badge @statusClass ms-auto">@statusLabel</span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0" style="font-size:13px;">
+                    <tr>
+                        <td class="text-muted ps-3" style="width:45%;padding:9px 0 9px 16px;">İş Emri No</td>
+                        <td class="fw-semibold pe-3">@Model.WorkOrderNo</td>
+                    </tr>
+                    <tr style="background:#fafafa;">
+                        <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Ürün</td>
+                        <td class="fw-semibold pe-3">
+                            <div>@Model.Product?.ProductName</div>
+                            <div class="text-muted" style="font-size:11px;">@Model.Product?.ProductCode</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Makine</td>
+                        <td class="pe-3">@Model.Machine?.Name</td>
+                    </tr>
+                    <tr style="background:#fafafa;">
+                        <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Plan Tarihi</td>
+                        <td class="pe-3">@Model.PlannedDate.ToString("dd.MM.yyyy")</td>
+                    </tr>
+                    @if (Model.CompletedDate.HasValue)
+                    {
+                        <tr>
+                            <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Bitiş Tarihi</td>
+                            <td class="pe-3 text-success fw-semibold">@Model.CompletedDate.Value.ToString("dd.MM.yyyy")</td>
+                        </tr>
+                    }
+                    <tr style="background:#fafafa;">
+                        <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Plan Adet</td>
+                        <td class="fw-semibold pe-3">@Model.PlannedQuantity.ToString("N0")</td>
+                    </tr>
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <tr>
+                            <td class="text-muted ps-3" style="padding:9px 0 9px 16px;">Notlar</td>
+                            <td class="pe-3 text-muted" style="font-size:12px;">@Model.Notes</td>
+                        </tr>
+                    }
+                </table>
+            </div>
+        </div>
+
+        <!-- Üretim özet kartları -->
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <div class="stat-card p-3">
+                    <div class="stat-icon navy" style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="font-size:18px;">@toplamUretim.ToString("N0")</div>
+                        <div class="stat-label">Üretilen (adet)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-card p-3">
+                    <div class="stat-icon blue" style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                        <i class="fas fa-weight-hanging"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="font-size:18px;">@toplamTuketim.ToString("N0")</div>
+                        <div class="stat-label">Tüketim (kg)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-card p-3">
+                    <div class="stat-icon red" style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                        <i class="fas fa-burn"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="font-size:18px;">@toplamFire.ToString("N0")</div>
+                        <div class="stat-label">Fire (kg)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-card p-3">
+                    <div class="stat-icon @(fireOran < 3 ? "green" : fireOran < 6 ? "amber" : "red")"
+                         style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                        <i class="fas fa-percent"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="font-size:18px;">%@fireOran.ToString("N1")</div>
+                        <div class="stat-label">Fire Oranı</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- İlerleme -->
+        @if (Model.PlannedQuantity > 0)
+        {
+            var pct = (double)(toplamUretim / Model.PlannedQuantity * 100);
+            if (pct > 100) pct = 100;
+            <div class="card mb-3">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between mb-2" style="font-size:12.5px;">
+                        <span class="text-muted fw-semibold">Üretim İlerlemesi</span>
+                        <span class="fw-bold">%@pct.ToString("N0")</span>
+                    </div>
+                    <div class="progress" style="height:10px;">
+                        <div class="progress-bar @(pct >= 100 ? "bg-success" : pct >= 50 ? "bg-primary" : "bg-warning")"
+                             style="width:@pct.ToString("N0")%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2" style="font-size:11px;color:var(--text-muted);">
+                        <span>@toplamUretim.ToString("N0") adet</span>
+                        <span>Hedef: @Model.PlannedQuantity.ToString("N0") adet</span>
+                    </div>
+                </div>
+            </div>
+        }
+        <!-- BOM Bileşen Özeti -->
+        @if (recipeComponents.Any() || workOrderRecipes.Any())
+        {
+            <div class="card mb-3">
+                <div class="card-header-accent d-flex align-items-center justify-content-between" style="padding:10px 14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sitemap"></i>
+                        <span>BOM Bileşen Analizi</span>
+                    </div>
+                    @if (Model.Status != WorkOrderStatus.Tamamlandi && Model.Status != WorkOrderStatus.Iptal)
+                    {
+                        <button onclick="openAddRecipe()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;">
+                            <i class="fas fa-plus me-1"></i>Bileşen Ekle
+                        </button>
+                    }
+                </div>
+                <div class="card-body p-0">
+                    @if (!workOrderRecipes.Any())
+                    {
+                        <div class="text-center text-muted py-3" style="font-size:12px;">
+                            <i class="fas fa-info-circle mb-1 d-block"></i>
+                            Reçete bileşeni eklenmemiş.<br>
+                            <span style="font-size:11px;">"Bileşen Ekle" ile ürünün BOM satırlarını bu iş emrine bağlayın.</span>
+                        </div>
+                    }
+                    @foreach (var wr in workOrderRecipes)
+                    {
+                        var component = wr.Product;
+                        var consumedPct = wr.PlannedQuantity > 0 ? (double)(wr.ActualConsumedQuantity / wr.PlannedQuantity * 100) : 0;
+                        var barColor = consumedPct > 110 ? "#dc2626" : consumedPct >= 90 ? "#16a34a" : "#f59e0b";
+                        <div style="padding:10px 14px;border-bottom:1px solid #f0f0f0;">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div>
+                                    <div style="font-size:12px;font-weight:600;color:#111827;">@(component?.ProductName ?? "—")</div>
+                                    @if (component?.FscType != null)
+                                    {
+                                        <span class="badge badge-green" style="font-size:10px;">@component.FscType.Name</span>
+                                    }
+                                </div>
+                                @if (Model.Status != WorkOrderStatus.Tamamlandi)
+                                {
+                                    <button onclick="deleteWorkOrderRecipe(@wr.Id)"
+                                            style="background:none;border:none;color:#9ca3af;cursor:pointer;padding:0;font-size:12px;"
+                                            title="Kaldır"><i class="fas fa-times"></i></button>
+                                }
+                            </div>
+                            <div style="font-size:11px;color:#6b7280;margin-bottom:4px;">
+                                Planlanan: <strong>@wr.PlannedQuantity.ToString("N2") kg</strong>
+                                · Gerçek: <strong style="color:@(wr.ActualConsumedQuantity > 0 ? "#111827" : "#9ca3af")">@wr.ActualConsumedQuantity.ToString("N2") kg</strong>
+                                @if (wr.WasteQuantity > 0)
+                                {
+                                    <span>· Fire: <strong style="color:#dc2626;">@wr.WasteQuantity.ToString("N2") kg</strong></span>
+                                }
+                            </div>
+                            @if (wr.PlannedQuantity > 0)
+                            {
+                                <div style="background:#f3f4f6;border-radius:4px;height:5px;">
+                                    <div style="background:@barColor;height:5px;border-radius:4px;width:@(Math.Min(100, consumedPct).ToString("N0"))%;transition:width .3s;"></div>
+                                </div>
+                            }
+                            @if (wr.ProducedQuantity > 0)
+                            {
+                                <div style="font-size:11px;color:#6b7280;margin-top:3px;">
+                                    Üretim: <strong style="color:#166534;">@wr.ProducedQuantity.ToString("N0") adet</strong>
+                                </div>
+                            }
+                        </div>
+                    }
+                    @if (workOrderRecipes.Any())
+                    {
+                        var totalPlanned  = workOrderRecipes.Sum(r => r.PlannedQuantity);
+                        var totalActual   = workOrderRecipes.Sum(r => r.ActualConsumedQuantity);
+                        var totalWaste    = workOrderRecipes.Sum(r => r.WasteQuantity);
+                        <div style="padding:8px 14px;background:#f8fafc;font-size:11px;font-weight:600;color:#374151;display:flex;justify-content:space-between;">
+                            <span>Toplam Planlanan: @totalPlanned.ToString("N2") kg</span>
+                            <span style="color:@(totalWaste > 0 ? "#dc2626" : "#9ca3af")">Fire: @totalWaste.ToString("N2") kg</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Sağ panel: tüketim kayıtları -->
+    <div class="col-lg-8">
+        <div class="table-card">
+            <div style="background:var(--table-header-bg);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;">
+                <div style="color:#fff;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-list-ul"></i> Tüketim Kayıtları
+                    <span class="badge" style="background:rgba(255,255,255,.15);color:#fff;font-size:11px;">
+                        @Model.ProductionDetails.Count kayıt
+                    </span>
+                </div>
+                @if (Model.Status != WorkOrderStatus.Tamamlandi && Model.Status != WorkOrderStatus.Iptal)
+                {
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="loadFromRecipe()"
+                                style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;"
+                                title="Ürün reçetesini yükle">
+                            <i class="fas fa-list-ul"></i> Reçeteden Yükle
+                        </button>
+                        <button onclick="openAddDetailFn()"
+                                style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-plus"></i> Tüketim Gir
+                        </button>
+                    </div>
+                }
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Bobin (Seri No)</th>
+                        <th>Lot / Tedarikçi</th>
+                        <th class="text-end">Tüketim (kg)</th>
+                        <th class="text-end">Fire (kg)</th>
+                        <th class="text-end">Üretim (adet)</th>
+                        <th>Notlar</th>
+                        @if (Model.Status != WorkOrderStatus.Tamamlandi)
+                        {
+                            <th class="text-center">İşlem</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.ProductionDetails.Any())
+                    {
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <i class="fas fa-database"></i>
+                                    <p>Henüz tüketim kaydı yok. <strong>Tüketim Gir</strong> butonunu kullanın.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var d in Model.ProductionDetails.OrderByDescending(x => x.ProductionDate))
+                    {
+                        var fireOranRow = d.ConsumedWeight > 0 ? d.WasteWeight / d.ConsumedWeight * 100 : 0;
+                        <tr>
+                            <td class="text-muted">@d.ProductionDate.ToString("dd.MM.yyyy")</td>
+                            <td>
+                                <a href="/Purchase/Detail/@d.FscSerial?.LotId" class="table-link fw-semibold">
+                                    @d.FscSerial?.SerialNo
+                                </a>
+                            </td>
+                            <td>
+                                <button onclick="showLotDocs(@(d.FscSerial?.Id ?? 0))"
+                                        class="p-0 text-start"
+                                        style="background:none;border:none;cursor:pointer;"
+                                        title="Evrak ve lot detayını görüntüle">
+                                    <div style="font-size:12px;color:var(--accent);font-weight:600;">
+                                        @d.FscSerial?.Lot?.PartiNo
+                                        <i class="fas fa-folder-open ms-1" style="font-size:10px;color:#9ca3af;"></i>
+                                    </div>
+                                    <div class="text-muted" style="font-size:11px;">@d.FscSerial?.Lot?.Supplier?.Name</div>
+                                </button>
+                            </td>
+                            <td class="text-end fw-semibold">@d.ConsumedWeight.ToString("N2")</td>
+                            <td class="text-end">
+                                @if (d.WasteWeight > 0)
+                                {
+                                    <span class="badge badge-red" title="Fire oranı: %@fireOranRow.ToString("N1")">
+                                        @d.WasteWeight.ToString("N2")
+                                    </span>
+                                }
+                                else { <span class="text-muted">—</span> }
+                            </td>
+                            <td class="text-end">
+                                <span class="badge badge-blue">@d.ProducedQuantity.ToString("N0")</span>
+                            </td>
+                            <td class="text-muted" style="font-size:12px;">@(d.Notes ?? "—")</td>
+                            @if (Model.Status != WorkOrderStatus.Tamamlandi)
+                            {
+                                <td class="text-center">
+                                    <div class="d-flex gap-1 justify-content-center">
+                                        <button onclick="editDetail(@d.Id)"
+                                                class="btn btn-sm" style="padding:3px 8px;border-radius:5px;background:#f9fafb;color:#374151;border:1px solid #e5e7eb;">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="deleteDetail(@d.Id)"
+                                                class="btn btn-sm" style="padding:3px 8px;border-radius:5px;background:#fff5f5;color:#dc2626;border:1px solid #fecaca;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.ProductionDetails.Any())
+                {
+                    <tfoot>
+                        <tr style="background:#f8fafc;font-weight:600;font-size:13px;">
+                            <td colspan="3" class="ps-3 text-muted">Toplam</td>
+                            <td class="text-end">@toplamTuketim.ToString("N2") kg</td>
+                            <td class="text-end" style="color:#dc2626;">@toplamFire.ToString("N2") kg</td>
+                            <td class="text-end">@toplamUretim.ToString("N0") adet</td>
+                            <td colspan="@(Model.Status != WorkOrderStatus.Tamamlandi ? 2 : 1)"></td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Lot Evrak Modal -->
+<div class="modal fade" id="lotDocsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px;height:32px;border-radius:8px;background:#16a34a;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-file-alt" style="font-size:13px;color:#fff;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold mb-0" id="lotDocsTitle">Lot Evrak Detayı</h5>
+                        <div class="text-white-50" style="font-size:11px;" id="lotDocsSubtitle"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body p-0">
+
+                <!-- Lot Bilgileri -->
+                <div class="p-3 border-bottom" style="background:#f8fafc;">
+                    <div class="row g-3" id="lotInfoGrid">
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Parti No</div>
+                            <div class="fw-semibold" id="ldLotNo">—</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Tedarikçi</div>
+                            <div id="ldSupplier">—</div>
+                            <div class="text-muted" style="font-size:11px;" id="ldSupplierCode"></div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">FSC Tipi</div>
+                            <div id="ldFscType">—</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Hammadde</div>
+                            <div id="ldProduct">—</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Giriş Tarihi</div>
+                            <div id="ldArrival">—</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Plaka</div>
+                            <div id="ldPlate">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Evrak Alanları -->
+                <div class="p-3">
+                    <div class="row g-3">
+                        <!-- Fatura -->
+                        <div class="col-md-6">
+                            <div class="p-3 rounded border h-100" id="invoiceCard">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <div style="width:32px;height:32px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="fas fa-file-invoice" style="color:#1d4ed8;font-size:14px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold" style="font-size:13px;">Alış Faturası</div>
+                                        <div class="text-muted" style="font-size:11px;" id="ldInvoiceNo">—</div>
+                                    </div>
+                                    <div class="ms-auto text-end" id="ldInvoiceAmount" style="font-size:12px;font-weight:600;color:#1d4ed8;"></div>
+                                </div>
+                                <div id="ldInvoicePdf">
+                                    <div class="text-muted small"><i class="fas fa-info-circle me-1"></i>PDF henüz yüklenmemiş</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- İrsaliye -->
+                        <div class="col-md-6">
+                            <div class="p-3 rounded border h-100" id="dispatchCard">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <div style="width:32px;height:32px;border-radius:8px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="fas fa-truck" style="color:#16a34a;font-size:14px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold" style="font-size:13px;">Alış İrsaliyesi</div>
+                                        <div class="text-muted" style="font-size:11px;" id="ldDispatchNo">—</div>
+                                    </div>
+                                </div>
+                                <div id="ldDispatchPdf">
+                                    <div class="text-muted small"><i class="fas fa-info-circle me-1"></i>PDF henüz yüklenmemiş</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <a id="ldLotDetailLink" href="#" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-external-link-alt me-1"></i> Lot Detayına Git
+                </a>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tüketim Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-weight-hanging" style="font-size:13px;color:#fff;"></i>
+                    </div>
+                    <h5 class="modal-title fw-semibold mb-0" id="detailModalTitle">Tüketim Kaydı</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="detailId">
+                <input type="hidden" id="detailWoId" value="@Model.Id">
+                <input type="hidden" id="detailWaste" value="0">
+                <div class="row g-3">
+
+                    <!-- Bobin (grouped by lot) -->
+                    <div class="col-12">
+                        <label class="form-label">Bobin <span class="text-danger">*</span></label>
+                        <select id="detailSerialId" class="form-select" onchange="updateSerialInfo()">
+                            <option value="">— Bobin Seçiniz —</option>
+                            @{
+                                var byLot = serials.GroupBy(s => new {
+                                    PartiNo  = s.Lot?.PartiNo  ?? "—",
+                                    Supplier = s.Lot?.Supplier?.Name ?? "Bilinmiyor"
+                                });
+                            }
+                            @foreach (var g in byLot)
+                            {
+                                <optgroup label="@g.Key.PartiNo — @g.Key.Supplier">
+                                    @foreach (var s in g)
+                                    {
+                                        <option value="@s.Id"
+                                                data-kalan="@s.CurrentWeight"
+                                                data-lotno="@g.Key.PartiNo"
+                                                data-supplier="@g.Key.Supplier">
+                                            @s.SerialNo · Kalan: @s.CurrentWeight.ToString("N2") kg
+                                        </option>
+                                    }
+                                </optgroup>
+                            }
+                        </select>
+                        <div id="serialInfo" class="mt-1 px-2 py-1 rounded small" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:12px;"></div>
+                    </div>
+
+                    <!-- Tarih | Tüketim | Fire -->
+                    <div class="col-md-4">
+                        <label class="form-label">Üretim Tarihi <span class="text-danger">*</span></label>
+                        <input type="date" id="detailDate" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tüketilen (kg) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" id="detailConsumed" class="form-control" step="0.01" min="0.01"
+                                   placeholder="0.00" oninput="onConsumedChange()">
+                            <span class="input-group-text">kg</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label d-flex align-items-center justify-content-between">
+                            <span>Fire / Atık</span>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <input type="radio" class="btn-check" name="fireMode" id="fireModeKg" value="kg" checked onchange="toggleFireMode()">
+                                <label class="btn btn-outline-secondary" for="fireModeKg" style="font-size:11px;padding:1px 10px;line-height:1.6;">kg</label>
+                                <input type="radio" class="btn-check" name="fireMode" id="fireModePct" value="pct" onchange="toggleFireMode()">
+                                <label class="btn btn-outline-secondary" for="fireModePct" style="font-size:11px;padding:1px 10px;line-height:1.6;">%</label>
+                            </div>
+                        </label>
+                        <!-- kg mode -->
+                        <div id="fireKgDiv">
+                            <div class="input-group">
+                                <input type="number" id="fireKgDirect" class="form-control" step="0.01" min="0"
+                                       placeholder="0.00" value="0" oninput="syncFireKg()">
+                                <span class="input-group-text">kg</span>
+                            </div>
+                        </div>
+                        <!-- % mode -->
+                        <div id="firePctDiv" style="display:none;">
+                            <div class="input-group">
+                                <input type="number" id="firePercent" class="form-control" step="0.1" min="0" max="100"
+                                       placeholder="0.0" oninput="calcFireFromPct()">
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <div class="form-text" id="fireKgCalcText" style="font-size:11px;color:#dc2626;font-weight:500;">= 0.00 kg fire</div>
+                        </div>
+                    </div>
+
+                    <!-- Üretilen | Makine -->
+                    <div class="col-md-6">
+                        <label class="form-label">Üretilen Miktar (adet) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" id="detailQty" class="form-control" step="1" min="1" placeholder="0">
+                            <span class="input-group-text">adet</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted" style="font-size:12px;">Makine</label>
+                        <select id="detailMachineId" class="form-select form-select-sm">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var m in machines)
+                            {
+                                <option value="@m.Id">@m.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Notlar -->
+                    <div class="col-12">
+                        <label class="form-label">Notlar</label>
+                        <input type="text" id="detailNotes" class="form-control" placeholder="Opsiyonel...">
+                    </div>
+
+                    <!-- FSC CoC İzleme (collapsible) -->
+                    <div class="col-12">
+                        <div style="border-top:1px dashed #e5e7eb;padding-top:10px;">
+                            <button type="button" class="btn btn-link p-0 text-decoration-none"
+                                    style="font-size:12px;color:#6b7280;"
+                                    data-bs-toggle="collapse" data-bs-target="#cocSection">
+                                <i class="fas fa-sitemap me-1 text-success"></i>
+                                FSC CoC İzleme <span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;font-weight:500;margin-left:4px;">Opsiyonel</span>
+                                <i class="fas fa-chevron-down ms-1" style="font-size:10px;"></i>
+                            </button>
+                            <div class="collapse" id="cocSection">
+                                <div class="mt-2 p-2 rounded" style="background:#f8fafc;border:1px solid #e5e7eb;">
+                                    <label class="form-label" style="font-size:12px;">Reçete Bileşeni</label>
+                                    <select id="detailRecipeId" class="form-select form-select-sm">
+                                        <option value="">— Serbest Tüketim (Reçete Dışı) —</option>
+                                        @foreach (var wr in workOrderRecipes)
+                                        {
+                                            <option value="@wr.Id">
+                                                @(wr.Product?.ProductName ?? "?") — Plan: @wr.PlannedQuantity.ToString("N0") kg · Gerçek: @wr.ActualConsumedQuantity.ToString("N0") kg
+                                            </option>
+                                        }
+                                        @if (!workOrderRecipes.Any() && recipeComponents.Any())
+                                        {
+                                            <optgroup label="— Önce Bileşen Ekleyin —">
+                                                @foreach (var rc in recipeComponents)
+                                                {
+                                                    <option value="" disabled>@rc.ChildProduct?.ProductName — @rc.StandardQuantity @rc.Unit (standart)</option>
+                                                }
+                                            </optgroup>
+                                        }
+                                    </select>
+                                    <div class="form-text" style="font-size:11px;color:#6b7280;">
+                                        <i class="fas fa-info-circle me-1"></i>Seçilirse bu tüketim ilgili bileşenin mass-balance analizine dahil edilir.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-primary px-4" onclick="saveDetail()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BOM Bileşen Modal -->
+<div class="modal fade" id="recipeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px;height:32px;border-radius:8px;background:#16a34a;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-sitemap" style="font-size:13px;color:#fff;"></i>
+                    </div>
+                    <h5 class="modal-title fw-semibold mb-0">BOM Bileşeni Ekle</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="recipeExistingId">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Bileşen Ürün <span class="text-danger">*</span></label>
+                        @if (recipeComponents.Any())
+                        {
+                            <select id="recipeProductId" class="form-select">
+                                <option value="">— Bileşen Seçiniz —</option>
+                                @foreach (var rc in recipeComponents)
+                                {
+                                    <option value="@rc.ChildProductId">
+                                        @rc.ChildProduct?.ProductName
+                                        @if (rc.ChildProduct?.FscType != null)
+                                        {
+                                            <text> [@rc.ChildProduct.FscType.Name]</text>
+                                        }
+                                        — Std: @rc.StandardQuantity @rc.Unit
+                                    </option>
+                                }
+                            </select>
+                            <div class="form-text" style="font-size:11px;">
+                                <i class="fas fa-info-circle me-1 text-success"></i>Ürün reçetesindeki bileşenler listeleniyor.
+                            </div>
+                        }
+                        else
+                        {
+                            <select id="recipeProductId" class="form-select" disabled>
+                                <option value="">— Bu ürüne ait reçete tanımlı değil —</option>
+                            </select>
+                            <div class="form-text text-warning" style="font-size:11px;">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                Önce <a href="/Products/Recipe">Ürünler → Reçete</a> sayfasından bileşen tanımlayın.
+                            </div>
+                        }
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Planlanan Miktar (kg) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" id="recipePlanned" class="form-control" step="0.01" min="0.01" placeholder="0.00">
+                            <span class="input-group-text">kg</span>
+                        </div>
+                        <div class="form-text" style="font-size:11px;color:#6b7280;">
+                            Bu iş emrinde bu bileşenden planlanana toplam hammadde miktarı.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-success px-4" onclick="saveWorkOrderRecipe()">
+                    <i class="fas fa-save me-1"></i> Bileşen Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function showLotDocs(serialId) {
+    if (!serialId) return;
+    fetch(`/Production/GetLotDocuments/${serialId}`)
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success) { showToast('Lot bilgisi alınamadı.', 'error'); return; }
+            const d = res.data;
+
+            document.getElementById('lotDocsTitle').textContent   = `Parti: ${d.lotNo}`;
+            document.getElementById('lotDocsSubtitle').textContent = `Bobin: ${d.serialNo}`;
+
+            document.getElementById('ldLotNo').textContent       = d.lotNo    || '—';
+            document.getElementById('ldSupplier').textContent    = d.supplier || '—';
+            document.getElementById('ldSupplierCode').textContent = d.supplierCode ? `(${d.supplierCode})` : '';
+            document.getElementById('ldFscType').innerHTML       = d.fscType
+                ? `<span class="badge badge-success">${d.fscType}</span>`
+                : '—';
+            document.getElementById('ldProduct').textContent     = d.product ? `${d.product} (${d.productCode})` : '—';
+            document.getElementById('ldArrival').textContent     = d.arrivalDate || '—';
+            document.getElementById('ldPlate').textContent       = d.truckPlate  || '—';
+
+            // Fatura
+            const invNo = d.invoiceNo || '—';
+            document.getElementById('ldInvoiceNo').textContent = invNo;
+            const invAmt = d.invoiceAmount
+                ? new Intl.NumberFormat('tr-TR', { minimumFractionDigits:2 }).format(d.invoiceAmount) + ' ' + d.currency
+                : '';
+            document.getElementById('ldInvoiceAmount').textContent = invAmt;
+            document.getElementById('ldInvoicePdf').innerHTML = d.invoicePdfPath
+                ? `<button class="btn btn-primary btn-sm w-100" onclick="showPdf('/${d.invoicePdfPath}','Fatura — ' + invNo)">
+                       <i class="fas fa-file-pdf me-1"></i> Fatura PDF'ini Görüntüle
+                   </button>`
+                : `<div class="text-muted small"><i class="fas fa-info-circle me-1"></i>PDF henüz yüklenmemiş</div>`;
+
+            // İrsaliye
+            const dispNo = d.dispatchNo || '—';
+            document.getElementById('ldDispatchNo').textContent = dispNo;
+            document.getElementById('ldDispatchPdf').innerHTML = d.dispatchPdfPath
+                ? `<button class="btn btn-success btn-sm w-100" onclick="showPdf('/${d.dispatchPdfPath}','İrsaliye — ' + dispNo)">
+                       <i class="fas fa-file-pdf me-1"></i> İrsaliye PDF'ini Görüntüle
+                   </button>`
+                : `<div class="text-muted small"><i class="fas fa-info-circle me-1"></i>PDF henüz yüklenmemiş</div>`;
+
+            document.getElementById('ldLotDetailLink').href = `/Purchase/Detail/${d.lotId}`;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('lotDocsModal')).show();
+        });
+}
+
+// ── Fire toggle helpers ──────────────────────────────────────────────────────
+function toggleFireMode() {
+    const mode = document.querySelector('input[name="fireMode"]:checked').value;
+    document.getElementById('fireKgDiv').style.display  = mode === 'kg'  ? '' : 'none';
+    document.getElementById('firePctDiv').style.display = mode === 'pct' ? '' : 'none';
+    if (mode === 'pct') calcFireFromPct(); else syncFireKg();
+}
+
+function syncFireKg() {
+    const kg = parseFloat(document.getElementById('fireKgDirect').value) || 0;
+    document.getElementById('detailWaste').value = kg.toFixed(2);
+}
+
+function calcFireFromPct() {
+    const consumed = parseFloat(document.getElementById('detailConsumed').value) || 0;
+    const pct      = parseFloat(document.getElementById('firePercent').value)    || 0;
+    const kg       = consumed * pct / 100;
+    document.getElementById('detailWaste').value        = kg.toFixed(2);
+    document.getElementById('fireKgCalcText').textContent =
+        `= ${kg.toLocaleString('tr-TR', {minimumFractionDigits:2})} kg fire`;
+}
+
+function onConsumedChange() {
+    const mode = document.querySelector('input[name="fireMode"]:checked')?.value;
+    if (mode === 'pct') calcFireFromPct();
+}
+
+function _resetFireMode() {
+    document.getElementById('fireModeKg').checked = true;
+    document.getElementById('fireKgDiv').style.display  = '';
+    document.getElementById('firePctDiv').style.display = 'none';
+    document.getElementById('fireKgDirect').value = '0';
+    document.getElementById('firePercent').value  = '';
+    document.getElementById('fireKgCalcText').textContent = '= 0.00 kg fire';
+    document.getElementById('detailWaste').value  = '0';
+}
+
+// ── Tüketim modal ────────────────────────────────────────────────────────────
+window.openAddDetailFn = function() {
+    document.getElementById('detailId').value      = '';
+    document.getElementById('detailSerialId').value = '';
+    document.getElementById('detailRecipeId').value = '';
+    document.getElementById('detailDate').value    = new Date().toISOString().split('T')[0];
+    document.getElementById('detailConsumed').value = '';
+    document.getElementById('detailQty').value      = '';
+    document.getElementById('detailNotes').value    = '';
+    document.getElementById('serialInfo').style.display = 'none';
+    _resetFireMode();
+    // ensure machine pre-filled from work order
+    if (!document.getElementById('detailMachineId').value)
+        document.getElementById('detailMachineId').value = '@Model.MachineId';
+    document.getElementById('detailModalTitle').textContent = 'Tüketim Kaydı Ekle';
+    // collapse CoC section
+    const coc = bootstrap.Collapse.getOrCreateInstance(document.getElementById('cocSection'), {toggle:false});
+    coc.hide();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal')).show();
+};
+
+function updateSerialInfo() {
+    const sel = document.getElementById('detailSerialId');
+    const opt = sel.options[sel.selectedIndex];
+    const info = document.getElementById('serialInfo');
+    if (!opt.value) { info.style.display = 'none'; return; }
+    const kalan = parseFloat(opt.dataset.kalan || 0).toLocaleString('tr-TR', {minimumFractionDigits:2});
+    info.style.display = 'block';
+    info.innerHTML = `<i class="fas fa-info-circle me-1"></i>
+        <strong>${opt.dataset.lotno ?? '—'}</strong> · ${opt.dataset.supplier ?? '—'} ·
+        Kalan: <strong>${kalan} kg</strong>`;
+}
+
+function editDetail(id) {
+    fetch(`/Production/GetDetail/${id}`)
+        .then(r => r.json()).then(res => {
+            if (!res.success) return;
+            const d = res.data;
+            document.getElementById('detailId').value        = d.id;
+            document.getElementById('detailSerialId').value  = d.fscSerialId;
+            document.getElementById('detailMachineId').value = d.machineId;
+            document.getElementById('detailRecipeId').value  = d.workOrderRecipeId || '';
+            document.getElementById('detailDate').value      = d.productionDate;
+            document.getElementById('detailConsumed').value  = d.consumedWeight;
+            document.getElementById('detailQty').value       = d.producedQuantity;
+            document.getElementById('detailNotes').value     = d.notes || '';
+            document.getElementById('detailModalTitle').textContent = 'Tüketim Kaydını Düzenle';
+            // fire: always restore as kg on edit
+            _resetFireMode();
+            document.getElementById('fireKgDirect').value   = d.wasteWeight;
+            document.getElementById('detailWaste').value    = d.wasteWeight;
+            // expand CoC if recipe is selected
+            if (d.workOrderRecipeId) {
+                bootstrap.Collapse.getOrCreateInstance(document.getElementById('cocSection'), {toggle:false}).show();
+            }
+            updateSerialInfo();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal')).show();
+        });
+}
+
+function saveDetail() {
+    const serialVal   = document.getElementById('detailSerialId').value;
+    const dateVal     = document.getElementById('detailDate').value;
+    const consumedVal = document.getElementById('detailConsumed').value;
+    const qtyVal      = document.getElementById('detailQty').value;
+
+    if (!serialVal || !dateVal || !consumedVal || !qtyVal) {
+        showToast('Bobin, Tarih, Tüketim ve Üretim Miktarı zorunludur.', 'warning');
+        return;
+    }
+
+    // ensure hidden waste is up-to-date
+    const mode = document.querySelector('input[name="fireMode"]:checked')?.value;
+    if (mode === 'pct') calcFireFromPct(); else syncFireKg();
+
+    const fd = new FormData();
+    const id = document.getElementById('detailId').value;
+    if (id) fd.append('Id', id);
+    fd.append('WorkOrderId',      document.getElementById('detailWoId').value);
+    fd.append('FscSerialId',      serialVal);
+    fd.append('MachineId',        document.getElementById('detailMachineId').value);
+    fd.append('ProductionDate',   dateVal);
+    fd.append('ConsumedWeight',   consumedVal);
+    fd.append('WasteWeight',      document.getElementById('detailWaste').value || '0');
+    fd.append('ProducedQuantity', qtyVal);
+    fd.append('Notes',            document.getElementById('detailNotes').value);
+    const recipeId = document.getElementById('detailRecipeId').value;
+    if (recipeId) fd.append('WorkOrderRecipeId', recipeId);
+
+    const btn = document.querySelector('#detailModal .btn-primary');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Kaydediliyor...';
+
+    fetch('/Production/SaveDetail', { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            btn.disabled = false; btn.innerHTML = orig;
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('detailModal'))?.hide();
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                showToast(res.message, 'error');
+            }
+        }).catch(() => { btn.disabled = false; btn.innerHTML = orig; });
+}
+
+function deleteDetail(id) {
+    Swal.fire({
+        title: 'Tüketim Kaydını Sil',
+        text: 'Bu kayıt silinince bobin ağırlığı geri iade edilecek. Devam edilsin mi?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Sil',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#dc2626'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        const fd = new FormData(); fd.append('id', id);
+        fetch('/Production/DeleteDetail', { method: 'POST', body: fd })
+            .then(r => r.json()).then(res => {
+                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1200); }
+                else showToast(res.message, 'error');
+            });
+    });
+}
+
+function loadFromRecipe() {
+    const productId = @Model.ProductId;
+    fetch(`/Products/GetRecipeForWorkOrder?productId=${productId}`)
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success || !res.lines.length) {
+                alert('Bu ürün için tanımlı aktif reçete bulunamadı.\nÖnce Ürünler → Reçete sayfasından bileşen tanımlayın.');
+                return;
+            }
+
+            let msg = 'Standart Reçete:\n\n';
+            res.lines.forEach(l => {
+                msg += `• ${l.childProductName} — ${l.standardQuantity} ${l.unit}\n`;
+            });
+            msg += '\nReçete bilgilerini tüketim formuna yüklemek istiyor musunuz?';
+
+            if (!confirm(msg)) return;
+
+            // İlk reçete satırını tüketim formuna prefill et
+            const first = res.lines[0];
+            openAddDetailFn();
+            // Notlar alanına reçete özetini yaz
+            const noteLines = res.lines.map(l => `${l.childProductName}: ${l.standardQuantity} ${l.unit}`).join(', ');
+            document.getElementById('detailNotes').value = `Reçete: ${noteLines}`;
+            showToast(`${res.lines.length} bileşen bulundu. Tüketim formunu doldurun.`, 'info');
+        });
+}
+
+function completeWO(id, no) {
+    Swal.fire({
+        title: 'İş Emrini Tamamla',
+        text: `${no} iş emri tamamlandı olarak işaretlensin mi?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Tamamla',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#16a34a'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        const fd = new FormData(); fd.append('id', id);
+        fetch('/Production/CompleteWorkOrder', { method: 'POST', body: fd })
+            .then(r => r.json()).then(res => {
+                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1200); }
+                else showToast(res.message, 'error');
+            });
+    });
+}
+
+// ── BOM Bileşen Yönetimi ────────────────────────────────────────────────────
+function openAddRecipe() {
+    document.getElementById('recipeProductId').value = '';
+    document.getElementById('recipePlanned').value = '';
+    document.getElementById('recipeExistingId').value = '';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('recipeModal')).show();
+}
+
+function saveWorkOrderRecipe() {
+    const productId = document.getElementById('recipeProductId').value;
+    const planned   = document.getElementById('recipePlanned').value;
+    if (!productId || !planned) {
+        showToast('Bileşen ve planlanan miktar zorunludur.', 'warning');
+        return;
+    }
+    const fd = new FormData();
+    fd.append('workOrderId',    @Model.Id);
+    fd.append('productId',      productId);
+    fd.append('plannedQuantity', planned);
+    const existingId = document.getElementById('recipeExistingId').value;
+    if (existingId) fd.append('existingId', existingId);
+
+    fetch('/Production/SaveWorkOrderRecipe', { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('recipeModal'))?.hide();
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(res.message, 'error');
+            }
+        });
+}
+
+function deleteWorkOrderRecipe(id) {
+    Swal.fire({
+        title: 'Bileşeni Kaldır',
+        text: 'Bu reçete bileşeni bu iş emrinden kaldırılsın mı?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Kaldır',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#dc2626'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        const fd = new FormData(); fd.append('id', id);
+        fetch('/Production/DeleteWorkOrderRecipe', { method: 'POST', body: fd })
+            .then(r => r.json()).then(res => {
+                if (res.success) { showToast('Bileşen kaldırıldı.', 'success'); setTimeout(() => location.reload(), 1000); }
+                else showToast(res.message, 'error');
+            });
+    });
+}
+</script>
+}

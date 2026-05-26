@@ -1,11 +1,12 @@
-﻿using FSCTakip.DataAccess.Data;
+﻿using FSCTakip.Business.Services;
+using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 using ClosedXML.Excel;
 using System.IO;
 
-namespace FSC_ERP.Controllers
+namespace FSCTakip.WebUI.Controllers
 {
     public class BaseController : Controller
     {
@@ -14,6 +15,70 @@ namespace FSC_ERP.Controllers
         public BaseController(AppDbContext context)
         {
             _context = context;
+        }
+
+        // ── Yetki Kontrol Yardımcıları ────────────────────────────────────────
+
+        protected int CurrentUserId =>
+            int.TryParse(HttpContext.Session.GetString("UserId"), out var id) ? id : 0;
+
+        protected bool IsAdminUser =>
+            HttpContext.Session.GetString("IsAdmin") == "1";
+
+        /// <summary>Session önbelleğinden yetki okur — her request'te DB'ye gitme.</summary>
+        protected EffectivePermission GetPermission(string moduleCode)
+        {
+            if (IsAdminUser) return EffectivePermission.All;
+            var json = HttpContext.Session.GetString("Perms");
+            if (string.IsNullOrEmpty(json)) return EffectivePermission.None;
+            try
+            {
+                var perms = System.Text.Json.JsonSerializer.Deserialize<
+                    Dictionary<string, System.Text.Json.JsonElement>>(json);
+                if (perms != null && perms.TryGetValue(moduleCode, out var perm))
+                    return new EffectivePermission
+                    {
+                        CanRead   = perm.GetProperty("r").GetBoolean(),
+                        CanWrite  = perm.GetProperty("w").GetBoolean(),
+                        CanDelete = perm.GetProperty("d").GetBoolean()
+                    };
+            }
+            catch { }
+            return EffectivePermission.None;
+        }
+
+        /// <summary>Yazma yetkisi yoksa 403 JSON döner.</summary>
+        protected IActionResult? RequireWrite(string moduleCode)
+        {
+            if (!GetPermission(moduleCode).CanWrite)
+                return Json(new { success = false, message = "Bu işlem için yetkiniz bulunmamaktadır." });
+            return null;
+        }
+
+        /// <summary>Silme yetkisi yoksa 403 JSON döner.</summary>
+        protected IActionResult? RequireDelete(string moduleCode)
+        {
+            if (!GetPermission(moduleCode).CanDelete)
+                return Json(new { success = false, message = "Silme yetkisine sahip değilsiniz." });
+            return null;
+        }
+
+        /// <summary>Okuma yetkisi yoksa AccessDenied view döner.</summary>
+        protected IActionResult? RequireRead(string moduleCode)
+        {
+            if (CurrentUserId == 0) return RedirectToAction("Login", "Account");
+            if (!GetPermission(moduleCode).CanRead)
+                return View("~/Views/Shared/AccessDenied.cshtml");
+            return null;
+        }
+
+        /// <summary>View'a yetki bayraklarını ViewBag ile iletir.</summary>
+        protected void SetPermissionViewBag(string moduleCode)
+        {
+            var p = GetPermission(moduleCode);
+            ViewBag.CanRead   = p.CanRead;
+            ViewBag.CanWrite  = p.CanWrite;
+            ViewBag.CanDelete = p.CanDelete;
         }
 
         // 1. GENEL AKTİF/PASİF YAPMA METODU

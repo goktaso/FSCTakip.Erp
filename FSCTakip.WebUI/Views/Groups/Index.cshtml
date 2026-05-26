@@ -1,0 +1,149 @@
+@model List<FSCTakip.Core.Entities.PermissionGroup>
+@{
+    ViewData["Title"] = "Yetki Grupları";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0"><i class="fas fa-layer-group me-2 text-primary"></i>Yetki Grupları</h5>
+    <button class="btn btn-primary btn-sm" onclick="editGroup(0)">
+        <i class="fas fa-plus me-1"></i> Yeni Grup
+    </button>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Grup Adı</th>
+                    <th>Açıklama</th>
+                    <th class="text-center">Kullanıcı</th>
+                    <th class="text-center">Modül</th>
+                    <th class="text-center">Durum</th>
+                    <th class="text-center" style="width:160px">İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var g in Model)
+                {
+                    <tr>
+                        <td class="fw-semibold">
+                            <i class="fas fa-users me-1 text-secondary"></i>@g.Name
+                        </td>
+                        <td class="text-muted small">@g.Description</td>
+                        <td class="text-center">
+                            <span class="badge bg-info text-dark">@g.UserGroups.Count</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">@g.Permissions.Count</span>
+                        </td>
+                        <td class="text-center">
+                            @if (g.IsActive)
+                            {
+                                <span class="badge bg-success">Aktif</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Pasif</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <a href="/Groups/Detail/@g.Id" class="btn btn-sm btn-outline-primary py-0 px-2" title="Yetkiler">
+                                <i class="fas fa-shield-alt"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="editGroup(@g.Id)" title="Düzenle">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm @(g.IsActive ? "btn-outline-warning" : "btn-outline-success") py-0 px-2"
+                                    onclick="toggleGroup(@g.Id, this)" title="@(g.IsActive ? "Pasif Yap" : "Aktif Yap")">
+                                <i class="fas fa-@(g.IsActive ? "toggle-off" : "toggle-on")"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-4">Henüz grup tanımlanmamış.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="groupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="groupModalTitle">Yeni Grup</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="gId" value="0" />
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Grup Adı <span class="text-danger">*</span></label>
+                    <input type="text" id="gName" class="form-control" placeholder="Operatör, Muhasebe..." />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Açıklama</label>
+                    <textarea id="gDesc" class="form-control" rows="2" placeholder="Kısa açıklama..."></textarea>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="gActive" class="form-check-input" checked />
+                    <label class="form-check-label" for="gActive">Aktif</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button class="btn btn-primary" onclick="saveGroup()"><i class="fas fa-save me-1"></i>Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function editGroup(id) {
+    if (id === 0) {
+        document.getElementById('groupModalTitle').textContent = 'Yeni Grup';
+        document.getElementById('gId').value = 0;
+        document.getElementById('gName').value = '';
+        document.getElementById('gDesc').value = '';
+        document.getElementById('gActive').checked = true;
+        new bootstrap.Modal(document.getElementById('groupModal')).show();
+        return;
+    }
+    fetch('/Groups/GetGroup/' + id)
+        .then(r => r.json()).then(d => {
+            if (!d.success) { alert('Grup bulunamadı.'); return; }
+            document.getElementById('groupModalTitle').textContent = 'Grubu Düzenle';
+            document.getElementById('gId').value = d.id;
+            document.getElementById('gName').value = d.name;
+            document.getElementById('gDesc').value = d.description || '';
+            document.getElementById('gActive').checked = d.isActive;
+            new bootstrap.Modal(document.getElementById('groupModal')).show();
+        });
+}
+
+function saveGroup() {
+    const id = document.getElementById('gId').value;
+    const name = document.getElementById('gName').value.trim();
+    if (!name) { alert('Grup adı zorunludur.'); return; }
+    const fd = new FormData();
+    fd.append('id', id);
+    fd.append('name', name);
+    fd.append('description', document.getElementById('gDesc').value);
+    fd.append('isActive', document.getElementById('gActive').checked);
+    fetch('/Groups/Save', { method: 'POST', body: fd })
+        .then(r => r.json()).then(d => {
+            if (d.success) location.reload();
+            else alert(d.message);
+        });
+}
+
+function toggleGroup(id, btn) {
+    fetch('/Groups/ToggleActive', { method: 'POST', body: new URLSearchParams({ id }) })
+        .then(r => r.json()).then(d => { if (d.success) location.reload(); });
+}
+</script>
+}

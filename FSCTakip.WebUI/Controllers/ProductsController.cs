@@ -1,4 +1,4 @@
-using FSCTakip.Core.Entities;
+﻿using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -9,18 +9,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-// ... Mevcut using satırları ...
-
-namespace FSC_ERP.Controllers
+namespace FSCTakip.WebUI.Controllers
 {
     public class ProductsController : BaseController
     {
         public ProductsController(FSCTakip.DataAccess.Data.AppDbContext context) : base(context) { }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? supplierId, int? productGroupId, string? search)
         {
             await PopulateDropdowns(ViewData);
-            var products = await _context.Products
+
+            var query = _context.Products
                 .Include(p => p.ProductGroup)
                 .Include(p => p.Supplier)
                 .Include(p => p.FscType)
@@ -28,9 +27,26 @@ namespace FSC_ERP.Controllers
                 .Include(p => p.PaperColor)
                 .Include(p => p.PaperWeight)
                 .Include(p => p.PaperWidth)
-                .Include(p => p.Unit) // YENİ: Birim ilişkisi eklendi
-                .OrderBy(p => p.ProductCode)
-                .ToListAsync();
+                .AsQueryable();
+
+            if (supplierId.HasValue)
+                query = query.Where(p => p.SupplierId == supplierId.Value);
+            if (productGroupId.HasValue)
+                query = query.Where(p => p.ProductGroupId == productGroupId.Value);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                query = query.Where(p =>
+                    p.ProductCode.Contains(s) ||
+                    p.ProductName.Contains(s) ||
+                    (p.ExternalCode != null && p.ExternalCode.Contains(s)));
+            }
+
+            ViewBag.SupplierId     = supplierId;
+            ViewBag.ProductGroupId = productGroupId;
+            ViewBag.Search         = search;
+
+            var products = await query.OrderBy(p => p.ProductCode).ToListAsync();
             return View(products);
         }
 
@@ -100,6 +116,9 @@ namespace FSC_ERP.Controllers
                 }
 
                 model.ProductCode = newCode;
+                model.ExternalCode = string.IsNullOrWhiteSpace(model.ExternalCode) ? null : model.ExternalCode.Trim().ToUpperInvariant();
+                model.SupplierId = model.SupplierId; // Tedarikçi ataması
+                model.Unit = model.Unit ?? "ADET";
                 model.CreatedDate = DateTime.Now;
                 model.CreatedBy = "SYSTEM";
                 model.IsActive = true;
@@ -119,6 +138,7 @@ namespace FSC_ERP.Controllers
                     existing.PaperColorId = model.PaperColorId;
                     existing.PaperWeightId = model.PaperWeightId;
                     existing.PaperWidthId = model.PaperWidthId;
+                    existing.ExternalCode = string.IsNullOrWhiteSpace(model.ExternalCode) ? existing.ExternalCode : model.ExternalCode.Trim().ToUpperInvariant();
                     existing.UpdatedDate = DateTime.Now;
                     existing.UpdatedBy = "SYSTEM";
                 }
@@ -147,27 +167,176 @@ namespace FSC_ERP.Controllers
             viewData["PaperWidths"] = new SelectList(widths.Select(x => new { Id = x.Id, Text = $"{x.Value} {x.Unit}" }), "Id", "Text");
         }
 
-        public async Task<IActionResult> ExportIndex()
+        public async Task<IActionResult> ExportIndex(int? supplierId, int? productGroupId, string? search)
         {
-            var data = await _context.Products
+            var query = _context.Products
                 .Include(p => p.ProductGroup)
                 .Include(p => p.Supplier)
-                .Include(p => p.Unit) // Excel için birim adı
+                .Include(p => p.FscType)
                 .Include(p => p.PaperWeight)
                 .Include(p => p.PaperWidth)
-                .OrderBy(p => p.ProductCode)
+                .AsQueryable();
+
+            if (supplierId.HasValue)
+                query = query.Where(p => p.SupplierId == supplierId.Value);
+            if (productGroupId.HasValue)
+                query = query.Where(p => p.ProductGroupId == productGroupId.Value);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                query = query.Where(p =>
+                    p.ProductCode.Contains(s) ||
+                    p.ProductName.Contains(s) ||
+                    (p.ExternalCode != null && p.ExternalCode.Contains(s)));
+            }
+
+            var data = await query.OrderBy(p => p.ProductCode)
                 .Select(p => new {
-                    p.ProductCode,
-                    p.ProductName,
-                    Tedarikci = p.Supplier.Name ?? "-",
-                    Grup = p.ProductGroup.GroupName,
-                    Birim = p.Unit.Name ?? "-", // GÜNCELLENDİ
-                    Gramaj = p.PaperWeight != null ? $"{p.PaperWeight.Value} {p.PaperWeight.Unit}" : "-",
-                    En = p.PaperWidth != null ? $"{p.PaperWidth.Value} {p.PaperWidth.Unit}" : "-",
-                    Durum = p.IsActive ? "AKTİF" : "PASİF"
+                    DahiliKod   = p.ProductCode,
+                    HariciKod   = p.ExternalCode ?? "",
+                    UrunAdi     = p.ProductName,
+                    Tedarikci   = p.Supplier != null ? p.Supplier.Name : "-",
+                    Grup        = p.ProductGroup != null ? p.ProductGroup.GroupName : "-",
+                    FscTipi     = p.FscType != null ? p.FscType.Name : "-",
+                    Birim       = p.Unit,
+                    Gramaj      = p.PaperWeight != null ? $"{p.PaperWeight.Value} {p.PaperWeight.Unit}" : "-",
+                    En          = p.PaperWidth  != null ? $"{p.PaperWidth.Value} {p.PaperWidth.Unit}"   : "-",
+                    Durum       = p.IsActive ? "AKTİF" : "PASİF"
                 }).ToListAsync();
 
             return ExportToExcel(data, "UrunListesi");
+        }
+
+        // ─── Ürün Reçetesi (BOM) ─────────────────────────────────────────────
+
+        // GET /Products/Recipe/{id}
+        public async Task<IActionResult> Recipe(int id)
+        {
+            var product = await _context.Products
+                .Include(p => p.ProductGroup)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (product == null) return NotFound();
+
+            var lines = await _context.ProductRecipes
+                .Include(r => r.ChildProduct).ThenInclude(c => c.ProductGroup)
+                .Where(r => r.ParentProductId == id)
+                .OrderBy(r => r.ChildProduct.ProductName)
+                .ToListAsync();
+
+            // Bileşen olarak eklenebilecek ürünler (kendisi hariç)
+            ViewBag.AvailableProducts = await _context.Products
+                .Where(p => p.IsActive && p.Id != id)
+                .OrderBy(p => p.ProductName)
+                .ToListAsync();
+
+            ViewData["Title"] = $"Reçete — {product.ProductName}";
+            ViewBag.Product = product;
+            return View(lines);
+        }
+
+        // POST /Products/SaveRecipeLine
+        [HttpPost]
+        public async Task<IActionResult> SaveRecipeLine(ProductRecipe model)
+        {
+            try
+            {
+                if (model.Id == 0)
+                {
+                    var exists = await _context.ProductRecipes.AnyAsync(r =>
+                        r.ParentProductId == model.ParentProductId &&
+                        r.ChildProductId  == model.ChildProductId);
+                    if (exists)
+                        return Json(new { success = false, message = "Bu bileşen zaten reçetede mevcut." });
+
+                    model.IsActive    = true;
+                    model.CreatedDate = DateTime.Now;
+                    model.CreatedBy   = User.Identity?.Name ?? "System";
+                    _context.ProductRecipes.Add(model);
+                }
+                else
+                {
+                    var existing = await _context.ProductRecipes.FindAsync(model.Id);
+                    if (existing == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+                    existing.ChildProductId    = model.ChildProductId;
+                    existing.StandardQuantity  = model.StandardQuantity;
+                    existing.Unit              = model.Unit;
+                    existing.UpdatedDate       = DateTime.Now;
+                    existing.UpdatedBy         = User.Identity?.Name ?? "System";
+                }
+
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Reçete satırı kaydedildi." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // GET /Products/GetRecipeLine
+        [HttpGet]
+        public async Task<IActionResult> GetRecipeLine(int id)
+        {
+            var item = await _context.ProductRecipes.FindAsync(id);
+            if (item == null) return Json(new { success = false });
+            return Json(new { success = true, data = new {
+                item.Id, item.ParentProductId, item.ChildProductId,
+                item.StandardQuantity, item.Unit, item.IsActive
+            }});
+        }
+
+        // POST /Products/DeleteRecipeLine
+        [HttpPost]
+        public async Task<IActionResult> DeleteRecipeLine(int id)
+        {
+            var item = await _context.ProductRecipes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            try
+            {
+                _context.ProductRecipes.Remove(item);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu reçete satırı kullanıldığı için silinemez." });
+            }
+        }
+
+        // POST /Products/ToggleRecipeLine
+        [HttpPost]
+        public async Task<IActionResult> ToggleRecipeLine(int id)
+        {
+            var item = await _context.ProductRecipes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            item.IsActive    = !item.IsActive;
+            item.UpdatedDate = DateTime.Now;
+            item.UpdatedBy   = User.Identity?.Name ?? "System";
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, isActive = item.IsActive });
+        }
+
+        // GET /Products/GetRecipeForWorkOrder/{productId}  — üretim sayfasından çağrılır
+        [HttpGet]
+        public async Task<IActionResult> GetRecipeForWorkOrder(int productId)
+        {
+            var lines = await _context.ProductRecipes
+                .Include(r => r.ChildProduct)
+                .Where(r => r.ParentProductId == productId && r.IsActive)
+                .OrderBy(r => r.ChildProduct.ProductName)
+                .Select(r => new {
+                    r.Id,
+                    r.ChildProductId,
+                    childProductName = r.ChildProduct.ProductName,
+                    childProductCode = r.ChildProduct.ProductCode,
+                    r.StandardQuantity,
+                    r.Unit
+                })
+                .ToListAsync();
+
+            return Json(new { success = true, lines });
         }
     }
 }
