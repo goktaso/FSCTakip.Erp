@@ -218,9 +218,24 @@ namespace FSCTakip.WebUI.Controllers
                 if (model.InitialWeight <= 0)
                     return Json(new { success = false, message = "Bobin ağırlığı sıfırdan büyük olmalıdır." });
 
-                var lot = await _context.FscLots.FindAsync(model.LotId);
+                var lot = await _context.FscLots
+                    .Include(l => l.Product)
+                    .FirstOrDefaultAsync(l => l.Id == model.LotId);
                 if (lot == null)
                     return Json(new { success = false, message = "Lot bulunamadı." });
+
+                // ── Birim dönüşümü: ürün birimi KG değilse otomatik uygula ──
+                var productUnit = lot.Product?.Unit?.Trim().ToUpperInvariant() ?? "KG";
+                decimal? convFactor = null;
+                if (productUnit != "KG" && productUnit != "")
+                {
+                    var conversions = await _context.UnitConversions.Where(c => c.IsActive).ToListAsync();
+                    convFactor = UnitConversionController.FindFactor(
+                        conversions, productUnit, lot.ProductId, lot.Product?.ProductGroupId);
+                }
+
+                decimal enteredQty = model.InitialWeight;
+                decimal weightKg   = convFactor.HasValue ? enteredQty * convFactor.Value : enteredQty;
 
                 if (model.Id == 0)
                 {
@@ -230,26 +245,48 @@ namespace FSCTakip.WebUI.Controllers
                         var count = await _context.FscSerials.CountAsync(s => s.LotId == model.LotId);
                         model.SerialNo = $"{lot.PartiNo}-B{count + 1:D2}";
                     }
+                    if (convFactor.HasValue)
+                    {
+                        model.OriginalQuantity = enteredQty;
+                        model.OriginalUnit     = productUnit;
+                        model.InitialWeight    = weightKg;
+                    }
                     model.CurrentWeight = model.InitialWeight;
                     _context.FscSerials.Add(model);
                 }
                 else
                 {
-                    var existing = await _context.FscSerials.FindAsync(model.Id);
+                    var existing = await _context.FscSerials
+                        .Include(s => s.ProductionDetails)
+                        .FirstOrDefaultAsync(s => s.Id == model.Id);
                     if (existing == null) return Json(new { success = false, message = "Seri bulunamadı." });
 
-                    existing.SerialNo      = model.SerialNo;
-                    existing.LotNo         = model.LotNo;
-                    existing.InitialWeight = model.InitialWeight;
+                    existing.SerialNo       = model.SerialNo;
+                    existing.LotNo          = model.LotNo;
                     existing.IsOpeningStock = model.IsOpeningStock;
-                    existing.Notes         = model.Notes;
-                    // CurrentWeight sadece giriş ağırlığı değiştiyse ve hiç tüketim yoksa güncelle
+                    existing.Notes          = model.Notes;
+
+                    if (convFactor.HasValue)
+                    {
+                        existing.OriginalQuantity = enteredQty;
+                        existing.OriginalUnit     = productUnit;
+                        existing.InitialWeight    = weightKg;
+                    }
+                    else
+                    {
+                        existing.InitialWeight = model.InitialWeight;
+                    }
+                    // CurrentWeight: sadece hiç tüketim yoksa güncelle
                     if (!existing.ProductionDetails.Any())
-                        existing.CurrentWeight = model.InitialWeight;
+                        existing.CurrentWeight = existing.InitialWeight;
                 }
 
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Seri kaydedildi." });
+
+                var unitMsg = convFactor.HasValue
+                    ? $"Seri kaydedildi. {enteredQty:N3} {productUnit} → {weightKg:N4} KG olarak dönüştürüldü."
+                    : "Seri kaydedildi.";
+                return Json(new { success = true, message = unitMsg, convertedKg = weightKg });
             }
             catch (Exception ex)
             {

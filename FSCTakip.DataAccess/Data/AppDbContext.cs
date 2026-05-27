@@ -78,6 +78,10 @@ namespace FSCTakip.DataAccess.Data
         public DbSet<AuditLog> AuditLogs { get; set; }
         #endregion
 
+        #region Birim Dönüşüm
+        public DbSet<UnitConversion> UnitConversions { get; set; }
+        #endregion
+
         // ─────────────────────────────────────────────────────────────────────
         //  SaveChangesAsync — uppercase + audit log
         // ─────────────────────────────────────────────────────────────────────
@@ -392,6 +396,12 @@ namespace FSCTakip.DataAccess.Data
 
             modelBuilder.Entity<WasteManagement>()
                 .HasOne(w => w.WorkOrder).WithMany().HasForeignKey(w => w.WorkOrderId).OnDelete(DeleteBehavior.SetNull);
+
+            // Birim Dönüşüm
+            modelBuilder.Entity<UnitConversion>()
+                .HasOne(u => u.ProductGroup).WithMany().HasForeignKey(u => u.ProductGroupId).OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<UnitConversion>()
+                .HasOne(u => u.Product).WithMany().HasForeignKey(u => u.ProductId).OnDelete(DeleteBehavior.SetNull);
 
             // RBAC
             modelBuilder.Entity<UserGroup>().HasKey(ug => new { ug.UserId, ug.GroupId });

@@ -1,0 +1,159 @@
+@using FSCTakip.WebUI.Controllers
+@model List<SerialConversionPreview>
+@{
+    ViewData["Title"] = "Dönüşüm Önizlemesi";
+    var withFactor    = Model.Where(r => r.HasFactor).ToList();
+    var withoutFactor = Model.Where(r => !r.HasFactor).ToList();
+}
+
+@section TopbarActions {
+    <a href="/UnitConversion" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Parametreler
+    </a>
+    @if (withFactor.Any())
+    {
+        <button class="btn btn-warning btn-sm ms-2 px-3" onclick="applyAll()">
+            <i class="fas fa-sync me-1"></i> @withFactor.Count Seriyi Dönüştür
+        </button>
+    }
+}
+
+<!-- Özet -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-list-ol"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.Count</div>
+            <div class="stat-label">Bekleyen Seri</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@withFactor.Count</div>
+            <div class="stat-label">Parametresi Olan</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@withoutFactor.Count</div>
+            <div class="stat-label">Parametresiz (atlanacak)</div>
+        </div>
+    </div>
+</div>
+
+@if (withFactor.Any())
+{
+    <div class="table-card mb-3">
+        <div class="p-3 border-bottom">
+            <strong style="font-size:14px;">
+                <i class="fas fa-check-circle me-2 text-success"></i>
+                Dönüştürülecek Seriler (@withFactor.Count)
+            </strong>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>SERİ NO</th>
+                        <th>LOT / PARTİ</th>
+                        <th>ÜRÜN</th>
+                        <th>TEDARİKÇİ</th>
+                        <th class="text-end">GİRİŞ MİKTARI</th>
+                        <th class="text-center">ÇARPAN</th>
+                        <th class="text-end">→ KG</th>
+                        <th class="text-end">KALAN → KG</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in withFactor)
+                    {
+                        <tr>
+                            <td class="fw-semibold small">@r.SerialNo</td>
+                            <td class="text-muted small">@r.LotPartiNo</td>
+                            <td class="small">@r.ProductName</td>
+                            <td class="text-muted small">@r.SupplierName</td>
+                            <td class="text-end small">@r.OriginalQty.ToString("N3") @r.OriginalUnit</td>
+                            <td class="text-center small text-muted">× @r.Factor?.ToString("N7")</td>
+                            <td class="text-end small fw-semibold text-success">@r.ConvertedKg?.ToString("N4") KG</td>
+                            <td class="text-end small text-muted">@r.CurrentKg?.ToString("N4") KG</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="background:#f8f9fa;">
+                        <td colspan="6" class="fw-semibold text-end small">Toplam dönüşüm:</td>
+                        <td class="text-end fw-bold text-success small">
+                            @withFactor.Sum(r => r.ConvertedKg ?? 0).ToString("N4") KG
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+}
+
+@if (withoutFactor.Any())
+{
+    <div class="table-card">
+        <div class="p-3 border-bottom">
+            <strong style="font-size:14px;">
+                <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+                Parametresiz Seriler — atlanacak (@withoutFactor.Count)
+            </strong>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>SERİ NO</th>
+                        <th>ÜRÜN</th>
+                        <th>BİRİM</th>
+                        <th class="text-end">MİKTAR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in withoutFactor)
+                    {
+                        <tr>
+                            <td class="small">@r.SerialNo</td>
+                            <td class="small">@r.ProductName</td>
+                            <td class="badge bg-warning text-dark small">@r.OriginalUnit</td>
+                            <td class="text-end small">@r.OriginalQty.ToString("N3")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="p-2 text-muted small" style="background:#fef3c7;">
+            <i class="fas fa-info-circle me-1"></i>
+            Bu birimler için <a href="/UnitConversion">parametre ekleyin</a>, ardından önizlemeyi yenileyin.
+        </div>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="text-center text-muted py-5">
+        <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+        <div>Dönüştürülecek seri bulunmuyor — tüm veriler KG cinsinden.</div>
+    </div>
+}
+
+@section Scripts {
+<script>
+function applyAll() {
+    if (!confirm('Parametresi olan @withFactor.Count seri KG\'ye dönüştürülsün mü?\nBu işlem geri alınamaz.')) return;
+    $.post('/UnitConversion/ApplyAll', {}, function(res) {
+        if (res.success) {
+            Swal.fire({ icon: 'success', title: res.message, timer: 3000, showConfirmButton: false })
+                .then(() => window.location = '/UnitConversion');
+        } else {
+            alert(res.message);
+        }
+    });
+}
+</script>
+}

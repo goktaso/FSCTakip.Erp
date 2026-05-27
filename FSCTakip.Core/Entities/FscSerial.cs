@@ -8,6 +8,16 @@
         public string? LotNo { get; set; }
         public decimal InitialWeight { get; set; }
         public decimal CurrentWeight { get; set; }
+
+        /// <summary>
+        /// Sisteme girildiği orijinal miktar (birim dönüşümünden önce).
+        /// Null ise giriş zaten KG'dir.
+        /// </summary>
+        public decimal? OriginalQuantity { get; set; }
+
+        /// <summary>Orijinal birim (örn: "MT"). Null ise giriş zaten KG.</summary>
+        public string? OriginalUnit { get; set; }
+
         public bool IsOpeningStock { get; set; }
         public string? Notes { get; set; }
 
