@@ -53,3 +53,9 @@ body {
 .email-field {
     text-transform: lowercase !important;
 }
+
+/* Birim Dönüşüm audit badge */
+.bg-purple {
+    background-color: #7c3aed !important;
+    color: #fff !important;
+}
