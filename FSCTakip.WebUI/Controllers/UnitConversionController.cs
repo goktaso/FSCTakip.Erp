@@ -281,7 +281,9 @@ namespace FSCTakip.WebUI.Controllers
                 var user = HttpContext.Session.GetString("UserFullName") ?? "SYSTEM";
                 var ip   = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "—";
 
-                _context.AuditLogs.Add(new AuditLog
+                // WriteAuditDirectAsync: uppercase dönüşümü ve re-audit tetiklemez
+                // Böylece TableName ve JSON anahtarları orijinal case ile kaydedilir
+                await _context.WriteAuditDirectAsync(new AuditLog
                 {
                     TableName = "BirimDönüşüm",
                     RecordId  = null,
@@ -292,8 +294,6 @@ namespace FSCTakip.WebUI.Controllers
                     ChangedAt = DateTime.Now,
                     IpAddress = ip
                 });
-                // AuditLog entity _skipAuditTables'da → SaveChangesAsync sadece bu satırı kaydeder, sonsuz döngü yok
-                await _context.SaveChangesAsync();
             }
             catch
             {

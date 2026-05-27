@@ -150,6 +150,24 @@ namespace FSCTakip.DataAccess.Data
         }
 
         // ─────────────────────────────────────────────────────────────────────
+        //  Doğrudan audit satırı yazar — uppercase ve re-audit tetiklemez
+        //  (WriteAuditAsync gibi explicit loglama için kullanılır)
+        // ─────────────────────────────────────────────────────────────────────
+        public async Task WriteAuditDirectAsync(AuditLog log)
+        {
+            _isAuditing = true;
+            try
+            {
+                AuditLogs.Add(log);
+                await base.SaveChangesAsync();
+            }
+            finally
+            {
+                _isAuditing = false;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
         //  Dönem kilidi kontrolü
         // ─────────────────────────────────────────────────────────────────────
 
