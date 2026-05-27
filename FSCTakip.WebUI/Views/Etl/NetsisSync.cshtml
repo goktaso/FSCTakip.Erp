@@ -184,6 +184,19 @@
                     <i class="fas fa-chevron-right text-muted" style="font-size:11px;"></i>
                 </div>
 
+                <!-- Hammadde Girişleri (Lotlar) -->
+                <div class="sync-card p-3 d-flex align-items-center gap-3" style="border-color:#d1fae5;" onclick="openLotPreview()">
+                    <div class="icon-wrap" style="background:#ecfdf5;">
+                        <i class="fas fa-boxes-stacked text-success" style="font-size:18px;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold" style="font-size:13px;">Hammadde Girişlerini Güncelle</div>
+                        <div class="text-muted" style="font-size:11px;">tblseritra (GCKOD=G) → FscLots + FscSerials</div>
+                        <div class="text-muted" style="font-size:10px;margin-top:2px;">Ağırlık hatalarını düzeltir · Eksik lotları ekler</div>
+                    </div>
+                    <span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;">ÖNİZLE</span>
+                </div>
+
                 <!-- Tümü -->
                 <button class="btn btn-dark w-100 mt-1 d-flex align-items-center gap-2 justify-content-center" style="border-radius:10px;padding:12px;" onclick="runAll()">
                     <i class="fas fa-sync-alt"></i>
@@ -506,13 +519,49 @@
     });
 }
 
+<!-- ── Hammadde Lot Önizleme Modalı ──────────────────────────── -->
+<div class="modal fade" id="lotPreviewModal" tabindex="-1" aria-labelledby="lotPreviewModalLabel">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header" style="background:#1e3d14;">
+                <h5 class="modal-title text-white fw-semibold" id="lotPreviewModalLabel">
+                    <i class="fas fa-search me-2"></i>Hammadde Girişleri — Netsis Önizleme
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <!-- İstatistik bandı -->
+            <div id="lotPreviewStats"></div>
+            <!-- Tablo -->
+            <div class="modal-body p-0" id="lotPreviewBody" style="min-height:200px;">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x text-muted mb-3"></i>
+                    <div class="text-muted small">Yükleniyor...</div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <div class="text-muted small me-auto">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <span class="badge" style="background:#dcfce7;color:#166534;">Yeni</span> = oluşturulacak &nbsp;
+                    <span class="badge" style="background:#fef9c3;color:#92400e;">Güncelle</span> = ağırlık güncellenecek &nbsp;
+                    <span class="badge" style="background:#fee2e2;color:#b91c1c;">Ürün Yok</span> = atlanacak
+                </div>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-success" id="lotPreviewRunBtn" onclick="runLotImport()" style="display:none;">
+                    <i class="fas fa-play me-2"></i>Aktarımı Başlat
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script>
 // ── Yardımcılar ────────────────────────────────────────────
 const syncLabels = {
     ProductImport:  { label: 'Ürünler', icon: 'fa-boxes', color: '#3b82f6' },
     SupplierImport: { label: 'Tedarikçiler', icon: 'fa-truck', color: '#f59e0b' },
-    CustomerImport: { label: 'Müşteriler', icon: 'fa-users', color: '#16a34a' }
+    CustomerImport: { label: 'Müşteriler', icon: 'fa-users', color: '#16a34a' },
+    LotImport:      { label: 'Hammadde Girişleri', icon: 'fa-boxes-stacked', color: '#16a34a' }
 };
 
 // Panel göster/gizle
@@ -757,5 +806,98 @@ document.getElementById('confirmOkBtn').addEventListener('click', () => {
     confirmModal.hide();
     if (_confirmOkFn) _confirmOkFn();
 });
+
+// ── Hammadde Lot Önizleme ──────────────────────────────────
+let lotPreviewModal = null;
+function openLotPreview() {
+    if (!lotPreviewModal) lotPreviewModal = new bootstrap.Modal(document.getElementById('lotPreviewModal'));
+    // Yükleniyor spinner
+    document.getElementById('lotPreviewBody').innerHTML = `
+        <div class="text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x text-muted mb-3"></i>
+            <div class="text-muted small">Netsis'ten veriler çekiliyor...</div>
+        </div>`;
+    document.getElementById('lotPreviewStats').innerHTML = '';
+    document.getElementById('lotPreviewRunBtn').style.display = 'none';
+    lotPreviewModal.show();
+
+    fetch('/Etl/PreviewLotImport')
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success) {
+                document.getElementById('lotPreviewBody').innerHTML =
+                    `<div class="alert alert-danger m-3"><i class="fas fa-times-circle me-2"></i>${res.message}</div>`;
+                return;
+            }
+            // İstatistik bandı
+            document.getElementById('lotPreviewStats').innerHTML = `
+                <div class="d-flex gap-3 px-3 py-2 border-bottom" style="background:#f8fafc;flex-wrap:wrap;">
+                    <div class="stat-box" style="background:#eff6ff;flex:1;min-width:90px;">
+                        <div class="num" style="color:#1d4ed8;">${res.total}</div>
+                        <div class="lbl">Toplam</div>
+                    </div>
+                    <div class="stat-box" style="background:#f0fdf4;flex:1;min-width:90px;">
+                        <div class="num" style="color:#16a34a;">${res.newCount}</div>
+                        <div class="lbl">Yeni Lot</div>
+                    </div>
+                    <div class="stat-box" style="background:#fffbeb;flex:1;min-width:90px;">
+                        <div class="num" style="color:#d97706;">${res.matched}</div>
+                        <div class="lbl">Güncelle</div>
+                    </div>
+                    <div class="stat-box" style="background:#fef2f2;flex:1;min-width:90px;">
+                        <div class="num" style="color:#dc2626;">${res.noProduct}</div>
+                        <div class="lbl">Ürün Yok</div>
+                    </div>
+                </div>`;
+
+            // Tablo
+            const colorOf = d => d === 'Yeni' ? '#dcfce7;color:#166534' : d === 'Güncelle' ? '#fef9c3;color:#92400e' : '#fee2e2;color:#b91c1c';
+            const rows = res.rows.map(r => `
+                <tr>
+                    <td class="fw-semibold small">${r.seriNo}</td>
+                    <td class="small text-muted">${r.stokKodu}</td>
+                    <td class="small" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${r.stokAdi}">${r.stokAdi}</td>
+                    <td class="small text-end">${r.initAgirlik.toLocaleString('tr-TR')} kg</td>
+                    <td class="small">${r.belgeNo || '<span class="text-muted">—</span>'}</td>
+                    <td class="small text-muted">${r.tarih}</td>
+                    <td>${r.isSayim ? '<span class="badge bg-secondary" style="font-size:10px;">Sayım</span>' : ''}</td>
+                    <td><span class="badge" style="background:${colorOf(r.durum)};font-size:10px;">${r.durum}</span></td>
+                </tr>`).join('');
+
+            document.getElementById('lotPreviewBody').innerHTML = `
+                <div class="table-responsive" style="max-height:450px;overflow-y:auto;">
+                    <table class="table table-sm table-hover mb-0" style="font-size:12px;">
+                        <thead class="sticky-top bg-white" style="z-index:1;">
+                            <tr>
+                                <th>Seri No</th><th>Stok Kodu</th><th>Stok Adı</th>
+                                <th class="text-end">Başl. Ağırlık</th><th>Belge No</th>
+                                <th>Tarih</th><th>Tür</th><th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
+            document.getElementById('lotPreviewRunBtn').style.display = '';
+        })
+        .catch(err => {
+            document.getElementById('lotPreviewBody').innerHTML =
+                `<div class="alert alert-danger m-3"><i class="fas fa-times-circle me-2"></i>Bağlantı hatası: ${err.message}</div>`;
+        });
+}
+
+function runLotImport() {
+    const connId = document.getElementById('connectionId')?.value ?? '';
+    lotPreviewModal?.hide();
+    openConfirm({
+        title: 'Hammadde Girişlerini Aktar',
+        sub: 'tblseritra → FscLots + FscSerials',
+        body: 'Netsis\'teki tüm seri girişleri (GCKOD=G, Üretim hariç) FscLot ve FscSerial tablolarına aktarılacak. Mevcut kayıtların <strong>ağırlık bilgileri güncellenecek</strong>, eksik seri kayıtları eklenecek.',
+        warn: 'Mevcut FscSerial ağırlıkları Netsis INIT_MIKTAR ile değiştirilir. Bu işlem geri alınamaz.',
+        okLabel: 'Evet, Aktarımı Başlat',
+        okClass: 'btn-success',
+        iconBg: '#dcfce7', iconColor: '#16a34a', iconClass: 'fa-boxes-stacked',
+        onOk: () => runSync('LotImport')
+    });
+}
 </script>
 }
