@@ -202,18 +202,16 @@ namespace FSCTakip.WebUI.Controllers
         {
             var sd = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
             var ed = endDate   ?? DateTime.Today;
-            var edNext = ed.AddDays(1);
+
+            // ── Ortak veri yükle ────────────────────────────────────────────
+            var data        = await BuildAuditReportData(sd, ed);
+            var lots        = data.Lots;
+            var prodDetails = data.ProdDetails;
+            var salesLines  = data.SalesLines;
+            var preSerials  = data.PreSerials;
+            var allSerials  = data.AllSerials;
 
             // ── A: Hammadde Girişleri ────────────────────────────────────────
-            var lots = await _context.FscLots
-                .Include(l => l.FscType)
-                .Include(l => l.Supplier)
-                .Include(l => l.Product)
-                .Include(l => l.Serials)
-                .Where(l => l.ArrivalDate >= sd && l.ArrivalDate < edNext)
-                .OrderBy(l => l.FscType.Name).ThenBy(l => l.Supplier != null ? l.Supplier.Name : "").ThenBy(l => l.ArrivalDate)
-                .ToListAsync();
-
             var inputRows = lots.GroupBy(l => new { FscType = l.FscType?.Name ?? "—", FscCode = l.FscType?.Code ?? "—", Supplier = l.Supplier?.Name ?? "—", SupplierFsc = l.Supplier?.FscCode ?? "" })
                 .Select(g => new AuditInputRow {
                     FscType         = g.Key.FscType,
@@ -229,15 +227,6 @@ namespace FSCTakip.WebUI.Controllers
                 }).ToList();
 
             // ── B: Üretim Tüketimi ───────────────────────────────────────────
-            var prodDetails = await _context.ProductionDetails
-                .Include(d => d.WorkOrder).ThenInclude(w => w.Product)
-                .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.Supplier)
-                .Include(d => d.Machine)
-                .Where(d => d.ProductionDate >= sd && d.ProductionDate < edNext)
-                .OrderBy(d => d.ProductionDate)
-                .ToListAsync();
-
             var productionRows = prodDetails.GroupBy(d => new { WoNo = d.WorkOrder.WorkOrderNo, ProductName = d.WorkOrder.Product?.ProductName ?? "—", d.ProductionDate })
                 .Select(g => new AuditProductionRow {
                     WorkOrderNo   = g.Key.WoNo,
@@ -252,16 +241,6 @@ namespace FSCTakip.WebUI.Controllers
                 }).ToList();
 
             // ── C: Satış Sevkiyatları ────────────────────────────────────────
-            var salesLines = await _context.SalesOrderLines
-                .Include(l => l.SalesOrder).ThenInclude(o => o.Customer)
-                .Include(l => l.Product)
-                .Include(l => l.WorkOrder)
-                .Where(l => l.SalesOrder.Status == SalesOrderStatus.TeslimEdildi
-                         && l.SalesOrder.DispatchDate >= sd
-                         && l.SalesOrder.DispatchDate < edNext)
-                .OrderBy(l => l.SalesOrder.DispatchDate)
-                .ToListAsync();
-
             var salesRows = salesLines.Select(l => new AuditSalesRow {
                 SalesOrderNo      = l.SalesOrder.SalesOrderNo,
                 DispatchDate      = l.SalesOrder.DispatchDate ?? l.SalesOrder.OrderDate,
@@ -277,13 +256,7 @@ namespace FSCTakip.WebUI.Controllers
             }).ToList();
 
             // ── D: FSC Tipi Denge Özeti ─────────────────────────────────────
-            // Açılış bakiyesi: dönem BAŞINDAN önce gelen seriler, dönem öncesi tüketimle düzeltilmiş
-            var preSerials = await _context.FscSerials
-                .Include(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(s => s.ProductionDetails)
-                .Where(s => s.Lot.ArrivalDate < sd)
-                .ToListAsync();
-
+            // preSerials / allSerials → data'dan gelir (BuildAuditReportData)
             var openingByType = preSerials
                 .GroupBy(s => s.Lot?.FscType?.Name ?? "—")
                 .ToDictionary(g => g.Key, g =>
@@ -293,10 +266,6 @@ namespace FSCTakip.WebUI.Controllers
                             .Sum(d => d.ConsumedWeight + d.WasteWeight)));
 
             // Canlı stok (CurrentWeight — bugünkü gerçek değer, bilgi amaçlı)
-            var allSerials = await _context.FscSerials
-                .Include(s => s.Lot).ThenInclude(l => l.FscType)
-                .ToListAsync();
-
             var currentStockByType = allSerials
                 .GroupBy(s => s.Lot?.FscType?.Name ?? "—")
                 .ToDictionary(g => g.Key, g => g.Sum(s => s.CurrentWeight));
@@ -354,28 +323,11 @@ namespace FSCTakip.WebUI.Controllers
         {
             var sd = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
             var ed = endDate   ?? DateTime.Today;
-            var edNext = ed.AddDays(1);
 
-            // Aynı veri setini çek (DRY için idealde metot çıkarılabilir)
-            var lots = await _context.FscLots
-                .Include(l => l.FscType).Include(l => l.Supplier).Include(l => l.Serials)
-                .Where(l => l.ArrivalDate >= sd && l.ArrivalDate < edNext)
-                .ToListAsync();
-
-            var prodDetails = await _context.ProductionDetails
-                .Include(d => d.WorkOrder).ThenInclude(w => w.Product)
-                .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.Supplier)
-                .Where(d => d.ProductionDate >= sd && d.ProductionDate < edNext)
-                .ToListAsync();
-
-            var salesLines = await _context.SalesOrderLines
-                .Include(l => l.SalesOrder).ThenInclude(o => o.Customer)
-                .Include(l => l.Product).Include(l => l.WorkOrder)
-                .Where(l => l.SalesOrder.Status == SalesOrderStatus.TeslimEdildi
-                         && l.SalesOrder.DispatchDate >= sd
-                         && l.SalesOrder.DispatchDate < edNext)
-                .ToListAsync();
+            var data        = await BuildAuditReportData(sd, ed);
+            var lots        = data.Lots;
+            var prodDetails = data.ProdDetails;
+            var salesLines  = data.SalesLines;
 
             using var wb = new ClosedXML.Excel.XLWorkbook();
             var headerBg = ClosedXML.Excel.XLColor.FromHtml("#1e3d14");
@@ -464,23 +416,17 @@ namespace FSCTakip.WebUI.Controllers
                 ws4.Cell(2, i+1).Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
                 ws4.Cell(2, i+1).Style.Fill.BackgroundColor = headerBg;
             }
-            // Açılış bakiyesi (Export için)
-            var preSerials2 = await _context.FscSerials
-                .Include(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(s => s.ProductionDetails)
-                .Where(s => s.Lot.ArrivalDate < sd)
-                .ToListAsync();
-            var openingMap2 = preSerials2
+            // Açılış bakiyesi
+            var openingMap2 = data.PreSerials
                 .GroupBy(s => s.Lot?.FscType?.Name ?? "—")
                 .ToDictionary(g => g.Key, g =>
                     g.Sum(s => s.InitialWeight - s.ProductionDetails
                         .Where(d => d.ProductionDate < sd)
                         .Sum(d => d.ConsumedWeight + d.WasteWeight)));
-            var allSerials2 = await _context.FscSerials.Include(s => s.Lot).ThenInclude(l => l.FscType).ToListAsync();
             var consumedMap2 = prodDetails.GroupBy(d => d.FscSerial?.Lot?.FscType?.Name ?? "—")
                 .ToDictionary(g => g.Key, g => (Consumed: g.Sum(d => d.ConsumedWeight), Waste: g.Sum(d => d.WasteWeight)));
             var fscTypes2 = lots.Select(l => l.FscType?.Name ?? "—")
-                .Union(preSerials2.Select(s => s.Lot?.FscType?.Name ?? "—"))
+                .Union(data.PreSerials.Select(s => s.Lot?.FscType?.Name ?? "—"))
                 .Union(prodDetails.Select(d => d.FscSerial?.Lot?.FscType?.Name ?? "—"))
                 .Distinct();
             int r4 = 3;
@@ -489,7 +435,7 @@ namespace FSCTakip.WebUI.Controllers
                 openingMap2.TryGetValue(ft, out var openingKg2);
                 if (openingKg2 < 0) openingKg2 = 0;
                 consumedMap2.TryGetValue(ft, out var cons);
-                var stockKg = allSerials2.Where(s => s.Lot?.FscType?.Name == ft).Sum(s => s.CurrentWeight);
+                var stockKg = data.AllSerials.Where(s => s.Lot?.FscType?.Name == ft).Sum(s => s.CurrentWeight);
                 var closingKg2 = openingKg2 + inputKg - cons.Consumed - cons.Waste;
                 if (closingKg2 < 0) closingKg2 = 0;
                 var ok = (cons.Consumed + cons.Waste) <= (openingKg2 + inputKg) + 0.01m;
@@ -876,6 +822,52 @@ namespace FSCTakip.WebUI.Controllers
             return View(model);
         }
 
+        // ── Ortak veri yükleme yardımcısı ───────────────────────────────────────
+        private async Task<AuditReportData> BuildAuditReportData(DateTime sd, DateTime ed)
+        {
+            var edNext = ed.AddDays(1);
+
+            var lots = await _context.FscLots
+                .Include(l => l.FscType)
+                .Include(l => l.Supplier)
+                .Include(l => l.Product)
+                .Include(l => l.Serials)
+                .Where(l => l.ArrivalDate >= sd && l.ArrivalDate < edNext)
+                .OrderBy(l => l.FscType.Name).ThenBy(l => l.Supplier != null ? l.Supplier.Name : "").ThenBy(l => l.ArrivalDate)
+                .ToListAsync();
+
+            var prodDetails = await _context.ProductionDetails
+                .Include(d => d.WorkOrder).ThenInclude(w => w.Product)
+                .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.FscType)
+                .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.Supplier)
+                .Include(d => d.Machine)
+                .Where(d => d.ProductionDate >= sd && d.ProductionDate < edNext)
+                .OrderBy(d => d.ProductionDate)
+                .ToListAsync();
+
+            var salesLines = await _context.SalesOrderLines
+                .Include(l => l.SalesOrder).ThenInclude(o => o.Customer)
+                .Include(l => l.Product)
+                .Include(l => l.WorkOrder)
+                .Where(l => l.SalesOrder.Status == SalesOrderStatus.TeslimEdildi
+                         && l.SalesOrder.DispatchDate >= sd
+                         && l.SalesOrder.DispatchDate < edNext)
+                .OrderBy(l => l.SalesOrder.DispatchDate)
+                .ToListAsync();
+
+            var preSerials = await _context.FscSerials
+                .Include(s => s.Lot).ThenInclude(l => l.FscType)
+                .Include(s => s.ProductionDetails)
+                .Where(s => s.Lot.ArrivalDate < sd)
+                .ToListAsync();
+
+            var allSerials = await _context.FscSerials
+                .Include(s => s.Lot).ThenInclude(l => l.FscType)
+                .ToListAsync();
+
+            return new AuditReportData(lots, prodDetails, salesLines, preSerials, allSerials);
+        }
+
         // ── 8. Fire / Atık Derinlemesine Raporu ─────────────────────────────────
         // GET /Reports/WasteAnalysis
         public async Task<IActionResult> WasteAnalysis(DateTime? startDate, DateTime? endDate, int? machineId, int? productGroupId)
@@ -966,6 +958,17 @@ namespace FSCTakip.WebUI.Controllers
     }
 
     // ── View Model Sınıfları ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// AuditReport ve ExportAuditReport arasında paylaşılan ham veri seti.
+    /// BuildAuditReportData() tarafından doldurulur.
+    /// </summary>
+    public record AuditReportData(
+        List<FscLot>           Lots,
+        List<ProductionDetail> ProdDetails,
+        List<SalesOrderLine>   SalesLines,
+        List<FscSerial>        PreSerials,
+        List<FscSerial>        AllSerials);
 
     public class CocRow
     {
