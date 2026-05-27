@@ -1,0 +1,268 @@
+@using FSCTakip.Core.Entities
+@model List<UnitConversion>
+@{
+    ViewData["Title"] = "Birim Dönüşüm Parametreleri";
+    var productGroups = ViewBag.ProductGroups as List<FSCTakip.Core.Entities.ProductGroup> ?? new();
+    var products      = ViewBag.Products as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    int pendingCount  = ViewBag.PendingCount ?? 0;
+}
+
+@section TopbarActions {
+    <button class="btn btn-primary btn-sm" onclick="openAdd()">
+        <i class="fas fa-plus me-1"></i> Yeni Parametre
+    </button>
+    <a href="/UnitConversion/Preview" class="btn btn-outline-secondary btn-sm ms-2">
+        <i class="fas fa-search me-1"></i> Ön İzleme
+    </a>
+}
+
+@if (pendingCount > 0)
+{
+    <div class="p-3 rounded mb-3 d-flex align-items-start gap-2"
+         style="background:#fef3c7;border:1px solid #fcd34d;font-size:12.5px;">
+        <i class="fas fa-exchange-alt mt-1" style="color:#d97706;flex-shrink:0;"></i>
+        <div>
+            <strong style="color:#92400e;">@pendingCount seri henüz KG'ye dönüştürülmemiş.</strong>
+            Aktif parametreler tanımlandıktan sonra aşağıdaki <em>Tümünü Uygula</em> butonunu kullanın.
+            <button class="btn btn-warning btn-sm ms-3 px-3" onclick="applyAll()">
+                <i class="fas fa-sync me-1"></i> Tümünü Uygula
+            </button>
+        </div>
+    </div>
+}
+
+<div class="table-card">
+    <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
+        <strong style="font-size:14px;">
+            <i class="fas fa-ruler-combined me-2 text-muted"></i>
+            Dönüşüm Parametreleri
+        </strong>
+        <span class="text-muted small">
+            Her zaman hedef birim <strong>KG</strong>'dir · KG = Girilen Miktar × Çarpan
+        </span>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>KAYNAK BİRİM</th>
+                    <th>ÇARPAN</th>
+                    <th>AÇIKLAMA</th>
+                    <th>KAPSAM</th>
+                    <th>ÖRNEK</th>
+                    <th class="text-center">DURUM</th>
+                    <th class="text-end">İŞLEM</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-4">Henüz parametre tanımlanmamış.</td></tr>
+                }
+                @foreach (var item in Model)
+                {
+                    var scopeText = item.Product != null ? $"Ürün: {item.Product.ProductName}" :
+                                   item.ProductGroup != null ? $"Grup: {item.ProductGroup.GroupName}" : "Tüm ürünler";
+                    <tr>
+                        <td>
+                            <span class="fw-bold" style="font-size:15px;">@item.FromUnit</span>
+                            <span class="text-muted small ms-1">→ KG</span>
+                        </td>
+                        <td class="fw-semibold" style="font-variant-numeric:tabular-nums;">
+                            @item.Factor.ToString("N6")
+                        </td>
+                        <td>@item.Description</td>
+                        <td class="text-muted small">@scopeText</td>
+                        <td class="text-muted small">
+                            1 @item.FromUnit = @item.Factor.ToString("N4") KG
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-sm @(item.IsActive ? "badge-success" : "badge-warning") toggle-btn"
+                                    style="border:none;padding:2px 10px;border-radius:20px;font-size:11px;"
+                                    data-id="@item.Id"
+                                    onclick="toggleStatus(@item.Id, this)">
+                                @(item.IsActive ? "Aktif" : "Pasif")
+                            </button>
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-outline-primary btn-sm" onclick="openEdit(@item.Id,'@item.FromUnit','@item.ToUnit',@item.Factor,'@item.Description.Replace("'","\'")','@(item.ProductGroupId?.ToString() ?? "")','@(item.ProductId?.ToString() ?? "")')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm ms-1" onclick="deleteItem(@item.Id)">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Bilgi kutusu -->
+<div class="p-3 rounded mt-3 small" style="background:#f0fdf4;border:1px solid #bbf7d0;">
+    <i class="fas fa-info-circle me-1" style="color:#16a34a;"></i>
+    <strong>Nasıl çalışır?</strong>
+    Hammadde girişinde ürün birimi <code>MT</code> (veya başka bir KG-dışı birim) ise,
+    sisteme girilen miktar otomatik olarak <code>Miktar × Çarpan = KG</code> formülüyle dönüştürülür ve
+    stok/bakiye hesapları her zaman KG üzerinden yapılır.
+    Orijinal miktar ve birim kaydın içinde saklanır (izlenebilirlik).
+    <br>
+    <strong>Öncelik:</strong> Ürün bazlı kapsam &gt; Grup bazlı &gt; Genel (kapsamsız).
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="convModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header" style="background:#1e3d14;">
+                <h5 class="modal-title text-white fw-semibold" id="convModalTitle">
+                    <i class="fas fa-ruler-combined me-2"></i> Dönüşüm Parametresi
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="convId">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Kaynak Birim <span class="text-danger">*</span></label>
+                        <input id="convFrom" class="form-control" placeholder="örn: MT" maxlength="10">
+                        <div class="form-text">Netsis'te kullanılan birim (büyük harf olacak)</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Hedef Birim</label>
+                        <input id="convTo" class="form-control" value="KG" readonly style="background:#f8f9fa;">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Çarpan (Factor) <span class="text-danger">*</span></label>
+                        <input id="convFactor" type="number" step="0.0000001" min="0.0000001" class="form-control"
+                               placeholder="örn: 0.0045000">
+                        <div class="form-text">KG = Girilen Miktar × Çarpan &nbsp;|&nbsp; Örnek: 1 MT BURGU SAP = 0.0045 KG</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Açıklama</label>
+                        <input id="convDesc" class="form-control" placeholder="örn: BURGU SAP metre → kg">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Ürün Grubu (kapsam)</label>
+                        <select id="convGroup" class="form-select">
+                            <option value="">Tüm gruplar</option>
+                            @foreach (var g in productGroups)
+                            {
+                                <option value="@g.Id">@g.GroupName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Ürün (kapsam)</label>
+                        <select id="convProduct" class="form-select">
+                            <option value="">Tüm ürünler</option>
+                            @foreach (var p in products)
+                            {
+                                <option value="@p.Id">@p.ProductCode — @p.ProductName (@p.Unit)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div id="convPreview" class="mt-3 p-2 rounded text-center small"
+                     style="background:#f0fdf4;border:1px solid #bbf7d0;display:none;">
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button class="btn btn-primary" onclick="saveConv()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function openAdd() {
+    document.getElementById('convId').value = '';
+    document.getElementById('convFrom').value = '';
+    document.getElementById('convFactor').value = '';
+    document.getElementById('convDesc').value = '';
+    document.getElementById('convGroup').value = '';
+    document.getElementById('convProduct').value = '';
+    document.getElementById('convPreview').style.display = 'none';
+    document.getElementById('convModalTitle').innerHTML = '<i class="fas fa-plus me-2"></i> Yeni Dönüşüm';
+    new bootstrap.Modal(document.getElementById('convModal')).show();
+}
+
+function openEdit(id, from, to, factor, desc, groupId, productId) {
+    document.getElementById('convId').value = id;
+    document.getElementById('convFrom').value = from;
+    document.getElementById('convFactor').value = factor;
+    document.getElementById('convDesc').value = desc;
+    document.getElementById('convGroup').value = groupId || '';
+    document.getElementById('convProduct').value = productId || '';
+    updatePreview();
+    document.getElementById('convModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i> Parametre Düzenle';
+    new bootstrap.Modal(document.getElementById('convModal')).show();
+}
+
+document.getElementById('convFactor').addEventListener('input', updatePreview);
+document.getElementById('convFrom').addEventListener('input', updatePreview);
+
+function updatePreview() {
+    var f = parseFloat(document.getElementById('convFactor').value);
+    var u = document.getElementById('convFrom').value.trim().toUpperCase() || '?';
+    var box = document.getElementById('convPreview');
+    if (f > 0) {
+        box.style.display = '';
+        box.innerHTML = `<strong>Örnek:</strong> 1.000 <strong>${u}</strong> × ${f.toFixed(7)} = <strong>${(1000 * f).toFixed(4)} KG</strong>`;
+    } else {
+        box.style.display = 'none';
+    }
+}
+
+function saveConv() {
+    var id     = document.getElementById('convId').value;
+    var from   = document.getElementById('convFrom').value.trim();
+    var factor = parseFloat(document.getElementById('convFactor').value);
+    var desc   = document.getElementById('convDesc').value.trim();
+    var groupId   = document.getElementById('convGroup').value || null;
+    var productId = document.getElementById('convProduct').value || null;
+
+    if (!from) { alert('Kaynak birim zorunludur.'); return; }
+    if (!(factor > 0)) { alert('Çarpan sıfırdan büyük olmalıdır.'); return; }
+
+    $.post('/UnitConversion/Save', {
+        Id: id || 0, FromUnit: from, ToUnit: 'KG', Factor: factor,
+        Description: desc, ProductGroupId: groupId, ProductId: productId
+    }, function(res) {
+        if (res.success) { location.reload(); }
+        else { alert(res.message); }
+    });
+}
+
+function deleteItem(id) {
+    if (!confirm('Bu parametre silinsin mi?')) return;
+    $.post('/UnitConversion/Delete', { id: id }, function(res) {
+        if (res.success) location.reload();
+        else alert(res.message);
+    });
+}
+
+function toggleStatus(id, btn) {
+    $.post('/UnitConversion/ToggleStatus', { id: id }, function(res) {
+        if (res.success) location.reload();
+    });
+}
+
+function applyAll() {
+    if (!confirm('Tüm uygun seriler KG\'ye dönüştürülsün mü?\n\nBu işlem geri alınamaz.')) return;
+    $.post('/UnitConversion/ApplyAll', {}, function(res) {
+        if (res.success) {
+            Swal.fire({ icon: 'success', title: res.message, timer: 3000, showConfirmButton: false })
+                .then(() => location.reload());
+        } else {
+            alert(res.message);
+        }
+    });
+}
+</script>
+}

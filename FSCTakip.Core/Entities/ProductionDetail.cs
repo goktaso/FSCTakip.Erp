@@ -25,5 +25,11 @@ namespace FSCTakip.Core.Entities
         public decimal ProducedQuantity { get; set; }
 
         public string? Notes { get; set; }
+
+        /// <summary>
+        /// True ise bu satırdaki ConsumedWeight / WasteWeight birim dönüşümü uygulanmış (KG).
+        /// False/null ise orijinal birimde (örn. MT) olabilir.
+        /// </summary>
+        public bool UnitConverted { get; set; }
     }
 }

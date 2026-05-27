@@ -111,7 +111,19 @@
       "Bash(sqlcmd -S 'ARDA\\\\ARDA' -d FscErpDb -E -Q ' *)",
       "Bash(cp \"D:\\\\C#\\\\FSCTakip.Erp\\\\.claude\\\\worktrees\\\\affectionate-hawking-cb4488\\\\FSCTakip.WebUI\\\\Controllers\\\\ReportsController.cs\" \"D:\\\\C#\\\\FSCTakip.Erp\\\\FSCTakip.WebUI\\\\Controllers\\\\ReportsController.cs\" && cp \"D:\\\\C#\\\\FSCTakip.Erp\\\\.claude\\\\worktrees\\\\affectionate-hawking-cb4488\\\\FSCTakip.WebUI\\\\Views\\\\Reports\\\\AuditReport.cshtml\" \"D:\\\\C#\\\\FSCTakip.Erp\\\\FSCTakip.WebUI\\\\Views\\\\Reports\\\\AuditReport.cshtml\" && echo \"Kopyalama tamam\")",
       "Bash(ls /mnt/d/C#/FSCTakip.Erp/ 2>&1 | head -10)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(sqlcmd -S \"ARDA\\\\ARDA\" -d ACOREFSC25 -U data -P data123 -Q \"SELECT TOP 5 * FROM tblseritra WHERE GCKOD='G' AND HARACIK NOT LIKE 'Uretim' ORDER BY TARIH, STOK_KODU\" -W)",
+      "Bash(sqlcmd -S \"ARDA\\\\ARDA\" -d FscErpDb -U data -P data123 -Q \"SELECT COUNT\\(*\\) AS FscLotSayisi FROM FscLots; SELECT COUNT\\(*\\) AS FscSerialSayisi FROM FscSerials; SELECT COUNT\\(*\\) AS ProductSayisi FROM Products WHERE ExternalCode IS NOT NULL; SELECT ExternalCode, ProductCode, ProductName FROM Products WHERE ExternalCode IS NOT NULL ORDER BY ExternalCode\" -W)",
+      "Bash(sqlcmd -S \"ARDA\\\\ARDA\" -d ACOREFSC25 -U data -P data123 -Q \"SELECT BELGENO, STOK_KODU, COUNT\\(*\\) AS BobenAdedi, SUM\\(MIKTAR\\) AS ToplamKg, MIN\\(TARIH\\) AS Tarih FROM tblseritra WHERE GCKOD='G' AND HARACIK NOT LIKE 'Uretim' GROUP BY BELGENO, STOK_KODU HAVING COUNT\\(*\\) > 1 ORDER BY Tarih\" -W -s\"|\")",
+      "Bash(sqlcmd -S \"ARDA\\\\ARDA\" -d FscErpDb -U data -P data123 -Q \"SELECT s.SerialNo, s.InitialWeight, s.CurrentWeight, COUNT\\(pd.Id\\) AS ProdDetails, SUM\\(pd.ConsumedWeight\\) AS ToplamTuketim FROM FscSerials s LEFT JOIN ProductionDetails pd ON pd.FscSerialId=s.Id GROUP BY s.SerialNo, s.InitialWeight, s.CurrentWeight HAVING COUNT\\(pd.Id\\) > 0 ORDER BY s.SerialNo\" -W -s\"|\")",
+      "Bash(sqlcmd -S \"ARDA\\\\ARDA\" -d ACOREFSC25 -U data -P data123 -Q \"SELECT SERI_NO, STOK_KODU, COUNT\\(*\\) AS SAYI, SUM\\(MIKTAR\\) AS ToplamMiktar, COUNT\\(DISTINCT BELGENO\\) AS FarkliBelge FROM tblseritra WHERE GCKOD='G' AND HARACIK NOT LIKE 'Uretim' GROUP BY SERI_NO, STOK_KODU HAVING COUNT\\(*\\)>1 ORDER BY SAYI DESC\" -W -s\"|\")",
+      "Bash(sqlcmd -S \"ARDA\\\\ARDA\" -d FscErpDb -U data -P data123 -Q \"SELECT p.ExternalCode, p.ProductName, p.FscTypeId, f.Name AS FscType FROM Products p LEFT JOIN FscTypes f ON f.Id=p.FscTypeId WHERE p.ExternalCode IS NOT NULL ORDER BY CAST\\(p.ExternalCode AS INT\\)\" -W -s\"|\")",
+      "Bash(sqlcmd -S \"ARDA\\\\ARDA\" -d ACOREFSC25 -U data -P data123 -Q \"SELECT t.SERI_NO, t.STOK_KODU, ISNULL\\(t.INIT_MIKTAR,t.MIKTAR\\) AS INIT_AGIRLIK, t.MIKTAR, ISNULL\\(t.BELGENO,''\\) AS BELGENO, CONVERT\\(date,t.TARIH\\) AS TARIH, t.HARACIK FROM tblseritra t WHERE t.GCKOD='G' AND t.HARACIK NOT LIKE 'Uretim' AND t.BELGENO IS NOT NULL AND t.BELGENO != '' ORDER BY t.TARIH, t.STOK_KODU, t.SERI_NO\" -W -s\"|\")",
+      "Bash(sqlcmd -S \"ARDA\\\\ARDA\" -d FscErpDb -U data -P data123 -Q \"SELECT TOP 1 * FROM StockMovements\" -W)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:5099/Etl/PreviewLotImport\")",
+      "Bash(curl -sv \"http://localhost:5099/Etl/PreviewLotImport\")",
+      "Bash(pkill -f \"FSCTakip.WebUI\")",
+      "Bash(sqlcmd -S 'ARDA\\\\ARDA' -d ACOREFSC25 -U data -P data123 -Q ' *)"
     ]
   }
 }

@@ -4,6 +4,7 @@ using FSCTakip.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FSCTakip.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260527083623_AddRbacAndAuditLog")]
+    partial class AddRbacAndAuditLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -492,12 +495,6 @@ namespace FSCTakip.DataAccess.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("OriginalQuantity")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("OriginalUnit")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SerialNo")
@@ -988,8 +985,9 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Property<int?>("SupplierId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UnitId")
-                        .HasColumnType("int");
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -1012,8 +1010,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasIndex("ProductGroupId");
 
                     b.HasIndex("SupplierId");
-
-                    b.HasIndex("UnitId");
 
                     b.ToTable("Products");
                 });
@@ -1138,9 +1134,6 @@ namespace FSCTakip.DataAccess.Migrations
 
                     b.Property<DateTime>("ProductionDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<bool>("UnitConverted")
-                        .HasColumnType("bit");
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -1443,60 +1436,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Suppliers");
-                });
-
-            modelBuilder.Entity("FSCTakip.Core.Entities.UnitConversion", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("Factor")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("FromUnit")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("ProductGroupId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ToUnit")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductGroupId");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("UnitConversions");
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.UserGroup", b =>
@@ -1853,12 +1792,6 @@ namespace FSCTakip.DataAccess.Migrations
                         .WithMany()
                         .HasForeignKey("SupplierId");
 
-                    b.HasOne("FSCTakip.Core.Entities.Unit", "Unit")
-                        .WithMany()
-                        .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("FscType");
 
                     b.Navigation("PaperColor");
@@ -1872,8 +1805,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Navigation("ProductGroup");
 
                     b.Navigation("Supplier");
-
-                    b.Navigation("Unit");
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.ProductRecipe", b =>
@@ -1987,23 +1918,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("WorkOrder");
-                });
-
-            modelBuilder.Entity("FSCTakip.Core.Entities.UnitConversion", b =>
-                {
-                    b.HasOne("FSCTakip.Core.Entities.ProductGroup", "ProductGroup")
-                        .WithMany()
-                        .HasForeignKey("ProductGroupId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("FSCTakip.Core.Entities.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Product");
-
-                    b.Navigation("ProductGroup");
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.UserGroup", b =>
