@@ -665,6 +665,95 @@ namespace FSCTakip.WebUI.Controllers
             }
         }
 
+        // ─── Hammadde Lot Önizleme ────────────────────────────────────────────────
+        // GET /Etl/PreviewLotImport — Netsis tblseritra verilerinin özet önizlemesini döner
+        [HttpGet]
+        public async Task<IActionResult> PreviewLotImport()
+        {
+            if (!IsAdminUser)
+                return Json(new { success = false, message = "Bu işlem yalnızca admin kullanıcılar tarafından yapılabilir." });
+
+            var connStr = _cfg.GetConnectionString("NetsisConnection");
+            if (string.IsNullOrWhiteSpace(connStr))
+                return Json(new { success = false, message = "NetsisConnection bağlantısı appsettings.json'da tanımlı değil." });
+
+            try
+            {
+                using var cn = new SqlConnection(connStr);
+                await cn.OpenAsync();
+
+                const string previewSql = @"
+                    SELECT TOP 1000
+                        t.SERI_NO, t.STOK_KODU, s.STOK_ADI,
+                        ISNULL(t.INIT_MIKTAR, t.MIKTAR) AS INIT_AGIRLIK,
+                        ISNULL(t.BELGENO,'') AS BELGENO,
+                        CONVERT(date,t.TARIH) AS TARIH,
+                        CASE WHEN t.BELGENO IS NULL OR t.BELGENO='' THEN 1 ELSE 0 END AS IS_SAYIM
+                    FROM (
+                        SELECT *,
+                               ROW_NUMBER() OVER (
+                                   PARTITION BY SERI_NO, STOK_KODU
+                                   ORDER BY TARIH ASC,
+                                            CASE WHEN BELGENO IS NOT NULL AND BELGENO!='' THEN 0 ELSE 1 END ASC,
+                                            BELGENO ASC
+                               ) AS RN
+                        FROM tblseritra
+                        WHERE GCKOD='G' AND HARACIK NOT LIKE 'Uretim'
+                    ) t
+                    LEFT JOIN TBLSTSABIT s ON s.STOK_KODU=t.STOK_KODU
+                    WHERE RN = 1
+                    ORDER BY t.TARIH, t.STOK_KODU, t.SERI_NO";
+
+                using var cmd = new SqlCommand(previewSql, cn);
+                cmd.CommandTimeout = 60;
+                using var rdr = await cmd.ExecuteReaderAsync();
+
+                var allProducts = await _context.Products.Where(p => p.ExternalCode != null).ToDictionaryAsync(p => p.ExternalCode!);
+                var allSerials  = await _context.FscSerials.Select(s => s.SerialNo).ToListAsync();
+
+                var preview = new List<object>();
+                int total = 0, matched = 0, newCount = 0, noProduct = 0;
+
+                while (await rdr.ReadAsync())
+                {
+                    total++;
+                    var seriNo   = rdr["SERI_NO"]?.ToString()?.Trim() ?? "";
+                    var stokKodu = rdr["STOK_KODU"]?.ToString()?.Trim() ?? "";
+                    var stokAdi  = rdr["STOK_ADI"]?.ToString()?.Trim() ?? "";
+                    var weight   = rdr["INIT_AGIRLIK"] == DBNull.Value ? 0m : Convert.ToDecimal(rdr["INIT_AGIRLIK"]);
+                    var belgeNo  = rdr["BELGENO"]?.ToString()?.Trim() ?? "";
+                    var tarih    = Convert.ToDateTime(rdr["TARIH"]).ToString("dd.MM.yyyy");
+                    var isSayim  = Convert.ToInt32(rdr["IS_SAYIM"]) == 1;
+
+                    var hasProduct = allProducts.ContainsKey(stokKodu);
+                    var hasSerial  = allSerials.Contains(seriNo);
+
+                    if (!hasProduct) noProduct++;
+                    else if (hasSerial) matched++;
+                    else newCount++;
+
+                    preview.Add(new
+                    {
+                        seriNo, stokKodu, stokAdi,
+                        initAgirlik = weight,
+                        belgeNo, tarih, isSayim,
+                        durum = !hasProduct ? "Ürün Yok" : (hasSerial ? "Güncelle" : "Yeni")
+                    });
+                }
+
+                return Json(new
+                {
+                    success  = true,
+                    total, matched, newCount, noProduct,
+                    rows     = preview
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
         [HttpPost]
         public async Task<IActionResult> NetsisExecute(string syncType, int? connectionId)
         {
@@ -738,6 +827,7 @@ namespace FSCTakip.WebUI.Controllers
                     "ProductImport"  => await SyncNetsisProducts(netsisCon),
                     "SupplierImport" => await SyncNetsisSuppliers(netsisCon),
                     "CustomerImport" => await SyncNetsisCustomers(netsisCon),
+                    "LotImport"      => await SyncNetsisLots(netsisCon),
                     _ => (0, 0, 0, new List<string> { "Bilinmeyen senkronizasyon türü." })
                 };
 
@@ -1067,6 +1157,195 @@ namespace FSCTakip.WebUI.Controllers
                     errors.Add($"{r.Kod} - {r.Isim}: {GetDbError(ex)}");
                 }
             }
+            return (ins, upd, skp, errors);
+        }
+
+        // ─── Netsis Hammadde Giriş Senkronizasyonu (tblseritra) ─────────────────
+        /// <summary>
+        /// tblseritra tablosundan hammadde seri hareketlerini çekip FscLot+FscSerial
+        /// tablolarını oluşturur / günceller.  Mevcut ağırlık hataları da düzeltilir.
+        /// Filtre: GCKOD='G' AND HARACIK NOT LIKE 'Uretim'
+        /// </summary>
+        private async Task<(int ins, int upd, int skp, List<string> errs)> SyncNetsisLots(SqlConnection cn)
+        {
+            int ins = 0, upd = 0, skp = 0;
+            var errors = new List<string>();
+
+            // Her SERI_NO+STOK_KODU kombinasyonu için ilk (en eski) giriş kaydını al.
+            // BELGENO'su olan satırı tercih et; yoksa SAYIM kaydı gelir (IsOpeningStock=true).
+            const string sql = @"
+                SELECT SERI_NO, STOK_KODU,
+                       ISNULL(INIT_MIKTAR, MIKTAR) AS INIT_AGIRLIK,
+                       ISNULL(BELGENO,'')           AS BELGENO,
+                       CONVERT(date, TARIH)          AS TARIH,
+                       CASE WHEN BELGENO IS NULL OR BELGENO='' THEN 1 ELSE 0 END AS IS_SAYIM
+                FROM (
+                    SELECT *,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY SERI_NO, STOK_KODU
+                               ORDER BY TARIH ASC,
+                                        CASE WHEN BELGENO IS NOT NULL AND BELGENO!='' THEN 0 ELSE 1 END ASC,
+                                        BELGENO ASC
+                           ) AS RN
+                    FROM tblseritra
+                    WHERE GCKOD='G' AND HARACIK NOT LIKE 'Uretim'
+                ) t
+                WHERE RN = 1
+                ORDER BY TARIH, STOK_KODU, SERI_NO";
+
+            using var cmd = new SqlCommand(sql, cn);
+            cmd.CommandTimeout = 120;
+            using var rdr = await cmd.ExecuteReaderAsync();
+
+            var rows = new List<(string SeriNo, string StokKodu, decimal InitWeight, string BelgeNo, DateTime Tarih, bool IsSayim)>();
+            while (await rdr.ReadAsync())
+            {
+                var initWeight = rdr["INIT_AGIRLIK"] == DBNull.Value ? 0m : Convert.ToDecimal(rdr["INIT_AGIRLIK"]);
+                if (initWeight <= 0) continue; // sıfır ağırlıklı kayıtları atla
+
+                rows.Add((
+                    rdr["SERI_NO"]?.ToString()?.Trim() ?? "",
+                    rdr["STOK_KODU"]?.ToString()?.Trim() ?? "",
+                    initWeight,
+                    rdr["BELGENO"]?.ToString()?.Trim() ?? "",
+                    Convert.ToDateTime(rdr["TARIH"]),
+                    Convert.ToInt32(rdr["IS_SAYIM"]) == 1
+                ));
+            }
+            rdr.Close();
+
+            // FSCTakip ana tablolarını belleğe al (N+1 sorguyu önler)
+            var allProducts = await _context.Products.ToListAsync();
+            var allLots     = await _context.FscLots.Include(l => l.Serials).ToListAsync();
+            var allSerials  = await _context.FscSerials
+                                    .Include(s => s.ProductionDetails)
+                                    .ToListAsync();
+            // Hammadde deposu (Id=3 veya ilk aktif depo)
+            var warehouse = await _context.Warehouses
+                                    .Where(w => w.IsActive)
+                                    .OrderBy(w => w.Id)
+                                    .FirstOrDefaultAsync();
+
+            foreach (var r in rows)
+            {
+                if (string.IsNullOrWhiteSpace(r.SeriNo)) { skp++; continue; }
+
+                try
+                {
+                    // ── 1. Ürün eşleştir ─────────────────────────────────────
+                    var product = allProducts.FirstOrDefault(p => p.ExternalCode == r.StokKodu);
+                    if (product == null)
+                    {
+                        errors.Add($"{r.SeriNo}: Ürün bulunamadı (STOK_KODU={r.StokKodu})");
+                        skp++;
+                        continue;
+                    }
+
+                    // ── 2. FscLot — PartiNo + ProductId ile eşleştir ────────
+                    var existingLot = allLots.FirstOrDefault(l => l.PartiNo == r.SeriNo && l.ProductId == product.Id)
+                                  ?? allLots.FirstOrDefault(l => l.PartiNo == r.SeriNo);
+
+                    FscLot lot;
+                    bool   lotCreated = false;
+
+                    if (existingLot == null)
+                    {
+                        lot = new FscLot
+                        {
+                            PartiNo     = r.SeriNo,
+                            FscTypeId   = product.FscTypeId ?? 1,
+                            SupplierId  = product.SupplierId,
+                            ProductId   = product.Id,
+                            InvoiceNo   = string.IsNullOrEmpty(r.BelgeNo) ? null : r.BelgeNo,
+                            ArrivalDate = r.Tarih,
+                            Notes       = r.IsSayim ? "Sayım girişi (NETSIS ETL)" : $"Netsis ETL: {r.StokKodu}",
+                            CreatedDate = DateTime.Now,
+                            CreatedBy   = "NETSIS"
+                        };
+                        _context.FscLots.Add(lot);
+                        allLots.Add(lot);
+                        await _context.SaveChangesAsync(); // lot.Id oluşsun
+                        lotCreated = true;
+                        ins++;
+                    }
+                    else
+                    {
+                        lot            = existingLot;
+                        lot.ProductId  = product.Id;
+                        lot.FscTypeId  = product.FscTypeId ?? lot.FscTypeId;
+                        lot.SupplierId = product.SupplierId ?? lot.SupplierId;
+                        if (!string.IsNullOrEmpty(r.BelgeNo))
+                            lot.InvoiceNo = r.BelgeNo;
+                        lot.ArrivalDate = r.Tarih;
+                        lot.UpdatedDate = DateTime.Now;
+                        lot.UpdatedBy   = "NETSIS";
+                        upd++;
+                    }
+
+                    // ── 3. FscSerial — SerialNo ile eşleştir ────────────────
+                    var existingSerial = allSerials.FirstOrDefault(s => s.SerialNo == r.SeriNo && s.LotId == lot.Id)
+                                     ?? allSerials.FirstOrDefault(s => s.SerialNo == r.SeriNo);
+
+                    FscSerial serial;
+                    if (existingSerial == null)
+                    {
+                        serial = new FscSerial
+                        {
+                            LotId          = lot.Id,
+                            SerialNo       = r.SeriNo,
+                            InitialWeight  = r.InitWeight,
+                            CurrentWeight  = r.InitWeight,  // tüketim yoksa tüm ağırlık mevcut
+                            IsOpeningStock = r.IsSayim,
+                            Notes          = r.IsSayim ? "Açılış stoğu (sayım)" : null,
+                            CreatedDate    = DateTime.Now,
+                            CreatedBy      = "NETSIS"
+                        };
+                        _context.FscSerials.Add(serial);
+                        allSerials.Add(serial);
+                    }
+                    else
+                    {
+                        serial = existingSerial;
+                        // Gerçek başlangıç ağırlığını güncelle
+                        var totalConsumed = serial.ProductionDetails
+                                                  .Sum(pd => pd.ConsumedWeight + pd.WasteWeight);
+                        serial.InitialWeight  = r.InitWeight;
+                        serial.CurrentWeight  = Math.Max(0, r.InitWeight - totalConsumed);
+                        serial.IsOpeningStock = r.IsSayim;
+                        // Lot bağını da düzelt (eski kayıtlar yanlış lot'a bağlı olabilir)
+                        serial.LotId          = lot.Id;
+                        serial.UpdatedDate    = DateTime.Now;
+                        serial.UpdatedBy      = "NETSIS";
+                    }
+
+                    // ── 4. StockMovement — sadece yeni lotlar için giriş hareketi ──
+                    if (lotCreated && warehouse != null)
+                    {
+                        var sm = new StockMovement
+                        {
+                            Type          = MovementType.PurchaseEntry,
+                            DocumentNo    = string.IsNullOrEmpty(r.BelgeNo) ? $"SAYIM-{r.SeriNo}" : r.BelgeNo,
+                            DocumentDate  = r.Tarih,
+                            ProductId     = product.Id,
+                            Quantity      = r.InitWeight,
+                            Unit          = "KG",
+                            ToWarehouseId = warehouse.Id,
+                            Description   = $"Netsis ETL: {r.SeriNo} ({r.StokKodu})",
+                            CreatedDate   = DateTime.Now,
+                            CreatedBy     = "NETSIS"
+                        };
+                        _context.StockMovements.Add(sm);
+                    }
+
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    _context.ChangeTracker.Clear(); // başarısız entity'yi temizle
+                    errors.Add($"{r.SeriNo} ({r.StokKodu}): {GetDbError(ex)}");
+                }
+            }
+
             return (ins, upd, skp, errors);
         }
 
