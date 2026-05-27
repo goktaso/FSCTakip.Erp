@@ -2,6 +2,7 @@ using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace FSCTakip.WebUI.Controllers
 {
@@ -88,6 +89,12 @@ namespace FSCTakip.WebUI.Controllers
                     existing.UpdatedBy     = "SYSTEM";
                 }
                 await _context.SaveChangesAsync();
+
+                // Açık audit satırı — "BirimDönüşüm" adıyla günlükte görünür
+                var action = model.Id == 0 ? "PARAMETRE_EKLENDI" : "PARAMETRE_GUNCELLENDI";
+                await WriteAuditAsync(action,
+                    $"Birim: {model.FromUnit} → {model.ToUnit} | Çarpan: {model.Factor:N7} | {model.Description}");
+
                 return Json(new { success = true, message = "Dönüşüm parametresi kaydedildi." });
             }
             catch (Exception ex)
@@ -104,8 +111,10 @@ namespace FSCTakip.WebUI.Controllers
 
             var item = await _context.UnitConversions.FindAsync(id);
             if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            var desc = $"Birim: {item.FromUnit} → {item.ToUnit} | Çarpan: {item.Factor:N7} | {item.Description}";
             _context.UnitConversions.Remove(item);
             await _context.SaveChangesAsync();
+            await WriteAuditAsync("PARAMETRE_SILINDI", desc);
             return Json(new { success = true });
         }
 
@@ -244,12 +253,52 @@ namespace FSCTakip.WebUI.Controllers
                 }
             }
 
+            // Toplu dönüşüm — tek özet audit satırı (tekil FscSerial UPDATE'lere ek olarak)
+            var convParams = conversions
+                .Where(c => c.IsActive)
+                .Select(c => $"{c.FromUnit}→KG (×{c.Factor:N7}){(c.Description != "" ? " " + c.Description : "")}")
+                .Distinct();
+            await WriteAuditAsync("TOPLU_BIRIM_DONUSUMU",
+                $"Dönüştürülen seri: {converted} | Atlanan: {skipped} | Parametreler: {string.Join("; ", convParams)}");
+
             return Json(new {
                 success = true,
                 converted,
                 skipped,
                 message = $"{converted} seri dönüştürüldü, {skipped} seri atlandı (KG veya parametre yok)."
             });
+        }
+
+        // ── Audit yardımcısı — insan-okunur özet satırı ───────────────────────
+        /// <summary>
+        /// Birim dönüşüm işlemleri için AuditLog tablosuna açık, okunabilir bir satır yazar.
+        /// TableName = "BirimDönüşüm" olarak işaretlenir; değişiklik günlüğünde bu adla filtrelenebilir.
+        /// </summary>
+        private async Task WriteAuditAsync(string action, string details)
+        {
+            try
+            {
+                var user = HttpContext.Session.GetString("UserFullName") ?? "SYSTEM";
+                var ip   = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "—";
+
+                _context.AuditLogs.Add(new AuditLog
+                {
+                    TableName = "BirimDönüşüm",
+                    RecordId  = null,
+                    Action    = action,
+                    OldValues = null,
+                    NewValues = JsonSerializer.Serialize(new { Detay = details }),
+                    ChangedBy = user,
+                    ChangedAt = DateTime.Now,
+                    IpAddress = ip
+                });
+                // AuditLog entity _skipAuditTables'da → SaveChangesAsync sadece bu satırı kaydeder, sonsuz döngü yok
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                // Audit yazılamazsa ana işlemi engelleme
+            }
         }
 
         // ── Yardımcı: en uygun dönüşüm katsayısını bul ───────────────────────

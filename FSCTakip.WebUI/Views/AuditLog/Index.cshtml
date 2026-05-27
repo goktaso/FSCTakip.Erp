@@ -94,39 +94,78 @@
                     <tr>
                         <td class="small text-muted">@log.ChangedAt.ToString("dd.MM.yy HH:mm:ss")</td>
                         <td>
-                            <span class="badge bg-light text-dark border small">@log.TableName</span>
+                            @{
+                                // Özel tablo renklendirme
+                                var (tblCls, tblIcon) = log.TableName switch {
+                                    "BirimDönüşüm"    => ("bg-purple text-white", "fa-ruler-combined"),
+                                    "UnitConversions" => ("bg-purple text-white", "fa-ruler-combined"),
+                                    "FscLots"         => ("bg-info text-white",   "fa-boxes"),
+                                    "FscSerials"      => ("bg-info text-white",   "fa-barcode"),
+                                    "ProductionDetails" => ("badge-warning",      "fa-industry"),
+                                    "SalesOrders"     => ("badge-success",        "fa-truck"),
+                                    "SalesOrderLines" => ("badge-success",        "fa-list"),
+                                    _                 => ("bg-light text-dark border", "fa-table")
+                                };
+                            }
+                            <span class="badge @tblCls small">
+                                <i class="fas @tblIcon me-1"></i>@log.TableName
+                            </span>
                         </td>
                         <td class="text-center small">
                             @(log.RecordId.HasValue ? "#" + log.RecordId : "-")
                         </td>
                         <td class="text-center">
                             @{
-                                var (badgeCls, icon) = log.Action switch {
-                                    "INSERT" => ("bg-success", "fa-plus"),
-                                    "UPDATE" => ("bg-warning text-dark", "fa-pen"),
-                                    "DELETE" => ("bg-danger", "fa-trash"),
-                                    _ => ("bg-secondary", "fa-question")
+                                var (badgeCls, icon, actionLabel) = log.Action switch {
+                                    "INSERT"             => ("bg-success",          "fa-plus",           "Eklendi"),
+                                    "UPDATE"             => ("bg-warning text-dark","fa-pen",            "Güncellendi"),
+                                    "DELETE"             => ("bg-danger",           "fa-trash",          "Silindi"),
+                                    "PARAMETRE_EKLENDI"  => ("bg-success",          "fa-ruler-combined", "Parametre Eklendi"),
+                                    "PARAMETRE_GUNCELLENDI" => ("bg-warning text-dark","fa-ruler-combined","Parametre Güncellendi"),
+                                    "PARAMETRE_SILINDI"  => ("bg-danger",           "fa-ruler-combined", "Parametre Silindi"),
+                                    "TOPLU_BIRIM_DONUSUMU" => ("bg-primary",        "fa-sync-alt",       "Toplu Dönüşüm"),
+                                    _                    => ("bg-secondary",        "fa-question",       log.Action)
                                 };
                             }
-                            <span class="badge @badgeCls">
-                                <i class="fas @icon me-1"></i>@log.Action
+                            <span class="badge @badgeCls" title="@actionLabel">
+                                <i class="fas @icon me-1"></i>@actionLabel
                             </span>
                         </td>
                         <td class="small">
                             <i class="fas fa-user me-1 text-muted"></i>@(log.ChangedBy ?? "-")
                         </td>
                         <td class="small text-muted" style="max-width:400px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">
-                            @if (log.Action == "UPDATE" && log.OldValues != null && log.NewValues != null)
-                            {
-                                @:Güncellendi: @log.NewValues
-                            }
-                            else if (log.Action == "INSERT" && log.NewValues != null)
-                            {
-                                @:Eklendi: @log.NewValues
-                            }
-                            else if (log.Action == "DELETE" && log.OldValues != null)
-                            {
-                                @:Silindi: @log.OldValues
+                            @{
+                                // BirimDönüşüm için Detay alanını doğrudan göster
+                                if (log.TableName == "BirimDönüşüm" || log.TableName == "UnitConversions")
+                                {
+                                    var detay = log.NewValues;
+                                    if (detay != null)
+                                    {
+                                        try {
+                                            var doc = System.Text.Json.JsonDocument.Parse(detay);
+                                            if (doc.RootElement.TryGetProperty("Detay", out var d))
+                                                detay = d.GetString() ?? detay;
+                                        } catch { }
+                                    }
+                                    <i class="fas fa-ruler-combined me-1 text-primary"></i>@detay
+                                }
+                                else if (log.Action == "UPDATE" && log.OldValues != null && log.NewValues != null)
+                                {
+                                    @:Güncellendi: @log.NewValues
+                                }
+                                else if (log.Action == "INSERT" && log.NewValues != null)
+                                {
+                                    @:Eklendi: @log.NewValues
+                                }
+                                else if (log.Action == "DELETE" && log.OldValues != null)
+                                {
+                                    @:Silindi: @log.OldValues
+                                }
+                                else if (log.NewValues != null)
+                                {
+                                    @log.NewValues
+                                }
                             }
                         </td>
                         <td class="text-center">
