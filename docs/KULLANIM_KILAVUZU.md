@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 2.4 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 3.0 · **Güncelleme:** Mayıs 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -39,6 +39,11 @@
 30. [Netsis ETL Excel Dosyaları](#netsis-etl-excel)
 31. [Hammadde Stoğu — Bobin Bazlı](#hammadde-stogu)
 32. [ETL Otomatik Algıla Import](#etl-oto-import)
+33. [Kullanıcı ve Yetki Yönetimi](#kullanici-yonetimi)
+34. [Müşteri FSC Lisans Durumu](#musteri-fsc)
+35. [Üretim Planı Takvimi](#uretim-plani)
+36. [Fire / Atık Analizi](#fire-analizi)
+37. [Dönem Kilidi](#donem-kilidi)
 
 ---
 
@@ -1657,6 +1662,189 @@ Aktarım bittikten sonra gösterilen özet:
 - Hammadde için ürün `StokKodu` FSC ERP'deki `ProductCode` ile eşleşmelidir — ürün bulunamazsa satır hata listesine düşer
 
 > **ℹ️ Sıralama:** Hammadde aktarımı öncesinde tedarikçi ve ürün kartları sistemde mevcut olmalıdır. Önce Tedarikçi → sonra Ürünler → son olarak Hammadde dosyasını aktarın.
+
+---
+
+---
+
+## 33. Kullanıcı ve Yetki Yönetimi {#kullanici-yonetimi}
+
+**Sayfalar:** `/Users/Index` · `/Users/Detail/{id}` · `/Groups/Index` · `/Groups/Detail/{id}` · `/AuditLog/Index`  
+**Menü:** Sol Menü → Sistem Yönetimi (yalnızca admin kullanıcılara görünür)
+
+```
+[≡] [+ Yeni Kullanıcı]   Kullanıcı Yönetimi   [👤 Admin]
+```
+
+### Kullanıcı Yönetimi
+
+| Alan | Açıklama |
+|------|----------|
+| Kullanıcı Adı | Giriş için kullanılır (benzersiz) |
+| Ad Soyad | Görüntülenen isim |
+| Gruplar | Kullanıcının dahil olduğu yetki grupları |
+| Admin | ✓ işaretlenirse tüm yetkilere sahip olur |
+
+**Şifre sıfırlama:** Düzenle → Yeni Şifre alanını doldurup Kaydet.
+
+### Yetki Grupları
+
+Gruplar modül bazlı **Okuma / Yazma / Silme** yetkisi verir:
+
+| Yetki | Açıklama |
+|-------|----------|
+| Okuma | Sayfayı görüntüleyebilir |
+| Yazma | Kayıt ekleyip düzenleyebilir |
+| Silme | Kayıt silebilir |
+
+Bir kullanıcı birden fazla gruba dahil olabilir; yetkiler **OR** mantığıyla birleşir.
+
+### Kullanıcı Bazlı Override
+
+`/Users/Detail/{id}` sayfasında her modül için bireysel yetki geçersiz kılma:
+
+| Değer | Anlamı |
+|-------|--------|
+| `—` | Grup izinlerini miras al (varsayılan) |
+| `✓` | Grup izninden bağımsız olarak her zaman VER |
+| `✗` | Grup izninden bağımsız olarak her zaman ENGELLE |
+
+### Denetim Kaydı (AuditLog)
+
+`/AuditLog/Index` sayfası tüm INSERT / UPDATE / DELETE işlemlerini kaydeder.  
+Filtreler: Tablo · İşlem Tipi · Kullanıcı · Tarih Aralığı  
+Detay sayfasında eski ve yeni değerler yan yana görüntülenir.
+
+> **⚠️ Güvenlik:** Admin şifresini yalnızca ilk kurulum sırasında değiştirin. Şifreler SHA-256 + salt ile şifrelenir.
+
+---
+
+## 34. Müşteri FSC Lisans Durumu {#musteri-fsc}
+
+**Sayfa:** `/Reports/CustomerFsc`  
+**Menü:** Sol Menü → Raporlar → Müşteri FSC
+
+```
+[≡]   Müşteri FSC Lisans Durumu   [👤]
+```
+
+Tedarikçi FSC sayfasının müşteri karşılığı. Aktif müşterilerin FSC lisans bitiş tarihlerini ve geçerlilik durumlarını gösterir.
+
+| Kart | İçerik |
+|------|--------|
+| Geçerli Lisans | 30 günden fazla süresi kalan |
+| 30 Gün İçinde Bitiyor | Kritik uyarı |
+| Süresi Geçmiş / Pasif | Satışta CoC riski |
+
+> **⚠️ FSC CoC:** Lisansı sona ermiş müşteriye FSC etiketli ürün satmak CoC zincirini kırar. Denetimde bu tablonun tüm satırları **Geçerli** olmalıdır.
+
+---
+
+## 35. Üretim Planı Takvimi {#uretim-plani}
+
+**Sayfa:** `/Planning`  
+**Menü:** Sol Menü → FSC Süreçleri → Üretim Planı
+
+```
+[≡] [← Önceki] [Mayıs 2026] [Sonraki →] [Bugün] [İş Emirleri]   Üretim Planı   [👤]
+```
+
+FullCalendar takvim görünümü ile iş emirlerini planlı tarihlerine göre görselleştirir.
+
+### Renk Kodu
+
+| Renk | Anlamı |
+|------|--------|
+| Mavi | Üretimde |
+| Yeşil | Tamamlandı |
+| Kırmızı | Gecikmiş (planlı tarih geçmiş, tamamlanmamış) |
+| Turuncu | Taslak — yaklaşan |
+| Gri | İptal |
+
+### Sürükle-Bırak Tarih Güncelleme
+
+Takvimde iş emri kutucuğunu başka bir güne sürükleyin → otomatik olarak planlı tarih güncellenir (Yazma yetkisi gerekir).
+
+### İş Emri Detayı
+
+Takvim üzerindeki iş emrine tıklayın → modal popup'ta ürün, makine, planlı tarih, durum, adet bilgileri görüntülenir. **İş Emrine Git** butonu ile üretim detay sayfasına geçilir.
+
+### Makine Yükü
+
+Sağ panelde bu ay için her makinenin kaç iş emrinin bekliyor/üretimde/tamamlandığını gösterir.
+
+> **ℹ️ Gecikmiş Uyarı:** Sayfa başında kırmızı banner ile gecikmiş iş emirleri listelenir.
+
+---
+
+## 36. Fire / Atık Analizi {#fire-analizi}
+
+**Sayfa:** `/Reports/WasteAnalysis`  
+**Menü:** Sol Menü → Raporlar → Fire Analizi
+
+```
+[≡] [Tarih] [—] [Tarih] [Makine ▼] [Filtrele]   Fire / Atık Analizi   [👤]
+```
+
+### Özet Kartları
+
+| Kart | İçerik |
+|------|--------|
+| Toplam Tüketim | Seçilen dönemde kullanılan hammadde (kg) |
+| Üretim Kaynaklı Fire | Üretim detaylarından hesaplanan fire |
+| Genel Fire Oranı | Fire / Tüketim × 100 |
+| Atık Yönetim Kaydı | İmha kayıtlarında girilen toplam (kg) |
+
+### Makine Bazında Fire Oranı
+
+Her makine için tüketim, fire ve fire oranı tablo halinde gösterilir.  
+Oran renk kodlaması: **%3 altı** yeşil · **%3–5** turuncu · **%5 üstü** kırmızı.
+
+### Aylık Trend
+
+Ay bazında tüketim ve fire bar görsel ile izlenir. Zaman içindeki fire oranı değişimi görülür.
+
+### Kategori Bazında Atık
+
+`/Production/WasteManagement` sayfasında girilen atık kategorilerinin dönem özeti.
+
+> **⚠️ FSC CoC:** FSC denetiminde fire oranlarının belgelenmesi gerekir. Bu rapor ile beklenen fire oranı (%3–5) dışına çıkan makineler tespit edilebilir.
+
+---
+
+## 37. Dönem Kilidi {#donem-kilidi}
+
+**Sayfa:** `/AuditPeriod`  
+**Menü:** Sol Menü → Raporlar → Denetim Dönemleri
+
+```
+[≡] [+ Yeni Dönem Ekle] [Denetim Raporu]   Denetim Dönemleri   [👤 Admin]
+```
+
+### Dönem Kilitleme
+
+Admin kullanıcı, denetim döneminin bitişinden sonra dönemi **kilitleyebilir**:
+
+1. İlgili dönem satırında **Kilitle** (kırmızı) butonuna tıklayın
+2. Onay dialogunda **Evet, Kilitle** seçin
+3. Dönem artık kilitli — **KİLİT** sütununda kırmızı rozet görünür
+
+### Kilitli Dönemin Etkisi
+
+Kilitli döneme ait tarih aralığında **oluşturulan tüm işlemler** (hammadde girişi, üretim, satış, stok hareketi) **admin olmayan kullanıcılar tarafından değiştirilemez veya silinemez**.
+
+Admin kullanıcı yetkisine sahip kişiler kilitli dönem işlemlerini düzenleyebilir.
+
+### Dönem Kilidini Kaldırma
+
+**Aç** (sarı) butonuna tıklayarak kilit kaldırılabilir.
+
+### Dashboard Uyarısı
+
+Kilitli dönemler varsa Dashboard ana sayfasında kırmızı banner ile gösterilir:  
+`🔒 Kilitli Dönemler: 2024 (17.12.23–22.11.24, kilitli: admin) ...`
+
+> **⚠️ Denetim Hazırlığı:** FSC CoC denetimi öncesinde ilgili dönemi kilitleyin. Bu sayede denetim dönemindeki kayıtlar değiştirilmeden korunur ve denetçiye sunulan veriler tutarlı kalır.
 
 ---
 
