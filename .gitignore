@@ -361,3 +361,13 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# ── Hassas: gerçek bağlantı bilgileri izlenmez (appsettings.example.json'u kopyalayın) ──
+FSCTakip.WebUI/appsettings.json
+FSCTakip.WebUI/appsettings.Development.json
+
+# ── Kullanıcı tarafından yüklenen belgeler (fatura/irsaliye PDF, ETL Excel) — repoda tutulmaz ──
+FSCTakip.WebUI/wwwroot/uploads/
+
+# ── Yerel makine ayarları ──
+.claude/settings.local.json

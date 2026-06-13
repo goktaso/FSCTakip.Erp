@@ -144,5 +144,94 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         public IActionResult Error() => View();
+
+        // ── Bildirim çanı (topbar — tüm sayfalarda) ──────────────────────────
+        public async Task<IActionResult> GetNotifications()
+        {
+            if (CurrentUserId == 0) return Json(Array.Empty<object>());
+
+            var today  = DateTime.Today;
+            var warn60 = today.AddDays(60);
+            var notifs = new List<object>();
+
+            // FSC süresi dolan/dolacak tedarikçiler
+            var expSuppliers = await _context.Suppliers
+                .Where(s => s.IsActive && s.FscExpiryDate.HasValue && s.FscExpiryDate <= warn60)
+                .OrderBy(s => s.FscExpiryDate)
+                .Take(10)
+                .ToListAsync();
+            foreach (var s in expSuppliers)
+            {
+                var expired = s.FscExpiryDate!.Value.Date < today;
+                notifs.Add(new
+                {
+                    urgent  = expired,
+                    title   = $"Tedarikçi FSC {(expired ? "süresi doldu" : "yakında dolacak")}",
+                    message = $"{s.Name} — {s.FscExpiryDate:dd.MM.yyyy}"
+                });
+            }
+
+            // FSC süresi dolan/dolacak müşteriler
+            var expCustomers = await _context.Customers
+                .Where(c => c.IsActive && c.IsFscActive && c.FscExpiryDate.HasValue && c.FscExpiryDate <= warn60)
+                .OrderBy(c => c.FscExpiryDate)
+                .Take(10)
+                .ToListAsync();
+            foreach (var c in expCustomers)
+            {
+                var expired = c.FscExpiryDate!.Value.Date < today;
+                notifs.Add(new
+                {
+                    urgent  = expired,
+                    title   = $"Müşteri FSC {(expired ? "süresi doldu" : "yakında dolacak")}",
+                    message = $"{c.Name} — {c.FscExpiryDate:dd.MM.yyyy}"
+                });
+            }
+
+            // Düşük stok bobinleri
+            var lowStock = await _context.FscSerials
+                .Where(s => s.CurrentWeight > 0 && s.CurrentWeight < 500)
+                .CountAsync();
+            if (lowStock > 0)
+                notifs.Add(new { urgent = false, title = "Düşük stok uyarısı", message = $"{lowStock} bobin 500 kg altında" });
+
+            return Json(notifs);
+        }
+
+        // ── Global arama (topbar — tüm sayfalarda) ───────────────────────────
+        public async Task<IActionResult> GlobalSearch(string q)
+        {
+            if (CurrentUserId == 0 || string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2)
+                return Json(Array.Empty<object>());
+
+            q = q.Trim();
+            var results = new List<object>();
+
+            var customers = await _context.Customers
+                .Where(c => c.Name.Contains(q) || c.CustomerCode.Contains(q))
+                .OrderBy(c => c.Name).Take(5).ToListAsync();
+            foreach (var c in customers)
+                results.Add(new { type = "Müşteri", title = c.Name, sub = c.CustomerCode, url = "/Customers/Index" });
+
+            var suppliers = await _context.Suppliers
+                .Where(s => s.Name.Contains(q) || s.SupplierCode.Contains(q))
+                .OrderBy(s => s.Name).Take(5).ToListAsync();
+            foreach (var s in suppliers)
+                results.Add(new { type = "Tedarikçi", title = s.Name, sub = s.SupplierCode, url = "/Suppliers/Index" });
+
+            var products = await _context.Products
+                .Where(p => p.ProductName.Contains(q) || p.ProductCode.Contains(q))
+                .OrderBy(p => p.ProductName).Take(5).ToListAsync();
+            foreach (var p in products)
+                results.Add(new { type = "Ürün", title = p.ProductName, sub = p.ProductCode, url = "/Products/Index" });
+
+            var lots = await _context.FscLots
+                .Where(l => l.PartiNo.Contains(q))
+                .OrderByDescending(l => l.ArrivalDate).Take(5).ToListAsync();
+            foreach (var l in lots)
+                results.Add(new { type = "Lot", title = l.PartiNo, sub = l.ArrivalDate.ToString("dd.MM.yyyy"), url = $"/Purchase/Detail/{l.Id}" });
+
+            return Json(results);
+        }
     }
 }

@@ -1282,9 +1282,11 @@ namespace FSCTakip.WebUI.Controllers
                         upd++;
                     }
 
-                    // ── 3. FscSerial — SerialNo ile eşleştir ────────────────
-                    var existingSerial = allSerials.FirstOrDefault(s => s.SerialNo == r.SeriNo && s.LotId == lot.Id)
-                                     ?? allSerials.FirstOrDefault(s => s.SerialNo == r.SeriNo);
+                    // ── 3. FscSerial — SerialNo + LotId ile eşleştir ────────
+                    // ÖNEMLI: Fallback (sadece SerialNo eşleşmesi) kaldırıldı.
+                    // SerialNo başka bir lotta da bulunabilir; LotId olmadan eşleştirmek
+                    // seriali yanlış lota taşır.
+                    var existingSerial = allSerials.FirstOrDefault(s => s.SerialNo == r.SeriNo && s.LotId == lot.Id);
 
                     FscSerial serial;
                     if (existingSerial == null)
@@ -1312,8 +1314,7 @@ namespace FSCTakip.WebUI.Controllers
                         serial.InitialWeight  = r.InitWeight;
                         serial.CurrentWeight  = Math.Max(0, r.InitWeight - totalConsumed);
                         serial.IsOpeningStock = r.IsSayim;
-                        // Lot bağını da düzelt (eski kayıtlar yanlış lot'a bağlı olabilir)
-                        serial.LotId          = lot.Id;
+                        // LotId güncellenmez — serial zaten doğru lotta (LotId == lot.Id)
                         serial.UpdatedDate    = DateTime.Now;
                         serial.UpdatedBy      = "NETSIS";
                     }

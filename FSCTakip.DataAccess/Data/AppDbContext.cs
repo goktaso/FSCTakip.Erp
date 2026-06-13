@@ -102,8 +102,18 @@ namespace FSCTakip.DataAccess.Data
             {
                 foreach (var prop in entry.Metadata.GetProperties().Where(p => p.ClrType == typeof(string)))
                 {
-                    if (entry.Property(prop.Name).CurrentValue is string val && !string.IsNullOrEmpty(val))
-                        entry.Property(prop.Name).CurrentValue = val.ToUpper(trCulture);
+                    var propEntry = entry.Property(prop.Name);
+
+                    // NOT NULL string kolona null gelirse (MVC boş form alanını null'a çevirir)
+                    // "" yap → SQL 515 (Cannot insert NULL) hatasını kökten önle.
+                    if (propEntry.CurrentValue is null && !prop.IsNullable)
+                    {
+                        propEntry.CurrentValue = string.Empty;
+                        continue;
+                    }
+
+                    if (propEntry.CurrentValue is string val && !string.IsNullOrEmpty(val))
+                        propEntry.CurrentValue = val.ToUpper(trCulture);
                 }
             }
 
@@ -375,6 +385,9 @@ namespace FSCTakip.DataAccess.Data
             modelBuilder.Entity<ProductRecipe>()
                 .HasOne(pr => pr.ChildProduct).WithMany(p => p.ChildRecipes)
                 .HasForeignKey(pr => pr.ChildProductId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ProductRecipe>()
+                .Property(pr => pr.StandardQuantity)
+                .HasColumnType("decimal(18,6)");
 
             modelBuilder.Entity<Product>().HasOne(p => p.ProductGroup).WithMany().HasForeignKey(p => p.ProductGroupId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<Product>().HasOne(p => p.FscType).WithMany().HasForeignKey(p => p.FscTypeId).OnDelete(DeleteBehavior.Restrict);
@@ -420,6 +433,9 @@ namespace FSCTakip.DataAccess.Data
                 .HasOne(u => u.ProductGroup).WithMany().HasForeignKey(u => u.ProductGroupId).OnDelete(DeleteBehavior.SetNull);
             modelBuilder.Entity<UnitConversion>()
                 .HasOne(u => u.Product).WithMany().HasForeignKey(u => u.ProductId).OnDelete(DeleteBehavior.SetNull);
+            // Factor: 0.0000001 gibi çok küçük değerleri saklayabilmek için decimal(18,7)
+            modelBuilder.Entity<UnitConversion>()
+                .Property(u => u.Factor).HasColumnType("decimal(18,7)");
 
             // RBAC
             modelBuilder.Entity<UserGroup>().HasKey(ug => new { ug.UserId, ug.GroupId });

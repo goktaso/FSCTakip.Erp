@@ -1,127 +1,178 @@
 @model FSCTakip.WebUI.Controllers.LotTraceResult?
 @using FSCTakip.Core.Entities
 @{
-    ViewData["Title"] = "Lot Takip Raporu";
-    var lots = ViewBag.Lots as List<FscLot> ?? new();
+    ViewData["Title"] = "Lot Kullanım Raporu";
+    var lots   = ViewBag.Lots as List<FscLot> ?? new();
+    int? lotId = ViewBag.LotId as int?;
 }
 
-<div class="page-header">
-    <h4 class="page-title"><i class="fas fa-search me-2 text-primary"></i>Lot Takip Raporu</h4>
-</div>
+@section TopbarActions {
+    @if (Model != null)
+    {
+        <a href="/Reports/ExportLotTrace?lotId=@Model.Lot.Id" class="btn btn-outline-success btn-sm">
+            <i class="fas fa-file-excel me-1"></i> Excel
+        </a>
+    }
+}
 
-<!-- Lot Seçimi -->
-<div class="filter-card">
-    <form method="get" action="/Reports/LotTrace" class="filter-form">
-        <select name="lotId" class="form-control form-control-sm" style="max-width:320px;">
-            <option value="">— Lot Seçiniz —</option>
+<!-- Arama / Seçim -->
+<div class="filter-card mb-3">
+    <form method="get" action="/Reports/LotTrace" class="d-flex align-items-center gap-2 flex-wrap">
+        <select name="lotId" class="form-select form-select-sm" style="max-width:380px;" onchange="this.form.submit()">
+            <option value="">— Parti seçiniz —</option>
             @foreach (var l in lots)
             {
-                bool sel = Model?.Lot?.Id == l.Id;
+                bool sel = lotId == l.Id;
                 <option value="@l.Id" selected="@(sel ? "selected" : null)">
                     @l.PartiNo — @(l.Supplier?.Name ?? "") (@l.ArrivalDate.ToString("dd.MM.yyyy"))
                 </option>
             }
         </select>
-        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search me-1"></i>Takip Et</button>
+        <span class="text-muted small">veya</span>
+        <input name="search" class="form-control form-control-sm" style="max-width:200px;"
+               placeholder="Parti / fatura no ara" value="@(ViewBag.Search ?? "")">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search me-1"></i>Ara</button>
+        @if (Model != null)
+        {
+            <a href="/Reports/LotTrace" class="btn btn-outline-secondary btn-sm">Temizle</a>
+        }
     </form>
 </div>
 
 @if (Model == null)
 {
     <div class="table-card text-center py-5 text-muted">
-        <i class="fas fa-search fa-3x mb-3 d-block"></i>
-        <p>Yukarıdan bir lot seçerek hammaddeden satışa tam izlenebilirliği görüntüleyin.</p>
+        <i class="fas fa-boxes fa-3x mb-3 d-block" style="color:#d1d5db;"></i>
+        <p class="mb-0">Yukarıdan bir parti seçin ya da parti/fatura numarasıyla arama yapın.</p>
+        <p class="small mt-1">Seçilen partiye ait tüm seri (bobin) kullanımlarını, üretilen mamulleri ve tüketilen KG miktarlarını görüntüleyebilirsiniz.</p>
     </div>
 }
 else
 {
     var lot = Model.Lot;
-    <!-- Parti Bilgileri -->
+    var culture = new System.Globalization.CultureInfo("tr-TR");
+
+    <!-- ── Özet Kartlar ──────────────────────────────────────────────── -->
     <div class="row g-3 mb-3">
-        <div class="col-md-6">
+        <div class="col-6 col-md-3">
+            <div class="table-card p-3 text-center">
+                <div style="font-size:22px;font-weight:700;color:#1d4ed8;">@Model.Serials.Count</div>
+                <div class="text-muted small">Seri / Bobin</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="table-card p-3 text-center">
+                <div style="font-size:22px;font-weight:700;color:#d97706;">@Model.TotalWorkOrders</div>
+                <div class="text-muted small">İş Emri</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="table-card p-3 text-center">
+                <div style="font-size:22px;font-weight:700;color:#16a34a;">@Model.TotalConsumedKg.ToString("N1", culture)</div>
+                <div class="text-muted small">Tüketilen (kg)</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="table-card p-3 text-center">
+                <div style="font-size:22px;font-weight:700;color:#dc2626;">@Model.TotalWasteKg.ToString("N1", culture)</div>
+                <div class="text-muted small">Fire (kg)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <!-- Parti Bilgileri -->
+        <div class="col-md-5">
             <div class="table-card h-100">
                 <div class="p-3 border-bottom d-flex align-items-center gap-2">
-                    <i class="fas fa-layer-group text-primary"></i>
-                    <strong>Parti Bilgileri</strong>
+                    <span style="width:28px;height:28px;border-radius:8px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fas fa-layer-group" style="color:#1d4ed8;font-size:13px;"></i>
+                    </span>
+                    <strong style="font-size:14px;">Parti Bilgileri</strong>
                 </div>
                 <table class="table table-sm mb-0">
-                    <tr><td class="text-muted small">Parti No</td><td class="fw-semibold">@lot.PartiNo</td></tr>
-                    <tr><td class="text-muted small">Geliş Tarihi</td><td>@lot.ArrivalDate.ToString("dd.MM.yyyy")</td></tr>
-                    <tr><td class="text-muted small">Tedarikçi</td><td>@(lot.Supplier?.Name ?? "—")</td></tr>
-                    <tr><td class="text-muted small">Tedarikçi FSC Kodu</td><td>
+                    <tr><td class="text-muted small ps-3" style="width:45%">Parti No</td>
+                        <td class="fw-bold">@lot.PartiNo</td></tr>
+                    <tr><td class="text-muted small ps-3">Geliş Tarihi</td>
+                        <td>@lot.ArrivalDate.ToString("dd.MM.yyyy")</td></tr>
+                    <tr><td class="text-muted small ps-3">Tedarikçi</td>
+                        <td>@(lot.Supplier?.Name ?? "—")</td></tr>
+                    <tr><td class="text-muted small ps-3">Tedarikçi FSC</td>
+                        <td>
                         @if (!string.IsNullOrEmpty(lot.Supplier?.FscCode))
-                        {
-                            <span class="badge badge-success">@lot.Supplier.FscCode</span>
-                        }
+                        { <span class="badge badge-success">@lot.Supplier.FscCode</span> }
                         else { <span class="text-muted">—</span> }
-                    </td></tr>
-                    <tr><td class="text-muted small">FSC Tipi</td><td>
+                        </td></tr>
+                    <tr><td class="text-muted small ps-3">FSC Tipi</td>
+                        <td>
                         @if (lot.FscType != null)
+                        { <span class="badge badge-primary">@lot.FscType.Name</span> }
+                        </td></tr>
+                    <tr><td class="text-muted small ps-3">Hammadde</td>
+                        <td class="small">@(lot.Product?.ProductName ?? "—")</td></tr>
+                    <tr><td class="text-muted small ps-3">Fatura No</td>
+                        <td class="small">
+                        @if (!string.IsNullOrEmpty(lot.InvoiceNo) && !string.IsNullOrEmpty(lot.InvoicePdfPath))
                         {
-                            <span class="badge badge-primary">@lot.FscType.Name</span>
+                            <button class="doc-num-btn" onclick="showPdf('/@lot.InvoicePdfPath','Fatura — @lot.InvoiceNo')">
+                                <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@lot.InvoiceNo
+                            </button>
                         }
-                    </td></tr>
-                    <tr>
-                        <td class="text-muted small">İrsaliye No</td>
-                        <td>
-                            @if (!string.IsNullOrEmpty(lot.DispatchNo) && !string.IsNullOrEmpty(lot.DispatchPdfPath))
-                            {
-                                <button class="doc-num-btn"
-                                        onclick="showPdf('/@lot.DispatchPdfPath','İrsaliye — @lot.DispatchNo')"
-                                        title="İrsaliyeyi görüntüle">
-                                    <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@lot.DispatchNo
-                                </button>
-                            }
-                            else { <span>@(lot.DispatchNo ?? "—")</span> }
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted small">Fatura No</td>
-                        <td>
-                            @if (!string.IsNullOrEmpty(lot.InvoiceNo) && !string.IsNullOrEmpty(lot.InvoicePdfPath))
-                            {
-                                <button class="doc-num-btn"
-                                        onclick="showPdf('/@lot.InvoicePdfPath','Fatura — @lot.InvoiceNo')"
-                                        title="Faturayı görüntüle">
-                                    <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@lot.InvoiceNo
-                                </button>
-                            }
-                            else { <span>@(lot.InvoiceNo ?? "—")</span> }
-                        </td>
-                    </tr>
-                    <tr><td class="text-muted small">Ürün</td><td>@(lot.Product?.ProductName ?? "—")</td></tr>
+                        else { <span>@(lot.InvoiceNo ?? "—")</span> }
+                        </td></tr>
+                    <tr><td class="text-muted small ps-3">İrsaliye No</td>
+                        <td class="small">
+                        @if (!string.IsNullOrEmpty(lot.DispatchNo) && !string.IsNullOrEmpty(lot.DispatchPdfPath))
+                        {
+                            <button class="doc-num-btn" onclick="showPdf('/@lot.DispatchPdfPath','İrsaliye — @lot.DispatchNo')">
+                                <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@lot.DispatchNo
+                            </button>
+                        }
+                        else { <span>@(lot.DispatchNo ?? "—")</span> }
+                        </td></tr>
                 </table>
             </div>
         </div>
-        <div class="col-md-6">
+
+        <!-- FSC Zinciri Özeti -->
+        <div class="col-md-7">
             <div class="table-card h-100">
                 <div class="p-3 border-bottom d-flex align-items-center gap-2">
-                    <i class="fas fa-sitemap text-success"></i>
-                    <strong>FSC Zinciri Özeti</strong>
+                    <span style="width:28px;height:28px;border-radius:8px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fas fa-sitemap" style="color:#16a34a;font-size:13px;"></i>
+                    </span>
+                    <strong style="font-size:14px;">FSC İzlenebilirlik Zinciri</strong>
                 </div>
                 <div class="p-3">
                     <div class="d-flex flex-column gap-2">
-                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:#f0fdf4;">
+                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:#f0fdf4;border:1px solid #bbf7d0;">
                             <span class="badge badge-success">1</span>
-                            <span class="small"><strong>Tedarikçi:</strong> @(lot.Supplier?.Name ?? "—")</span>
+                            <div class="small">
+                                <strong>Tedarikçi:</strong> @(lot.Supplier?.Name ?? "—")
+                                @if (!string.IsNullOrEmpty(lot.Supplier?.FscCode))
+                                { <span class="badge badge-success ms-1" style="font-size:10px;">@lot.Supplier.FscCode</span> }
+                            </div>
                         </div>
-                        <div class="text-center text-muted small">↓</div>
-                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:#eff6ff;">
+                        <div class="text-center text-muted" style="font-size:18px;">↓</div>
+                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:#eff6ff;border:1px solid #bfdbfe;">
                             <span class="badge badge-primary">2</span>
-                            <span class="small"><strong>Parti:</strong> @lot.PartiNo (@Model.Serials.Count seri)</span>
+                            <span class="small"><strong>Parti:</strong> @lot.PartiNo &nbsp;·&nbsp; <strong>@Model.Serials.Count</strong> seri (bobin)
+                                &nbsp;·&nbsp; <strong>@Model.Serials.Sum(s => s.InitialWeight).ToString("N1", culture) kg</strong> başlangıç</span>
                         </div>
-                        <div class="text-center text-muted small">↓</div>
-                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:#fefce8;">
+                        <div class="text-center text-muted" style="font-size:18px;">↓</div>
+                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:#fefce8;border:1px solid #fde68a;">
                             <span class="badge badge-warning">3</span>
                             <span class="small"><strong>Üretim:</strong>
-                                @{ var woCount = Model.Serials.SelectMany(s => s.ProductionDetails).Select(pd => pd.WorkOrderId).Distinct().Count(); }
-                                @woCount iş emri
-                            </span>
+                                <strong>@Model.TotalWorkOrders</strong> iş emri &nbsp;·&nbsp;
+                                <strong>@Model.TotalConsumedKg.ToString("N1", culture) kg</strong> tüketim &nbsp;·&nbsp;
+                                <strong>@Model.TotalWasteKg.ToString("N1", culture) kg</strong> fire</span>
                         </div>
-                        <div class="text-center text-muted small">↓</div>
-                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:#fdf4ff;">
+                        <div class="text-center text-muted" style="font-size:18px;">↓</div>
+                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:#fdf4ff;border:1px solid #e9d5ff;">
                             <span class="badge" style="background:#7c3aed;color:#fff;">4</span>
-                            <span class="small"><strong>Satış:</strong> @Model.SalesLines.Count kalem, @Model.SalesLines.Select(l => l.SalesOrderId).Distinct().Count() sipariş</span>
+                            <span class="small"><strong>Satış:</strong>
+                                @Model.SalesLines.Count kalem &nbsp;·&nbsp;
+                                @Model.SalesLines.Select(l => l.SalesOrderId).Distinct().Count() sipariş</span>
                         </div>
                     </div>
                 </div>
@@ -129,55 +180,146 @@ else
         </div>
     </div>
 
-    <!-- Seri Listesi -->
+    <!-- ── Üretim Kullanım Detayı ──────────────────────────────────────── -->
+    <div class="table-card mb-3">
+        <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <span style="width:28px;height:28px;border-radius:8px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-industry" style="color:#d97706;font-size:13px;"></i>
+                </span>
+                <strong style="font-size:14px;">Üretim Kullanım Detayı</strong>
+                <span class="badge badge-warning ms-1">@Model.ProductionRows.Count kayıt</span>
+            </div>
+            <span class="text-muted small">Bu partiden hangi mamul üretildi, ne kadar kağıt tüketildi</span>
+        </div>
+        @if (!Model.ProductionRows.Any())
+        {
+            <div class="text-center text-muted py-4 small">Bu parti henüz hiçbir üretimde kullanılmamış.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>TARİH</th>
+                            <th>İŞ EMRİ</th>
+                            <th>MAMUL</th>
+                            <th>MAKİNE</th>
+                            <th>KULLANILAN SERİ</th>
+                            <th class="text-end">TÜKETİM (kg)</th>
+                            <th class="text-end">FİRE (kg)</th>
+                            <th class="text-end">FİRE %</th>
+                            <th class="text-end">ÜRETİLEN (adet)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            decimal grandConsumed = 0;
+                            decimal grandWaste    = 0;
+                            decimal grandProduced = 0;
+                        }
+                        @foreach (var row in Model.ProductionRows)
+                        {
+                            grandConsumed += row.ConsumedKg;
+                            grandWaste    += row.WasteKg;
+                            grandProduced += row.ProducedQty;
+                            <tr>
+                                <td class="text-muted small">@row.ProductionDate.ToString("dd.MM.yyyy")</td>
+                                <td>
+                                    <a href="/Production/Detail/@row.WorkOrderId" class="fw-semibold small text-primary">
+                                        @row.WorkOrderNo
+                                    </a>
+                                </td>
+                                <td class="small">
+                                    <div class="fw-semibold">@row.ProductName</div>
+                                    @if (!string.IsNullOrEmpty(row.ProductCode))
+                                    { <div class="text-muted" style="font-size:11px;">@row.ProductCode</div> }
+                                </td>
+                                <td class="text-muted small">@row.MachineName</td>
+                                <td class="small text-muted" style="font-size:11px;">@row.SerialNos</td>
+                                <td class="text-end fw-semibold small">@row.ConsumedKg.ToString("N2", culture)</td>
+                                <td class="text-end small text-danger">@row.WasteKg.ToString("N2", culture)</td>
+                                <td class="text-end small">
+                                    @{
+                                        var fr = row.FireRate;
+                                        var frColor = fr >= 5 ? "#dc2626" : fr >= 2 ? "#d97706" : "#16a34a";
+                                    }
+                                    <span style="color:@frColor;font-weight:600;">%@fr.ToString("N1", culture)</span>
+                                </td>
+                                <td class="text-end small">
+                                    @if (row.ProducedQty > 0)
+                                    { <span class="fw-semibold">@row.ProducedQty.ToString("N0", culture)</span> }
+                                    else
+                                    { <span class="text-muted">—</span> }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr style="background:#f8fafc;font-weight:600;border-top:2px solid #e2e8f0;">
+                            <td colspan="5" class="small ps-3 text-muted">TOPLAM</td>
+                            <td class="text-end small">@grandConsumed.ToString("N2", culture)</td>
+                            <td class="text-end small text-danger">@grandWaste.ToString("N2", culture)</td>
+                            <td class="text-end small">
+                                @{
+                                    var totalFr = grandConsumed > 0 ? grandWaste / grandConsumed * 100 : 0;
+                                    var totalFrColor = totalFr >= 5 ? "#dc2626" : totalFr >= 2 ? "#d97706" : "#16a34a";
+                                }
+                                <span style="color:@totalFrColor;">%@totalFr.ToString("N1", culture)</span>
+                            </td>
+                            <td class="text-end small">@grandProduced.ToString("N0", culture)</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </div>
+
+    <!-- ── Seri (Bobin) Listesi ───────────────────────────────────────── -->
     <div class="table-card mb-3">
         <div class="p-3 border-bottom d-flex align-items-center gap-2">
-            <i class="fas fa-barcode text-primary"></i>
-            <strong>Seri (Bobin) Listesi — @Model.Serials.Count adet</strong>
+            <span style="width:28px;height:28px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-barcode" style="color:#1d4ed8;font-size:13px;"></i>
+            </span>
+            <strong style="font-size:14px;">Seri (Bobin) Listesi</strong>
+            <span class="badge badge-blue ms-1">@Model.Serials.Count adet</span>
         </div>
         <div class="table-responsive">
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>SERİ NO</th>
-                        <th class="text-end">BAŞLANGIÇ AĞIRLIK (kg)</th>
-                        <th class="text-end">KALAN AĞIRLIK (kg)</th>
-                        <th class="text-end">TÜKETIM (kg)</th>
+                        <th class="text-end">BAŞLANGIÇ (kg)</th>
+                        <th class="text-end">KALAN (kg)</th>
+                        <th class="text-end">TÜKETİLEN (kg)</th>
                         <th>KULLANILDIĞI İŞ EMİRLERİ</th>
-                        <th>DURUM</th>
+                        <th class="text-center">DURUM</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var s in Model.Serials)
                     {
                         var consumed = s.InitialWeight - s.CurrentWeight;
-                        var pct = s.InitialWeight > 0 ? (int)(consumed * 100 / s.InitialWeight) : 0;
-                        var workOrders = s.ProductionDetails.Select(pd => pd.WorkOrder?.WorkOrderNo).Where(n => n != null).Distinct().ToList();
+                        var pct      = s.InitialWeight > 0 ? (int)(consumed * 100 / s.InitialWeight) : 0;
+                        var wos      = s.ProductionDetails.Select(pd => pd.WorkOrder?.WorkOrderNo).Where(n => n != null).Distinct().ToList();
                         <tr>
                             <td class="fw-semibold small">@s.SerialNo</td>
-                            <td class="text-end small">@s.InitialWeight.ToString("N1")</td>
-                            <td class="text-end small @(s.CurrentWeight <= 0 ? "text-muted" : "")">@s.CurrentWeight.ToString("N1")</td>
-                            <td class="text-end small text-danger">@consumed.ToString("N1")</td>
+                            <td class="text-end small">@s.InitialWeight.ToString("N1", culture)</td>
+                            <td class="text-end small @(s.CurrentWeight <= 0 ? "text-muted" : "")">@s.CurrentWeight.ToString("N1", culture)</td>
+                            <td class="text-end small text-danger">@consumed.ToString("N1", culture)</td>
                             <td class="small">
-                                @foreach (var wo in workOrders)
-                                {
-                                    <span class="badge badge-primary me-1" style="font-size:10px;">@wo</span>
-                                }
-                                @if (!workOrders.Any()) { <span class="text-muted">—</span> }
+                                @foreach (var wo in wos)
+                                { <span class="badge badge-primary me-1" style="font-size:10px;">@wo</span> }
+                                @if (!wos.Any()) { <span class="text-muted">—</span> }
                             </td>
-                            <td>
+                            <td class="text-center">
                                 @if (s.CurrentWeight <= 0)
-                                {
-                                    <span class="badge badge-secondary">Tükendi</span>
-                                }
+                                { <span class="badge badge-secondary">Tükendi</span> }
                                 else if (pct >= 80)
-                                {
-                                    <span class="badge badge-warning">Azalıyor (%@pct)</span>
-                                }
+                                { <span class="badge badge-warning">Azalıyor (%@pct)</span> }
                                 else
-                                {
-                                    <span class="badge badge-success">Devam (%@pct)</span>
-                                }
+                                { <span class="badge badge-success">Devam (%@pct)</span> }
                             </td>
                         </tr>
                     }
@@ -186,13 +328,16 @@ else
         </div>
     </div>
 
-    <!-- İlgili Satışlar -->
+    <!-- ── İlgili Satışlar ───────────────────────────────────────────── -->
     @if (Model.SalesLines.Any())
     {
         <div class="table-card">
             <div class="p-3 border-bottom d-flex align-items-center gap-2">
-                <i class="fas fa-truck text-success"></i>
-                <strong>Bu Partiden Üretilip Satılan Ürünler — @Model.SalesLines.Count kalem</strong>
+                <span style="width:28px;height:28px;border-radius:8px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-truck" style="color:#16a34a;font-size:13px;"></i>
+                </span>
+                <strong style="font-size:14px;">Bu Partiden Üretilip Satılan Ürünler</strong>
+                <span class="badge badge-success ms-1">@Model.SalesLines.Count kalem</span>
             </div>
             <div class="table-responsive">
                 <table class="data-table">
@@ -201,9 +346,10 @@ else
                             <th>SİPARİŞ NO</th>
                             <th>MÜŞTERİ</th>
                             <th>ÜRÜN</th>
+                            <th>İŞ EMRİ</th>
                             <th class="text-end">MİKTAR</th>
-                            <th>SEVKİYAT TARİHİ</th>
-                            <th>DURUM</th>
+                            <th>SEVKİYAT</th>
+                            <th class="text-center">DURUM</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -214,18 +360,19 @@ else
                                     <a href="/Sales/Detail/@sl.SalesOrderId" class="text-primary">@sl.SalesOrder.SalesOrderNo</a>
                                 </td>
                                 <td class="small">@(sl.SalesOrder.Customer?.Name ?? "—")</td>
-                                <td class="small"><strong>@(sl.Product?.ProductName ?? "—")</strong></td>
-                                <td class="text-end small">@sl.Quantity.ToString("N0") @sl.Unit</td>
-                                <td class="small text-muted">@(sl.SalesOrder.DispatchDate?.ToString("dd.MM.yyyy") ?? "—")</td>
-                                <td>
+                                <td class="small fw-semibold">@(sl.Product?.ProductName ?? "—")</td>
+                                <td class="small">
+                                    @if (sl.WorkOrderId.HasValue)
+                                    { <a href="/Production/Detail/@sl.WorkOrderId" class="text-muted">@sl.WorkOrder?.WorkOrderNo</a> }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td class="text-end small">@sl.Quantity.ToString("N0", culture) @sl.Unit</td>
+                                <td class="text-muted small">@(sl.SalesOrder.DispatchDate?.ToString("dd.MM.yyyy") ?? "—")</td>
+                                <td class="text-center">
                                     @if (sl.SalesOrder.Status == SalesOrderStatus.TeslimEdildi)
-                                    {
-                                        <span class="badge badge-success">Teslim Edildi</span>
-                                    }
+                                    { <span class="badge badge-success">Teslim Edildi</span> }
                                     else
-                                    {
-                                        <span class="badge badge-warning">Taslak</span>
-                                    }
+                                    { <span class="badge badge-warning">Taslak</span> }
                                 </td>
                             </tr>
                         }
@@ -236,8 +383,8 @@ else
     }
     else
     {
-        <div class="table-card text-center py-4 text-muted small">
-            <i class="fas fa-info-circle me-1"></i>Bu parti henüz herhangi bir satışa bağlanmamış.
+        <div class="table-card text-center py-3 text-muted small">
+            <i class="fas fa-info-circle me-1"></i>Bu partiden üretilen ürünler henüz satışa bağlanmamış.
         </div>
     }
 }

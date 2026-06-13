@@ -118,6 +118,9 @@ new string(phone.Where(char.IsDigit).ToArray())
 - Sidebar sol menü — FSC yeşil (#1e3d14 arka plan)
 - FontAwesome ikonlar
 - Responsive tablo + filtre paneli
+- Dashboard & Analytics: Kütle dengesi (Mass Balance) takibi için üstte 3'lü metrik kartları ve mini grafikler kullanılacak.
+- Lot/Seri İşlemleri: Satır içi (inline) hesaplamalar ve dinamik badge'ler (FSC Mix/100%) ile kullanıcı anlık olarak kütle girdisini görecek.
+- Estetik: Endüstriyel ERP ciddiyetinde, temiz padding'li, oval köşeli (rounded-3) modern kart tasarımları tercih edilecek.
 
 ## Dosya Yükleme Konvansiyonu
 

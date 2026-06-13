@@ -77,19 +77,36 @@ namespace FSCTakip.WebUI.Controllers
             if (string.IsNullOrWhiteSpace(model.Name))
                 return Json(new { success = false, message = "Tedarikçi adı zorunludur." });
 
-            // Email formatı kontrolü
+            // Düzenlemede mevcut e-posta/telefonu al — değişmemiş alanları yeniden doğrulama
+            // (eski/geçersiz formatlı kayıtların başka alanları güncellenebilsin diye).
+            string? storedEmail = null, storedPhone = null;
+            if (model.Id != 0)
+            {
+                var stored = await _context.Suppliers.AsNoTracking()
+                    .Where(s => s.Id == model.Id)
+                    .Select(s => new { s.Email, s.Phone })
+                    .FirstOrDefaultAsync();
+                storedEmail = stored?.Email;
+                storedPhone = stored?.Phone;
+            }
+
+            // Email formatı kontrolü — yalnızca yeni kayıt veya e-posta değiştiyse
             if (!string.IsNullOrEmpty(model.Email))
             {
                 model.Email = model.Email.Replace("İ", "i").Replace("I", "ı").Trim().ToLowerInvariant();
-                if (!System.Text.RegularExpressions.Regex.IsMatch(model.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                var emailChanged = storedEmail == null
+                    || !string.Equals(storedEmail.Trim(), model.Email, StringComparison.OrdinalIgnoreCase);
+                if (emailChanged && !System.Text.RegularExpressions.Regex.IsMatch(model.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
                     return Json(new { success = false, message = "Geçerli bir e-posta adresi giriniz." });
             }
 
-            // Telefon temizleme — sadece rakamlar
+            // Telefon temizleme — sadece rakamlar; uzunluk kontrolü yalnızca telefon değiştiyse
             if (!string.IsNullOrEmpty(model.Phone))
             {
                 model.Phone = new string(model.Phone.Where(char.IsDigit).ToArray());
-                if (model.Phone.Length > 0 && (model.Phone.Length < 10 || model.Phone.Length > 15))
+                var storedPhoneDigits = storedPhone == null ? null : new string(storedPhone.Where(char.IsDigit).ToArray());
+                var phoneChanged = storedPhoneDigits == null || storedPhoneDigits != model.Phone;
+                if (phoneChanged && model.Phone.Length > 0 && (model.Phone.Length < 10 || model.Phone.Length > 15))
                     return Json(new { success = false, message = "Telefon numarası 10-15 rakam arasında olmalıdır." });
             }
 

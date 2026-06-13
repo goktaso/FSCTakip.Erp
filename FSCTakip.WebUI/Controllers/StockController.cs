@@ -220,7 +220,7 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.TotalLots    = serials.Select(s => s.LotId).Distinct().Count();
             ViewBag.ByFscType    = serials
                 .GroupBy(s => s.Lot?.FscType?.Name ?? "—")
-                .Select(g => new { FscType = g.Key, TotalKg = g.Sum(s => s.CurrentWeight), Count = g.Count() })
+                .Select(g => new FscTypeStockSummary { FscType = g.Key, TotalKg = g.Sum(s => s.CurrentWeight), Count = g.Count() })
                 .OrderByDescending(x => x.TotalKg)
                 .ToList();
 
@@ -306,6 +306,13 @@ namespace FSCTakip.WebUI.Controllers
 
             return ExportToExcel(rows, "StokHareketleri");
         }
+    }
+
+    public class FscTypeStockSummary
+    {
+        public string FscType { get; set; } = "";
+        public decimal TotalKg { get; set; }
+        public int Count { get; set; }
     }
 
     public class StockSummaryRow

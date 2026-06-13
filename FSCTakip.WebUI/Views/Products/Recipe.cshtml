@@ -92,7 +92,7 @@ else
                             </td>
                             <td><code style="font-size:11px;">@line.ChildProduct?.ProductCode</code></td>
                             <td class="text-muted" style="font-size:12px;">@line.ChildProduct?.ProductGroup?.GroupName</td>
-                            <td class="text-end fw-semibold">@line.StandardQuantity.ToString("N2")</td>
+                            <td class="text-end fw-semibold">@line.StandardQuantity.ToString("N4")</td>
                             <td class="text-muted">@line.Unit</td>
                             <td class="text-center">
                                 <span id="badge_@line.Id" class="badge @(line.IsActive ? "badge-success" : "badge-warning")">
@@ -144,11 +144,20 @@ else
                 <div class="row g-3">
                     <div class="col-md-12">
                         <label class="form-label small fw-semibold">Bileşen Ürün <span class="text-danger">*</span></label>
-                        <select id="childProductId" class="form-select">
+                        <input type="text" id="childProductSearch" class="form-control mb-2"
+                               placeholder="Kod / Dış Kod / Ürün adına göre ara...">
+                        <select id="childProductId" class="form-select" size="8" style="height:auto;">
                             <option value="">— Seçiniz —</option>
                             @foreach (var p in avail)
                             {
-                                <option value="@p.Id">[@p.ProductCode] @p.ProductName</option>
+                                var productCode = (p.ProductCode ?? "").Trim();
+                                var externalCode = (p.ExternalCode ?? "").Trim();
+                                var productName = (p.ProductName ?? "").Trim();
+                                var externalCodeText = string.IsNullOrWhiteSpace(externalCode) ? "—" : externalCode;
+                                var searchText = $"{productCode} {externalCode} {productName}".ToLowerInvariant();
+                                <option value="@p.Id" data-search="@searchText">
+                                    @productCode | @externalCodeText | @productName
+                                </option>
                             }
                         </select>
                     </div>
@@ -156,7 +165,7 @@ else
                         <label class="form-label small fw-semibold">Standart Miktar <span class="text-danger">*</span>
                             <span class="text-muted fw-normal">(1 birim üretim için)</span>
                         </label>
-                        <input type="number" id="standardQty" class="form-control" step="0.001" min="0.001" placeholder="0.00">
+                        <input type="text" id="standardQty" class="form-control" inputmode="decimal" placeholder="Örn: 0,0023">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">Birim <span class="text-danger">*</span></label>
@@ -187,6 +196,7 @@ let _modal;
 function openModal(id) {
     document.getElementById('lineId').value          = id;
     document.getElementById('childProductId').value  = '';
+    document.getElementById('childProductSearch').value = '';
     document.getElementById('standardQty').value     = '';
     document.getElementById('unit').value            = 'kg';
 
@@ -200,6 +210,9 @@ function openModal(id) {
             .then(res => {
                 if (!res.success) return;
                 document.getElementById('childProductId').value = res.data.childProductId;
+                if (typeof setRecipeProductSearchFromSelection === 'function') {
+                    setRecipeProductSearchFromSelection();
+                }
                 document.getElementById('standardQty').value    = res.data.standardQuantity;
                 document.getElementById('unit').value           = res.data.unit;
             });
@@ -209,25 +222,67 @@ function openModal(id) {
     _modal.show();
 }
 
+function normalizeDecimalInput(value) {
+    let s = (value || '').toString().trim();
+    if (!s) return NaN;
+
+    s = s.replace(/\s/g, '');
+    
+    // Türkçe format kontrolü: son ayırıcı virgül mü?
+    const lastComma = s.lastIndexOf(',');
+    const lastDot = s.lastIndexOf('.');
+    
+    // Önceki sayısal karakterler
+    const hasComma = lastComma >= 0;
+    const hasDot = lastDot >= 0;
+    
+    if (hasComma && hasDot) {
+        // İki ayırıcı varsa, sonuncusu ondalık kabul edilir
+        const sepIndex = Math.max(lastComma, lastDot);
+        const intPart = s.slice(0, sepIndex).replace(/[.,]/g, '');
+        const fracPart = s.slice(sepIndex + 1).replace(/[.,]/g, '');
+        s = `${intPart}.${fracPart}`;
+    } else if (hasComma) {
+        // Sadece virgül varsa (TR formatı)
+        const intPart = s.slice(0, lastComma).replace(/[.,]/g, '');
+        const fracPart = s.slice(lastComma + 1).replace(/[.,]/g, '');
+        s = `${intPart}.${fracPart}`;
+    } else if (hasDot) {
+        // Sadece nokta varsa (EN formatı)
+        const intPart = s.slice(0, lastDot).replace(/[.,]/g, '');
+        const fracPart = s.slice(lastDot + 1).replace(/[.,]/g, '');
+        s = `${intPart}.${fracPart}`;
+    } else {
+        //Ayırıcı yoksa
+        s = s.replace(/[.,]/g, '');
+    }
+
+    s = s.replace(/[^0-9.-]/g, '');
+    const num = Number(s);
+    return Number.isFinite(num) ? num : NaN;
+}
+
 function saveLine() {
     const childId = document.getElementById('childProductId').value;
-    const qty     = parseFloat(document.getElementById('standardQty').value);
+    const qtyRaw  = document.getElementById('standardQty').value;
+    const qty     = normalizeDecimalInput(qtyRaw);
 
-    if (!childId)        { alert('Bileşen ürün seçiniz.');         return; }
-    if (isNaN(qty) || qty <= 0) { alert('Geçerli bir miktar giriniz.'); return; }
+    if (!childId) { showToast('Bileşen ürün seçiniz.', 'warning'); return; }
+    if (isNaN(qty) || qty <= 0) { showToast('Geçerli bir miktar giriniz.', 'warning'); return; }
 
-    const fd = new FormData();
+const fd = new FormData();
     fd.append('Id',               document.getElementById('lineId').value);
     fd.append('ParentProductId',  document.getElementById('parentId').value);
     fd.append('ChildProductId',   childId);
-    fd.append('StandardQuantity', qty);
+    // TR formatı (virgül ondalık) olarak gönder - controller bunu bekliyor
+    fd.append('StandardQuantity', qty.toString().replace('.', ','));
     fd.append('Unit',             document.getElementById('unit').value);
 
     fetch('/Products/SaveRecipeLine', { method: 'POST', body: fd })
         .then(r => r.json())
         .then(res => {
             if (res.success) { _modal.hide(); location.reload(); }
-            else alert(res.message);
+            else showToast(res.message || 'Kayıt sırasında hata oluştu.', 'error');
         });
 }
 
@@ -235,7 +290,7 @@ function toggleLine(id) {
     fetch(`/Products/ToggleRecipeLine?id=${id}`, { method: 'POST' })
         .then(r => r.json())
         .then(res => {
-            if (!res.success) { alert(res.message); return; }
+            if (!res.success) { showToast(res.message || 'İşlem başarısız.', 'error'); return; }
             const badge = document.getElementById(`badge_${id}`);
             const btn   = document.getElementById(`toggleBtn_${id}`);
             if (res.isActive) {
@@ -253,10 +308,82 @@ function toggleLine(id) {
 }
 
 function deleteLine(id) {
-    if (!confirm('Bu bileşeni reçeteden kaldırmak istiyor musunuz?')) return;
-    fetch(`/Products/DeleteRecipeLine?id=${id}`, { method: 'POST' })
-        .then(r => r.json())
-        .then(res => { if (res.success) location.reload(); else alert(res.message); });
+    Swal.fire({
+        title: 'Bileşeni Sil',
+        text: 'Bu bileşeni reçeteden kaldırmak istiyor musunuz?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Sil',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#dc2626'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        fetch(`/Products/DeleteRecipeLine?id=${id}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(res => { if (res.success) location.reload(); else showToast(res.message || 'Silme başarısız.', 'error'); });
+    });
 }
+
+/* ─── REÇETE BİLEŞEN ÜRÜN ARAMA + LİSTE FİLTRELEME ─────────── */
+function initRecipeProductSelectSearch() {
+    const searchInput = document.getElementById('childProductSearch');
+    const productSelect = document.getElementById('childProductId');
+    if (!searchInput || !productSelect) return;
+
+    const originalOptions = Array.from(productSelect.options).map(o => ({
+        value: o.value,
+        text: o.textContent || '',
+        search: o.dataset.search || ''
+    }));
+
+    function renderOptions(term, keepValue) {
+        const q = (term || '').trim().toLowerCase();
+        const selectedVal = keepValue ?? productSelect.value;
+
+        productSelect.innerHTML = '';
+        originalOptions.forEach(item => {
+            if (!q || !item.value || item.search.includes(q)) {
+                const opt = document.createElement('option');
+                opt.value = item.value;
+                opt.textContent = item.text;
+                if (item.search) opt.dataset.search = item.search;
+                productSelect.appendChild(opt);
+            }
+        });
+
+        if (selectedVal && Array.from(productSelect.options).some(o => o.value === selectedVal)) {
+            productSelect.value = selectedVal;
+        }
+    }
+
+    window.setRecipeProductSearchFromSelection = function () {
+        const selected = Array.from(productSelect.options).find(o => o.value === productSelect.value);
+        if (!selected || !selected.value) return;
+        const selectedId = selected.value;
+        const selectedText = selected.textContent || '';
+        const selectedSearch = selected.dataset.search || '';
+
+        productSelect.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.value = selectedId;
+        opt.textContent = selectedText;
+        opt.dataset.search = selectedSearch;
+        productSelect.appendChild(opt);
+        productSelect.value = selectedId;
+    };
+
+    searchInput.addEventListener('input', function () {
+        renderOptions(this.value, '');
+    });
+
+    productSelect.addEventListener('change', function () {
+        if (!this.value) return;
+        window.setRecipeProductSearchFromSelection();
+    });
+
+    renderOptions('', '');
+}
+
+initRecipeProductSelectSearch();
 </script>
 }

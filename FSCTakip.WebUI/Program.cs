@@ -7,10 +7,16 @@ using FSCTakip.WebUI.Filters;
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Gerekli Servisleri Ekle
-builder.Services.AddControllersWithViews(options =>
+var mvcBuilder = builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<SessionAuthFilter>();
 });
+
+// Development ortamında .cshtml değişiklikleri rebuild gerektirmez
+if (builder.Environment.IsDevelopment())
+{
+    mvcBuilder.AddRazorRuntimeCompilation();
+}
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication();
 
@@ -37,10 +43,17 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
+    app.UseHttpsRedirection(); // Sadece production'da HTTPS'e yönlendir
 }
-
-app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+// Proxy / CDN içerik dönüşümünü engelle — charset bozulmasını önler
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.Headers.Append("Cache-Control", "no-transform");
+    ctx.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    await next();
+});
 
 app.UseRouting();
 

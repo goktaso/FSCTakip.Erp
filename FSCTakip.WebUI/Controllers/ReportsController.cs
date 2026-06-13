@@ -1,6 +1,7 @@
 using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace FSCTakip.WebUI.Controllers
@@ -150,7 +151,7 @@ namespace FSCTakip.WebUI.Controllers
 
         // ── 2. Lot Takip Raporu ─────────────────────────────────────────────────
         // GET /Reports/LotTrace
-        public async Task<IActionResult> LotTrace(int? lotId)
+        public async Task<IActionResult> LotTrace(int? lotId, string? search)
         {
             var lots = await _context.FscLots
                 .Include(l => l.Supplier)
@@ -159,7 +160,18 @@ namespace FSCTakip.WebUI.Controllers
                 .OrderByDescending(l => l.ArrivalDate)
                 .ToListAsync();
 
-            ViewBag.Lots = lots;
+            ViewBag.Lots   = lots;
+            ViewBag.Search = search;
+
+            // Metin araması ile parti/seri no'ya göre lot bul
+            if (!lotId.HasValue && !string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToUpperInvariant();
+                var matchLot = lots.FirstOrDefault(l =>
+                    l.PartiNo.ToUpperInvariant().Contains(term) ||
+                    (l.InvoiceNo?.ToUpperInvariant().Contains(term) ?? false));
+                if (matchLot != null) lotId = matchLot.Id;
+            }
 
             if (!lotId.HasValue)
                 return View(null as LotTraceResult);
@@ -171,7 +183,11 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(s => s.ProductionDetails)
                     .ThenInclude(pd => pd.WorkOrder)
                         .ThenInclude(w => w.Product)
+                .Include(s => s.ProductionDetails)
+                    .ThenInclude(pd => pd.WorkOrder)
+                        .ThenInclude(w => w.Machine)
                 .Where(s => s.LotId == lotId.Value)
+                .OrderBy(s => s.SerialNo)
                 .ToListAsync();
 
             var workOrderIds = serials
@@ -186,14 +202,100 @@ namespace FSCTakip.WebUI.Controllers
                 .Where(l => l.WorkOrderId.HasValue && workOrderIds.Contains(l.WorkOrderId!.Value))
                 .ToListAsync();
 
+            // Üretim kullanım satırları: bu partiyi hangi iş emirleri, hangi gün, kaç kg kullandı
+            var flatPd = serials
+                .SelectMany(s => s.ProductionDetails.Select(pd => new { SerialNo = s.SerialNo, pd }))
+                .ToList();
+
+            var productionRows = flatPd
+                .GroupBy(x => new
+                {
+                    x.pd.WorkOrderId,
+                    WorkOrderNo = x.pd.WorkOrder?.WorkOrderNo ?? "—",
+                    ProductName = x.pd.WorkOrder?.Product?.ProductName ?? "—",
+                    ProductCode = x.pd.WorkOrder?.Product?.ProductCode ?? "",
+                    MachineName = x.pd.WorkOrder?.Machine?.Name ?? "—",
+                    Date        = x.pd.ProductionDate.Date
+                })
+                .Select(g => new LotTraceProductionRow
+                {
+                    WorkOrderId    = g.Key.WorkOrderId,
+                    WorkOrderNo    = g.Key.WorkOrderNo,
+                    ProductName    = g.Key.ProductName,
+                    ProductCode    = g.Key.ProductCode,
+                    MachineName    = g.Key.MachineName,
+                    ProductionDate = g.Key.Date,
+                    SerialNos      = string.Join(", ", g.Select(x => x.SerialNo).Distinct()),
+                    ConsumedKg     = g.Sum(x => x.pd.ConsumedWeight),
+                    WasteKg        = g.Sum(x => x.pd.WasteWeight),
+                    ProducedQty    = g.Max(x => x.pd.ProducedQuantity)
+                })
+                .OrderBy(r => r.ProductionDate)
+                .ThenBy(r => r.WorkOrderNo)
+                .ToList();
+
             var result = new LotTraceResult
             {
-                Lot       = lot,
-                Serials   = serials,
-                SalesLines = salesLines
+                Lot            = lot,
+                Serials        = serials,
+                SalesLines     = salesLines,
+                ProductionRows = productionRows
             };
 
+            ViewBag.LotId = lotId;
             return View(result);
+        }
+
+        // GET /Reports/ExportLotTrace
+        public async Task<IActionResult> ExportLotTrace(int lotId)
+        {
+            var lot = await _context.FscLots
+                .Include(l => l.Supplier)
+                .Include(l => l.FscType)
+                .Include(l => l.Product)
+                .FirstOrDefaultAsync(l => l.Id == lotId);
+
+            if (lot == null) return NotFound();
+
+            var serials = await _context.FscSerials
+                .Include(s => s.ProductionDetails)
+                    .ThenInclude(pd => pd.WorkOrder)
+                        .ThenInclude(w => w.Product)
+                .Include(s => s.ProductionDetails)
+                    .ThenInclude(pd => pd.WorkOrder)
+                        .ThenInclude(w => w.Machine)
+                .Where(s => s.LotId == lotId)
+                .OrderBy(s => s.SerialNo)
+                .ToListAsync();
+
+            var flatPd = serials
+                .SelectMany(s => s.ProductionDetails.Select(pd => new { SerialNo = s.SerialNo, pd }))
+                .ToList();
+
+            var productionRows = flatPd
+                .GroupBy(x => new
+                {
+                    x.pd.WorkOrderId,
+                    WorkOrderNo = x.pd.WorkOrder?.WorkOrderNo ?? "—",
+                    ProductName = x.pd.WorkOrder?.Product?.ProductName ?? "—",
+                    MachineName = x.pd.WorkOrder?.Machine?.Name ?? "—",
+                    Date        = x.pd.ProductionDate.Date
+                })
+                .Select(g => new
+                {
+                    UretimTarihi   = g.Key.Date.ToString("dd.MM.yyyy"),
+                    IsEmriNo       = g.Key.WorkOrderNo,
+                    Mamul          = g.Key.ProductName,
+                    Makine         = g.Key.MachineName,
+                    KullanilanSeri = string.Join(", ", g.Select(x => x.SerialNo).Distinct()),
+                    TuketilenKg    = g.Sum(x => x.pd.ConsumedWeight),
+                    FireKg         = g.Sum(x => x.pd.WasteWeight),
+                    UretilenAdet   = g.Max(x => x.pd.ProducedQuantity)
+                })
+                .OrderBy(r => r.UretimTarihi)
+                .ToList();
+
+            return ExportToExcel(productionRows, $"LotKullanim_{lot.PartiNo}");
         }
 
         // ── 4. Denetim Özet Raporu ─────────────────────────────────────────────
@@ -539,7 +641,13 @@ namespace FSCTakip.WebUI.Controllers
                     PlannedDate    = w.PlannedDate,
                     Status         = w.Status,
                     PlannedQty     = w.PlannedQuantity,
-                    TotalProducedQty = w.ProductionDetails.Sum(pd => pd.ProducedQuantity),
+                    // Her tarih grubunda Max al: aynı üretim günü içindeki tüm malzeme
+                    // satırları aynı üretim adedini taşır → birden fazla güne bölünmüşse topla.
+                    TotalProducedQty = w.ProductionDetails.Any()
+                        ? w.ProductionDetails
+                            .GroupBy(d => d.ProductionDate.Date)
+                            .Sum(g => g.Max(d => d.ProducedQuantity))
+                        : w.ActualQuantity,
                     TotalConsumedKg  = w.ProductionDetails.Sum(pd => pd.ConsumedWeight),
                     TotalWasteKg     = w.ProductionDetails.Sum(pd => pd.WasteWeight)
                 };
@@ -584,7 +692,9 @@ namespace FSCTakip.WebUI.Controllers
                         PlannedKg     = 0,
                         ConsumedKg    = unlinked.Sum(pd => pd.ConsumedWeight),
                         WasteKg       = unlinked.Sum(pd => pd.WasteWeight),
-                        ProducedQty   = unlinked.Sum(pd => pd.ProducedQuantity),
+                        ProducedQty   = unlinked
+                            .GroupBy(d => d.ProductionDate.Date)
+                            .Sum(g => g.Max(d => d.ProducedQuantity)),
                         SerialNos     = unlinked.Select(pd => pd.FscSerial?.SerialNo ?? "").Where(s => s != "").Distinct().ToList(),
                         LotNos        = unlinked.Select(pd => pd.FscSerial?.Lot?.PartiNo ?? "").Where(s => s != "").Distinct().ToList(),
                         SupplierNames = unlinked.Select(pd => pd.FscSerial?.Lot?.Supplier?.Name ?? "").Where(s => s != "").Distinct().ToList(),
@@ -608,7 +718,7 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.AllWorkOrders = await _context.WorkOrders
                 .Where(w => w.Status != WorkOrderStatus.Taslak)
                 .OrderByDescending(w => w.PlannedDate)
-                .Select(w => new { w.Id, w.WorkOrderNo })
+                .Select(w => new SelectListItem { Value = w.Id.ToString(), Text = w.WorkOrderNo })
                 .ToListAsync();
             ViewData["Title"] = "BOM Bileşen Analizi";
             return View(model);
@@ -700,7 +810,11 @@ namespace FSCTakip.WebUI.Controllers
                     // BOM tanımlı değil — sadece toplam
                     var totalConsumed = w.ProductionDetails.Sum(pd => pd.ConsumedWeight);
                     var totalWaste    = w.ProductionDetails.Sum(pd => pd.WasteWeight);
-                    var totalProduced = w.ProductionDetails.Sum(pd => pd.ProducedQuantity);
+                    var totalProduced = w.ProductionDetails.Any()
+                        ? w.ProductionDetails
+                            .GroupBy(d => d.ProductionDate.Date)
+                            .Sum(g => g.Max(d => d.ProducedQuantity))
+                        : w.ActualQuantity;
                     ws.Cell(row, 1).Value  = w.WorkOrderNo;
                     ws.Cell(row, 2).Value  = w.Product?.ProductName ?? "—";
                     ws.Cell(row, 3).Value  = statusLabel;
@@ -868,6 +982,217 @@ namespace FSCTakip.WebUI.Controllers
             return new AuditReportData(lots, prodDetails, salesLines, preSerials, allSerials);
         }
 
+        // ── 9. Hammadde / Mamul / Lot İzleme ───────────────────────────────────
+        // GET /Reports/MaterialTrace
+        public async Task<IActionResult> MaterialTrace(
+            string  mode      = "hammadde",
+            int?    hammaddeId = null,
+            int?    mamulId    = null,
+            string? partiNo   = null,
+            string? serialNo  = null,
+            DateTime? startDate = null,
+            DateTime? endDate   = null)
+        {
+            var sd = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
+            var ed = endDate   ?? DateTime.Today;
+
+            // Hammadde dropdown: FscLot.ProductId üzerinden gelen ürünler
+            var hammaddeProductIds = await _context.FscLots
+                .Where(l => l.ProductId != null)
+                .Select(l => l.ProductId!.Value)
+                .Distinct().ToListAsync();
+            ViewBag.Hammaddeler = await _context.Products
+                .Where(p => hammaddeProductIds.Contains(p.Id))
+                .OrderBy(p => p.ProductName).ToListAsync();
+
+            // Mamul dropdown: WorkOrder.ProductId üzerinden gelen ürünler
+            var mamulProductIds = await _context.WorkOrders
+                .Select(w => w.ProductId).Distinct().ToListAsync();
+            ViewBag.Mamuller = await _context.Products
+                .Where(p => mamulProductIds.Contains(p.Id))
+                .OrderBy(p => p.ProductName).ToListAsync();
+
+            ViewBag.Mode       = mode;
+            ViewBag.HammaddeId = hammaddeId;
+            ViewBag.MamulId    = mamulId;
+            ViewBag.PartiNo    = partiNo?.Trim();
+            ViewBag.SerialNo   = serialNo?.Trim();
+            ViewBag.StartDate  = sd.ToString("yyyy-MM-dd");
+            ViewBag.EndDate    = ed.ToString("yyyy-MM-dd");
+
+            bool hasFilter = mode switch {
+                "hammadde" => hammaddeId.HasValue,
+                "mamul"    => mamulId.HasValue,
+                "parti"    => !string.IsNullOrWhiteSpace(partiNo) || !string.IsNullOrWhiteSpace(serialNo),
+                _          => false
+            };
+
+            ViewData["Title"] = mode switch {
+                "mamul" => "Mamul Hammadde Analizi",
+                "parti" => "Parti / Lot Kullanım İzleme",
+                _       => "Hammadde Kullanım İzleme"
+            };
+
+            if (!hasFilter)
+                return View(new MaterialTraceModel { Mode = mode, StartDate = sd, EndDate = ed });
+
+            // ── Ana sorgu ──────────────────────────────────────────────────────
+            var query = _context.ProductionDetails
+                .Include(pd => pd.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.Product)
+                .Include(pd => pd.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.FscType)
+                .Include(pd => pd.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.Supplier)
+                .Include(pd => pd.WorkOrder).ThenInclude(w => w.Product)
+                .Include(pd => pd.WorkOrder).ThenInclude(w => w.Machine)
+                .AsQueryable();
+
+            switch (mode)
+            {
+                case "hammadde":
+                    query = query.Where(pd => pd.FscSerial != null
+                        && pd.FscSerial.Lot != null
+                        && pd.FscSerial.Lot.ProductId == hammaddeId!.Value);
+                    query = query.Where(pd => pd.ProductionDate >= sd && pd.ProductionDate < ed.AddDays(1));
+                    if (!string.IsNullOrWhiteSpace(partiNo))
+                        query = query.Where(pd => pd.FscSerial!.Lot.PartiNo.Contains(partiNo.Trim()));
+                    break;
+
+                case "mamul":
+                    query = query.Where(pd => pd.WorkOrder != null
+                        && pd.WorkOrder.ProductId == mamulId!.Value);
+                    query = query.Where(pd => pd.ProductionDate >= sd && pd.ProductionDate < ed.AddDays(1));
+                    break;
+
+                case "parti":
+                    if (!string.IsNullOrWhiteSpace(partiNo))
+                    {
+                        var t = partiNo.Trim();
+                        query = query.Where(pd => pd.FscSerial != null
+                            && pd.FscSerial.Lot != null
+                            && pd.FscSerial.Lot.PartiNo.Contains(t));
+                    }
+                    if (!string.IsNullOrWhiteSpace(serialNo))
+                    {
+                        var t = serialNo.Trim();
+                        query = query.Where(pd => pd.FscSerial != null
+                            && pd.FscSerial.SerialNo.Contains(t));
+                    }
+                    if (startDate.HasValue) query = query.Where(pd => pd.ProductionDate >= sd);
+                    if (endDate.HasValue)   query = query.Where(pd => pd.ProductionDate < ed.AddDays(1));
+                    break;
+            }
+
+            var data = await query
+                .OrderBy(pd => pd.ProductionDate)
+                .ThenBy(pd => pd.WorkOrder!.WorkOrderNo)
+                .ThenBy(pd => pd.FscSerial!.Lot.PartiNo)
+                .ToListAsync();
+
+            var rows = data.Select(pd => new MaterialTraceRow
+            {
+                HammaddeAdi  = pd.FscSerial?.Lot?.Product?.ProductName ?? "—",
+                HammaddeKodu = pd.FscSerial?.Lot?.Product?.ProductCode ?? "",
+                PartiNo      = pd.FscSerial?.Lot?.PartiNo ?? "—",
+                SerialNo     = pd.FscSerial?.SerialNo ?? "—",
+                FscTipi      = pd.FscSerial?.Lot?.FscType?.Name ?? "—",
+                Tedarikci    = pd.FscSerial?.Lot?.Supplier?.Name ?? "—",
+                GelisTarihi  = pd.FscSerial?.Lot?.ArrivalDate,
+                WorkOrderId  = pd.WorkOrderId,
+                WorkOrderNo  = pd.WorkOrder?.WorkOrderNo ?? "—",
+                MamulAdi     = pd.WorkOrder?.Product?.ProductName ?? "—",
+                MamulKodu    = pd.WorkOrder?.Product?.ProductCode ?? "",
+                MakineName   = pd.WorkOrder?.Machine?.Name ?? "—",
+                UretimTarihi = pd.ProductionDate,
+                TuketilenKg  = pd.ConsumedWeight,
+                FireKg       = pd.WasteWeight,
+                UretilenAdet = pd.ProducedQuantity
+            }).ToList();
+
+            var model = new MaterialTraceModel
+            {
+                Mode       = mode,
+                HammaddeId = hammaddeId,
+                MamulId    = mamulId,
+                PartiNo    = partiNo?.Trim(),
+                SerialNo   = serialNo?.Trim(),
+                StartDate  = sd,
+                EndDate    = ed,
+                Rows       = rows
+            };
+            return View(model);
+        }
+
+        // GET /Reports/ExportMaterialTrace
+        public async Task<IActionResult> ExportMaterialTrace(
+            string  mode      = "hammadde",
+            int?    hammaddeId = null,
+            int?    mamulId    = null,
+            string? partiNo   = null,
+            string? serialNo  = null,
+            DateTime? startDate = null,
+            DateTime? endDate   = null)
+        {
+            var sd = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
+            var ed = endDate   ?? DateTime.Today;
+
+            var query = _context.ProductionDetails
+                .Include(pd => pd.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.Product)
+                .Include(pd => pd.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.FscType)
+                .Include(pd => pd.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.Supplier)
+                .Include(pd => pd.WorkOrder).ThenInclude(w => w.Product)
+                .Include(pd => pd.WorkOrder).ThenInclude(w => w.Machine)
+                .AsQueryable();
+
+            switch (mode)
+            {
+                case "hammadde":
+                    if (!hammaddeId.HasValue) return BadRequest();
+                    query = query.Where(pd => pd.FscSerial != null && pd.FscSerial.Lot != null && pd.FscSerial.Lot.ProductId == hammaddeId.Value);
+                    query = query.Where(pd => pd.ProductionDate >= sd && pd.ProductionDate < ed.AddDays(1));
+                    if (!string.IsNullOrWhiteSpace(partiNo)) query = query.Where(pd => pd.FscSerial!.Lot.PartiNo.Contains(partiNo.Trim()));
+                    break;
+                case "mamul":
+                    if (!mamulId.HasValue) return BadRequest();
+                    query = query.Where(pd => pd.WorkOrder != null && pd.WorkOrder.ProductId == mamulId.Value);
+                    query = query.Where(pd => pd.ProductionDate >= sd && pd.ProductionDate < ed.AddDays(1));
+                    break;
+                case "parti":
+                    if (!string.IsNullOrWhiteSpace(partiNo)) query = query.Where(pd => pd.FscSerial != null && pd.FscSerial.Lot != null && pd.FscSerial.Lot.PartiNo.Contains(partiNo.Trim()));
+                    if (!string.IsNullOrWhiteSpace(serialNo)) query = query.Where(pd => pd.FscSerial != null && pd.FscSerial.SerialNo.Contains(serialNo.Trim()));
+                    if (startDate.HasValue) query = query.Where(pd => pd.ProductionDate >= sd);
+                    if (endDate.HasValue)   query = query.Where(pd => pd.ProductionDate < ed.AddDays(1));
+                    break;
+            }
+
+            var data = await query
+                .OrderBy(pd => pd.ProductionDate)
+                .ThenBy(pd => pd.WorkOrder!.WorkOrderNo)
+                .ToListAsync();
+
+            var rows = data.Select(pd => new {
+                UretimTarihi = pd.ProductionDate.ToString("dd.MM.yyyy"),
+                IsEmriNo     = pd.WorkOrder?.WorkOrderNo ?? "",
+                Mamul        = pd.WorkOrder?.Product?.ProductName ?? "",
+                MamulKodu    = pd.WorkOrder?.Product?.ProductCode ?? "",
+                Makine       = pd.WorkOrder?.Machine?.Name ?? "",
+                Hammadde     = pd.FscSerial?.Lot?.Product?.ProductName ?? "",
+                PartiNo      = pd.FscSerial?.Lot?.PartiNo ?? "",
+                SeriNo       = pd.FscSerial?.SerialNo ?? "",
+                FscTipi      = pd.FscSerial?.Lot?.FscType?.Name ?? "",
+                Tedarikci    = pd.FscSerial?.Lot?.Supplier?.Name ?? "",
+                GelisTarihi  = pd.FscSerial?.Lot?.ArrivalDate.ToString("dd.MM.yyyy") ?? "",
+                TuketilenKg  = pd.ConsumedWeight,
+                FireKg       = pd.WasteWeight,
+                UretilenAdet = pd.ProducedQuantity
+            }).ToList();
+
+            var fileName = mode switch {
+                "mamul" => "MamulHammaddeAnalizi",
+                "parti" => $"PartiKullanim_{partiNo ?? ""}",
+                _       => "HammaddeKullanimIzleme"
+            };
+            return ExportToExcel(rows, fileName);
+        }
+
         // ── 8. Fire / Atık Derinlemesine Raporu ─────────────────────────────────
         // GET /Reports/WasteAnalysis
         public async Task<IActionResult> WasteAnalysis(DateTime? startDate, DateTime? endDate, int? machineId, int? productGroupId)
@@ -904,7 +1229,10 @@ namespace FSCTakip.WebUI.Controllers
                     MachineName     = g.Key.MachineName,
                     TotalConsumedKg = g.Sum(d => d.ConsumedWeight),
                     TotalWasteKg    = g.Sum(d => d.WasteWeight),
-                    TotalProducedQty = g.Sum(d => d.ProducedQuantity),
+                    // Her iş emrini × gün için Max al → toplam gerçek üretimi bul
+                    TotalProducedQty = g
+                        .GroupBy(d => new { d.WorkOrderId, d.ProductionDate.Date })
+                        .Sum(wg => wg.Max(d => d.ProducedQuantity)),
                     RecordCount     = g.Count()
                 })
                 .OrderByDescending(r => r.FireRate)
@@ -1057,9 +1385,29 @@ namespace FSCTakip.WebUI.Controllers
 
     public class LotTraceResult
     {
-        public FscLot Lot                         { get; set; } = null!;
-        public List<FscSerial> Serials            { get; set; } = new();
-        public List<SalesOrderLine> SalesLines    { get; set; } = new();
+        public FscLot Lot                                    { get; set; } = null!;
+        public List<FscSerial> Serials                       { get; set; } = new();
+        public List<SalesOrderLine> SalesLines               { get; set; } = new();
+        public List<LotTraceProductionRow> ProductionRows    { get; set; } = new();
+
+        public decimal TotalConsumedKg  => ProductionRows.Sum(r => r.ConsumedKg);
+        public decimal TotalWasteKg     => ProductionRows.Sum(r => r.WasteKg);
+        public int     TotalWorkOrders  => ProductionRows.Select(r => r.WorkOrderId).Distinct().Count();
+    }
+
+    public class LotTraceProductionRow
+    {
+        public int      WorkOrderId    { get; set; }
+        public string   WorkOrderNo    { get; set; } = "";
+        public string   ProductName    { get; set; } = "";
+        public string   ProductCode    { get; set; } = "";
+        public string   MachineName    { get; set; } = "";
+        public DateTime ProductionDate { get; set; }
+        public string   SerialNos      { get; set; } = "";
+        public decimal  ConsumedKg     { get; set; }
+        public decimal  WasteKg        { get; set; }
+        public decimal  ProducedQty    { get; set; }
+        public decimal  FireRate       => ConsumedKg > 0 ? WasteKg / ConsumedKg * 100 : 0;
     }
 
     // ── Tam İzlenebilirlik View Modelleri ──────────────────────────────────────
@@ -1152,6 +1500,46 @@ namespace FSCTakip.WebUI.Controllers
         public decimal FireRate      => ConsumedKg > 0 ? WasteKg / ConsumedKg * 100 : 0;
         public bool    IsOverPlan    => PlannedKg > 0 && ConsumedKg > PlannedKg * 1.10m;
         public bool    IsNearPlan    => PlannedKg > 0 && ConsumedKg >= PlannedKg * 0.90m;
+    }
+
+    // ── MaterialTrace View Models ──────────────────────────────────────────────
+    public class MaterialTraceModel
+    {
+        public string    Mode       { get; set; } = "hammadde";
+        public int?      HammaddeId { get; set; }
+        public int?      MamulId    { get; set; }
+        public string?   PartiNo    { get; set; }
+        public string?   SerialNo   { get; set; }
+        public DateTime  StartDate  { get; set; }
+        public DateTime  EndDate    { get; set; }
+        public List<MaterialTraceRow> Rows { get; set; } = new();
+
+        public decimal TotalConsumedKg => Rows.Sum(r => r.TuketilenKg);
+        public decimal TotalWasteKg    => Rows.Sum(r => r.FireKg);
+        public int     TotalWorkOrders => Rows.Select(r => r.WorkOrderId).Distinct().Count();
+        public int     TotalLots       => Rows.Select(r => r.PartiNo).Distinct().Count();
+        public int     TotalSerials    => Rows.Select(r => r.SerialNo).Distinct().Count();
+    }
+
+    public class MaterialTraceRow
+    {
+        public string    HammaddeAdi  { get; set; } = "";
+        public string    HammaddeKodu { get; set; } = "";
+        public string    PartiNo      { get; set; } = "";
+        public string    SerialNo     { get; set; } = "";
+        public string    FscTipi      { get; set; } = "";
+        public string    Tedarikci    { get; set; } = "";
+        public DateTime? GelisTarihi  { get; set; }
+        public int       WorkOrderId  { get; set; }
+        public string    WorkOrderNo  { get; set; } = "";
+        public string    MamulAdi     { get; set; } = "";
+        public string    MamulKodu    { get; set; } = "";
+        public string    MakineName   { get; set; } = "";
+        public DateTime  UretimTarihi { get; set; }
+        public decimal   TuketilenKg  { get; set; }
+        public decimal   FireKg       { get; set; }
+        public decimal   UretilenAdet { get; set; }
+        public decimal   FireRate     => TuketilenKg > 0 ? FireKg / TuketilenKg * 100 : 0;
     }
 
     // ── WasteAnalysis View Models ──────────────────────────────────────────────

@@ -261,6 +261,16 @@
                                         <label class="form-label">Sertifika Bitiş Tarihi</label>
                                         <input type="date" class="form-control" name="FscExpiryDate" id="custFscDate">
                                     </div>
+                                    <div class="col-12">
+                                        <!-- bool bind: hidden(false) + checkbox(true) → işaretliyse "true,false" gelir, binder ilk değeri alır -->
+                                        <input type="hidden" name="IsFscActive" value="false">
+                                        <div class="form-check mt-1">
+                                            <input class="form-check-input" type="checkbox" name="IsFscActive" value="true" id="custFscActive" checked>
+                                            <label class="form-check-label" for="custFscActive" style="font-size:13px;">
+                                                FSC Aktif (sertifika geçerli)
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -301,6 +311,7 @@
     function openAddModal() {
         document.getElementById('customerForm').reset();
         document.getElementById('custId').value = 0;
+        document.getElementById('custFscActive').checked = true;   // yeni müşteride varsayılan FSC aktif
         document.getElementById('customerModalTitle').textContent = 'Yeni Müşteri Ekle';
         bootstrap.Modal.getOrCreateInstance(document.getElementById('customerModal')).show();
     }
@@ -319,6 +330,7 @@
                 document.getElementById('custCity').value  = res.data.city  || '';
                 document.getElementById('custAddress').value = res.data.address || '';
                 document.getElementById('custFscCode').value = res.data.fscLicenseCode || '';
+                document.getElementById('custFscActive').checked = !!res.data.isFscActive;
                 if (res.data.fscExpiryDate)
                     document.getElementById('custFscDate').value = res.data.fscExpiryDate.split('T')[0];
                 document.getElementById('customerModalTitle').textContent = 'Müşteri Düzenle';

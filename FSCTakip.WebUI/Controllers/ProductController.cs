@@ -157,5 +157,31 @@ namespace FSCTakip.WebUI.Controllers
             var data = await _context.BagTypes.OrderBy(b => b.Name).Select(b => new { b.Id, b.Name, b.Code, Durum = b.IsActive ? "AKTİF" : "PASİF" }).ToListAsync();
             return ExportToExcel(data, "TorbaTipleri");
         }
+
+        // GET /Product/ExportProductGroups
+        public async Task<IActionResult> ExportProductGroups()
+        {
+            var data = await _context.ProductGroups.OrderBy(g => g.GroupCode).Select(g => new {
+                GrupKodu   = g.GroupCode,
+                GrupAdi    = g.GroupName,
+                AralikBas  = g.RangeStart,
+                AralikBit  = g.RangeEnd,
+                Durum      = g.IsActive ? "AKTİF" : "PASİF"
+            }).ToListAsync();
+            return ExportToExcel(data, "UrunGruplari");
+        }
+
+        // POST /Product/DeleteProductGroup
+        [HttpPost]
+        public async Task<IActionResult> DeleteProductGroup(int id)
+        {
+            var item = await _context.ProductGroups.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            var used = await _context.Products.AnyAsync(p => p.ProductGroupId == id);
+            if (used) return Json(new { success = false, message = "Bu grup ürünlerde kullanılmaktadır." });
+            _context.ProductGroups.Remove(item);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Grup silindi." });
+        }
     }
 }

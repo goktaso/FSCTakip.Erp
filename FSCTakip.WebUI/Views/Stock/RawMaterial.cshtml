@@ -8,7 +8,7 @@
     decimal totalKg     = ViewBag.TotalKg     ?? 0m;
     int totalBobins     = ViewBag.TotalBobins ?? 0;
     int totalLots       = ViewBag.TotalLots   ?? 0;
-    var byFscType       = ViewBag.ByFscType   as dynamic;
+    var byFscType       = ViewBag.ByFscType   as List<FSCTakip.WebUI.Controllers.FscTypeStockSummary>;
 }
 
 <!-- Topbar -->
@@ -129,8 +129,8 @@
                     {
                         foreach (var row in byFscType)
                         {
-                            string name = row.FscType?.ToString() ?? "";
-                            if (name.Contains("100")) { fsc100Kg += (decimal)row.TotalKg; }
+                            string name = row.FscType ?? "";
+                            if (name.Contains("100")) { fsc100Kg += row.TotalKg; }
                         }
                     }
                 }
@@ -149,17 +149,17 @@
         <div class="d-flex gap-2 flex-wrap">
             @foreach (var row in byFscType)
             {
-                decimal pct = totalKg > 0 ? (decimal)row.TotalKg / totalKg * 100 : 0;
-                string badgeColor = ((string)row.FscType).Contains("100") ? "#dcfce7" :
-                                    ((string)row.FscType).Contains("MIX") ? "#dbeafe" :
-                                    ((string)row.FscType).Contains("RECYCLED") ? "#fef3c7" : "#f3f4f6";
-                string textColor  = ((string)row.FscType).Contains("100") ? "#166534" :
-                                    ((string)row.FscType).Contains("MIX") ? "#1d4ed8" :
-                                    ((string)row.FscType).Contains("RECYCLED") ? "#92400e" : "#374151";
+                decimal pct = totalKg > 0 ? row.TotalKg / totalKg * 100 : 0;
+                string badgeColor = row.FscType.Contains("100") ? "#dcfce7" :
+                                    row.FscType.Contains("MIX") ? "#dbeafe" :
+                                    row.FscType.Contains("RECYCLED") ? "#fef3c7" : "#f3f4f6";
+                string textColor  = row.FscType.Contains("100") ? "#166534" :
+                                    row.FscType.Contains("MIX") ? "#1d4ed8" :
+                                    row.FscType.Contains("RECYCLED") ? "#92400e" : "#374151";
                 <div class="d-flex align-items-center gap-2 px-3 py-2 rounded" style="background:@badgeColor;color:@textColor;min-width:180px;">
                     <div>
                         <div class="fw-semibold" style="font-size:13px;">@row.FscType</div>
-                        <div style="font-size:11px;">@(((decimal)row.TotalKg).ToString("N0")) kg · @row.Count bobin</div>
+                        <div style="font-size:11px;">@row.TotalKg.ToString("N0") kg · @row.Count bobin</div>
                     </div>
                     <div class="ms-auto fw-bold" style="font-size:14px;">%@pct.ToString("F1")</div>
                 </div>

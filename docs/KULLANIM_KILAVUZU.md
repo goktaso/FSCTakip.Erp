@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 3.0 · **Güncelleme:** Mayıs 2026  
+> **Versiyon:** 3.1 · **Güncelleme:** Haziran 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -55,7 +55,7 @@
 
 1. Tarayıcınızda sistem adresini açın (ör. `http://sunucu:5000`)
 2. **Kullanıcı Kodu** alanına kullanıcı adınızı girin
-3. **Şifre** alanına şifrenizi girin
+3. **Şifre** alanına şifrenizi girin — alanın sağındaki **👁 göz** simgesine tıklayarak girdiğiniz şifreyi görünür yapıp doğrulayabilir, tekrar tıklayarak gizleyebilirsiniz
 4. **Şirket Veritabanı** açılır listesinden firmanızı seçin
 5. **GİRİŞ YAP** butonuna tıklayın
 
@@ -70,9 +70,9 @@
 │  └───────────────────────────────┘  │
 │                                     │
 │  Şifre                              │
-│  ┌─[🔒]──────────────────────────┐  │
-│  │  ••••••••                     │  │
-│  └───────────────────────────────┘  │
+│  ┌─[🔒]──────────────────────┬[👁]┐ │
+│  │  ••••••••                 │    │ │
+│  └───────────────────────────┴────┘ │
 │                                     │
 │  ┌─────────────────────────────┐    │
 │  │  ▶  GİRİŞ YAP              │    │
@@ -81,6 +81,8 @@
 ```
 
 > **İpucu:** Yanlış şifre girişi yaptığınızda "Kullanıcı adı veya şifre hatalı" uyarısı görürsünüz. Büyük/küçük harf duyarlıdır.
+>
+> **👁 Şifreyi göster:** Şifre alanının sağındaki göz simgesi, yazdığınız şifreyi açık metin olarak gösterip gizlemenizi sağlar — özellikle uzun/karmaşık şifrelerde hatalı giriş riskini azaltır.
 
 ### Çıkış Yapma
 Sağ üst köşedeki kırmızı **⏻ güç** butonuna tıklayarak oturumu sonlandırabilirsiniz.
@@ -96,6 +98,13 @@ Giriş yapıldıktan sonra açılan ana ekranda:
 - **Özet istatistikler:** Toplam lot, hammadde stoku, aktif tedarikçi sayısı
 - **FSC uyarıları:** Sertifikası yaklaşan tedarikçiler için otomatik uyarı bandı
 - **Hızlı erişim linkleri:** En sık kullanılan sayfalar
+
+### Üst Çubuk (Topbar) — Tüm Sayfalarda
+
+Üst çubuktaki şu iki araç **her sayfada** kullanılabilir:
+
+- **🔍 Global Arama:** Üstteki arama kutusuna en az 2 karakter yazdığınızda; müşteri, tedarikçi, ürün ve lot kayıtları arasında anlık arama yapılır. Sonuca tıklayınca ilgili sayfaya gidersiniz.
+- **🔔 Bildirim Çanı:** Sağ üstteki zil simgesine tıklayınca açılan listede; **FSC sertifikası süresi dolan/yaklaşan** tedarikçi-müşteriler ve **düşük stok** (500 kg altı bobin) uyarıları görünür. Acil (süresi geçmiş) uyarılar kırmızı, yaklaşanlar turuncu noktayla işaretlenir; acil uyarı sayısı zilin üzerinde rozet olarak gösterilir.
 
 ---
 
@@ -203,10 +212,11 @@ Listede tedarikçinin yanındaki **✏️ kalem** ikonuna tıklayarak düzenleye
 3. Opsiyonel alanlar:
    - **FSC Lisans No** — müşterinin kendi FSC sertifika numarası
    - **FSC Geçerlilik Tarihi** — chain of custody takibi için
+   - **FSC Aktif** — müşterinin FSC sertifikasının geçerli olup olmadığını belirten kutucuk. FSC bölümündedir; yeni müşteride varsayılan **işaretlidir**. Sertifikası olmayan/geçersiz müşteriler için işareti kaldırın.
    - **Vergi No / Adres** — fatura bilgileri
 4. Sistem `MHS-001`, `MHS-002`... şeklinde otomatik kod atar
 
-> **ℹ️ Not:** FSC sertifikalı müşteriye satış yapıldığında FSC CoC zinciri otomatik takip edilir. Müşterinin sertifikası geçersizse satış sırasında uyarı alırsınız.
+> **ℹ️ Not:** FSC sertifikalı müşteriye satış yapıldığında FSC CoC zinciri otomatik takip edilir. Müşterinin sertifikası geçersizse (veya **FSC Aktif** kutucuğu işaretli değilse) satış sırasında uyarı alırsınız.
 
 ---
 

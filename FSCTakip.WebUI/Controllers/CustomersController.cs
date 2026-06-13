@@ -56,6 +56,40 @@ namespace FSCTakip.WebUI.Controllers
             return Json(new { success = true, id = c.Id, text = c.Name });
         }
 
+        // GET /Customers/ExportCustomers
+        public async Task<IActionResult> ExportCustomers()
+        {
+            var rows = await _context.Customers.OrderBy(c => c.Name).Select(c => new {
+                Kod           = c.CustomerCode,
+                HariciKod     = c.ExternalCode ?? "",
+                Ad            = c.Name,
+                Telefon       = c.Phone ?? "",
+                Email         = c.Email ?? "",
+                Adres         = c.Address ?? "",
+                Sehir         = c.City ?? "",
+                VergiDairesi  = c.TaxOffice ?? "",
+                VergiNo       = c.TaxNumber ?? "",
+                FscLisansKodu = c.FscLicenseCode ?? "",
+                FscBitis      = c.FscExpiryDate != null ? c.FscExpiryDate.Value.ToString("dd.MM.yyyy") : "",
+                FscAktif      = c.IsFscActive ? "Evet" : "Hayır",
+                Durum         = c.IsActive ? "Aktif" : "Pasif"
+            }).ToListAsync();
+
+            return ExportToExcel(rows, "Musteriler");
+        }
+
+        // POST /Customers/ToggleStatus
+        [HttpPost]
+        public async Task<IActionResult> ToggleStatus(int id)
+        {
+            var item = await _context.Customers.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            item.IsActive    = !item.IsActive;
+            item.UpdatedDate = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, isActive = item.IsActive });
+        }
+
         // Müşteri Listesi - Verilerin gelmesini garanti eder
         public IActionResult Index()
         {
@@ -82,19 +116,36 @@ namespace FSCTakip.WebUI.Controllers
             if (string.IsNullOrWhiteSpace(model.Name))
                 return Json(new { success = false, message = "Müşteri adı zorunludur." });
 
-            // Email formatı kontrolü
+            // Düzenlemede mevcut e-posta/telefonu al — değişmemiş alanları yeniden doğrulama
+            // (eski/geçersiz formatlı kayıtların başka alanları güncellenebilsin diye).
+            string? storedEmail = null, storedPhone = null;
+            if (model.Id != 0)
+            {
+                var stored = await _context.Customers.AsNoTracking()
+                    .Where(c => c.Id == model.Id)
+                    .Select(c => new { c.Email, c.Phone })
+                    .FirstOrDefaultAsync();
+                storedEmail = stored?.Email;
+                storedPhone = stored?.Phone;
+            }
+
+            // Email formatı kontrolü — yalnızca yeni kayıt veya e-posta değiştiyse
             if (!string.IsNullOrEmpty(model.Email))
             {
                 model.Email = model.Email.Replace("İ", "i").Replace("I", "ı").Trim().ToLowerInvariant();
-                if (!System.Text.RegularExpressions.Regex.IsMatch(model.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                var emailChanged = storedEmail == null
+                    || !string.Equals(storedEmail.Trim(), model.Email, StringComparison.OrdinalIgnoreCase);
+                if (emailChanged && !System.Text.RegularExpressions.Regex.IsMatch(model.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
                     return Json(new { success = false, message = "Geçerli bir e-posta adresi giriniz." });
             }
 
-            // Telefon temizleme — sadece rakamlar
+            // Telefon temizleme — sadece rakamlar; uzunluk kontrolü yalnızca telefon değiştiyse
             if (!string.IsNullOrEmpty(model.Phone))
             {
                 model.Phone = new string(model.Phone.Where(char.IsDigit).ToArray());
-                if (model.Phone.Length > 0 && (model.Phone.Length < 10 || model.Phone.Length > 15))
+                var storedPhoneDigits = storedPhone == null ? null : new string(storedPhone.Where(char.IsDigit).ToArray());
+                var phoneChanged = storedPhoneDigits == null || storedPhoneDigits != model.Phone;
+                if (phoneChanged && model.Phone.Length > 0 && (model.Phone.Length < 10 || model.Phone.Length > 15))
                     return Json(new { success = false, message = "Telefon numarası 10-15 rakam arasında olmalıdır." });
             }
 

@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Birim Dönüşüm Parametreleri";
     var productGroups = ViewBag.ProductGroups as List<FSCTakip.Core.Entities.ProductGroup> ?? new();
-    var products      = ViewBag.Products as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var products      = ViewBag.Products as List<FSCTakip.Core.Entities.Product> ?? new();
     int pendingCount  = ViewBag.PendingCount ?? 0;
 }
 
@@ -138,6 +138,10 @@
                         <input id="convFactor" type="number" step="0.0000001" min="0.0000001" class="form-control"
                                placeholder="örn: 0.0045000">
                         <div class="form-text">KG = Girilen Miktar × Çarpan &nbsp;|&nbsp; Örnek: 1 MT BURGU SAP = 0.0045 KG</div>
+                        <div id="factorWarning" class="alert alert-warning py-1 px-2 mt-1 small" style="display:none;">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>Dikkat:</strong> 1'den büyük çarpan — 1 MT = <span id="warnKg"></span> KG anlamına gelir. BURGU SAP gibi ince malzemeler için genellikle 0.0001–0.01 arası bir değer beklenir.
+                        </div>
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-semibold">Açıklama</label>
@@ -211,11 +215,24 @@ function updatePreview() {
     var f = parseFloat(document.getElementById('convFactor').value);
     var u = document.getElementById('convFrom').value.trim().toUpperCase() || '?';
     var box = document.getElementById('convPreview');
+    var warn = document.getElementById('factorWarning');
+    var warnKg = document.getElementById('warnKg');
     if (f > 0) {
         box.style.display = '';
-        box.innerHTML = `<strong>Örnek:</strong> 1.000 <strong>${u}</strong> × ${f.toFixed(7)} = <strong>${(1000 * f).toFixed(4)} KG</strong>`;
+        var oneUnit = (1 * f).toFixed(7).replace(/\.?0+$/, '') || '0';
+        var bigUnit = (1000 * f).toFixed(4);
+        box.innerHTML = `<strong>Örnek:</strong> 1 <strong>${u}</strong> × ${f.toFixed(7)} = <strong>${oneUnit} KG</strong>`
+                      + `&nbsp;&nbsp;|&nbsp;&nbsp; 1.000 <strong>${u}</strong> = <strong>${bigUnit} KG</strong>`;
+        // Factor > 1 ise kullaniciya uyari ver (BURGU SAP gibi malzemeler icin anormal)
+        if (f > 1 && warn && warnKg) {
+            warnKg.textContent = f.toFixed(4);
+            warn.style.display = '';
+        } else if (warn) {
+            warn.style.display = 'none';
+        }
     } else {
         box.style.display = 'none';
+        if (warn) warn.style.display = 'none';
     }
 }
 

@@ -26,6 +26,12 @@
     <a href="/Production/ExportIndex" class="topbar-btn btn-excel">
         <i class="fas fa-file-excel"></i> Excel
     </a>
+    @if (User.IsInRole("Admin") || Context.Session.GetString("UserRole") == "Admin")
+    {
+        <button class="topbar-btn" style="background:#7c3aed;color:#fff;" onclick="recalcQty()" title="Mevcut hatalı üretim adetlerini yeniden hesapla">
+            <i class="fas fa-sync-alt"></i> Üretim Adeti Düzelt
+        </button>
+    }
 }
 
 <!-- Stat Kartları -->
@@ -273,11 +279,20 @@
                 <div class="row g-3">
                     <div class="col-md-7">
                         <label class="form-label fw-semibold">Üretilecek Ürün <span class="text-danger">*</span></label>
-                        <select id="woProductId" class="form-select">
-                            <option value="">— Seçiniz —</option>
+                        <input type="text" id="woProductSearch" class="form-control mb-2"
+                               placeholder="Kod / Dış Kod / Ürün adına göre ara...">
+                        <select id="woProductId" class="form-select" size="8" style="height:auto;">
+                            <option value="">— Seçiniz (stok hareketine işlenir) —</option>
                             @foreach (var p in products)
                             {
-                                <option value="@p.Id">@p.ProductCode — @p.ProductName</option>
+                                var productCode = (p.ProductCode ?? "").Trim();
+                                var externalCode = (p.ExternalCode ?? "").Trim();
+                                var productName = (p.ProductName ?? "").Trim();
+                                var externalCodeText = string.IsNullOrWhiteSpace(externalCode) ? "—" : externalCode;
+                                var searchText = $"{productCode} {externalCode} {productName}".ToLowerInvariant();
+                                <option value="@p.Id" data-search="@searchText">
+                                    @productCode | @externalCodeText | @productName
+                                </option>
                             }
                         </select>
                     </div>
@@ -335,6 +350,7 @@ function openNewWorkOrder() {
     document.getElementById('woNo').value        = '';
     document.getElementById('woDate').value      = new Date().toISOString().split('T')[0];
     document.getElementById('woProductId').value = '';
+    document.getElementById('woProductSearch').value = '';
     document.getElementById('woMachineId').value = '';
     document.getElementById('woQty').value       = '';
     document.getElementById('woNotes').value            = '';
@@ -357,6 +373,9 @@ function editWorkOrder(id) {
             document.getElementById('woDate').value      = d.plannedDate;
             document.getElementById('woProductId').value = d.productId;
             document.getElementById('woMachineId').value = d.machineId;
+            if (typeof setWorkOrderProductSearchFromSelection === 'function') {
+                setWorkOrderProductSearchFromSelection();
+            }
             document.getElementById('woQty').value       = d.plannedQuantity;
             document.getElementById('woStatus').value    = d.status;
             document.getElementById('woNotes').value           = d.notes || '';
@@ -452,6 +471,87 @@ function deleteWorkOrder(id, no) {
         fetch('/Production/DeleteWorkOrder', { method: 'POST', body: fd })
             .then(r => r.json()).then(res => {
                 if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1200); }
+                else showToast(res.message, 'error');
+            });
+    });
+}
+
+/* ─── WO ÜRÜN ARAMA + LİSTE FİLTRELEME (TEK ALAN) ───────────── */
+function initWorkOrderProductSelectSearch() {
+    const searchInput = document.getElementById('woProductSearch');
+    const productSelect = document.getElementById('woProductId');
+    if (!searchInput || !productSelect) return;
+
+    const originalOptions = Array.from(productSelect.options).map(o => ({
+        value: o.value,
+        text: o.textContent || '',
+        search: o.dataset.search || ''
+    }));
+
+    function renderOptions(term, keepValue) {
+        const q = (term || '').trim().toLowerCase();
+        const selectedVal = keepValue ?? productSelect.value;
+
+        productSelect.innerHTML = '';
+        originalOptions.forEach(item => {
+            if (!q || !item.value || item.search.includes(q)) {
+                const opt = document.createElement('option');
+                opt.value = item.value;
+                opt.textContent = item.text;
+                if (item.search) opt.dataset.search = item.search;
+                productSelect.appendChild(opt);
+            }
+        });
+
+        if (selectedVal && Array.from(productSelect.options).some(o => o.value === selectedVal)) {
+            productSelect.value = selectedVal;
+        }
+    }
+
+    window.setWorkOrderProductSearchFromSelection = function () {
+        const selected = Array.from(productSelect.options).find(o => o.value === productSelect.value);
+        if (!selected || !selected.value) return;
+        const selectedId = selected.value;
+        const selectedText = selected.textContent || '';
+        const selectedSearch = selected.dataset.search || '';
+
+        productSelect.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.value = selectedId;
+        opt.textContent = selectedText;
+        opt.dataset.search = selectedSearch;
+        productSelect.appendChild(opt);
+        productSelect.value = selectedId;
+    };
+
+    searchInput.addEventListener('input', function () {
+        renderOptions(this.value, '');
+    });
+
+    productSelect.addEventListener('change', function () {
+        if (!this.value) return;
+        window.setWorkOrderProductSearchFromSelection();
+    });
+
+    renderOptions('', '');
+}
+
+initWorkOrderProductSelectSearch();
+
+function recalcQty() {
+    Swal.fire({
+        title: 'Üretim Adeti Düzelt',
+        text: 'Tüm iş emirlerindeki hatalı üretim adetleri yeniden hesaplanacak. Devam edilsin mi?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Düzelt',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#7c3aed'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        fetch('/Production/RecalcAllActualQty', { method: 'POST' })
+            .then(r => r.json()).then(res => {
+                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1500); }
                 else showToast(res.message, 'error');
             });
     });

@@ -18,18 +18,35 @@ namespace FSCTakip.WebUI.Controllers
 
         // GET /AuditLog
         public async Task<IActionResult> Index(
-            string? table, string? action, string? user,
+            string? table, string? op, string? user,
             DateTime? dateFrom, DateTime? dateTo,
             int page = 1, int pageSize = 50)
         {
             var guard = AdminOnly(); if (guard != null) return guard;
 
+            // "action" ASP.NET Core'un rezerve route parametresi olduğu için model binding
+            // çakışabilir — query string'den doğrudan oku, op parametresine fallback yap
+            if (string.IsNullOrWhiteSpace(op))
+            {
+                var actionQs = HttpContext.Request.Query["action"].ToString();
+                if (!string.IsNullOrWhiteSpace(actionQs))
+                    op = actionQs;
+            }
+
+            // Varsayılan tarih aralığı: filtre yoksa son 30 gün
+            if (!dateFrom.HasValue && !dateTo.HasValue && string.IsNullOrWhiteSpace(table) &&
+                string.IsNullOrWhiteSpace(op) && string.IsNullOrWhiteSpace(user))
+            {
+                dateFrom = DateTime.Today.AddDays(-30);
+                dateTo   = DateTime.Today;
+            }
+
             var query = _context.AuditLogs.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(table))
                 query = query.Where(a => a.TableName.Contains(table));
-            if (!string.IsNullOrWhiteSpace(action))
-                query = query.Where(a => a.Action == action);
+            if (!string.IsNullOrWhiteSpace(op))
+                query = query.Where(a => a.Action == op);
             if (!string.IsNullOrWhiteSpace(user))
                 query = query.Where(a => a.ChangedBy != null && a.ChangedBy.Contains(user));
             if (dateFrom.HasValue)
@@ -58,7 +75,7 @@ namespace FSCTakip.WebUI.Controllers
 
             // Filtre değerleri (sayfada göstermek için)
             ViewBag.FilterTable    = table;
-            ViewBag.FilterAction   = action;
+            ViewBag.FilterAction   = op;
             ViewBag.FilterUser     = user;
             ViewBag.FilterDateFrom = dateFrom?.ToString("yyyy-MM-dd");
             ViewBag.FilterDateTo   = dateTo?.ToString("yyyy-MM-dd");

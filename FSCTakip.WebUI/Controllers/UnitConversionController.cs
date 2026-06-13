@@ -33,7 +33,6 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.Products = await _context.Products
                 .Where(p => p.IsActive)
                 .OrderBy(p => p.ProductName)
-                .Select(p => new { p.Id, p.ProductName, p.ProductCode, p.Unit })
                 .ToListAsync();
 
             // Özet: kaç seri dönüştürülmemiş durumda

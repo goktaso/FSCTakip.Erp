@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -261,17 +262,57 @@ namespace FSCTakip.WebUI.Controllers
         {
             try
             {
+                // Ondalık güvenli parse (TR/EN uyumlu)
+                var rawQty = (Request.Form["StandardQuantity"].ToString() ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(rawQty))
+                    return Json(new { success = false, message = "Standart miktar zorunludur." });
+
+                decimal parsedQty;
+                var tr = new CultureInfo("tr-TR");
+                var en = CultureInfo.InvariantCulture;
+
+                // 1) Doğrudan parse dene (tr / invariant)
+                if (!decimal.TryParse(rawQty, NumberStyles.Number, tr, out parsedQty) &&
+                    !decimal.TryParse(rawQty, NumberStyles.Number, en, out parsedQty))
+                {
+                    // 2) Fallback normalize: son ayırıcıyı ondalık kabul et
+                    var s = rawQty.Replace(" ", "");
+                    var lastComma = s.LastIndexOf(',');
+                    var lastDot = s.LastIndexOf('.');
+                    var sepIndex = Math.Max(lastComma, lastDot);
+
+                    if (sepIndex >= 0)
+                    {
+                        var intPart = s[..sepIndex].Replace(".", "").Replace(",", "");
+                        var fracPart = s[(sepIndex + 1)..].Replace(".", "").Replace(",", "");
+                        s = $"{intPart}.{fracPart}";
+                    }
+                    else
+                    {
+                        s = s.Replace(".", "").Replace(",", "");
+                    }
+
+                    if (!decimal.TryParse(s, NumberStyles.Number, en, out parsedQty))
+                        return Json(new { success = false, message = "Standart miktar formatı geçersiz." });
+                }
+
+                if (parsedQty <= 0)
+                    return Json(new { success = false, message = "Standart miktar sıfırdan büyük olmalıdır." });
+
+                // Model binding sapmalarını engelle
+                model.StandardQuantity = parsedQty;
+
                 if (model.Id == 0)
                 {
                     var exists = await _context.ProductRecipes.AnyAsync(r =>
                         r.ParentProductId == model.ParentProductId &&
-                        r.ChildProductId  == model.ChildProductId);
+                        r.ChildProductId == model.ChildProductId);
                     if (exists)
                         return Json(new { success = false, message = "Bu bileşen zaten reçetede mevcut." });
 
-                    model.IsActive    = true;
+                    model.IsActive = true;
                     model.CreatedDate = DateTime.Now;
-                    model.CreatedBy   = User.Identity?.Name ?? "System";
+                    model.CreatedBy = User.Identity?.Name ?? "System";
                     _context.ProductRecipes.Add(model);
                 }
                 else
@@ -279,11 +320,11 @@ namespace FSCTakip.WebUI.Controllers
                     var existing = await _context.ProductRecipes.FindAsync(model.Id);
                     if (existing == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
 
-                    existing.ChildProductId    = model.ChildProductId;
-                    existing.StandardQuantity  = model.StandardQuantity;
-                    existing.Unit              = model.Unit;
-                    existing.UpdatedDate       = DateTime.Now;
-                    existing.UpdatedBy         = User.Identity?.Name ?? "System";
+                    existing.ChildProductId = model.ChildProductId;
+                    existing.StandardQuantity = parsedQty;
+                    existing.Unit = model.Unit;
+                    existing.UpdatedDate = DateTime.Now;
+                    existing.UpdatedBy = User.Identity?.Name ?? "System";
                 }
 
                 await _context.SaveChangesAsync();

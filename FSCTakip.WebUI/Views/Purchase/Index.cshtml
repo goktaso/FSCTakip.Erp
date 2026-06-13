@@ -385,11 +385,20 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-semibold">Hammadde Ürünü</label>
-                        <select id="productId" class="form-select">
+                        <input type="text" id="productSearch" class="form-control mb-2"
+                               placeholder="Ürün kodu / dış kod / ürün adı ile ara (örn: 30444)">
+                        <select id="productId" class="form-select" size="10" style="font-family:inherit;">
                             <option value="">— Ürün seçiniz (stok hareketine işlenir) —</option>
                             @foreach (var p in products)
                             {
-                                <option value="@p.Id">@p.ProductCode — @p.ProductName</option>
+                                var productCode = (p.ProductCode ?? "").Trim();
+                                var externalCode = (p.ExternalCode ?? "").Trim();
+                                var productName = (p.ProductName ?? "").Trim();
+                                var externalCodeText = string.IsNullOrWhiteSpace(externalCode) ? "—" : externalCode;
+                                var searchText = $"{productCode} {externalCode} {productName}".ToLowerInvariant();
+                                <option value="@p.Id" data-search="@searchText">
+                                    @productCode | @externalCodeText | @productName
+                                </option>
                             }
                         </select>
                     </div>
@@ -412,7 +421,7 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small">Tutar</label>
-                            <input type="number" id="invoiceAmount" class="form-control form-control-sm" step="0.01" placeholder="0.00">
+                            <input type="text" id="invoiceAmount" class="form-control form-control-sm" inputmode="decimal" placeholder="0,00">
                         </div>
                         <div class="col-md-1">
                             <label class="form-label small">Döviz</label>
@@ -426,11 +435,27 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small"><i class="fas fa-file-pdf text-danger me-1"></i>İrsaliye PDF</label>
-                            <input type="file" id="dispatchFile" class="form-control form-control-sm" accept=".pdf">
+                            <div class="pdf-dropzone-wrap">
+                                <input type="file" id="dispatchFile" class="pdf-file-input" accept=".pdf">
+                                <label for="dispatchFile" class="pdf-dropzone" data-input-id="dispatchFile">
+                                    <i class="fas fa-file-pdf pdf-icon"></i>
+                                    <div class="pdf-dropzone-title">PDF dosyasını sürükleyip bırakın</div>
+                                    <div class="pdf-dropzone-subtitle">veya seçmek için tıklayın</div>
+                                </label>
+                                <div id="dispatchFileName" class="pdf-file-name">Dosya seçilmedi</div>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small"><i class="fas fa-file-invoice text-warning me-1"></i>Fatura PDF</label>
-                            <input type="file" id="invoiceFile" class="form-control form-control-sm" accept=".pdf">
+                            <div class="pdf-dropzone-wrap">
+                                <input type="file" id="invoiceFile" class="pdf-file-input" accept=".pdf">
+                                <label for="invoiceFile" class="pdf-dropzone" data-input-id="invoiceFile">
+                                    <i class="fas fa-file-pdf pdf-icon"></i>
+                                    <div class="pdf-dropzone-title">PDF dosyasını sürükleyip bırakın</div>
+                                    <div class="pdf-dropzone-subtitle">veya seçmek için tıklayın</div>
+                                </label>
+                                <div id="invoiceFileName" class="pdf-file-name">Dosya seçilmedi</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -531,6 +556,63 @@
     </div>
 </div>
 
+<style>
+#lotModal .pdf-dropzone-wrap {
+    position: relative;
+}
+#lotModal .pdf-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+#lotModal .pdf-dropzone {
+    width: 100%;
+    min-height: 150px;
+    border: 2px dashed #1e3d14;
+    border-radius: 12px;
+    background: #f2f7f1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+    padding: 16px;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+#lotModal .pdf-dropzone:hover {
+    background: #ebf4e9;
+    border-color: #2d5a21;
+}
+#lotModal .pdf-dropzone.is-dragover {
+    background: #e6f2e2;
+    border-color: #16310f;
+    transform: translateY(-1px);
+}
+#lotModal .pdf-icon {
+    font-size: 34px;
+    color: #c62828;
+}
+#lotModal .pdf-dropzone-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1f2937;
+}
+#lotModal .pdf-dropzone-subtitle {
+    font-size: 12px;
+    color: #6b7280;
+}
+#lotModal .pdf-file-name {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #374151;
+    word-break: break-word;
+}
+</style>
+
 @section Scripts {
 <script>
 /* ─── GLOBAL STATE ───────────────────────────────────────────── */
@@ -576,6 +658,8 @@ function resetLotForm() {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
+    setPdfFileName('dispatchFile');
+    setPdfFileName('invoiceFile');
 }
 
 /* ─── DÜZENLEME MODU ─────────────────────────────────────────── */
@@ -682,6 +766,241 @@ function updateDiffTotal() {
         : '— kg';
 }
 
+/* ─── PDF DROPZONE YARDIMCILARI ─────────────────────────────── */
+function setPdfFileName(inputId) {
+    const input = document.getElementById(inputId);
+    const nameEl = document.getElementById(inputId + 'Name');
+    if (!input || !nameEl) return;
+    const fileName = input.files && input.files.length ? input.files[0].name : 'Dosya seçilmedi';
+    nameEl.textContent = fileName;
+}
+
+function initPdfDropzones() {
+    const map = ['dispatchFile', 'invoiceFile'];
+
+    map.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        const zone = document.querySelector(`.pdf-dropzone[data-input-id="${inputId}"]`);
+        if (!input || !zone) return;
+
+        input.addEventListener('change', () => setPdfFileName(inputId));
+
+        ['dragenter', 'dragover'].forEach(evt => {
+            zone.addEventListener(evt, e => {
+                e.preventDefault();
+                e.stopPropagation();
+                zone.classList.add('is-dragover');
+            });
+        });
+
+        ['dragleave', 'dragend', 'drop'].forEach(evt => {
+            zone.addEventListener(evt, e => {
+                e.preventDefault();
+                e.stopPropagation();
+                zone.classList.remove('is-dragover');
+            });
+        });
+
+        zone.addEventListener('drop', e => {
+            const files = e.dataTransfer?.files;
+            if (!files || !files.length) return;
+            input.files = files;
+            setPdfFileName(inputId);
+        });
+
+        setPdfFileName(inputId);
+    });
+}
+
+initPdfDropzones();
+
+/* ─── ÜRÜN ARAMA + LİSTE FİLTRELEME (TEK ALAN) ─────────────── */
+function initProductSelectSearch() {
+    const searchInput = document.getElementById('productSearch');
+    const productSelect = document.getElementById('productId');
+    if (!searchInput || !productSelect) return;
+
+    const allOptions = Array.from(productSelect.options).map(o => ({
+        value: o.value,
+        text: o.textContent,
+        search: (o.dataset.search || '').toLowerCase()
+    }));
+
+    function renderOptions(term) {
+        const q = (term || '').trim().toLowerCase();
+        const current = productSelect.value;
+
+        productSelect.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '— Ürün seçiniz (stok hareketine işlenir) —';
+        productSelect.appendChild(placeholder);
+
+        allOptions.forEach(item => {
+            if (!item.value) return;
+            if (q && !item.search.includes(q)) return;
+
+            const opt = document.createElement('option');
+            opt.value = item.value;
+            opt.textContent = item.text;
+            opt.dataset.search = item.search;
+            productSelect.appendChild(opt);
+        });
+
+        if (current && Array.from(productSelect.options).some(o => o.value === current)) {
+            productSelect.value = current;
+        } else if (productSelect.options.length > 1) {
+            productSelect.selectedIndex = 1;
+        }
+    }
+
+    searchInput.addEventListener('input', function () {
+        renderOptions(this.value);
+    });
+
+    productSelect.addEventListener('change', function () {
+        if (!this.value) return;
+
+        const selected = Array.from(this.options).find(o => o.value === this.value);
+        if (!selected) return;
+
+        // Seçim yapıldıktan sonra liste tek satıra düşsün ama arama kutusu aynen kalsın
+        const selectedId = selected.value;
+        const selectedText = selected.textContent || '';
+        const selectedSearch = selected.dataset.search || '';
+
+        productSelect.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.value = selectedId;
+        opt.textContent = selectedText;
+        opt.dataset.search = selectedSearch;
+        productSelect.appendChild(opt);
+        productSelect.value = selectedId;
+    });
+
+    renderOptions('');
+}
+
+initProductSelectSearch();
+
+/* ─── FATURA TUTARI (TR/EN ONDALIK DÜZENLEME) ───────────────── */
+function normalizeAmountInput(raw) {
+    if (raw == null) return '';
+    let v = String(raw).trim();
+    if (!v) return '';
+
+    // Sadece rakam, nokta ve virgül bırak
+    v = v.replace(/[^\d.,]/g, '');
+    if (!v) return '';
+
+    const hasComma = v.includes(',');
+    const hasDot = v.includes('.');
+
+    if (hasComma && hasDot) {
+        // Son görüleni ondalık kabul et
+        const decIndex = Math.max(v.lastIndexOf(','), v.lastIndexOf('.'));
+        let intPart = v.slice(0, decIndex).replace(/[.,]/g, '');
+        let decPart = v.slice(decIndex + 1).replace(/[.,]/g, '');
+        if (!intPart) intPart = '0';
+        return decPart ? `${intPart}.${decPart}` : intPart;
+    }
+
+    if (hasComma) {
+        const parts = v.split(',');
+        const intPart = parts[0].replace(/\./g, '') || '0';
+        const decPart = parts.slice(1).join('');
+        return decPart ? `${intPart}.${decPart}` : intPart;
+    }
+
+    // Sadece nokta varsa: birden fazla ise sonuncuyu ondalık kabul et
+    const dotParts = v.split('.');
+    if (dotParts.length > 2) {
+        const decPart = dotParts.pop();
+        const intPart = dotParts.join('') || '0';
+        return decPart ? `${intPart}.${decPart}` : intPart;
+    }
+
+    return v;
+}
+
+const invoiceAmountInput = document.getElementById('invoiceAmount');
+if (invoiceAmountInput) {
+    invoiceAmountInput.addEventListener('input', function () {
+        // Yazarken sadece geçersiz karakterleri temizle
+        this.value = this.value.replace(/[^\d.,]/g, '');
+    });
+
+    invoiceAmountInput.addEventListener('blur', function () {
+        // Kayıt öncesi normalize et (3886,80 -> 3886.80)
+        this.value = normalizeAmountInput(this.value);
+    });
+}
+
+/* ─── PURCHASE SAYFASI: ÜST GLOBAL ARAMAYI TABLOYA BAĞLA ───── */
+(function initPurchaseTopbarGlobalSearch() {
+    const searchInput = document.getElementById('globalSearch');
+    const searchDropdown = document.getElementById('searchDropdown');
+    const table = document.querySelector('.data-table');
+    if (!searchInput || !table) return;
+
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    // Purchase sayfasında endpoint dropdown'unu kapat; lokal filtre kullanılacak
+    if (searchDropdown) searchDropdown.classList.remove('show');
+
+    function normalize(v) {
+        return (v || '').toString().toLowerCase().trim();
+    }
+
+    function rowText(row) {
+        const tds = row.querySelectorAll('td');
+        // Beklenen kolonlar:
+        // 0 Parti, 1 Tedarikçi, 2 Stok Kodu, 3 Stok Adı, 5 İrsaliye/Fatura
+        const parts = [
+            tds[0]?.innerText || '',
+            tds[1]?.innerText || '',
+            tds[2]?.innerText || '',
+            tds[3]?.innerText || '',
+            tds[5]?.innerText || ''
+        ];
+        return normalize(parts.join(' '));
+    }
+
+    function applyFilter() {
+        const q = normalize(searchInput.value);
+        rows.forEach(r => {
+            if (!q) {
+                r.style.display = '';
+                return;
+            }
+            r.style.display = rowText(r).includes(q) ? '' : 'none';
+        });
+    }
+
+    // Capture ile dinleyip _Layout içindeki global search handler'dan önce davran
+    searchInput.addEventListener('input', function (e) {
+        if (searchDropdown) searchDropdown.classList.remove('show');
+        applyFilter();
+        e.stopPropagation();
+    }, true);
+
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            this.value = '';
+            applyFilter();
+            if (searchDropdown) searchDropdown.classList.remove('show');
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+
+    // İlk yüklemede input doluysa uygula
+    applyFilter();
+})();
+
 /* ─── TEDARİKÇİ FSC UYARI ───────────────────────────────────── */
 document.getElementById('supplierId').addEventListener('change', function () {
     const fscOk = this.options[this.selectedIndex]?.dataset.fsc === 'true';
@@ -747,7 +1066,7 @@ async function saveLot() {
     fd.append('TruckPlate',  document.getElementById('truckPlate').value);
     fd.append('DispatchNo',  document.getElementById('dispatchNo').value);
     fd.append('InvoiceNo',   document.getElementById('invoiceNo').value);
-    const amt = document.getElementById('invoiceAmount').value;
+    const amt = normalizeAmountInput(document.getElementById('invoiceAmount').value);
     if (amt) fd.append('InvoiceAmount', amt);
     fd.append('Currency', document.getElementById('currency').value);
     fd.append('Notes',    document.getElementById('lotNotes').value);

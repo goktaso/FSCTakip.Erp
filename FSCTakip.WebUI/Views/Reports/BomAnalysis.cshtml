@@ -1,9 +1,10 @@
 @model BomAnalysisModel
 @using FSCTakip.Core.Entities
 @using FSCTakip.WebUI.Controllers
+@using Microsoft.AspNetCore.Mvc.Rendering
 @{
     ViewData["Title"] = "BOM Bileşen Analizi";
-    var allWorkOrders = ViewBag.AllWorkOrders as dynamic ?? new List<dynamic>();
+    var allWorkOrders = ViewBag.AllWorkOrders as List<SelectListItem> ?? new List<SelectListItem>();
 }
 
 @section TopbarActions {
@@ -35,7 +36,7 @@
                 {
                     foreach (var wo in allWorkOrders)
                     {
-                        <option value="@wo.Id">@wo.WorkOrderNo</option>
+                        <option value="@wo.Value">@wo.Text</option>
                     }
                 }
             </select>

@@ -120,9 +120,16 @@ namespace FSCTakip.WebUI.Controllers
 
                 wo.Status        = WorkOrderStatus.Tamamlandi;
                 wo.CompletedDate = DateTime.Now;
-                wo.ActualQuantity = await _context.ProductionDetails
+                // Üretilen adet: aynı gün içindeki tüm malzeme satırları aynı adeti taşır.
+                // Her tarih için Max alıp günleri topla → çok günlü üretimi de doğru hesaplar.
+                var prodDetails = await _context.ProductionDetails
                     .Where(d => d.WorkOrderId == id)
-                    .SumAsync(d => d.ProducedQuantity);
+                    .ToListAsync();
+                wo.ActualQuantity = prodDetails.Any()
+                    ? prodDetails
+                        .GroupBy(d => d.ProductionDate.Date)
+                        .Sum(g => g.Max(d => d.ProducedQuantity))
+                    : 0;
 
                 await _context.SaveChangesAsync();
                 return Json(new { success = true, message = "İş emri tamamlandı olarak işaretlendi." });
@@ -131,6 +138,39 @@ namespace FSCTakip.WebUI.Controllers
             {
                 return Json(new { success = false, message = ex.Message });
             }
+        }
+
+        // POST /Production/RecalcAllActualQty — Mevcut yanlış ActualQuantity değerlerini düzelt (admin)
+        [HttpPost]
+        public async Task<IActionResult> RecalcAllActualQty()
+        {
+            if (!IsAdminUser)
+                return Json(new { success = false, message = "Bu işlem yalnızca admin tarafından yapılabilir." });
+
+            var workOrders = await _context.WorkOrders
+                .Where(w => w.Status != WorkOrderStatus.Taslak)
+                .ToListAsync();
+
+            var allDetails = await _context.ProductionDetails.ToListAsync();
+            var detailsByWo = allDetails.GroupBy(d => d.WorkOrderId)
+                              .ToDictionary(g => g.Key, g => g.ToList());
+
+            int updated = 0;
+            foreach (var wo in workOrders)
+            {
+                if (!detailsByWo.TryGetValue(wo.Id, out var details) || !details.Any()) continue;
+                var correct = details
+                    .GroupBy(d => d.ProductionDate.Date)
+                    .Sum(g => g.Max(d => d.ProducedQuantity));
+                if (wo.ActualQuantity != correct)
+                {
+                    wo.ActualQuantity = correct;
+                    updated++;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = $"{updated} iş emrinin üretim adedi güncellendi." });
         }
 
         // GET /Production/Detail/{id}
@@ -324,7 +364,9 @@ namespace FSCTakip.WebUI.Controllers
 
                         recipe.ActualConsumedQuantity += model.ConsumedWeight - prevConsumed;
                         recipe.WasteQuantity          += model.WasteWeight    - prevWaste;
-                        recipe.ProducedQuantity       += model.ProducedQuantity - prevQty;
+                        // ProducedQuantity biriktirme YAPMA: aynı iş emrindeki her malzeme satırı
+                        // aynı üretim adedini taşır. Reçete bileşeni için en son (max) değeri al.
+                        recipe.ProducedQuantity        = Math.Max(recipe.ProducedQuantity, model.ProducedQuantity);
                         recipe.FscSerialId             = model.FscSerialId; // son kullanılan bobin
                     }
                 }
@@ -362,7 +404,13 @@ namespace FSCTakip.WebUI.Controllers
                     {
                         recipe.ActualConsumedQuantity = Math.Max(0, recipe.ActualConsumedQuantity - detail.ConsumedWeight);
                         recipe.WasteQuantity          = Math.Max(0, recipe.WasteQuantity          - detail.WasteWeight);
-                        recipe.ProducedQuantity       = Math.Max(0, recipe.ProducedQuantity       - detail.ProducedQuantity);
+                        // ProducedQuantity: silme sonrası kalan detayların max'ını hesapla
+                        var remainingDetails = await _context.ProductionDetails
+                            .Where(d => d.WorkOrderRecipeId == detail.WorkOrderRecipeId && d.Id != detail.Id)
+                            .ToListAsync();
+                        recipe.ProducedQuantity = remainingDetails.Any()
+                            ? remainingDetails.Max(d => d.ProducedQuantity)
+                            : 0;
                     }
                 }
 

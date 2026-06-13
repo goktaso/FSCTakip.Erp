@@ -43,7 +43,7 @@ namespace FSCTakip.WebUI.Controllers
             var machineLoad = workOrders
                 .Where(w => w.MachineId > 0 && w.Machine != null)
                 .GroupBy(w => w.Machine!.Name)
-                .Select(g => new
+                .Select(g => new MachineLoadRow
                 {
                     Machine = g.Key,
                     Count   = g.Count(),
@@ -172,5 +172,14 @@ namespace FSCTakip.WebUI.Controllers
                 notes          = wo.Notes
             });
         }
+    }
+
+    public class MachineLoadRow
+    {
+        public string Machine { get; set; } = "";
+        public int Count   { get; set; }
+        public int Planned { get; set; }
+        public int Active  { get; set; }
+        public int Done    { get; set; }
     }
 }

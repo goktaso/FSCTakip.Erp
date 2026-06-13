@@ -103,7 +103,7 @@
 
         <!-- Makine Doluluk -->
         @{
-            var machineLoad = ViewBag.MachineLoad as IEnumerable<dynamic>;
+            var machineLoad = ViewBag.MachineLoad as List<FSCTakip.WebUI.Controllers.MachineLoadRow>;
         }
         @if (machineLoad != null)
         {

@@ -94,7 +94,7 @@
                         <th>Renk</th>
                         <th>Gr.</th>
                         <th>En</th>
-                        <th>Birim</th>
+                        <th>Birim</th> @* GÜNCELLENDİ *@
                         <th>FSC Tipi</th>
                         <th style="width: 100px;">Durum</th>
                         <th class="text-right" style="width: 80px;">İşlemler</th>
@@ -119,7 +119,7 @@
                                 <td>@(item.PaperColor?.Name ?? "-")</td>
                                 <td>@(item.PaperWeight != null ? $"{item.PaperWeight.Value} {item.PaperWeight.Unit}" : "-")</td>
                                 <td>@(item.PaperWidth != null ? $"{item.PaperWidth.Value} {item.PaperWidth.Unit}" : "-")</td>
-                                <td>@item.Unit</td>
+                                <td><span class="badge badge-info py-1 px-2">@(item.Unit ?? "-")</span></td>
                                 <td><small>@(item.FscType?.Name ?? "-")</small></td>
                                 <td>
                                     <div class="custom-control custom-switch">
