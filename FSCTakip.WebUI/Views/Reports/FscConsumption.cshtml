@@ -1,0 +1,103 @@
+@model FSCTakip.WebUI.Controllers.FscConsumptionModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "FSC Tüketim Denetim Raporu";
+    var start = ViewBag.StartDate as string;
+    var end   = ViewBag.EndDate as string;
+    var products = ViewBag.Products as List<SelectListItem> ?? new();
+    var productId = ViewBag.ProductId as int?;
+    string FscBadge(string fsc) => (fsc ?? "").Contains("100") ? "background:#dcfce7;color:#166534;"
+        : (fsc ?? "").Contains("MIX") ? "background:#dbeafe;color:#1d4ed8;"
+        : (fsc ?? "").Contains("RECYCLED") ? "background:#fef3c7;color:#92400e;" : "background:#f3f4f6;color:#374151;";
+}
+
+@section TopbarActions {
+    <button class="btn btn-outline-secondary btn-sm" onclick="$('#filterPanel').slideToggle()"><i class="fas fa-filter me-1"></i> Filtrele</button>
+    <a href="/Reports/ExportFscConsumption?startDate=@start&endDate=@end&productId=@productId" class="btn btn-outline-success btn-sm"><i class="fas fa-file-excel me-1"></i> Excel</a>
+}
+
+<div id="filterPanel" class="filter-panel" style="display:none;">
+    <form method="get" action="/Reports/FscConsumption" class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label small fw-semibold">Başlangıç</label><input type="date" name="startDate" value="@start" class="form-control form-control-sm"></div>
+        <div class="col-md-3"><label class="form-label small fw-semibold">Bitiş</label><input type="date" name="endDate" value="@end" class="form-control form-control-sm"></div>
+        <div class="col-md-4"><label class="form-label small fw-semibold">Mamul (ops.)</label>
+            <select name="productId" class="form-select form-select-sm">
+                <option value="">— Tümü —</option>
+                @foreach (var p in products) { if (productId?.ToString()==p.Value) {<option value="@p.Value" selected>@p.Text</option>} else {<option value="@p.Value">@p.Text</option>} }
+            </select>
+        </div>
+        <div class="col-md-2"><button type="submit" class="btn btn-primary btn-sm w-100">Uygula</button></div>
+    </form>
+</div>
+
+<div class="alert alert-light border d-flex align-items-center" style="font-size:13px;">
+    <i class="fas fa-info-circle text-primary me-2"></i>
+    Dönem: <strong class="mx-1">@Model.StartDate.ToString("dd.MM.yyyy") – @Model.EndDate.ToString("dd.MM.yyyy")</strong>
+    · Üretilen mamulün bileşenlerine göre tüketilen FSC hammadde / yarı mamül ve fire miktarları.
+</div>
+
+<!-- Özet kartlar -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
+    <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-box"></i></div><div class="stat-info"><div class="stat-value">@Model.TotalProduced.ToString("N0")</div><div class="stat-label">Üretilen Mamul (adet)</div></div></div>
+    <div class="stat-card"><div class="stat-icon green"><i class="fas fa-weight-hanging"></i></div><div class="stat-info"><div class="stat-value">@Model.TotalConsumed.ToString("N1") kg</div><div class="stat-label">Toplam Tüketim</div></div></div>
+    <div class="stat-card"><div class="stat-icon amber"><i class="fas fa-burn"></i></div><div class="stat-info"><div class="stat-value">@Model.TotalWaste.ToString("N1") kg</div><div class="stat-label">Toplam Fire</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#ede9fe;color:#5b21b6;"><i class="fas fa-percent"></i></div><div class="stat-info"><div class="stat-value">%@(Model.TotalConsumed > 0 ? (Model.TotalWaste / Model.TotalConsumed * 100).ToString("F1") : "0")</div><div class="stat-label">Fire Oranı</div></div></div>
+</div>
+
+<!-- Kategori rollup -->
+<div class="card border-0 shadow-sm rounded-3 mb-3">
+    <div class="card-header bg-white border-0 pt-3 pb-2"><h6 class="fw-semibold mb-0"><i class="fas fa-layer-group text-primary me-2"></i>Bileşen Kategorisine Göre Toplam Tüketim</h6></div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0" style="font-size:13px;">
+            <thead style="background:#f8fafc;"><tr><th class="ps-3">Kategori</th><th class="text-end">Tüketilen (kg)</th><th class="text-end pe-3">Fire (kg)</th></tr></thead>
+            <tbody>
+            @foreach (var c in Model.CategoryRollup)
+            {
+                <tr><td class="ps-3 fw-semibold">@c.Category</td><td class="text-end">@c.ConsumedKg.ToString("N2")</td><td class="text-end pe-3 @(c.WasteKg>0?"text-warning":"text-muted")">@c.WasteKg.ToString("N2")</td></tr>
+            }
+            @if (!Model.CategoryRollup.Any()) { <tr><td colspan="3" class="text-center text-muted py-3">Bu dönemde tüketim kaydı yok.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Mamul bazında detay -->
+@foreach (var m in Model.Mamuller)
+{
+    <div class="card border-0 shadow-sm rounded-3 mb-3">
+        <div class="card-header bg-white border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+            <div>
+                <span class="badge" style="background:#eef2ff;color:#3730a3;">@m.MamulKod</span>
+                <span class="fw-semibold ms-1">@m.MamulAd</span>
+            </div>
+            <div class="text-muted" style="font-size:12.5px;">
+                Üretilen: <strong>@m.ProducedQty.ToString("N0") adet</strong> ·
+                Tüketim: <strong>@m.ConsumedKg.ToString("N2") kg</strong> ·
+                Fire: <strong class="@(m.WasteKg>0?"text-warning":"")">@m.WasteKg.ToString("N2") kg</strong>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0" style="font-size:12.5px;">
+                <thead style="background:#f8fafc;"><tr>
+                    <th class="ps-3">Kategori</th><th>Bileşen</th><th>FSC Tipi</th><th class="text-end">Tüketilen (kg)</th><th class="text-end pe-3">Fire (kg)</th>
+                </tr></thead>
+                <tbody>
+                @foreach (var c in m.Components)
+                {
+                    <tr>
+                        <td class="ps-3">@c.Category</td>
+                        <td><span class="badge" style="background:#eef2ff;color:#3730a3;">@c.ComponentKod</span> @c.ComponentAd</td>
+                        <td><span class="badge" style="@FscBadge(c.FscType)">@c.FscType</span></td>
+                        <td class="text-end">@c.ConsumedKg.ToString("N2")</td>
+                        <td class="text-end pe-3 @(c.WasteKg>0?"text-warning":"text-muted")">@c.WasteKg.ToString("N2")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+@if (!Model.Mamuller.Any())
+{
+    <div class="text-center text-muted py-5"><i class="fas fa-inbox me-2"></i>Seçili dönemde üretim/tüketim kaydı bulunamadı.</div>
+}

@@ -1283,6 +1283,154 @@ namespace FSCTakip.WebUI.Controllers
             ViewData["Title"] = "Fire / Atık Analizi";
             return View(model);
         }
+
+        // GET /Reports/FscConsumption — Yıllık FSC CoC tüketim denetim raporu (mamul → kategori → bileşen)
+        public async Task<IActionResult> FscConsumption(DateTime? startDate, DateTime? endDate, int? productId)
+        {
+            var sd = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
+            var ed = endDate ?? DateTime.Today;
+            var edNext = ed.AddDays(1);
+
+            var q = _context.ProductionDetails
+                .Include(d => d.WorkOrder).ThenInclude(w => w.Product)
+                .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
+                .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.FscType)
+                .Where(d => d.ProductionDate >= sd && d.ProductionDate < edNext && d.WorkOrder.Status != WorkOrderStatus.Taslak);
+            if (productId.HasValue) q = q.Where(d => d.WorkOrder.ProductId == productId.Value);
+            var details = await q.ToListAsync();
+
+            var mamuller = details
+                .GroupBy(d => new { d.WorkOrder.ProductId, d.WorkOrder.Product })
+                .Select(mg =>
+                {
+                    var m = new FscConsMamulRow
+                    {
+                        MamulKod    = mg.Key.Product?.ExternalCode ?? mg.Key.Product?.ProductCode ?? "—",
+                        MamulAd     = mg.Key.Product?.ProductName ?? "—",
+                        ProducedQty = mg.GroupBy(d => d.WorkOrderId)
+                            .Sum(wg => wg.GroupBy(d => d.ProductionDate.Date).Sum(dg => dg.Max(d => d.ProducedQuantity)))
+                    };
+                    m.Components = mg
+                        .GroupBy(d => new { Comp = d.FscSerial?.Lot?.Product, Fsc = d.FscSerial?.Lot?.FscType?.Name })
+                        .Select(cg => new FscConsComponentRow
+                        {
+                            Category     = CategorizeComponent(cg.Key.Comp),
+                            ComponentKod = cg.Key.Comp?.ExternalCode ?? cg.Key.Comp?.ProductCode ?? "—",
+                            ComponentAd  = cg.Key.Comp?.ProductName ?? "—",
+                            FscType      = cg.Key.Fsc ?? "—",
+                            ConsumedKg   = cg.Sum(d => d.ConsumedWeight),
+                            WasteKg      = cg.Sum(d => d.WasteWeight)
+                        })
+                        .OrderBy(c => c.Category).ThenBy(c => c.ComponentAd).ToList();
+                    return m;
+                })
+                .OrderBy(m => m.MamulAd).ToList();
+
+            var rollup = mamuller.SelectMany(m => m.Components)
+                .GroupBy(c => c.Category)
+                .Select(g => new FscConsCategoryRow { Category = g.Key, ConsumedKg = g.Sum(c => c.ConsumedKg), WasteKg = g.Sum(c => c.WasteKg) })
+                .OrderByDescending(r => r.ConsumedKg).ToList();
+
+            var model = new FscConsumptionModel
+            {
+                StartDate     = sd,
+                EndDate       = ed,
+                Mamuller      = mamuller,
+                CategoryRollup = rollup,
+                TotalConsumed = mamuller.Sum(m => m.ConsumedKg),
+                TotalWaste    = mamuller.Sum(m => m.WasteKg),
+                TotalProduced = (int)mamuller.Sum(m => m.ProducedQty)
+            };
+
+            ViewBag.StartDate = sd.ToString("yyyy-MM-dd");
+            ViewBag.EndDate   = ed.ToString("yyyy-MM-dd");
+            ViewBag.Products  = await _context.Products
+                .Where(p => p.ExternalCode != null && p.ExternalCode.StartsWith("3"))
+                .OrderBy(p => p.ProductName)
+                .Select(p => new SelectListItem { Value = p.Id.ToString(), Text = (p.ExternalCode ?? "") + " — " + p.ProductName })
+                .ToListAsync();
+            ViewBag.ProductId = productId;
+            ViewData["Title"] = "FSC Tüketim Denetim Raporu";
+            return View(model);
+        }
+
+        // GET /Reports/ExportFscConsumption
+        public async Task<IActionResult> ExportFscConsumption(DateTime? startDate, DateTime? endDate, int? productId)
+        {
+            var result = await FscConsumption(startDate, endDate, productId) as ViewResult;
+            var model = result?.Model as FscConsumptionModel ?? new FscConsumptionModel();
+            var rows = model.Mamuller.SelectMany(m => m.Components.Select(c => new
+            {
+                Mamul       = $"{m.MamulKod} — {m.MamulAd}",
+                UretilenAdet = m.ProducedQty,
+                Kategori    = c.Category,
+                BilesenKod  = c.ComponentKod,
+                Bilesen     = c.ComponentAd,
+                FscTipi     = c.FscType,
+                TuketilenKg = c.ConsumedKg,
+                FireKg      = c.WasteKg
+            })).ToList();
+            return ExportToExcel(rows, "FSC_Tuketim_Raporu");
+        }
+
+        // Bileşen kategorisi sınıflandırıcı (genelleştirilebilir: işlev deseni → kod → ProductGroup)
+        private static string CategorizeComponent(FSCTakip.Core.Entities.Product? p)
+        {
+            if (p == null) return "Diğer";
+            var tr  = new System.Globalization.CultureInfo("tr-TR");
+            var ad  = (p.ProductName ?? "").ToUpper(tr);
+            var kod = p.ExternalCode ?? "";
+            if (ad.Contains("ETİKET")) return "Etiket Bobini";
+            if (ad.Contains("BURGU SAP")) return "Burgu Sap";
+            if (ad.Contains("SAP BOB")) return "Sap Bobini";
+            if (ad.Contains("TUTKAL")) return "Tutkal";
+            if (ad.Contains("KOLİ")) return "Koli";
+            if (ad.Contains("BOYA")) return "Boya";
+            if (ad.StartsWith("BB ") || kod.StartsWith("23")) return "Gövde (BB)";
+            if (kod.StartsWith("24") || ad.StartsWith("YM ")) return "Ara Yarı Mamül";
+            if (kod.StartsWith("1")) return "Ham Kağıt";
+            if (!string.IsNullOrWhiteSpace(p.ProductGroup?.GroupName)) return p.ProductGroup!.GroupName;
+            return "Diğer";
+        }
+    }
+
+    // ── FSC Tüketim Denetim Raporu modelleri ───────────────────────────────────
+    public class FscConsumptionModel
+    {
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate   { get; set; }
+        public List<FscConsMamulRow>    Mamuller       { get; set; } = new();
+        public List<FscConsCategoryRow> CategoryRollup { get; set; } = new();
+        public decimal TotalConsumed { get; set; }
+        public decimal TotalWaste    { get; set; }
+        public int     TotalProduced { get; set; }
+    }
+
+    public class FscConsMamulRow
+    {
+        public string MamulKod { get; set; } = "";
+        public string MamulAd  { get; set; } = "";
+        public decimal ProducedQty { get; set; }
+        public List<FscConsComponentRow> Components { get; set; } = new();
+        public decimal ConsumedKg => Components.Sum(c => c.ConsumedKg);
+        public decimal WasteKg    => Components.Sum(c => c.WasteKg);
+    }
+
+    public class FscConsComponentRow
+    {
+        public string Category     { get; set; } = "";
+        public string ComponentKod { get; set; } = "";
+        public string ComponentAd  { get; set; } = "";
+        public string FscType      { get; set; } = "";
+        public decimal ConsumedKg  { get; set; }
+        public decimal WasteKg     { get; set; }
+    }
+
+    public class FscConsCategoryRow
+    {
+        public string Category   { get; set; } = "";
+        public decimal ConsumedKg { get; set; }
+        public decimal WasteKg    { get; set; }
     }
 
     // ── View Model Sınıfları ──────────────────────────────────────────────────
