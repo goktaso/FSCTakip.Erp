@@ -10,6 +10,19 @@
     var kalanKg    = Model.Sum(l => l.Serials.Sum(s => s.CurrentWeight));
     var totalBobin = Model.Sum(l => l.Serials.Count);
     var fscUyari   = suppliers.Count(s => s.IsFscActive && s.FscExpiryDate.HasValue && s.FscExpiryDate.Value <= DateTime.Today.AddDays(90));
+
+    // Stok türü: önce ProductGroup, yoksa kod deseni (1=Hammadde, 2=Yarı Mamül, 3=Mamul, 4=Sarf)
+    (string Ad, string Renk) Tur(FSCTakip.Core.Entities.FscLot l)
+    {
+        var grp = l.Product?.ProductGroup?.GroupName;
+        if (!string.IsNullOrWhiteSpace(grp)) return (grp, "#e0e7ff;color:#3730a3");
+        var kod = l.Product?.ExternalCode ?? "";
+        if (kod.StartsWith("1")) return ("Hammadde",   "#dcfce7;color:#166534");
+        if (kod.StartsWith("2")) return ("Yarı Mamül", "#fef3c7;color:#92400e");
+        if (kod.StartsWith("3")) return ("Mamul",      "#dbeafe;color:#1d4ed8");
+        if (kod.StartsWith("4")) return ("Sarf",       "#f3e8ff;color:#6b21a8");
+        return ("—", "#f3f4f6;color:#374151");
+    }
 }
 
 @section TopbarPrimary {
@@ -131,6 +144,7 @@
         <thead>
             <tr>
                 <th>Parti No</th>
+                <th>Tür</th>
                 <th>Tedarikçi</th>
                 <th>FSC Tipi</th>
                 <th>Stok Kodu</th>
@@ -150,7 +164,7 @@
             @if (!Model.Any())
             {
                 <tr>
-                    <td colspan="14">
+                    <td colspan="15">
                         <div class="empty-state">
                             <div class="empty-icon"><i class="fas fa-box-open"></i></div>
                             <h6>Henüz hammadde girişi yok</h6>
@@ -171,6 +185,8 @@
                             @lot.PartiNo
                         </a>
                     </td>
+                    @{ var tur = Tur(lot); }
+                    <td><span class="badge" style="background:@tur.Renk;font-weight:500;">@tur.Ad</span></td>
                     <td>
                         <div class="d-flex align-items-center gap-1">
                             @lot.Supplier?.Name

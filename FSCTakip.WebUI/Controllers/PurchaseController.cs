@@ -24,7 +24,11 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(l => l.Product).ThenInclude(p => p!.PaperWeight)
                 .Include(l => l.Product).ThenInclude(p => p!.PaperWidth)
                 .Include(l => l.Product).ThenInclude(p => p!.PaperColor)
+                .Include(l => l.Product).ThenInclude(p => p!.ProductGroup)
                 .Include(l => l.Serials)
+                // Dönüşümle içeride üretilen yarı mamül lotları (SourceSerialId dolu) burada gösterilmez —
+                // bu ekran satın alma/giriş içindir; onlar Hammadde Stoğu ve Yarı Mamül Dönüşüm'de görünür.
+                .Where(l => l.SourceSerialId == null)
                 .AsQueryable();
 
             if (startDate.HasValue)  query = query.Where(l => l.ArrivalDate >= startDate.Value);
