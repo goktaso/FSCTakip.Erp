@@ -131,6 +131,38 @@ namespace FSCTakip.WebUI.Controllers
                         .Sum(g => g.Max(d => d.ProducedQuantity))
                     : 0;
 
+                // Mamul → bitmiş ürün stoğuna giriş (ProductionEntry). İş emriyle eşlenir; yeniden tamamlamada güncellenir.
+                var mamulEntry = await _context.StockMovements.FirstOrDefaultAsync(
+                    m => m.Type == MovementType.ProductionEntry && m.WorkOrderId == wo.Id && m.ProductId == wo.ProductId);
+                if (wo.ActualQuantity > 0)
+                {
+                    if (mamulEntry == null)
+                    {
+                        _context.StockMovements.Add(new StockMovement
+                        {
+                            Type         = MovementType.ProductionEntry,
+                            ProductId    = wo.ProductId,
+                            Quantity     = wo.ActualQuantity,
+                            Unit         = "adet",
+                            DocumentNo   = wo.WorkOrderNo,
+                            DocumentDate = wo.CompletedDate ?? DateTime.Now,
+                            WorkOrderId  = wo.Id,
+                            Description  = $"Üretimden giriş — {wo.WorkOrderNo}",
+                            CreatedBy    = User.Identity?.Name ?? "System",
+                            CreatedDate  = DateTime.Now
+                        });
+                    }
+                    else
+                    {
+                        mamulEntry.Quantity     = wo.ActualQuantity;
+                        mamulEntry.DocumentDate = wo.CompletedDate ?? DateTime.Now;
+                    }
+                }
+                else if (mamulEntry != null)
+                {
+                    _context.StockMovements.Remove(mamulEntry);
+                }
+
                 await _context.SaveChangesAsync();
                 return Json(new { success = true, message = "İş emri tamamlandı olarak işaretlendi." });
             }
