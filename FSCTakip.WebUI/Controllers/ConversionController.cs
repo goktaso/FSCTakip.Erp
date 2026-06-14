@@ -40,22 +40,45 @@ namespace FSCTakip.WebUI.Controllers
                 .Select(p => new ConvTargetVM { Id = p.Id, Kod = p.ExternalCode!, Ad = p.ProductName })
                 .ToListAsync();
 
-            // Son dönüşümler
-            ViewBag.Recent = await _context.FscSerials
+            // Son dönüşümler (kaynak bobin/ürün bilgisiyle)
+            var recentYm = await _context.FscSerials
                 .Include(s => s.Lot).ThenInclude(l => l.Product)
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
                 .Where(s => s.Lot.PartiNo.StartsWith("YM"))
                 .OrderByDescending(s => s.Id)
                 .Take(20)
-                .Select(s => new ConvRecentVM {
-                    Tarih   = s.Lot.ArrivalDate,
-                    Parti   = s.Lot.PartiNo,
+                .Select(s => new {
+                    s.Lot.ArrivalDate, s.Lot.PartiNo,
                     Hedef   = s.Lot.Product != null ? s.Lot.Product.ProductName : "—",
                     FscType = s.Lot.FscType.Name,
-                    Kg      = s.InitialWeight,
-                    Kalan   = s.CurrentWeight
+                    s.InitialWeight, s.CurrentWeight,
+                    s.Lot.SourceSerialId, s.Lot.ConversionFireKg
                 })
                 .ToListAsync();
+
+            var srcIds = recentYm.Where(x => x.SourceSerialId != null).Select(x => x.SourceSerialId!.Value).Distinct().ToList();
+            var srcMap = await _context.FscSerials
+                .Where(s => srcIds.Contains(s.Id))
+                .Include(s => s.Lot).ThenInclude(l => l.Product)
+                .Select(s => new {
+                    s.Id, s.SerialNo,
+                    Kod = s.Lot.Product != null ? s.Lot.Product.ExternalCode : null,
+                    Ad  = s.Lot.Product != null ? s.Lot.Product.ProductName : null
+                })
+                .ToDictionaryAsync(x => x.Id, x => x);
+
+            ViewBag.Recent = recentYm.Select(x => new ConvRecentVM {
+                Tarih        = x.ArrivalDate,
+                Parti        = x.PartiNo,
+                Hedef        = x.Hedef,
+                FscType      = x.FscType,
+                Kg           = x.InitialWeight,
+                Kalan        = x.CurrentWeight,
+                Fire         = x.ConversionFireKg ?? 0m,
+                KaynakSerial = x.SourceSerialId != null && srcMap.ContainsKey(x.SourceSerialId.Value) ? srcMap[x.SourceSerialId.Value].SerialNo : "—",
+                KaynakKod    = x.SourceSerialId != null && srcMap.ContainsKey(x.SourceSerialId.Value) ? srcMap[x.SourceSerialId.Value].Kod : null,
+                KaynakAd     = x.SourceSerialId != null && srcMap.ContainsKey(x.SourceSerialId.Value) ? srcMap[x.SourceSerialId.Value].Ad : "—"
+            }).ToList();
 
             return View();
         }
@@ -224,5 +247,9 @@ namespace FSCTakip.WebUI.Controllers
         public string FscType { get; set; } = "";
         public decimal Kg { get; set; }
         public decimal Kalan { get; set; }
+        public decimal Fire { get; set; }
+        public string KaynakSerial { get; set; } = "—";
+        public string? KaynakKod { get; set; }
+        public string? KaynakAd { get; set; }
     }
 }

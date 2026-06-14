@@ -97,23 +97,32 @@
                     <table class="table table-sm table-hover mb-0" style="font-size:12.5px;">
                         <thead style="background:#f8fafc;">
                             <tr>
-                                <th class="ps-3">Tarih</th><th>Parti</th><th>Hedef YM</th>
-                                <th>FSC</th><th class="text-end">Üretilen</th><th class="text-end pe-3">Kalan</th>
+                                <th class="ps-3">Tarih</th><th>Parti</th><th>Kaynak (Ham/YM)</th><th>Hedef YM</th>
+                                <th>FSC</th><th class="text-end">Üretilen</th><th class="text-end">Fire</th><th class="text-end pe-3">Kalan</th>
                             </tr>
                         </thead>
                         <tbody>
                         @if (!recent.Any())
                         {
-                            <tr><td colspan="6" class="text-center text-muted py-4">Henüz dönüşüm kaydı yok.</td></tr>
+                            <tr><td colspan="8" class="text-center text-muted py-4">Henüz dönüşüm kaydı yok.</td></tr>
                         }
                         @foreach (var r in recent)
                         {
                             <tr>
                                 <td class="ps-3">@r.Tarih.ToString("dd.MM.yyyy")</td>
                                 <td><span class="badge bg-light text-dark">@r.Parti</span></td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(r.KaynakKod))
+                                    {
+                                        <span class="badge" style="background:#eef2ff;color:#3730a3;font-weight:500;">@r.KaynakKod</span>
+                                    }
+                                    <span>@r.KaynakAd</span>
+                                    <div class="text-muted" style="font-size:10.5px;">@r.KaynakSerial</div>
+                                </td>
                                 <td>@r.Hedef</td>
                                 <td><span class="badge" style="background:#dcfce7;color:#166534;">@r.FscType</span></td>
                                 <td class="text-end">@r.Kg.ToString("N2") kg</td>
+                                <td class="text-end @(r.Fire > 0 ? "text-warning fw-semibold" : "text-muted")">@r.Fire.ToString("N2") kg</td>
                                 <td class="text-end pe-3 fw-semibold">@r.Kalan.ToString("N2") kg</td>
                             </tr>
                         }
