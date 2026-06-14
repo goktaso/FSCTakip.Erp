@@ -1373,10 +1373,14 @@ namespace FSCTakip.WebUI.Controllers
             return ExportToExcel(rows, "FSC_Tuketim_Raporu");
         }
 
-        // Bileşen kategorisi sınıflandırıcı (genelleştirilebilir: işlev deseni → kod → ProductGroup)
+        // Bileşen kategorisi sınıflandırıcı (genelleştirilebilir):
+        //  1) Firma ProductGroup tanımladıysa onu kullan (her sektör kendi kategorisini tanımlar)
+        //  2) Grup yoksa ad/kod deseninden tahmin (FSCTakip kraft torba varsayılanı)
         private static string CategorizeComponent(FSCTakip.Core.Entities.Product? p)
         {
             if (p == null) return "Diğer";
+            if (!string.IsNullOrWhiteSpace(p.ProductGroup?.GroupName))
+                return p.ProductGroup!.GroupName;
             var tr  = new System.Globalization.CultureInfo("tr-TR");
             var ad  = (p.ProductName ?? "").ToUpper(tr);
             var kod = p.ExternalCode ?? "";
@@ -1389,7 +1393,6 @@ namespace FSCTakip.WebUI.Controllers
             if (ad.StartsWith("BB ") || kod.StartsWith("23")) return "Gövde (BB)";
             if (kod.StartsWith("24") || ad.StartsWith("YM ")) return "Ara Yarı Mamül";
             if (kod.StartsWith("1")) return "Ham Kağıt";
-            if (!string.IsNullOrWhiteSpace(p.ProductGroup?.GroupName)) return p.ProductGroup!.GroupName;
             return "Diğer";
         }
     }
