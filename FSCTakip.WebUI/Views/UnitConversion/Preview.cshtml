@@ -144,8 +144,8 @@
 
 @section Scripts {
 <script>
-function applyAll() {
-    if (!confirm('Parametresi olan @withFactor.Count seri KG\'ye dönüştürülsün mü?\nBu işlem geri alınamaz.')) return;
+async function applyAll() {
+    if (!await appConfirm('Parametresi olan @withFactor.Count seri KG\'ye dönüştürülsün mü?\nBu işlem geri alınamaz.')) return;
     $.post('/UnitConversion/ApplyAll', {}, function(res) {
         if (res.success) {
             Swal.fire({ icon: 'success', title: res.message, timer: 3000, showConfirmButton: false })

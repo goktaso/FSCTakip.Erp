@@ -215,12 +215,12 @@ function previewFile() {
         });
 }
 
-function executeImport() {
+async function executeImport() {
     const file = document.getElementById('excelFile').files[0];
     const type = document.getElementById('jobType').value;
     const connId = document.getElementById('connectionId').value;
     if (!file || !type) { alert('Aktarım türü ve dosya seçilmelidir.'); return; }
-    if (!confirm(`"${typeInfo[type]?.label ?? type}" aktarımını başlatmak istiyor musunuz?`)) return;
+    if (!await appConfirm(`"${typeInfo[type]?.label ?? type}" aktarımını başlatmak istiyor musunuz?`)) return;
 
     const fd = new FormData();
     fd.append('file', file);

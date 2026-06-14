@@ -238,7 +238,7 @@
                             {
                                 <div>
                                     <button class="doc-num-btn"
-                                            onclick="showPdf('/Purchase/ViewDocument?path=@lot.DispatchPdfPath','İrsaliye — @lot.DispatchNo')"
+                                            onclick="showPdf('/Document/Serve?key=@lot.DispatchPdfPath','İrsaliye — @lot.DispatchNo')"
                                             title="İrsaliyeyi görüntüle">
                                         <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@lot.DispatchNo
                                     </button>
@@ -257,7 +257,7 @@
                             {
                                 <div class="mt-1">
                                     <button class="doc-num-btn"
-                                            onclick="showPdf('/Purchase/ViewDocument?path=@lot.InvoicePdfPath','Fatura — @lot.InvoiceNo')"
+                                            onclick="showPdf('/Document/Serve?key=@lot.InvoicePdfPath','Fatura — @lot.InvoiceNo')"
                                             title="Faturayı görüntüle">
                                         <i class="fas fa-file-invoice me-1" style="color:#d97706;font-size:11px;"></i>@lot.InvoiceNo
                                     </button>

@@ -205,8 +205,8 @@ function toggleStatus(id) {
         });
 }
 
-function deleteItem(id, name) {
-    if (!confirm(`"${name}" deposunu silmek istiyor musunuz?`)) return;
+async function deleteItem(id, name) {
+    if (!await appConfirm(`"${name}" deposunu silmek istiyor musunuz?`)) return;
     fetch(`/Warehouse/Delete?id=${id}`, { method: 'POST' })
         .then(r => r.json())
         .then(res => {

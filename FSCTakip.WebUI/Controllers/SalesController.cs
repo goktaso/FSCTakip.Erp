@@ -1,6 +1,7 @@
 using ClosedXML.Excel;
 using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
+using FSCTakip.WebUI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -9,7 +10,40 @@ namespace FSCTakip.WebUI.Controllers
 {
     public class SalesController : BaseController
     {
-        public SalesController(AppDbContext context) : base(context) { }
+        private readonly IFileStorageService _storage;
+
+        public SalesController(AppDbContext context, IFileStorageService storage) : base(context)
+        {
+            _storage = storage;
+        }
+
+        // POST /Sales/UploadDocument — satış irsaliye/fatura belgesi yükle
+        [HttpPost]
+        public async Task<IActionResult> UploadDocument(int orderId, string docType, IFormFile file)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                    return Json(new { success = false, message = "Dosya seçilmedi." });
+
+                var order = await _context.SalesOrders.FindAsync(orderId);
+                if (order == null) return Json(new { success = false, message = "Sipariş bulunamadı." });
+
+                var path = await _storage.SaveAsync(file, docType == "invoice" ? "Invoice" : "Dispatch");
+
+                if (docType == "invoice")
+                    order.InvoicePdfPath = path;
+                else
+                    order.DispatchPdfPath = path;
+
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Belge yüklendi.", path });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
 
         // GET /Sales/Index
         public async Task<IActionResult> Index(

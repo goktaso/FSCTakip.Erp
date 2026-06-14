@@ -72,7 +72,7 @@
                                 @if (!string.IsNullOrEmpty(Model.DispatchPdfPath))
                                 {
                                     <button class="doc-num-btn"
-                                            onclick="showPdf('/@Model.DispatchPdfPath','İrsaliye — @Model.DispatchNo')"
+                                            onclick="showPdf('/Document/Serve?key=@Model.DispatchPdfPath','İrsaliye — @Model.DispatchNo')"
                                             title="İrsaliyeyi görüntüle">
                                         <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@Model.DispatchNo
                                     </button>
@@ -89,7 +89,7 @@
                                 @if (!string.IsNullOrEmpty(Model.InvoicePdfPath))
                                 {
                                     <button class="doc-num-btn"
-                                            onclick="showPdf('/@Model.InvoicePdfPath','Fatura — @Model.InvoiceNo')"
+                                            onclick="showPdf('/Document/Serve?key=@Model.InvoicePdfPath','Fatura — @Model.InvoiceNo')"
                                             title="Faturayı görüntüle">
                                         <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@Model.InvoiceNo
                                     </button>
@@ -114,6 +114,24 @@
                     {
                         <tr><td class="text-muted ps-3">Notlar</td><td style="font-size:12px;">@Model.Notes</td></tr>
                     }
+                    <tr>
+                        <td class="text-muted ps-3" style="vertical-align:top;padding-top:10px;">Belge Yükle</td>
+                        <td style="padding-top:10px;">
+                            <div class="d-flex flex-column gap-2" style="max-width:340px;">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text" style="font-size:11px;min-width:78px;"><i class="fas fa-file-pdf me-1 text-danger"></i>İrsaliye</span>
+                                    <input type="file" id="salesDispatchFile" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="uploadSalesDoc('dispatch')">Yükle</button>
+                                </div>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text" style="font-size:11px;min-width:78px;"><i class="fas fa-file-invoice me-1 text-warning"></i>Fatura</span>
+                                    <input type="file" id="salesInvoiceFile" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="uploadSalesDoc('invoice')">Yükle</button>
+                                </div>
+                                <div class="form-text" style="font-size:10.5px;">PDF/JPEG/PNG · max 20 MB</div>
+                            </div>
+                        </td>
+                    </tr>
                 </table>
             </div>
         </div>
@@ -366,6 +384,24 @@
 <script>
 const salesOrderId = @Model.Id;
 
+// Satış belgesi yükle (irsaliye/fatura)
+function uploadSalesDoc(type) {
+    const input = document.getElementById(type === 'invoice' ? 'salesInvoiceFile' : 'salesDispatchFile');
+    const file = input && input.files[0];
+    if (!file) { showToast('Önce dosya seçin.', 'warning'); return; }
+    const fd = new FormData();
+    fd.append('orderId', salesOrderId);
+    fd.append('docType', type);
+    fd.append('file', file);
+    fetch('/Sales/UploadDocument', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 800); }
+            else showToast(res.message, 'error');
+        })
+        .catch(() => showToast('Yükleme sırasında hata oluştu.', 'error'));
+}
+
 // Kalem modal sıfırla
 let _lineEditMode = false;
 document.getElementById('lineModal').addEventListener('show.bs.modal', function () {
@@ -428,8 +464,8 @@ function saveLine() {
         });
 }
 
-function deleteLine(id) {
-    if (!confirm('Bu kalemi silmek istiyor musunuz?')) return;
+async function deleteLine(id) {
+    if (!await appConfirm('Bu kalemi silmek istiyor musunuz?')) return;
     fetch(`/Sales/DeleteLine/${id}`, { method: 'POST' })
         .then(r => r.json()).then(res => {
             showToast(res.message, res.success ? 'success' : 'error');

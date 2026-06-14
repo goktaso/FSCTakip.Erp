@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -16,6 +17,11 @@ namespace FSCTakip.WebUI.Filters
 
             // Login/Logout sayfaları filtreden muaf
             if (string.Equals(controller, "Account", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            // [AllowAnonymous] ile işaretli action/controller'lar muaf (örn. DocumentController)
+            var endpoint = context.HttpContext.GetEndpoint();
+            if (endpoint?.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() != null)
                 return;
 
             var userId = context.HttpContext.Session.GetString("UserId");

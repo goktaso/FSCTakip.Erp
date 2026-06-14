@@ -169,7 +169,13 @@
                     </td>
                     <td>
                         <div class="fw-semibold" style="font-size:13px;">@wo.Product?.ProductName</div>
-                        <div class="text-muted" style="font-size:11px;">@wo.Product?.ProductCode</div>
+                        <div class="text-muted" style="font-size:11px;">
+                            @wo.Product?.ProductCode
+                            @if (!string.IsNullOrWhiteSpace(wo.Product?.ExternalCode))
+                            {
+                                <span class="badge" style="background:#eef2ff;color:#3730a3;font-weight:500;margin-left:4px;" title="Dış stok kodu">@wo.Product!.ExternalCode</span>
+                            }
+                        </div>
                     </td>
                     <td class="text-muted">@wo.Machine?.Name</td>
                     <td class="text-muted">@wo.PlannedDate.ToString("dd.MM.yyyy")</td>

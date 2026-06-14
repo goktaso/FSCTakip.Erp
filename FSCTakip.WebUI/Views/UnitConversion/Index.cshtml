@@ -256,8 +256,8 @@ function saveConv() {
     });
 }
 
-function deleteItem(id) {
-    if (!confirm('Bu parametre silinsin mi?')) return;
+async function deleteItem(id) {
+    if (!await appConfirm('Bu parametre silinsin mi?')) return;
     $.post('/UnitConversion/Delete', { id: id }, function(res) {
         if (res.success) location.reload();
         else alert(res.message);
@@ -270,8 +270,8 @@ function toggleStatus(id, btn) {
     });
 }
 
-function applyAll() {
-    if (!confirm('Tüm uygun seriler KG\'ye dönüştürülsün mü?\n\nBu işlem geri alınamaz.')) return;
+async function applyAll() {
+    if (!await appConfirm('Tüm uygun seriler KG\'ye dönüştürülsün mü?\n\nBu işlem geri alınamaz.')) return;
     $.post('/UnitConversion/ApplyAll', {}, function(res) {
         if (res.success) {
             Swal.fire({ icon: 'success', title: res.message, timer: 3000, showConfirmButton: false })

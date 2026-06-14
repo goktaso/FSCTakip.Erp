@@ -262,8 +262,8 @@ function saveItem() {
         });
 }
 
-function deleteItem(id) {
-    if (!confirm('Bu imha kaydını silmek istiyor musunuz?')) return;
+async function deleteItem(id) {
+    if (!await appConfirm('Bu imha kaydını silmek istiyor musunuz?')) return;
     fetch(`/Production/DeleteWaste?id=${id}`, { method: 'POST' })
         .then(r => r.json())
         .then(res => { if (res.success) location.reload(); else alert(res.message); });

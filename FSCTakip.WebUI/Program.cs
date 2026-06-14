@@ -3,6 +3,8 @@ using FSCTakip.DataAccess.Data;
 using FSCTakip.WebUI.Data;
 using FSCTakip.Business.Services;
 using FSCTakip.WebUI.Filters;
+using FSCTakip.WebUI.Binders;
+using FSCTakip.WebUI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 var mvcBuilder = builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<SessionAuthFilter>();
+    // Decimal form alanlarını kültürden bağımsız bağla (tr-TR'de "6000.00" → 60000000 bug'ı)
+    options.ModelBinderProviders.Insert(0, new InvariantDecimalModelBinderProvider());
 });
 
 // Development ortamında .cshtml değişiklikleri rebuild gerektirmez
@@ -31,6 +35,7 @@ builder.Services.AddSession(options =>
 // PermissionService ve HttpContextAccessor kaydı
 builder.Services.AddScoped<PermissionService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 
 // DbContext kayd�
 builder.Services.AddDbContext<AppDbContext>(options =>

@@ -9,7 +9,11 @@
 
     var toplamTuketim  = Model.ProductionDetails.Sum(d => d.ConsumedWeight);
     var toplamFire     = Model.ProductionDetails.Sum(d => d.WasteWeight);
-    var toplamUretim   = Model.ProductionDetails.Sum(d => d.ProducedQuantity);
+    // Üretim adedi toplanmaz: aynı gün/parti içindeki bileşen satırları aynı üretim adedini taşır.
+    // Her tarih için max alıp günleri topla (CompleteWorkOrder ile aynı mantık).
+    var toplamUretim   = Model.ProductionDetails
+                              .GroupBy(d => d.ProductionDate.Date)
+                              .Sum(g => g.Max(d => d.ProducedQuantity));
     var fireOran       = toplamTuketim > 0 ? toplamFire / toplamTuketim * 100 : 0;
 
     var (statusClass, statusLabel) = Model.Status switch {
@@ -33,9 +37,11 @@
     }
     @if (Model.Status == WorkOrderStatus.Uretimde)
     {
-        <button class="topbar-btn" style="background:#f0fdf4;color:#166534;border-color:#bbf7d0;"
+        <button class="topbar-btn" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;font-weight:600;font-size:14px;padding:10px 24px;letter-spacing:.02em;box-shadow:0 4px 16px rgba(22,163,74,.40);"
+                onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 22px rgba(22,163,74,.55)';"
+                onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(22,163,74,.40)';"
                 onclick="completeWO(@Model.Id, '@Model.WorkOrderNo')">
-            <i class="fas fa-check-circle"></i> Tamamla
+            <i class="fas fa-check-circle me-1"></i> ÜRETİMİ TAMAMLA
         </button>
     }
 }
@@ -563,11 +569,11 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                     @foreach (var s in g)
                                     {
                                         <div class="searchable-dropdown-item" data-id="@s.Id"
-                                             data-kalan="@s.CurrentWeight"
+                                             data-kalan="@s.CurrentWeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)"
                                              data-lotno="@g.Key.PartiNo"
                                              data-supplier="@g.Key.Supplier"
                                              data-serialno="@s.SerialNo"
-                                             onclick="selectSerial(@s.Id, '@s.SerialNo', @s.CurrentWeight.ToString("N2", System.Globalization.CultureInfo.InvariantCulture), '@g.Key.PartiNo', '@g.Key.Supplier')">
+                                             onclick="selectSerial(@s.Id, '@s.SerialNo', @s.CurrentWeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture), '@g.Key.PartiNo', '@g.Key.Supplier')">
                                             <div class="d-flex justify-content-between">
                                                 <span>@s.SerialNo</span>
                                                 <span class="text-muted">@s.CurrentWeight.ToString("N2") kg</span>
@@ -671,7 +677,7 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                         {
 var wrToplamTuketim = wr.ActualConsumedQuantity + wr.WasteQuantity;
                                             var kalan = wr.PlannedQuantity - wrToplamTuketim;
-                                            <option value="@wr.Id" data-plan="@wr.PlannedQuantity" data-actual="@wr.ActualConsumedQuantity" data-waste="@wr.WasteQuantity" data-kalan="@kalan">
+                                            <option value="@wr.Id" data-plan="@wr.PlannedQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-actual="@wr.ActualConsumedQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-waste="@wr.WasteQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-kalan="@kalan.ToString(System.Globalization.CultureInfo.InvariantCulture)">
 @(wr.Product?.ProductName ?? "?") — Plan: @wr.PlannedQuantity.ToString("N0") kg · Tüketim: @wr.ActualConsumedQuantity.ToString("N0") kg · Fire: @wr.WasteQuantity.ToString("N0") kg (Toplam: @wrToplamTuketim.ToString("N0")) · Kalan: @kalan.ToString("N0") kg
                                             </option>
                                         }
@@ -944,7 +950,7 @@ function onConsumedChange() {
 }
 
 // ── Üretilen Miktar → Tüketim Otomatik Hesaplama ─────────────────────
-var WORKORDER_PLANNED_QTY = @Model.PlannedQuantity;
+var WORKORDER_PLANNED_QTY = @Model.PlannedQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
 function calcConsumedFromQty() {
     const qty = parseFloat(document.getElementById('detailQty').value) || 0;
@@ -1193,42 +1199,44 @@ function deleteDetail(id) {
     });
 }
 
-function loadFromRecipe() {
+async function loadFromRecipe() {
     const productId = @Model.ProductId;
-    fetch(`/Products/GetRecipeForWorkOrder?productId=${productId}`)
-        .then(r => r.json())
-        .then(res => {
-            if (!res.success || !res.lines.length) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Reçete Tanımı Gerekli',
-                    html: `
-                        <div style="text-align:left;line-height:1.5;">
-                            <div>Bu ürün için tanımlı aktif reçete bulunamadı.</div>
-                            <div class="mt-2">Önce <b>Ürünler → Reçete</b> sayfasından bileşen tanımlayın.</div>
-                        </div>`,
-                    confirmButtonText: 'Anladım',
-                    confirmButtonColor: '#2563eb'
-                });
-                return;
-            }
+    let res;
+    try {
+        res = await fetch(`/Products/GetRecipeForWorkOrder?productId=${productId}`).then(r => r.json());
+    } catch { showToast('Reçete bilgisi alınamadı.', 'error'); return; }
 
-            let msg = 'Standart Reçete:\n\n';
-            res.lines.forEach(l => {
-                msg += `• ${l.childProductName} — ${l.standardQuantity} ${l.unit}\n`;
-            });
-            msg += '\nReçete bilgilerini tüketim formuna yüklemek istiyor musunuz?';
+    if (!res.success || !res.lines.length) {
+        appAlert('Bu ürün için tanımlı aktif reçete bulunamadı. Önce Ürünler → Reçete sayfasından bileşen tanımlayın.',
+                 { title: 'Reçete Tanımı Gerekli', icon: 'warning' });
+        return;
+    }
+    if (!(WORKORDER_PLANNED_QTY > 0)) {
+        showToast('İş emrinde planlanan üretim adedi tanımlı değil; önce iş emrini düzenleyin.', 'warning');
+        return;
+    }
 
-            if (!confirm(msg)) return;
+    // Önizleme: her bileşenin BOM planı = standart miktar × plan adet
+    let msg = `Plan adedi: ${WORKORDER_PLANNED_QTY.toLocaleString('tr-TR')} adet\n\nBOM'a eklenecek bileşenler:\n`;
+    res.lines.forEach(l => {
+        const planned = l.standardQuantity * WORKORDER_PLANNED_QTY;
+        msg += `• ${l.childProductName}: ${planned.toLocaleString('tr-TR', { maximumFractionDigits: 3 })} kg\n`;
+    });
+    if (!await appConfirm(msg, { title: 'Reçeteden BOM Yükle', icon: 'flask', confirmText: 'BOM\'a Ekle' })) return;
 
-            // İlk reçete satırını tüketim formuna prefill et
-            const first = res.lines[0];
-            openAddDetailFn();
-            // Notlar alanına reçete özetini yaz
-            const noteLines = res.lines.map(l => `${l.childProductName}: ${l.standardQuantity} ${l.unit}`).join(', ');
-            document.getElementById('detailNotes').value = `Reçete: ${noteLines}`;
-            showToast(`${res.lines.length} bileşen bulundu. Tüketim formunu doldurun.`, 'info');
-        });
+    let added = 0, skipped = 0;
+    for (const l of res.lines) {
+        const planned = (l.standardQuantity * WORKORDER_PLANNED_QTY).toFixed(4);
+        const fd = new FormData();
+        fd.append('workOrderId', @Model.Id);
+        fd.append('productId', l.childProductId);
+        fd.append('plannedQuantity', planned);   // JS sayısı → nokta ondalık (server invariant bekliyor)
+        const r = await fetch('/Production/SaveWorkOrderRecipe', { method: 'POST', body: fd })
+                        .then(x => x.json()).catch(() => ({ success: false }));
+        if (r.success) added++; else skipped++;
+    }
+    showToast(`${added} bileşen BOM'a eklendi${skipped ? `, ${skipped} zaten mevcuttu` : ''}.`, added ? 'success' : 'info');
+    setTimeout(() => location.reload(), 700);
 }
 
 function completeWO(id, no) {
