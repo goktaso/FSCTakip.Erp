@@ -405,6 +405,40 @@ namespace FSCTakip.WebUI.Controllers
                     await _context.SaveChangesAsync();
                 }
 
+                // Üretim firesi → İmha Kayıtları (WasteManagement) tek defter. Detay ile WasteCode üzerinden eşlenir.
+                var fireCode = $"FIRE-D{model.Id}";
+                var fireRec = await _context.WasteManagements.FirstOrDefaultAsync(w => w.WasteCode == fireCode);
+                if (model.WasteWeight > 0)
+                {
+                    if (fireRec == null)
+                    {
+                        _context.WasteManagements.Add(new FSCTakip.Core.Entities.WasteManagement
+                        {
+                            WasteCode      = fireCode,
+                            WorkOrderId    = model.WorkOrderId,
+                            Category       = WasteCategory.KesimArtigi,
+                            Description    = $"Üretim firesi — {wo?.WorkOrderNo}",
+                            Quantity       = model.WasteWeight,
+                            Unit           = "kg",
+                            DisposalDate   = model.ProductionDate,
+                            DisposalMethod = "Geri Dönüşüm",
+                            CreatedBy      = User.Identity?.Name ?? "System",
+                            CreatedDate    = DateTime.Now
+                        });
+                    }
+                    else
+                    {
+                        fireRec.Quantity     = model.WasteWeight;
+                        fireRec.DisposalDate = model.ProductionDate;
+                    }
+                    await _context.SaveChangesAsync();
+                }
+                else if (fireRec != null)
+                {
+                    _context.WasteManagements.Remove(fireRec);
+                    await _context.SaveChangesAsync();
+                }
+
                 return Json(new { success = true, message = "Tüketim kaydedildi.", kalanKg = serial.CurrentWeight });
             }
             catch (Exception ex)
@@ -452,6 +486,11 @@ namespace FSCTakip.WebUI.Controllers
                     .Where(sm => sm.Type == MovementType.ProductionConsumption && sm.ErpReferenceId == id)
                     .ToListAsync();
                 if (consMovs.Count > 0) _context.StockMovements.RemoveRange(consMovs);
+
+                // İlgili üretim firesi imha kaydını da kaldır
+                var fireCode = $"FIRE-D{id}";
+                var fireRec = await _context.WasteManagements.FirstOrDefaultAsync(w => w.WasteCode == fireCode);
+                if (fireRec != null) _context.WasteManagements.Remove(fireRec);
 
                 _context.ProductionDetails.Remove(detail);
                 await _context.SaveChangesAsync();
