@@ -26,9 +26,16 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(l => l.Product).ThenInclude(p => p!.PaperColor)
                 .Include(l => l.Product).ThenInclude(p => p!.ProductGroup)
                 .Include(l => l.Serials)
-                // Dönüşümle içeride üretilen yarı mamül lotları (SourceSerialId dolu) burada gösterilmez —
-                // bu ekran satın alma/giriş içindir; onlar Hammadde Stoğu ve Yarı Mamül Dönüşüm'de görünür.
-                .Where(l => l.SourceSerialId == null)
+                // Bu ekran HAMMADDE girişi/alımı içindir. Dışarıda tutulanlar:
+                //  • Dönüşümle içeride üretilen yarı mamüller (SourceSerialId dolu)
+                //  • Hammadde olmayan ürünler (yarı mamül 2xxx / mamul 3xxx / sarf 4xxx) — bunlar
+                //    dönüşüm/üretim çıktısıdır, satın alma değil.
+                // Yarı mamül/mamul stoğu Hammadde Stoğu ve Yarı Mamül Dönüşüm ekranlarında görünür.
+                .Where(l => l.SourceSerialId == null
+                         && (l.Product == null
+                             || l.Product.ExternalCode == null
+                             || l.Product.ExternalCode.StartsWith("1")
+                             || (l.Product.ProductGroup != null && l.Product.ProductGroup.GroupName.Contains("HAMMADDE"))))
                 .AsQueryable();
 
             if (startDate.HasValue)  query = query.Where(l => l.ArrivalDate >= startDate.Value);
