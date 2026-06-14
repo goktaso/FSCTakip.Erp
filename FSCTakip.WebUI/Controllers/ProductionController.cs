@@ -289,6 +289,7 @@ namespace FSCTakip.WebUI.Controllers
 
                 var serial = await _context.FscSerials
                     .Include(s => s.ProductionDetails)
+                    .Include(s => s.Lot)
                     .FirstOrDefaultAsync(s => s.Id == model.FscSerialId);
 
                 if (serial == null)
@@ -372,6 +373,38 @@ namespace FSCTakip.WebUI.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+
+                // Stok hareketi: tüketim (çıkış) — tüketilen malzemenin ürünü için. Detay ile ErpReferenceId üzerinden eşlenir.
+                if (serial.Lot?.ProductId != null)
+                {
+                    var consMov = await _context.StockMovements
+                        .FirstOrDefaultAsync(sm => sm.Type == MovementType.ProductionConsumption && sm.ErpReferenceId == model.Id);
+                    if (consMov == null)
+                    {
+                        _context.StockMovements.Add(new StockMovement
+                        {
+                            Type           = MovementType.ProductionConsumption,
+                            ErpReferenceId = model.Id,
+                            ProductId      = serial.Lot.ProductId.Value,
+                            Quantity       = model.ConsumedWeight,
+                            Unit           = "kg",
+                            DocumentNo     = wo?.WorkOrderNo ?? "",
+                            DocumentDate   = model.ProductionDate,
+                            WorkOrderId    = model.WorkOrderId,
+                            Description    = $"Üretim tüketimi — {wo?.WorkOrderNo}",
+                            CreatedBy      = User.Identity?.Name ?? "System",
+                            CreatedDate    = DateTime.Now
+                        });
+                    }
+                    else
+                    {
+                        consMov.Quantity     = model.ConsumedWeight;
+                        consMov.ProductId    = serial.Lot.ProductId.Value;
+                        consMov.DocumentDate = model.ProductionDate;
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
                 return Json(new { success = true, message = "Tüketim kaydedildi.", kalanKg = serial.CurrentWeight });
             }
             catch (Exception ex)
@@ -413,6 +446,12 @@ namespace FSCTakip.WebUI.Controllers
                             : 0;
                     }
                 }
+
+                // İlgili tüketim (çıkış) stok hareketini de kaldır
+                var consMovs = await _context.StockMovements
+                    .Where(sm => sm.Type == MovementType.ProductionConsumption && sm.ErpReferenceId == id)
+                    .ToListAsync();
+                if (consMovs.Count > 0) _context.StockMovements.RemoveRange(consMovs);
 
                 _context.ProductionDetails.Remove(detail);
                 await _context.SaveChangesAsync();

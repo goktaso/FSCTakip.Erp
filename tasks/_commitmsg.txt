@@ -1,0 +1,18 @@
+feat: stok tuketim (cikis) hareketleri + Hammadde Stogu tuketim/fire/dis-kod kolonlari
+
+Stok ekranlari artik tuketimi (cikis) gosteriyor — onceden tuketim sadece bobin
+agirligindan dusuyor, hic StockMovement yazilmiyordu.
+
+- MovementType.ProductionConsumption (5) eklendi (cikis).
+- ConversionController + ProductionController.SaveDetail tuketimde cikis hareketi yazar;
+  ProductionDetail ile ErpReferenceId uzerinden eslenir, DeleteDetail temizler.
+- StockController.Index/ExportStock: Net = Giris - (Satis + Tuketim) -> bobin kalaniyla tutar.
+- Stock/Movements: tip 5 rozet/etiket/isaret + filtre + ozet toplam cikis.
+- Stock/RawMaterial: Dis Kod + Tuketim(kg) + Fire(kg) kolonlari. Fire = uretim firesi
+  (ProductionDetail.WasteWeight) + donusum firesi (FscLot.ConversionFireKg).
+- FscLot.SourceSerialId + ConversionFireKg eklendi (CoC: YM lotu -> kaynak bobin + fire);
+  migration LotConversionSourceFire.
+- Production/Detail BOM ve recete bileseni listelerinde dis stok kodu gosterimi.
+- Mevcut tuketimler geriye donuk stok hareketine + YM lotlari kaynak/fire ile dolduruldu.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>

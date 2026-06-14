@@ -209,6 +209,13 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                             <div class="d-flex justify-content-between align-items-start mb-1">
                                 <div>
                                     <div style="font-size:12px;font-weight:600;color:#111827;">@(component?.ProductName ?? "—")</div>
+                                    <div style="font-size:10.5px;color:#6b7280;margin:1px 0 2px;">
+                                        @component?.ProductCode
+                                        @if (!string.IsNullOrWhiteSpace(component?.ExternalCode))
+                                        {
+                                            <span class="badge" style="background:#eef2ff;color:#3730a3;font-weight:500;margin-left:4px;" title="Dış stok kodu">@component!.ExternalCode</span>
+                                        }
+                                    </div>
                                     @if (component?.FscType != null)
                                     {
                                         <span class="badge badge-green" style="font-size:10px;">@component.FscType.Name</span>
@@ -678,7 +685,7 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
 var wrToplamTuketim = wr.ActualConsumedQuantity + wr.WasteQuantity;
                                             var kalan = wr.PlannedQuantity - wrToplamTuketim;
                                             <option value="@wr.Id" data-plan="@wr.PlannedQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-actual="@wr.ActualConsumedQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-waste="@wr.WasteQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-kalan="@kalan.ToString(System.Globalization.CultureInfo.InvariantCulture)">
-@(wr.Product?.ProductName ?? "?") — Plan: @wr.PlannedQuantity.ToString("N0") kg · Tüketim: @wr.ActualConsumedQuantity.ToString("N0") kg · Fire: @wr.WasteQuantity.ToString("N0") kg (Toplam: @wrToplamTuketim.ToString("N0")) · Kalan: @kalan.ToString("N0") kg
+@(string.IsNullOrEmpty(wr.Product?.ExternalCode) ? "" : wr.Product!.ExternalCode + " · ")@(wr.Product?.ProductName ?? "?") — Plan: @wr.PlannedQuantity.ToString("N0") kg · Tüketim: @wr.ActualConsumedQuantity.ToString("N0") kg · Fire: @wr.WasteQuantity.ToString("N0") kg (Toplam: @wrToplamTuketim.ToString("N0")) · Kalan: @kalan.ToString("N0") kg
                                             </option>
                                         }
                                         @if (!workOrderRecipes.Any() && recipeComponents.Any())
@@ -686,7 +693,7 @@ var wrToplamTuketim = wr.ActualConsumedQuantity + wr.WasteQuantity;
                                             <optgroup label="— Önce Bileşen Ekleyin —">
                                                 @foreach (var rc in recipeComponents)
                                                 {
-                                                    <option value="" disabled>@rc.ChildProduct?.ProductName — @rc.StandardQuantity @rc.Unit (standart)</option>
+                                                    <option value="" disabled>@(string.IsNullOrEmpty(rc.ChildProduct?.ExternalCode) ? "" : rc.ChildProduct!.ExternalCode + " · ")@rc.ChildProduct?.ProductName — @rc.StandardQuantity @rc.Unit (standart)</option>
                                                 }
                                             </optgroup>
                                         }
@@ -745,7 +752,7 @@ var wrToplamTuketim = wr.ActualConsumedQuantity + wr.WasteQuantity;
                                 @foreach (var rc in recipeComponents)
                                 {
                                     <option value="@rc.ChildProductId">
-                                        @rc.ChildProduct?.ProductName
+                                        @(string.IsNullOrEmpty(rc.ChildProduct?.ExternalCode) ? "" : rc.ChildProduct!.ExternalCode + " · ")@rc.ChildProduct?.ProductName
                                         @if (rc.ChildProduct?.FscType != null)
                                         {
                                             <text> [@rc.ChildProduct.FscType.Name]</text>

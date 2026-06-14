@@ -38,7 +38,7 @@ namespace FSCTakip.WebUI.Controllers
                     ProductId   = g.Key,
                     Product     = g.First().Product!,
                     GirisAdet   = g.Where(m => m.Type == MovementType.ProductionEntry || m.Type == MovementType.PurchaseEntry).Sum(m => m.Quantity),
-                    CikisAdet   = g.Where(m => m.Type == MovementType.SalesDispatch).Sum(m => m.Quantity),
+                    CikisAdet   = g.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity),
                     TransferAdet = g.Where(m => m.Type == MovementType.WarehouseTransfer).Sum(m => m.Quantity),
                     LastMovementDate = g.Max(m => m.DocumentDate)
                 })
@@ -168,7 +168,7 @@ namespace FSCTakip.WebUI.Controllers
                 {
                     var p = g.First().Product!;
                     var giris = g.Where(m => m.Type == MovementType.ProductionEntry || m.Type == MovementType.PurchaseEntry).Sum(m => m.Quantity);
-                    var cikis = g.Where(m => m.Type == MovementType.SalesDispatch).Sum(m => m.Quantity);
+                    var cikis = g.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity);
                     return new
                     {
                         UrunKodu  = p.ProductCode,
@@ -213,6 +213,23 @@ namespace FSCTakip.WebUI.Controllers
                 .ThenBy(s => s.Lot.Supplier.Name)
                 .ThenBy(s => s.Lot.PartiNo)
                 .ToListAsync();
+
+            // Bobin başına fire = üretim firesi (ProductionDetail.WasteWeight) + dönüşüm firesi (kaynak olduğu YM lotları)
+            var serialIds = serials.Select(s => s.Id).ToList();
+            var prodFire = await _context.ProductionDetails
+                .Where(d => serialIds.Contains(d.FscSerialId))
+                .GroupBy(d => d.FscSerialId)
+                .Select(g => new { SerialId = g.Key, Fire = g.Sum(x => x.WasteWeight) })
+                .ToDictionaryAsync(x => x.SerialId, x => x.Fire);
+            var convFire = await _context.FscLots
+                .Where(l => l.SourceSerialId != null && serialIds.Contains(l.SourceSerialId.Value) && l.ConversionFireKg != null)
+                .GroupBy(l => l.SourceSerialId!.Value)
+                .Select(g => new { SerialId = g.Key, Fire = g.Sum(x => x.ConversionFireKg!.Value) })
+                .ToDictionaryAsync(x => x.SerialId, x => x.Fire);
+            var fireDict = new Dictionary<int, decimal>(prodFire);
+            foreach (var kv in convFire)
+                fireDict[kv.Key] = (fireDict.TryGetValue(kv.Key, out var pf) ? pf : 0m) + kv.Value;
+            ViewBag.SerialFire = fireDict;
 
             // Özet kartlar
             ViewBag.TotalKg      = serials.Sum(s => s.CurrentWeight);
@@ -262,12 +279,14 @@ namespace FSCTakip.WebUI.Controllers
                 {
                     SeriNo         = s.SerialNo,
                     PartiNo        = s.Lot.PartiNo,
+                    DisKod         = s.Lot.Product != null ? s.Lot.Product.ExternalCode : "",
                     Urun           = s.Lot.Product != null ? s.Lot.Product.ProductName : "",
                     Tedarikci      = s.Lot.Supplier != null ? s.Lot.Supplier.Name : "",
                     FscTipi        = s.Lot.FscType != null ? s.Lot.FscType.Name : "",
                     GirisKg        = s.InitialWeight,
-                    KalanKg        = s.CurrentWeight,
                     TuketimKg      = s.InitialWeight - s.CurrentWeight,
+                    FireKg         = s.ProductionDetails.Sum(d => d.WasteWeight),
+                    KalanKg        = s.CurrentWeight,
                     YuzdeKalan     = s.InitialWeight > 0 ? Math.Round(s.CurrentWeight / s.InitialWeight * 100, 1) : 0m,
                     AcilisDevir    = s.IsOpeningStock ? "Evet" : "Hayır",
                     LotTarihi      = s.Lot.ArrivalDate.ToString("dd.MM.yyyy"),
@@ -291,9 +310,10 @@ namespace FSCTakip.WebUI.Controllers
                 {
                     Tarih       = m.DocumentDate.ToString("dd.MM.yyyy"),
                     BelgeNo     = m.DocumentNo ?? "",
-                    Tip         = m.Type == MovementType.ProductionEntry  ? "Üretim Girişi"
-                                : m.Type == MovementType.PurchaseEntry    ? "Satın Alma Girişi"
-                                : m.Type == MovementType.SalesDispatch    ? "Satış Çıkışı"
+                    Tip         = m.Type == MovementType.ProductionEntry       ? "Üretim Girişi"
+                                : m.Type == MovementType.PurchaseEntry         ? "Satın Alma Girişi"
+                                : m.Type == MovementType.SalesDispatch         ? "Satış Çıkışı"
+                                : m.Type == MovementType.ProductionConsumption ? "Üretim Tüketimi (Çıkış)"
                                 : "Depo Transferi",
                     Urun        = m.Product != null ? m.Product.ProductName : "",
                     Miktar      = m.Quantity,

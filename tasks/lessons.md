@@ -36,6 +36,22 @@ data-plan="@wr.PlannedQuantity.ToString(System.Globalization.CultureInfo.Invaria
 
 **Temizlik notu:** `PurchaseController.SaveFile` ve `ViewDocument` artık ölü kod (Document/Serve'e geçildi) — sonra kaldırılabilir.
 
+## Tüketim stok hareketi (çıkış) eksikti — Stok Durumu/Hareketleri'nde çıkış 0 (2026-06-14)
+
+**Belirti:** Üretim/dönüşüm yapılmasına rağmen Stok Durumu'nda çıkış 0, Stok Hareketleri'nde sadece girişler.
+
+**Kök neden:** Tüketim `FscSerial.CurrentWeight`'ten düşülüyordu ama **hiç `StockMovement` (çıkış) yazılmıyordu**. Stok ekranları StockMovement tabanlı → çıkış görünmüyordu.
+
+**Çözüm:**
+- `MovementType.ProductionConsumption = 5` (çıkış) eklendi.
+- `ConversionController.Convert` → kaynak ham/YM tüketimi için çıkış hareketi.
+- `ProductionController.SaveDetail` → tüketim için çıkış hareketi (detay ile **ErpReferenceId** üzerinden eşlenir; edit'te güncellenir). `DeleteDetail` → ilgili hareketi siler.
+- `StockController.Index/ExportStock` → CikisAdet'e ProductionConsumption dahil (Net = Giriş − Çıkış → bobin kalanıyla tutar).
+- `Stock/Movements` görünümü → tip 5 rozet/etiket/işaret + filtre + özet. `Stock/RawMaterial` → Dış Kod + Tüketim(kg) + Fire(kg) kolonları (Fire = ProductionDetail.WasteWeight/bobin; dönüşüm firesi Fire Raporu'nda).
+- Geçmiş veri SQL ile backfill (dönüşüm: HAM-DEMO Initial−Current; üretim: ProductionDetails).
+
+**Not:** Mamul (3xxxx) üretimi hâlâ stok hareketi oluşturmuyor (sadece WorkOrder.ActualQuantity); mamul stoğa satış sevkiyatında çıkış olarak girer — tasarım böyle.
+
 ## Tek tip mesaj kutusu standardı (2026-06-14) — §11'e eklenecek
 
 Tüm mesaj/onay kutuları `_Layout.cshtml`'de tanımlı tek bir ARD temalı sistemden çıkar (beyaz kart, ikon halkası, marka mavisi `#1976d2` / tehlike kırmızısı `#dc2626`, 16px köşe, yumuşak animasyon, Enter=onay/Esc=iptal):

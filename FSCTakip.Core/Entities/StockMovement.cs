@@ -5,10 +5,11 @@ namespace FSCTakip.Core.Entities
     // Hareketin ne olduğunu belirleyen sabit liste
     public enum MovementType
     {
-        ProductionEntry = 1,   // Üretimden depoya giriş (Mamul)
+        ProductionEntry = 1,   // Üretimden depoya giriş (Mamul / yarı mamül)
         WarehouseTransfer = 2,  // Depolar arası mal kaydırma
         SalesDispatch = 3,      // Müşteriye sevkiyat (İrsaliye/Fatura)
-        PurchaseEntry = 4       // Tedarikçiden hammadde girişi
+        PurchaseEntry = 4,      // Tedarikçiden hammadde girişi
+        ProductionConsumption = 5  // Üretim/dönüşümde hammadde-yarı mamül tüketimi (çıkış)
     }
 
     public class StockMovement : BaseEntity

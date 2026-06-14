@@ -101,12 +101,14 @@ namespace FSCTakip.WebUI.Controllers
                 var srcName = source.Lot.Product?.ProductName ?? source.Lot.PartiNo;
                 var lot = new FscLot
                 {
-                    PartiNo     = partiNo,
-                    FscTypeId   = source.Lot.FscTypeId,
-                    SupplierId  = null,
-                    ProductId   = targetProductId,
-                    ArrivalDate = when,
-                    Currency    = "TRY",
+                    PartiNo          = partiNo,
+                    FscTypeId        = source.Lot.FscTypeId,
+                    SupplierId       = null,
+                    ProductId        = targetProductId,
+                    ArrivalDate      = when,
+                    Currency         = "TRY",
+                    SourceSerialId   = source.Id,
+                    ConversionFireKg = consumedKg - producedKg,
                     Notes       = $"Yarı mamül dönüşüm — kaynak: {srcName} / {source.SerialNo} ({consumedKg:N2} kg → {producedKg:N2} kg)"
                                   + (string.IsNullOrWhiteSpace(notes) ? "" : $" · {notes.Trim()}"),
                     CreatedBy   = user,
@@ -141,6 +143,23 @@ namespace FSCTakip.WebUI.Controllers
                     CreatedBy    = user,
                     CreatedDate  = DateTime.Now
                 });
+
+                // 4b) Stok hareketi — kaynak ham/YM tüketimi (çıkış)
+                if (source.Lot.ProductId.HasValue)
+                {
+                    _context.StockMovements.Add(new StockMovement
+                    {
+                        Type         = MovementType.ProductionConsumption,
+                        ProductId    = source.Lot.ProductId.Value,
+                        Quantity     = consumedKg,
+                        Unit         = "kg",
+                        DocumentNo   = partiNo,
+                        DocumentDate = when,
+                        Description  = $"Dönüşüm tüketimi: {srcName} → {target.ProductName}",
+                        CreatedBy    = user,
+                        CreatedDate  = DateTime.Now
+                    });
+                }
 
                 // 5) Fire → Fire Raporu (WasteManagement) — tüketilen ile üretilen farkı
                 var fire = consumedKg - producedKg;

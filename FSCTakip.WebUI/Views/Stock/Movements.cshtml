@@ -32,6 +32,7 @@
             <option value="4">Satın Alma Girişi</option>
             <option value="1">Üretim Girişi</option>
             <option value="3">Satış Çıkışı</option>
+            <option value="5">Üretim Tüketimi (Çıkış)</option>
             <option value="2">Depo Transferi</option>
         </select>
         <input type="date" name="startDate" class="form-control form-control-sm" value="@start" title="Başlangıç" />
@@ -75,20 +76,23 @@
                 @foreach (var m in Model)
                 {
                     string tipClass = m.Type switch {
-                        MovementType.PurchaseEntry     => "badge-info",
-                        MovementType.ProductionEntry   => "badge-primary",
-                        MovementType.SalesDispatch     => "badge-danger",
-                        MovementType.WarehouseTransfer => "badge-warning",
+                        MovementType.PurchaseEntry         => "badge-info",
+                        MovementType.ProductionEntry       => "badge-primary",
+                        MovementType.SalesDispatch         => "badge-danger",
+                        MovementType.ProductionConsumption => "badge-warning",
+                        MovementType.WarehouseTransfer     => "badge-secondary",
                         _ => "badge-secondary"
                     };
                     string tipText = m.Type switch {
-                        MovementType.PurchaseEntry     => "Satın Alma",
-                        MovementType.ProductionEntry   => "Üretim",
-                        MovementType.SalesDispatch     => "Satış",
-                        MovementType.WarehouseTransfer => "Transfer",
+                        MovementType.PurchaseEntry         => "Satın Alma",
+                        MovementType.ProductionEntry       => "Üretim",
+                        MovementType.SalesDispatch         => "Satış",
+                        MovementType.ProductionConsumption => "Tüketim",
+                        MovementType.WarehouseTransfer     => "Transfer",
                         _ => m.Type.ToString()
                     };
                     bool isGiris = m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry;
+                    bool isCikis = m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption;
 
                     // Belge bilgisi — alış için FscLot, satış için SalesOrder
                     FscLot?    purchaseLot  = null;
@@ -102,8 +106,8 @@
                         <td class="small text-muted">@m.DocumentDate.ToString("dd.MM.yyyy")</td>
                         <td><span class="badge @tipClass">@tipText</span></td>
                         <td><strong class="small">@(m.Product?.ProductName ?? "—")</strong></td>
-                        <td class="text-end fw-semibold @(isGiris ? "text-success" : m.Type == MovementType.SalesDispatch ? "text-danger" : "")">
-                            @(isGiris ? "+" : m.Type == MovementType.SalesDispatch ? "-" : "")@m.Quantity.ToString("N0")
+                        <td class="text-end fw-semibold @(isGiris ? "text-success" : isCikis ? "text-danger" : "")">
+                            @(isGiris ? "+" : isCikis ? "-" : "")@m.Quantity.ToString("N0")
                         </td>
                         <td class="small text-muted">@m.Unit</td>
                         <td>
@@ -208,7 +212,7 @@
                 </strong>
                 &nbsp;|&nbsp;
                 Toplam Çıkış: <strong class="text-danger">
-                    @Model.Where(m => m.Type == MovementType.SalesDispatch).Sum(m => m.Quantity).ToString("N0")
+                    @Model.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity).ToString("N0")
                 </strong>
             </span>
         </div>
