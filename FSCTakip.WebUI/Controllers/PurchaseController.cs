@@ -1,11 +1,13 @@
 using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using FSCTakip.WebUI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace FSCTakip.WebUI.Controllers
 {
+    [Authorize]
     public class PurchaseController : BaseController
     {
         private readonly IFileStorageService _storage;
@@ -86,6 +88,13 @@ namespace FSCTakip.WebUI.Controllers
                         return Json(new { success = false, message = "Tedarikçi bulunamadı." });
                 }
 
+                // Tedarikçi zorunlu (FSC hammadde takibi için)
+                if (!model.SupplierId.HasValue || model.SupplierId.Value == 0)
+                    return Json(new { success = false, message = "Tedarikçi seçimi zorunludur. FSC hammadde girişinde sertifikalı tedarikçi belirtilmelidir." });
+
+                if (!model.ProductId.HasValue || model.ProductId.Value == 0)
+                    return Json(new { success = false, message = "Ürün seçimi zorunludur." });
+
                 // Parti no zorunlu
                 if (string.IsNullOrWhiteSpace(model.PartiNo))
                     return Json(new { success = false, message = "Parti numarası zorunludur." });
@@ -155,25 +164,35 @@ namespace FSCTakip.WebUI.Controllers
 
                     if (serialCount > 0)
                     {
-                        await _context.SaveChangesAsync();
-
-                        // StockMovement: hammadde giriş kaydı oluştur
-                        if (model.ProductId.HasValue)
+                        using var tx = await _context.Database.BeginTransactionAsync();
+                        try
                         {
-                            var totalKg = weights.Where(w => w > 0).Sum();
-                            _context.StockMovements.Add(new StockMovement
-                            {
-                                Type         = MovementType.PurchaseEntry,
-                                ProductId    = model.ProductId.Value,
-                                Quantity     = totalKg,
-                                Unit         = "kg",
-                                DocumentNo   = model.DispatchNo ?? model.PartiNo,
-                                DocumentDate = model.ArrivalDate,
-                                Description  = $"Hammadde girişi — {model.PartiNo} ({serialCount} bobin)",
-                                CreatedDate  = DateTime.Now,
-                                CreatedBy    = User.Identity?.Name ?? "System"
-                            });
                             await _context.SaveChangesAsync();
+
+                            // StockMovement: hammadde giriş kaydı oluştur
+                            if (model.ProductId.HasValue)
+                            {
+                                var totalKg = weights.Where(w => w > 0).Sum();
+                                _context.StockMovements.Add(new StockMovement
+                                {
+                                    Type         = MovementType.PurchaseEntry,
+                                    ProductId    = model.ProductId.Value,
+                                    Quantity     = totalKg,
+                                    Unit         = "kg",
+                                    DocumentNo   = model.DispatchNo ?? model.PartiNo,
+                                    DocumentDate = model.ArrivalDate,
+                                    Description  = $"Hammadde girişi — {model.PartiNo} ({serialCount} bobin)",
+                                    CreatedDate  = DateTime.Now,
+                                    CreatedBy    = User.Identity?.Name ?? "System"
+                                });
+                                await _context.SaveChangesAsync();
+                            }
+                            await tx.CommitAsync();
+                        }
+                        catch
+                        {
+                            await tx.RollbackAsync();
+                            throw;
                         }
                     }
                 }

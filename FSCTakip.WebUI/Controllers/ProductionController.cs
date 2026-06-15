@@ -1,10 +1,12 @@
 using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace FSCTakip.WebUI.Controllers
 {
+    [Authorize]
     public class ProductionController : BaseController
     {
         public ProductionController(AppDbContext context) : base(context) { }

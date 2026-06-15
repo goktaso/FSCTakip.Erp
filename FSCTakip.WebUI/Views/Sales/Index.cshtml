@@ -164,7 +164,9 @@
                         @if (!string.IsNullOrEmpty(s.DispatchNo) && !string.IsNullOrEmpty(s.DispatchPdfPath))
                         {
                             <button class="doc-num-btn"
-                                    onclick="showPdf('/@s.DispatchPdfPath','İrsaliye — @s.DispatchNo')"
+                                    data-pdf-path="/@s.DispatchPdfPath"
+                                    data-pdf-title="İrsaliye — @s.DispatchNo"
+                                    onclick="showPdfFromBtn(this)"
                                     title="İrsaliyeyi görüntüle">
                                 <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@s.DispatchNo
                             </button>
@@ -175,7 +177,9 @@
                         @if (!string.IsNullOrEmpty(s.InvoiceNo) && !string.IsNullOrEmpty(s.InvoicePdfPath))
                         {
                             <button class="doc-num-btn"
-                                    onclick="showPdf('/@s.InvoicePdfPath','Fatura — @s.InvoiceNo')"
+                                    data-pdf-path="/@s.InvoicePdfPath"
+                                    data-pdf-title="Fatura — @s.InvoiceNo"
+                                    onclick="showPdfFromBtn(this)"
                                     title="Faturayı görüntüle">
                                 <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@s.InvoiceNo
                             </button>
@@ -215,7 +219,7 @@
 </div>
 
 <!-- Sipariş Modal -->
-<div class="modal fade" id="salesModal" tabindex="-1">
+<div class="modal fade" id="salesModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header dark">
@@ -316,6 +320,10 @@
 
 @section Scripts {
 <script>
+function showPdfFromBtn(btn) {
+    showPdf(btn.dataset.pdfPath, btn.dataset.pdfTitle);
+}
+
 let _salesIsEdit = false;
 
 function openNewOrder() {
@@ -346,7 +354,7 @@ function onCustomerChange() {
 function editOrder(id) {
     fetch(`/Sales/GetOrder/${id}`)
         .then(r => r.json()).then(res => {
-            if (!res.success) return;
+            if (!res.success) { showToast(res.message || 'Kayıt yüklenemedi.', 'error'); return; }
             _salesIsEdit = true;
             const d = res.data;
             document.getElementById('salesOrderId').value       = d.id;
@@ -367,7 +375,8 @@ function editOrder(id) {
             document.getElementById('salesModalTitle').textContent = `Sipariş Düzenle — ${d.salesOrderNo}`;
             document.getElementById('salesSaveBtn').innerHTML = '<i class="fas fa-save me-1"></i> Güncelle';
             bootstrap.Modal.getOrCreateInstance(document.getElementById('salesModal')).show();
-        });
+        })
+        .catch(() => showToast('Bağlantı hatası.', 'error'));
 }
 
 function saveOrder() {

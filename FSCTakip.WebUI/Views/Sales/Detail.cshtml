@@ -72,7 +72,9 @@
                                 @if (!string.IsNullOrEmpty(Model.DispatchPdfPath))
                                 {
                                     <button class="doc-num-btn"
-                                            onclick="showPdf('/Document/Serve?key=@Model.DispatchPdfPath','İrsaliye — @Model.DispatchNo')"
+                                            data-pdf-path="/Document/Serve?key=@Model.DispatchPdfPath"
+                                            data-pdf-title="İrsaliye — @Model.DispatchNo"
+                                            onclick="showPdfFromBtn(this)"
                                             title="İrsaliyeyi görüntüle">
                                         <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@Model.DispatchNo
                                     </button>
@@ -89,7 +91,9 @@
                                 @if (!string.IsNullOrEmpty(Model.InvoicePdfPath))
                                 {
                                     <button class="doc-num-btn"
-                                            onclick="showPdf('/Document/Serve?key=@Model.InvoicePdfPath','Fatura — @Model.InvoiceNo')"
+                                            data-pdf-path="/Document/Serve?key=@Model.InvoicePdfPath"
+                                            data-pdf-title="Fatura — @Model.InvoiceNo"
+                                            onclick="showPdfFromBtn(this)"
                                             title="Faturayı görüntüle">
                                         <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@Model.InvoiceNo
                                     </button>
@@ -291,12 +295,24 @@
                 <input type="hidden" id="lineId">
                 <div class="row g-2">
                     <div class="col-12">
-                        <label class="form-label">Ürün *</label>
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <label class="form-label mb-0">Ürün *</label>
+                            <div class="d-flex align-items-center gap-1" style="font-size:12px;">
+                                <span class="text-muted">Göster:</span>
+                                <label class="d-flex align-items-center gap-1 mb-0" style="cursor:pointer;">
+                                    <input type="radio" name="productFilter" value="mamul" checked onchange="filterProducts(this.value)"> Mamul
+                                </label>
+                                <label class="d-flex align-items-center gap-1 mb-0" style="cursor:pointer;">
+                                    <input type="radio" name="productFilter" value="all" onchange="filterProducts(this.value)"> Tümü
+                                </label>
+                            </div>
+                        </div>
                         <select id="lineProductId" class="form-select form-select-sm">
                             <option value="">— Seçiniz —</option>
                             @foreach (var p in products)
                             {
-                                <option value="@p.Id">@p.ProductCode — @p.ProductName</option>
+                                var grpName = p.ProductGroup?.GroupName ?? "";
+                                <option value="@p.Id" data-group="@grpName">@p.ProductCode — @p.ProductName</option>
                             }
                         </select>
                     </div>
@@ -333,7 +349,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
-                <button type="button" class="btn btn-primary btn-sm" onclick="saveLine()">
+                <button type="button" class="btn btn-primary btn-sm" id="lineSaveBtn" onclick="saveLine()">
                     <i class="fas fa-save me-1"></i> Kaydet
                 </button>
             </div>
@@ -382,6 +398,10 @@
 
 @section Scripts {
 <script>
+function showPdfFromBtn(btn) {
+    showPdf(btn.dataset.pdfPath, btn.dataset.pdfTitle);
+}
+
 const salesOrderId = @Model.Id;
 
 // Satış belgesi yükle (irsaliye/fatura)
@@ -402,6 +422,22 @@ function uploadSalesDoc(type) {
         .catch(() => showToast('Yükleme sırasında hata oluştu.', 'error'));
 }
 
+function filterProducts(mode) {
+    const sel = document.getElementById('lineProductId');
+    const current = sel.value;
+    Array.from(sel.options).forEach(opt => {
+        if (!opt.value) return; // "Seçiniz" her zaman görünür
+        if (mode === 'mamul') {
+            const grp = (opt.dataset.group || '').toUpperCase();
+            opt.hidden = !grp.startsWith('MAMUL');
+        } else {
+            opt.hidden = false;
+        }
+    });
+    // Seçili ürün gizlendiyse sıfırla
+    if (sel.value && sel.options[sel.selectedIndex]?.hidden) sel.value = '';
+}
+
 // Kalem modal sıfırla
 let _lineEditMode = false;
 document.getElementById('lineModal').addEventListener('show.bs.modal', function () {
@@ -414,6 +450,9 @@ document.getElementById('lineModal').addEventListener('show.bs.modal', function 
         document.getElementById('linePrice').value = '0';
         document.getElementById('lineNotes').value = '';
         document.getElementById('lineModalTitle').innerHTML = '<i class="fas fa-plus me-2"></i>Kalem Ekle';
+        // Her açılışta "Mamul" filtresine döndür
+        document.querySelector('input[name="productFilter"][value="mamul"]').checked = true;
+        filterProducts('mamul');
     }
     _lineEditMode = false;
 });
@@ -425,7 +464,7 @@ function editLine(id) {
     // Basitçe sayfayı yenile + modal aç — production'da API endpoint kullanılabilir
     fetch(`/Sales/GetLine/${id}`)
         .then(r => r.json()).then(res => {
-            if (!res.success) { _lineEditMode = false; return; }
+            if (!res.success) { _lineEditMode = false; showToast(res.message || 'Kayıt yüklenemedi.', 'error'); return; }
             const d = res.data;
             document.getElementById('lineId').value          = d.id;
             document.getElementById('lineProductId').value   = d.productId;
@@ -436,13 +475,17 @@ function editLine(id) {
             document.getElementById('lineNotes').value       = d.notes || '';
             document.getElementById('lineModalTitle').innerHTML = '<i class="fas fa-pen me-2"></i>Kalem Düzenle';
             bootstrap.Modal.getOrCreateInstance(document.getElementById('lineModal')).show();
-        });
+        })
+        .catch(() => { _lineEditMode = false; showToast('Bağlantı hatası.', 'error'); });
 }
 
 function saveLine() {
     const productId = document.getElementById('lineProductId').value;
     const qty       = document.getElementById('lineQty').value;
     if (!productId || !qty) { showToast('Ürün ve miktar zorunludur', 'warning'); return; }
+
+    const saveBtn = document.getElementById('lineSaveBtn');
+    if (saveBtn) { saveBtn.disabled = true; }
 
     const fd = new FormData();
     fd.append('lineId',       document.getElementById('lineId').value || '0');
@@ -461,7 +504,9 @@ function saveLine() {
                 showToast(res.message, 'success');
                 setTimeout(() => location.reload(), 800);
             } else { showToast(res.message, 'error'); }
-        });
+        })
+        .catch(() => showToast('Bağlantı hatası.', 'error'))
+        .finally(() => { if (saveBtn) saveBtn.disabled = false; });
 }
 
 async function deleteLine(id) {

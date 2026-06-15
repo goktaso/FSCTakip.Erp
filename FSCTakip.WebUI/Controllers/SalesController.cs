@@ -2,12 +2,14 @@ using ClosedXML.Excel;
 using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using FSCTakip.WebUI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 
 namespace FSCTakip.WebUI.Controllers
 {
+    [Authorize]
     public class SalesController : BaseController
     {
         private readonly IFileStorageService _storage;
@@ -80,7 +82,7 @@ namespace FSCTakip.WebUI.Controllers
 
             if (order == null) return NotFound();
 
-            ViewBag.Products   = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
+            ViewBag.Products   = await _context.Products.Include(p => p.ProductGroup).Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
             ViewBag.WorkOrders = await _context.WorkOrders
                 .Include(w => w.Product)
                 .Where(w => w.Status == WorkOrderStatus.Tamamlandi)
@@ -122,49 +124,53 @@ namespace FSCTakip.WebUI.Controllers
             string? plateNumber, string? deliveryAddress,
             SalesOrderStatus status, string? notes)
         {
-            if (salesOrderId == 0)
+            try
             {
-                var count = await _context.SalesOrders.CountAsync();
-                var order = new SalesOrder
+                if (salesOrderId == 0)
                 {
-                    SalesOrderNo    = $"SIP{DateTime.Today.Year}-{count + 1:D3}",
-                    ExternalOrderNo = string.IsNullOrWhiteSpace(externalOrderNo) ? null : externalOrderNo.Trim(),
-                    CustomerId      = customerId,
-                    OrderDate       = orderDate,
-                    DispatchNo      = dispatchNo,
-                    InvoiceNo       = invoiceNo,
-                    InvoiceAmount   = invoiceAmount,
-                    Currency        = currency,
-                    PlateNumber     = plateNumber,
-                    DeliveryAddress = deliveryAddress,
-                    Status          = status,
-                    Notes           = notes
-                };
-                _context.SalesOrders.Add(order);
-                await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Sipariş oluşturuldu", salesOrderNo = order.SalesOrderNo, id = order.Id });
-            }
-            else
-            {
-                var order = await _context.SalesOrders.FindAsync(salesOrderId);
-                if (order == null) return Json(new { success = false, message = "Kayıt bulunamadı" });
+                    var count = await _context.SalesOrders.CountAsync();
+                    var order = new SalesOrder
+                    {
+                        SalesOrderNo    = $"SIP{DateTime.Today.Year}-{count + 1:D3}",
+                        ExternalOrderNo = string.IsNullOrWhiteSpace(externalOrderNo) ? null : externalOrderNo.Trim(),
+                        CustomerId      = customerId,
+                        OrderDate       = orderDate,
+                        DispatchNo      = dispatchNo,
+                        InvoiceNo       = invoiceNo,
+                        InvoiceAmount   = invoiceAmount,
+                        Currency        = currency,
+                        PlateNumber     = plateNumber,
+                        DeliveryAddress = deliveryAddress,
+                        Status          = status,
+                        Notes           = notes
+                    };
+                    _context.SalesOrders.Add(order);
+                    await _context.SaveChangesAsync();
+                    return Json(new { success = true, message = "Sipariş oluşturuldu", salesOrderNo = order.SalesOrderNo, id = order.Id });
+                }
+                else
+                {
+                    var order = await _context.SalesOrders.FindAsync(salesOrderId);
+                    if (order == null) return Json(new { success = false, message = "Kayıt bulunamadı" });
 
-                order.CustomerId      = customerId;
-                order.OrderDate       = orderDate;
-                order.ExternalOrderNo = string.IsNullOrWhiteSpace(externalOrderNo) ? order.ExternalOrderNo : externalOrderNo.Trim();
-                order.DispatchNo      = dispatchNo;
-                order.InvoiceNo       = invoiceNo;
-                order.InvoiceAmount   = invoiceAmount;
-                order.Currency        = currency;
-                order.PlateNumber     = plateNumber;
-                order.DeliveryAddress = deliveryAddress;
-                order.Status          = status;
-                order.Notes           = notes;
-                order.UpdatedDate     = DateTime.Now;
+                    order.CustomerId      = customerId;
+                    order.OrderDate       = orderDate;
+                    order.ExternalOrderNo = string.IsNullOrWhiteSpace(externalOrderNo) ? order.ExternalOrderNo : externalOrderNo.Trim();
+                    order.DispatchNo      = dispatchNo;
+                    order.InvoiceNo       = invoiceNo;
+                    order.InvoiceAmount   = invoiceAmount;
+                    order.Currency        = currency;
+                    order.PlateNumber     = plateNumber;
+                    order.DeliveryAddress = deliveryAddress;
+                    order.Status          = status;
+                    order.Notes           = notes;
+                    order.UpdatedDate     = DateTime.Now;
 
-                await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Sipariş güncellendi", salesOrderNo = order.SalesOrderNo, id = order.Id });
+                    await _context.SaveChangesAsync();
+                    return Json(new { success = true, message = "Sipariş güncellendi", salesOrderNo = order.SalesOrderNo, id = order.Id });
+                }
             }
+            catch (Exception ex) { return Json(new { success = false, message = ex.Message }); }
         }
 
         // GET /Sales/GetLine/{id}
@@ -292,6 +298,9 @@ namespace FSCTakip.WebUI.Controllers
             if (order == null) return Json(new { success = false, message = "Sipariş bulunamadı" });
             if (order.Status == SalesOrderStatus.TeslimEdildi)
                 return Json(new { success = false, message = "Sipariş zaten teslim edildi" });
+            if (order.Customer?.IsFscActive == false ||
+                (order.Customer?.FscExpiryDate.HasValue == true && order.Customer.FscExpiryDate.Value < DateTime.Today))
+                return Json(new { success = false, message = $"{order.Customer?.Name} firmasının FSC sertifikası geçersiz veya süresi dolmuş. Sevkiyat engellenmiştir." });
             if (!order.Lines.Any())
                 return Json(new { success = false, message = "Siparişte kalem yok, sevk edilemez" });
 
@@ -316,7 +325,9 @@ namespace FSCTakip.WebUI.Controllers
                     CustomerId   = order.CustomerId,
                     PlateNumber  = order.PlateNumber,
                     WorkOrderId  = line.WorkOrderId,
-                    Description  = $"Sevkiyat: {order.Customer.Name}"
+                    Description  = $"Sevkiyat: {order.Customer.Name}",
+                    CreatedBy    = User.Identity?.Name ?? "System",
+                    CreatedDate  = DateTime.Now
                 });
             }
 

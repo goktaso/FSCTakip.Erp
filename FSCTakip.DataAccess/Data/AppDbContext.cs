@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.AspNetCore.Http;
 using FSCTakip.Core.Entities;
@@ -455,6 +455,27 @@ namespace FSCTakip.DataAccess.Data
                 .HasOne(up => up.User).WithMany(u => u.PermissionOverrides).HasForeignKey(up => up.UserId).OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<UserPermissionOverride>()
                 .HasOne(up => up.Module).WithMany(m => m.UserOverrides).HasForeignKey(up => up.ModuleId).OnDelete(DeleteBehavior.Cascade);
+
+            // H5 -- StockMovements composite index: ProductId + DocumentDate sorgularini hizlandirir
+            modelBuilder.Entity<StockMovement>()
+                .HasIndex(s => new { s.ProductId, s.DocumentDate })
+                .HasDatabaseName("IX_StockMovements_ProductId_DocumentDate");
+
+            // H7 -- FscSerial decimal precision: agirlik alanlari 4 hane ondalik hassasiyetle
+            modelBuilder.Entity<FscSerial>()
+                .Property(s => s.InitialWeight).HasColumnType("decimal(18,4)");
+            modelBuilder.Entity<FscSerial>()
+                .Property(s => s.CurrentWeight).HasColumnType("decimal(18,4)");
+            modelBuilder.Entity<FscSerial>()
+                .Property(s => s.OriginalQuantity).HasColumnType("decimal(18,4)");
+
+            // M11 -- FscLot.SourceSerialId FK + index: donusum izi icin CoC FK tanimi
+            modelBuilder.Entity<FscLot>()
+                .HasOne<FscSerial>().WithMany()
+                .HasForeignKey(l => l.SourceSerialId).OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<FscLot>()
+                .HasIndex(l => l.SourceSerialId)
+                .HasDatabaseName("IX_FscLots_SourceSerialId");
 
             modelBuilder.Entity<AppUser>().HasIndex(u => u.Username).IsUnique();
 

@@ -254,7 +254,9 @@
                             {
                                 <div>
                                     <button class="doc-num-btn"
-                                            onclick="showPdf('/Document/Serve?key=@lot.DispatchPdfPath','İrsaliye — @lot.DispatchNo')"
+                                            data-pdf-path="/Document/Serve?key=@lot.DispatchPdfPath"
+                                            data-pdf-title="İrsaliye — @lot.DispatchNo"
+                                            onclick="showPdfFromBtn(this)"
                                             title="İrsaliyeyi görüntüle">
                                         <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@lot.DispatchNo
                                     </button>
@@ -273,7 +275,9 @@
                             {
                                 <div class="mt-1">
                                     <button class="doc-num-btn"
-                                            onclick="showPdf('/Document/Serve?key=@lot.InvoicePdfPath','Fatura — @lot.InvoiceNo')"
+                                            data-pdf-path="/Document/Serve?key=@lot.InvoicePdfPath"
+                                            data-pdf-title="Fatura — @lot.InvoiceNo"
+                                            onclick="showPdfFromBtn(this)"
                                             title="Faturayı görüntüle">
                                         <i class="fas fa-file-invoice me-1" style="color:#d97706;font-size:11px;"></i>@lot.InvoiceNo
                                     </button>
@@ -360,7 +364,7 @@
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Tedarikçi <span class="text-danger">*</span></label>
                         <div class="qa-group">
-                            <select id="supplierId" class="form-select">
+                            <select id="supplierId" class="form-select" required>
                                 <option value="">— Seçiniz —</option>
                                 @foreach (var s in suppliers)
                                 {
@@ -631,6 +635,10 @@
 
 @section Scripts {
 <script>
+function showPdfFromBtn(btn) {
+    showPdf(btn.dataset.pdfPath, btn.dataset.pdfTitle);
+}
+
 /* ─── GLOBAL STATE ───────────────────────────────────────────── */
 let _lotEditMode = false;
 let _diffRowCount = 0;
@@ -683,7 +691,7 @@ function editLot(id) {
     _lotEditMode = true;
     fetch(`/Purchase/GetLot/${id}`)
         .then(r => r.json()).then(res => {
-            if (!res.success) return;
+            if (!res.success) { showToast(res.message || 'Kayıt yüklenemedi.', 'error'); return; }
             const d = res.data;
             resetLotForm();
             document.getElementById('lotId').value            = d.id;
@@ -709,7 +717,8 @@ function editLot(id) {
             document.getElementById('goToDetailLink').href = '/Purchase/Detail/' + d.id;
             document.getElementById('saveLotBtn').innerHTML = '<i class="fas fa-save me-1"></i> Güncelle';
             bootstrap.Modal.getOrCreateInstance(document.getElementById('lotModal')).show();
-        });
+        })
+        .catch(() => showToast('Bağlantı hatası.', 'error'));
 }
 
 /* ─── EŞİT / FARKLI MOD DEĞİŞİMİ ───────────────────────────── */
@@ -1035,8 +1044,17 @@ async function saveLot() {
         document.getElementById('partiNo').focus();
         return;
     }
-    if (!supplierId || !fscTypeId || !arrivalDate) {
-        showToast('Tedarikçi, FSC Tipi ve Geliş Tarihi zorunludur.', 'warning');
+    if (!supplierId) {
+        showToast('Tedarikçi seçimi zorunludur. FSC hammadde girişinde sertifikalı tedarikçi belirtilmelidir.', 'warning');
+        document.getElementById('supplierId').focus();
+        return;
+    }
+    const fscWarning = document.getElementById('supplierFscWarning');
+    if (fscWarning && fscWarning.style.display !== 'none') {
+        if (!confirm('Seçili tedarikçinin FSC sertifikası geçersiz veya süresi dolmuş. Yine de devam etmek istiyor musunuz?')) return;
+    }
+    if (!fscTypeId || !arrivalDate) {
+        showToast('FSC Tipi ve Geliş Tarihi zorunludur.', 'warning');
         return;
     }
 
