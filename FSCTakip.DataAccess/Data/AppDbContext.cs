@@ -472,7 +472,7 @@ namespace FSCTakip.DataAccess.Data
             // M11 -- FscLot.SourceSerialId FK + index: donusum izi icin CoC FK tanimi
             modelBuilder.Entity<FscLot>()
                 .HasOne<FscSerial>().WithMany()
-                .HasForeignKey(l => l.SourceSerialId).OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(l => l.SourceSerialId).OnDelete(DeleteBehavior.ClientSetNull);
             modelBuilder.Entity<FscLot>()
                 .HasIndex(l => l.SourceSerialId)
                 .HasDatabaseName("IX_FscLots_SourceSerialId");
@@ -500,3 +500,4 @@ namespace FSCTakip.DataAccess.Data
         }
     }
 }
+

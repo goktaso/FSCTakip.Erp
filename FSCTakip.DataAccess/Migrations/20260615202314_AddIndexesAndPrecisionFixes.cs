@@ -55,7 +55,7 @@ namespace FSCTakip.DataAccess.Migrations
                 column: "SourceSerialId",
                 principalTable: "FscSerials",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.SetNull);
+                onDelete: ReferentialAction.NoAction);
         }
 
         /// <inheritdoc />
