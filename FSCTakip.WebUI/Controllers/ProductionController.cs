@@ -253,6 +253,7 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(s => s.Lot).ThenInclude(l => l.Product)
                 .Where(s => s.CurrentWeight > 0)
                 .OrderBy(s => s.Lot.PartiNo).ThenBy(s => s.SerialNo)
+                .AsSplitQuery()
                 .ToListAsync();
 
             // ÃœrÃ¼nÃ¼n tanÄ±mlÄ± reÃ§ete bileÅŸenleri (BOM dropdown iÃ§in)
