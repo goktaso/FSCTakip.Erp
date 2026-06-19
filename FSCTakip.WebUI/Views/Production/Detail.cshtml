@@ -563,51 +563,81 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
 <div class="searchable-dropdown" style="position:relative;">
                             <input type="text" id="serialSearch" class="form-control" placeholder="Seri no, parti no veya kod ile ara..."
                                    autocomplete="off" oninput="filterSerials()" onfocus="filterSerials(); document.getElementById('serialDropdown').style.display = 'block';" onblur="hideSerialDropdown()">
-                            <div id="serialDropdown" style="max-height:320px;overflow-y:auto; display:none;">
+                            <div id="serialDropdown" style="max-height:380px;overflow-y:auto; display:none;">
                                 @{
-                                    var byLot = serials.GroupBy(s => new {
-                                        PartiNo    = s.Lot?.PartiNo         ?? "—",
-                                        Supplier   = s.Lot?.Supplier?.Name  ?? "Bilinmiyor",
-                                        ProdCode   = s.Lot?.Product?.ProductCode   ?? "",
-                                        ExtCode    = s.Lot?.Product?.ExternalCode  ?? "",
-                                        ProdName   = s.Lot?.Product?.ProductName   ?? "",
-                                        FscType    = s.Lot?.FscType?.Code          ?? ""
+                                    // 1. seviye: ürün bazlı gruplama
+                                    var byProduct = serials.GroupBy(s => new {
+                                        ProdCode = s.Lot?.Product?.ProductCode ?? "",
+                                        ExtCode  = s.Lot?.Product?.ExternalCode ?? "",
+                                        ProdName = s.Lot?.Product?.ProductName ?? "Bilinmiyor",
+                                        FscType  = s.Lot?.FscType?.Code ?? ""
                                     });
+                                    int prodIdx = 0;
                                 }
-                                @foreach (var g in byLot)
+                                @foreach (var pg in byProduct)
                                 {
-                                    @* Grup başlığı: ürün bilgileri + lot + tedarikçi *@
-                                    <div class="searchable-dropdown-group" style="padding:6px 10px;line-height:1.4;">
-                                        <div style="font-size:11px;font-weight:700;color:#1d4ed8;letter-spacing:0;">
-                                            @if (!string.IsNullOrEmpty(g.Key.ProdCode)) { <span>@g.Key.ProdCode</span> }
-                                            @if (!string.IsNullOrEmpty(g.Key.ExtCode))  { <span style="color:#6366f1;margin-left:4px;">@g.Key.ExtCode</span> }
-                                            @if (!string.IsNullOrEmpty(g.Key.FscType))  { <span style="background:#dcfce7;color:#166534;padding:1px 5px;border-radius:4px;font-size:10px;margin-left:4px;">@g.Key.FscType</span> }
+                                    var prodGroupId = $"prodgrp_{prodIdx++}";
+                                    var totalKg = pg.Sum(s => s.CurrentWeight);
+                                    // 2. seviye: lot bazlı alt gruplama
+                                    var byLot = pg.GroupBy(s => new {
+                                        PartiNo  = s.Lot?.PartiNo ?? "—",
+                                        Supplier = s.Lot?.Supplier?.Name ?? "Bilinmiyor"
+                                    });
+                                    @* Ürün satırı — tıklayınca bobinleri aç/kapat *@
+                                    <div class="serial-product-header"
+                                         data-prodcode="@pg.Key.ProdCode"
+                                         data-extcode="@pg.Key.ExtCode"
+                                         data-prodname="@pg.Key.ProdName"
+                                         onclick="toggleProdGroup('@prodGroupId')"
+                                         style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer;border-bottom:1px solid #e5e7eb;background:#f8fafc;user-select:none;">
+                                        <div style="flex:1;min-width:0;">
+                                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                                @if (!string.IsNullOrEmpty(pg.Key.ProdCode)) {
+                                                    <span style="font-size:11px;font-weight:700;color:#1d4ed8;">@pg.Key.ProdCode</span>
+                                                }
+                                                @if (!string.IsNullOrEmpty(pg.Key.ExtCode)) {
+                                                    <span style="font-size:11px;font-weight:600;color:#6366f1;">@pg.Key.ExtCode</span>
+                                                }
+                                                @if (!string.IsNullOrEmpty(pg.Key.FscType)) {
+                                                    <span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;">@pg.Key.FscType</span>
+                                                }
+                                            </div>
+                                            <div style="font-size:12.5px;font-weight:600;color:#111827;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@pg.Key.ProdName</div>
                                         </div>
-                                        <div style="font-size:11.5px;color:#111827;font-weight:600;">@g.Key.ProdName</div>
-                                        <div style="font-size:10.5px;color:#6b7280;margin-top:1px;">
-                                            Lot: <strong>@g.Key.PartiNo</strong> &nbsp;·&nbsp; @g.Key.Supplier
+                                        <div style="display:flex;align-items:center;gap:8px;margin-left:8px;white-space:nowrap;">
+                                            <span style="font-size:11px;color:#6b7280;">@pg.Count() bobin · @totalKg.ToString("N0") kg</span>
+                                            <i id="icon_@prodGroupId" class="fas fa-chevron-right" style="font-size:11px;color:#9ca3af;transition:transform .2s;"></i>
                                         </div>
                                     </div>
-                                    @foreach (var s in g)
-                                    {
-                                        <div class="searchable-dropdown-item"
-                                             data-id="@s.Id"
-                                             data-kalan="@s.CurrentWeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)"
-                                             data-lotno="@g.Key.PartiNo"
-                                             data-supplier="@g.Key.Supplier"
-                                             data-serialno="@s.SerialNo"
-                                             data-prodcode="@g.Key.ProdCode"
-                                             data-extcode="@g.Key.ExtCode"
-                                             data-prodname="@g.Key.ProdName"
-                                             onclick="selectSerial(@s.Id, '@s.SerialNo', @s.CurrentWeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture), '@g.Key.PartiNo', '@g.Key.Supplier', '@g.Key.ProdCode', '@g.Key.ExtCode', '@g.Key.ProdName')">
-                                            <div class="d-flex justify-content-between align-items-center" style="padding:1px 0;">
-                                                <div>
-                                                    <span style="font-weight:600;font-size:12.5px;">@s.SerialNo</span>
-                                                </div>
-                                                <span style="font-size:12px;font-weight:600;color:#1d4ed8;white-space:nowrap;margin-left:8px;">@s.CurrentWeight.ToString("N2") kg</span>
+                                    @* Bobin listesi — başlangıçta gizli *@
+                                    <div id="@prodGroupId" style="display:none;">
+                                        @foreach (var lg in byLot)
+                                        {
+                                            @* Lot alt başlığı *@
+                                            <div style="padding:4px 16px;background:#f1f5f9;border-bottom:1px solid #e5e7eb;">
+                                                <span style="font-size:10.5px;color:#475569;">Lot: <strong>@lg.Key.PartiNo</strong> &nbsp;·&nbsp; @lg.Key.Supplier</span>
                                             </div>
-                                        </div>
-                                    }
+                                            @foreach (var s in lg)
+                                            {
+                                                <div class="searchable-dropdown-item"
+                                                     data-id="@s.Id"
+                                                     data-kalan="@s.CurrentWeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)"
+                                                     data-lotno="@lg.Key.PartiNo"
+                                                     data-supplier="@lg.Key.Supplier"
+                                                     data-serialno="@s.SerialNo"
+                                                     data-prodcode="@pg.Key.ProdCode"
+                                                     data-extcode="@pg.Key.ExtCode"
+                                                     data-prodname="@pg.Key.ProdName"
+                                                     style="padding-left:20px;"
+                                                     onclick="selectSerial(@s.Id, '@s.SerialNo', @s.CurrentWeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture), '@lg.Key.PartiNo', '@lg.Key.Supplier', '@pg.Key.ProdCode', '@pg.Key.ExtCode', '@pg.Key.ProdName')">
+                                                    <div class="d-flex justify-content-between align-items-center" style="padding:1px 0;">
+                                                        <span style="font-weight:600;font-size:12.5px;">@s.SerialNo</span>
+                                                        <span style="font-size:12px;font-weight:600;color:#1d4ed8;white-space:nowrap;margin-left:8px;">@s.CurrentWeight.ToString("N2") kg</span>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
                                 }
                                 @if (!serials.Any())
                                 {
@@ -829,57 +859,78 @@ var wrToplamTuketim = wr.ActualConsumedQuantity + wr.WasteQuantity;
 // Use server-rendered data from workOrderRecipes variable instead
 
 // ── Serial Search Functions ──────────────────────────────────────────────
+function toggleProdGroup(groupId) {
+    const panel = document.getElementById(groupId);
+    const icon  = document.getElementById('icon_' + groupId);
+    if (!panel) return;
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'block';
+    if (icon) icon.style.transform = isOpen ? '' : 'rotate(90deg)';
+}
+
 function filterSerials() {
-    const input = document.getElementById('serialSearch');
+    const input    = document.getElementById('serialSearch');
     const dropdown = document.getElementById('serialDropdown');
     if (!dropdown) return;
     const term = (input.value || '').toLowerCase().trim();
-    const allItems = dropdown.querySelectorAll('.searchable-dropdown-item');
-    let visibleCount = 0;
-    // If no search term, show all items first
+    dropdown.style.display = 'block';
+
+    const productHeaders = dropdown.querySelectorAll('.serial-product-header');
+    let totalVisible = 0;
+
     if (!term) {
-        allItems.forEach(item => {
-            item.style.display = '';
-            visibleCount++;
+        // Arama yok: ürün başlıklarını göster, bobin panellerini kapat
+        productHeaders.forEach(hdr => {
+            hdr.style.display = '';
+            const panelId = hdr.getAttribute('onclick').match(/'([^']+)'/)?.[1];
+            if (panelId) {
+                const panel = document.getElementById(panelId);
+                if (panel) panel.style.display = 'none';
+                const icon = document.getElementById('icon_' + panelId);
+                if (icon) icon.style.transform = '';
+            }
+            totalVisible++;
         });
-        // Show all groups
-        const groups = dropdown.querySelectorAll('.searchable-dropdown-group');
-        groups.forEach(group => group.style.display = '');
     } else {
-        // Filter by term
-        allItems.forEach(item => {
-            const serialNo  = (item.dataset.serialno  || '').toLowerCase();
-            const lotNo     = (item.dataset.lotno     || '').toLowerCase();
-            const supplier  = (item.dataset.supplier  || '').toLowerCase();
-            const prodCode  = (item.dataset.prodcode  || '').toLowerCase();
-            const extCode   = (item.dataset.extcode   || '').toLowerCase();
-            const prodName  = (item.dataset.prodname  || '').toLowerCase();
-            const matches = serialNo.includes(term) || lotNo.includes(term) || supplier.includes(term)
-                         || prodCode.includes(term)  || extCode.includes(term) || prodName.includes(term);
-            item.style.display = matches ? '' : 'none';
-            if (matches) visibleCount++;
-        });
-        // Show/hide group headers based on visible items
-        const groups = dropdown.querySelectorAll('.searchable-dropdown-group');
-        groups.forEach(group => {
-            const next = group.nextElementSibling;
-            if (next && next.classList.contains('searchable-dropdown-item')) {
-                const isVisible = next.style.display !== 'none';
-                group.style.display = isVisible ? '' : 'none';
+        // Arama var: eşleşen bobinleri göster, ilgili ürün gruplarını ve panellerini aç
+        productHeaders.forEach(hdr => {
+            const prodCode = (hdr.dataset.prodcode || '').toLowerCase();
+            const extCode  = (hdr.dataset.extcode  || '').toLowerCase();
+            const prodName = (hdr.dataset.prodname || '').toLowerCase();
+            const panelId  = hdr.getAttribute('onclick').match(/'([^']+)'/)?.[1];
+            const panel    = panelId ? document.getElementById(panelId) : null;
+            if (!panel) { hdr.style.display = 'none'; return; }
+
+            const items = panel.querySelectorAll('.searchable-dropdown-item');
+            let panelVisible = 0;
+
+            items.forEach(item => {
+                const serialNo = (item.dataset.serialno || '').toLowerCase();
+                const lotNo    = (item.dataset.lotno    || '').toLowerCase();
+                const supplier = (item.dataset.supplier || '').toLowerCase();
+                const matches  = serialNo.includes(term) || lotNo.includes(term)
+                              || supplier.includes(term) || prodCode.includes(term)
+                              || extCode.includes(term)  || prodName.includes(term);
+                item.style.display = matches ? '' : 'none';
+                if (matches) panelVisible++;
+            });
+
+            if (panelVisible > 0) {
+                hdr.style.display = '';
+                panel.style.display = 'block';
+                const icon = document.getElementById('icon_' + panelId);
+                if (icon) icon.style.transform = 'rotate(90deg)';
+                totalVisible++;
+            } else {
+                hdr.style.display = 'none';
+                panel.style.display = 'none';
             }
         });
     }
-    // Show dropdown whenever there are items
-    if (visibleCount > 0) {
-        dropdown.style.display = 'block';
-    } else {
-        dropdown.style.display = 'none';
-        if (term) {
-            dropdown.innerHTML = '<div class="searchable-dropdown-empty">"' + term + '" ile eşleşen bobin yok</div>';
-            dropdown.style.display = 'block';
-        } else {
-            dropdown.innerHTML = '<div class="searchable-dropdown-empty">Mevcut bobin bulunamadı</div>';
-        }
+
+    if (totalVisible === 0) {
+        dropdown.innerHTML = '<div class="searchable-dropdown-empty">' +
+            (term ? '"' + term + '" ile eşleşen bobin yok' : 'Mevcut bobin bulunamadı') + '</div>';
     }
 }
 
