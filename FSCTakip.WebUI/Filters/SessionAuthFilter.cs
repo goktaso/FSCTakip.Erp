@@ -27,9 +27,22 @@ namespace FSCTakip.WebUI.Filters
             var userId = context.HttpContext.Session.GetString("UserId");
             if (string.IsNullOrEmpty(userId))
             {
-                var returnUrl = context.HttpContext.Request.Path + context.HttpContext.Request.QueryString;
-                context.Result = new RedirectToActionResult("Login", "Account",
-                    new { returnUrl });
+                var isAjax = context.HttpContext.Request.Headers["X-Requested-With"] == "XMLHttpRequest"
+                          || (context.HttpContext.Request.ContentType?.Contains("application/json") == true)
+                          || (context.HttpContext.Request.Headers["Accept"].ToString().Contains("application/json"));
+
+                if (isAjax)
+                {
+                    context.Result = new JsonResult(new { success = false, message = "Oturum süresi doldu, lütfen yeniden giriş yapın.", sessionExpired = true })
+                    {
+                        StatusCode = 401
+                    };
+                }
+                else
+                {
+                    var returnUrl = context.HttpContext.Request.Path + context.HttpContext.Request.QueryString;
+                    context.Result = new RedirectToActionResult("Login", "Account", new { returnUrl });
+                }
             }
         }
 

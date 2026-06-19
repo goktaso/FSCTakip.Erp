@@ -988,7 +988,8 @@
     var activeSection = ctrl switch {
         "Purchase" or "Production" or "Sales" or "Stock" or "Planning" => "fsc",
         "Customers" or "Suppliers" or "Products"          => "ticari",
-        "Reports"                                         => "rapor",
+        "Reports" or "AuditPeriod"                        => "rapor",
+        "DocumentArchive"                                 => "belge",
         "Product" or "Paper" or "Machine" or "Warehouse"
             or "Etl" or "Guide" or "UnitConversion"       => "tanim",
         "Users" or "Groups" or "AuditLog"                 => "admin",
@@ -1205,6 +1206,21 @@
                 <a class="nav-link-item @(ctrl=="Reports"&&action=="BomAnalysis"?"active":"")" href="/Reports/BomAnalysis">
                     <span class="nav-icon"><i class="fas fa-sitemap"></i></span>
                     <span class="nav-label">BOM Analizi</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ── BELGE YÖNETİMİ ───────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-belge" aria-expanded="@Exp("belge")">
+            <span>Belge Yönetimi</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("belge")" id="sec-belge">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="DocumentArchive"?"active":"")" href="/DocumentArchive">
+                    <span class="nav-icon"><i class="fas fa-folder-open"></i></span>
+                    <span class="nav-label">Belge Arşivi</span>
                 </a>
             </div>
         </div>
@@ -2771,5 +2787,25 @@ async function saveQuickAdd() {
 </script>
 
 @await RenderSectionAsync("Scripts", required: false)
+
+<script>
+// Global fetch wrapper: 401 (oturum sona erdi) yakalayıp login sayfasına yönlendirir
+async function fetchJson(url, options) {
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+        try {
+            const j = await res.json();
+            if (j.sessionExpired) {
+                await appAlert({ type: 'warning', title: 'Oturum Sona Erdi', text: j.message || 'Lütfen yeniden giriş yapın.' });
+                window.location.href = '/Account/Login';
+                return null;
+            }
+        } catch {}
+        window.location.href = '/Account/Login';
+        return null;
+    }
+    return res;
+}
+</script>
 </body>
 </html>

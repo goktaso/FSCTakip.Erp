@@ -1,4 +1,4 @@
-using FSCTakip.Core.Entities;
+﻿using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using FSCTakip.WebUI.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FSCTakip.WebUI.Controllers
 {
-    [Authorize]
     public class PurchaseController : BaseController
     {
         private readonly IFileStorageService _storage;
@@ -28,11 +27,11 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(l => l.Product).ThenInclude(p => p!.PaperColor)
                 .Include(l => l.Product).ThenInclude(p => p!.ProductGroup)
                 .Include(l => l.Serials)
-                // Bu ekran HAMMADDE girişi/alımı içindir. Dışarıda tutulanlar:
-                //  • Dönüşümle içeride üretilen yarı mamüller (SourceSerialId dolu)
-                //  • Hammadde olmayan ürünler (yarı mamül 2xxx / mamul 3xxx / sarf 4xxx) — bunlar
-                //    dönüşüm/üretim çıktısıdır, satın alma değil.
-                // Yarı mamül/mamul stoğu Hammadde Stoğu ve Yarı Mamül Dönüşüm ekranlarında görünür.
+                // Bu ekran HAMMADDE giriÅŸi/alÄ±mÄ± iÃ§indir. DÄ±ÅŸarÄ±da tutulanlar:
+                //  â€¢ DÃ¶nÃ¼ÅŸÃ¼mle iÃ§eride Ã¼retilen yarÄ± mamÃ¼ller (SourceSerialId dolu)
+                //  â€¢ Hammadde olmayan Ã¼rÃ¼nler (yarÄ± mamÃ¼l 2xxx / mamul 3xxx / sarf 4xxx) â€” bunlar
+                //    dÃ¶nÃ¼ÅŸÃ¼m/Ã¼retim Ã§Ä±ktÄ±sÄ±dÄ±r, satÄ±n alma deÄŸil.
+                // YarÄ± mamÃ¼l/mamul stoÄŸu Hammadde StoÄŸu ve YarÄ± MamÃ¼l DÃ¶nÃ¼ÅŸÃ¼m ekranlarÄ±nda gÃ¶rÃ¼nÃ¼r.
                 .Where(l => l.SourceSerialId == null
                          && (l.Product == null
                              || l.Product.ExternalCode == null
@@ -69,8 +68,8 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // POST /Purchase/SaveLot
-        // serialsJson: JSON dizi — yeni giriş modalından bobin ağırlıkları gelir
-        // Örnek: "[500.5,480.0,520.0]"  veya eşit mod için "equal:10:500" (count:weight)
+        // serialsJson: JSON dizi â€” yeni giriÅŸ modalÄ±ndan bobin aÄŸÄ±rlÄ±klarÄ± gelir
+        // Ã–rnek: "[500.5,480.0,520.0]"  veya eÅŸit mod iÃ§in "equal:10:500" (count:weight)
         [HttpPost]
         public async Task<IActionResult> SaveLot(
             FscLot model,
@@ -85,19 +84,19 @@ namespace FSCTakip.WebUI.Controllers
                 {
                     supplier = await _context.Suppliers.FindAsync(model.SupplierId.Value);
                     if (supplier == null)
-                        return Json(new { success = false, message = "Tedarikçi bulunamadı." });
+                        return Json(new { success = false, message = "TedarikÃ§i bulunamadÄ±." });
                 }
 
-                // Tedarikçi zorunlu (FSC hammadde takibi için)
+                // TedarikÃ§i zorunlu (FSC hammadde takibi iÃ§in)
                 if (!model.SupplierId.HasValue || model.SupplierId.Value == 0)
-                    return Json(new { success = false, message = "Tedarikçi seçimi zorunludur. FSC hammadde girişinde sertifikalı tedarikçi belirtilmelidir." });
+                    return Json(new { success = false, message = "TedarikÃ§i seÃ§imi zorunludur. FSC hammadde giriÅŸinde sertifikalÄ± tedarikÃ§i belirtilmelidir." });
 
                 if (!model.ProductId.HasValue || model.ProductId.Value == 0)
-                    return Json(new { success = false, message = "Ürün seçimi zorunludur." });
+                    return Json(new { success = false, message = "ÃœrÃ¼n seÃ§imi zorunludur." });
 
                 // Parti no zorunlu
                 if (string.IsNullOrWhiteSpace(model.PartiNo))
-                    return Json(new { success = false, message = "Parti numarası zorunludur." });
+                    return Json(new { success = false, message = "Parti numarasÄ± zorunludur." });
 
                 if (invoiceFile != null && invoiceFile.Length > 0)
                     model.InvoicePdfPath = await _storage.SaveAsync(invoiceFile, "Invoice");
@@ -107,7 +106,7 @@ namespace FSCTakip.WebUI.Controllers
 
                 string fscUyari = string.Empty;
                 if (supplier != null && (!supplier.IsFscActive || (supplier.FscExpiryDate.HasValue && supplier.FscExpiryDate.Value < DateTime.Today)))
-                    fscUyari = $"{supplier.Name} firmasının FSC sertifikası geçersiz veya süresi dolmuş!";
+                    fscUyari = $"{supplier.Name} firmasÄ±nÄ±n FSC sertifikasÄ± geÃ§ersiz veya sÃ¼resi dolmuÅŸ!";
 
                 if (model.Id == 0)
                     _context.FscLots.Add(model);
@@ -116,7 +115,7 @@ namespace FSCTakip.WebUI.Controllers
 
                 await _context.SaveChangesAsync();
 
-                // ── Bobinleri kaydet (yalnızca yeni lot için) ──────────────
+                // â”€â”€ Bobinleri kaydet (yalnÄ±zca yeni lot iÃ§in) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 int serialCount = 0;
                 if (model.Id > 0 && !string.IsNullOrWhiteSpace(serialsJson))
                 {
@@ -143,7 +142,7 @@ namespace FSCTakip.WebUI.Controllers
                             weights = System.Text.Json.JsonSerializer.Deserialize<List<decimal>>(serialsJson)
                                       ?? new List<decimal>();
                         }
-                        catch { /* geçersiz JSON — bobin eklenmez */ }
+                        catch { /* geÃ§ersiz JSON â€” bobin eklenmez */ }
                     }
 
                     for (int i = 0; i < weights.Count; i++)
@@ -169,7 +168,7 @@ namespace FSCTakip.WebUI.Controllers
                         {
                             await _context.SaveChangesAsync();
 
-                            // StockMovement: hammadde giriş kaydı oluştur
+                            // StockMovement: hammadde giriÅŸ kaydÄ± oluÅŸtur
                             if (model.ProductId.HasValue)
                             {
                                 var totalKg = weights.Where(w => w > 0).Sum();
@@ -181,7 +180,7 @@ namespace FSCTakip.WebUI.Controllers
                                     Unit         = "kg",
                                     DocumentNo   = model.DispatchNo ?? model.PartiNo,
                                     DocumentDate = model.ArrivalDate,
-                                    Description  = $"Hammadde girişi — {model.PartiNo} ({serialCount} bobin)",
+                                    Description  = $"Hammadde giriÅŸi â€” {model.PartiNo} ({serialCount} bobin)",
                                     CreatedDate  = DateTime.Now,
                                     CreatedBy    = User.Identity?.Name ?? "System"
                                 });
@@ -199,7 +198,7 @@ namespace FSCTakip.WebUI.Controllers
 
                 return Json(new {
                     success     = true,
-                    message     = $"Hammadde girişi kaydedildi.",
+                    message     = $"Hammadde giriÅŸi kaydedildi.",
                     lotId       = model.Id,
                     partiNo     = model.PartiNo,
                     serialCount,
@@ -225,7 +224,7 @@ namespace FSCTakip.WebUI.Controllers
 
             if (lot == null) return NotFound();
 
-            ViewData["Title"] = $"Lot Detayı — {lot.PartiNo}";
+            ViewData["Title"] = $"Lot DetayÄ± â€” {lot.PartiNo}";
             return View(lot);
         }
 
@@ -247,15 +246,15 @@ namespace FSCTakip.WebUI.Controllers
             try
             {
                 if (model.InitialWeight <= 0)
-                    return Json(new { success = false, message = "Bobin ağırlığı sıfırdan büyük olmalıdır." });
+                    return Json(new { success = false, message = "Bobin aÄŸÄ±rlÄ±ÄŸÄ± sÄ±fÄ±rdan bÃ¼yÃ¼k olmalÄ±dÄ±r." });
 
                 var lot = await _context.FscLots
                     .Include(l => l.Product)
                     .FirstOrDefaultAsync(l => l.Id == model.LotId);
                 if (lot == null)
-                    return Json(new { success = false, message = "Lot bulunamadı." });
+                    return Json(new { success = false, message = "Lot bulunamadÄ±." });
 
-                // ── Birim dönüşümü: ürün birimi KG değilse otomatik uygula ──
+                // â”€â”€ Birim dÃ¶nÃ¼ÅŸÃ¼mÃ¼: Ã¼rÃ¼n birimi KG deÄŸilse otomatik uygula â”€â”€
                 var productUnit = lot.Product?.Unit?.Trim().ToUpperInvariant() ?? "KG";
                 decimal? convFactor = null;
                 if (productUnit != "KG" && productUnit != "")
@@ -270,7 +269,7 @@ namespace FSCTakip.WebUI.Controllers
 
                 if (model.Id == 0)
                 {
-                    // Seri numarası otomatik üret
+                    // Seri numarasÄ± otomatik Ã¼ret
                     if (string.IsNullOrWhiteSpace(model.SerialNo))
                     {
                         var count = await _context.FscSerials.CountAsync(s => s.LotId == model.LotId);
@@ -290,7 +289,7 @@ namespace FSCTakip.WebUI.Controllers
                     var existing = await _context.FscSerials
                         .Include(s => s.ProductionDetails)
                         .FirstOrDefaultAsync(s => s.Id == model.Id);
-                    if (existing == null) return Json(new { success = false, message = "Seri bulunamadı." });
+                    if (existing == null) return Json(new { success = false, message = "Seri bulunamadÄ±." });
 
                     existing.SerialNo       = model.SerialNo;
                     existing.LotNo          = model.LotNo;
@@ -307,7 +306,7 @@ namespace FSCTakip.WebUI.Controllers
                     {
                         existing.InitialWeight = model.InitialWeight;
                     }
-                    // CurrentWeight: sadece hiç tüketim yoksa güncelle
+                    // CurrentWeight: sadece hiÃ§ tÃ¼ketim yoksa gÃ¼ncelle
                     if (!existing.ProductionDetails.Any())
                         existing.CurrentWeight = existing.InitialWeight;
                 }
@@ -315,7 +314,7 @@ namespace FSCTakip.WebUI.Controllers
                 await _context.SaveChangesAsync();
 
                 var unitMsg = convFactor.HasValue
-                    ? $"Seri kaydedildi. {enteredQty:N3} {productUnit} → {weightKg:N4} KG olarak dönüştürüldü."
+                    ? $"Seri kaydedildi. {enteredQty:N3} {productUnit} â†’ {weightKg:N4} KG olarak dÃ¶nÃ¼ÅŸtÃ¼rÃ¼ldÃ¼."
                     : "Seri kaydedildi.";
                 return Json(new { success = true, message = unitMsg, convertedKg = weightKg });
             }
@@ -335,9 +334,9 @@ namespace FSCTakip.WebUI.Controllers
                     .Include(s => s.ProductionDetails)
                     .FirstOrDefaultAsync(s => s.Id == id);
 
-                if (serial == null) return Json(new { success = false, message = "Seri bulunamadı." });
+                if (serial == null) return Json(new { success = false, message = "Seri bulunamadÄ±." });
                 if (serial.ProductionDetails.Any())
-                    return Json(new { success = false, message = "Bu seriye bağlı üretim kaydı var, silinemez." });
+                    return Json(new { success = false, message = "Bu seriye baÄŸlÄ± Ã¼retim kaydÄ± var, silinemez." });
 
                 _context.FscSerials.Remove(serial);
                 await _context.SaveChangesAsync();
@@ -356,10 +355,10 @@ namespace FSCTakip.WebUI.Controllers
             try
             {
                 if (file == null || file.Length == 0)
-                    return Json(new { success = false, message = "Dosya seçilmedi." });
+                    return Json(new { success = false, message = "Dosya seÃ§ilmedi." });
 
                 var lot = await _context.FscLots.FindAsync(lotId);
-                if (lot == null) return Json(new { success = false, message = "Lot bulunamadı." });
+                if (lot == null) return Json(new { success = false, message = "Lot bulunamadÄ±." });
 
                 var path = await _storage.SaveAsync(file, docType == "invoice" ? "Invoice" : "Dispatch");
 
@@ -369,7 +368,7 @@ namespace FSCTakip.WebUI.Controllers
                     lot.DispatchPdfPath = path;
 
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Belge yüklendi.", path });
+                return Json(new { success = true, message = "Belge yÃ¼klendi.", path });
             }
             catch (Exception ex)
             {
@@ -411,3 +410,4 @@ namespace FSCTakip.WebUI.Controllers
         }
     }
 }
+

@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using FSCTakip.WebUI.Services;
@@ -9,7 +9,6 @@ using System;
 
 namespace FSCTakip.WebUI.Controllers
 {
-    [Authorize]
     public class SalesController : BaseController
     {
         private readonly IFileStorageService _storage;
@@ -19,17 +18,17 @@ namespace FSCTakip.WebUI.Controllers
             _storage = storage;
         }
 
-        // POST /Sales/UploadDocument — satış irsaliye/fatura belgesi yükle
+        // POST /Sales/UploadDocument â€” satÄ±ÅŸ irsaliye/fatura belgesi yÃ¼kle
         [HttpPost]
         public async Task<IActionResult> UploadDocument(int orderId, string docType, IFormFile file)
         {
             try
             {
                 if (file == null || file.Length == 0)
-                    return Json(new { success = false, message = "Dosya seçilmedi." });
+                    return Json(new { success = false, message = "Dosya seÃ§ilmedi." });
 
                 var order = await _context.SalesOrders.FindAsync(orderId);
-                if (order == null) return Json(new { success = false, message = "Sipariş bulunamadı." });
+                if (order == null) return Json(new { success = false, message = "SipariÅŸ bulunamadÄ±." });
 
                 var path = await _storage.SaveAsync(file, docType == "invoice" ? "Invoice" : "Dispatch");
 
@@ -39,7 +38,7 @@ namespace FSCTakip.WebUI.Controllers
                     order.DispatchPdfPath = path;
 
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Belge yüklendi.", path });
+                return Json(new { success = true, message = "Belge yÃ¼klendi.", path });
             }
             catch (Exception ex)
             {
@@ -146,12 +145,12 @@ namespace FSCTakip.WebUI.Controllers
                     };
                     _context.SalesOrders.Add(order);
                     await _context.SaveChangesAsync();
-                    return Json(new { success = true, message = "Sipariş oluşturuldu", salesOrderNo = order.SalesOrderNo, id = order.Id });
+                    return Json(new { success = true, message = "SipariÅŸ oluÅŸturuldu", salesOrderNo = order.SalesOrderNo, id = order.Id });
                 }
                 else
                 {
                     var order = await _context.SalesOrders.FindAsync(salesOrderId);
-                    if (order == null) return Json(new { success = false, message = "Kayıt bulunamadı" });
+                    if (order == null) return Json(new { success = false, message = "KayÄ±t bulunamadÄ±" });
 
                     order.CustomerId      = customerId;
                     order.OrderDate       = orderDate;
@@ -167,7 +166,7 @@ namespace FSCTakip.WebUI.Controllers
                     order.UpdatedDate     = DateTime.Now;
 
                     await _context.SaveChangesAsync();
-                    return Json(new { success = true, message = "Sipariş güncellendi", salesOrderNo = order.SalesOrderNo, id = order.Id });
+                    return Json(new { success = true, message = "SipariÅŸ gÃ¼ncellendi", salesOrderNo = order.SalesOrderNo, id = order.Id });
                 }
             }
             catch (Exception ex) { return Json(new { success = false, message = ex.Message }); }
@@ -199,9 +198,9 @@ namespace FSCTakip.WebUI.Controllers
             string unit, string? notes)
         {
             var order = await _context.SalesOrders.FindAsync(salesOrderId);
-            if (order == null) return Json(new { success = false, message = "Sipariş bulunamadı" });
+            if (order == null) return Json(new { success = false, message = "SipariÅŸ bulunamadÄ±" });
             if (order.Status == SalesOrderStatus.TeslimEdildi)
-                return Json(new { success = false, message = "Teslim edilmiş siparişe kalem eklenemez" });
+                return Json(new { success = false, message = "Teslim edilmiÅŸ sipariÅŸe kalem eklenemez" });
 
             if (lineId == 0)
             {
@@ -220,7 +219,7 @@ namespace FSCTakip.WebUI.Controllers
             else
             {
                 var line = await _context.SalesOrderLines.FindAsync(lineId);
-                if (line == null) return Json(new { success = false, message = "Kalem bulunamadı" });
+                if (line == null) return Json(new { success = false, message = "Kalem bulunamadÄ±" });
                 line.ProductId   = productId;
                 line.WorkOrderId = workOrderId == 0 ? null : workOrderId;
                 line.Quantity    = quantity;
@@ -241,9 +240,9 @@ namespace FSCTakip.WebUI.Controllers
             var line = await _context.SalesOrderLines
                 .Include(l => l.SalesOrder)
                 .FirstOrDefaultAsync(l => l.Id == id);
-            if (line == null) return Json(new { success = false, message = "Kalem bulunamadı" });
+            if (line == null) return Json(new { success = false, message = "Kalem bulunamadÄ±" });
             if (line.SalesOrder.Status == SalesOrderStatus.TeslimEdildi)
-                return Json(new { success = false, message = "Teslim edilmiş siparişten kalem silinemez" });
+                return Json(new { success = false, message = "Teslim edilmiÅŸ sipariÅŸten kalem silinemez" });
 
             try
             {
@@ -266,15 +265,15 @@ namespace FSCTakip.WebUI.Controllers
         public async Task<IActionResult> DeleteOrder(int id)
         {
             var order = await _context.SalesOrders.Include(s => s.Lines).FirstOrDefaultAsync(s => s.Id == id);
-            if (order == null) return Json(new { success = false, message = "Sipariş bulunamadı" });
+            if (order == null) return Json(new { success = false, message = "SipariÅŸ bulunamadÄ±" });
             if (order.Status == SalesOrderStatus.TeslimEdildi)
-                return Json(new { success = false, message = "Teslim edilmiş sipariş silinemez" });
+                return Json(new { success = false, message = "Teslim edilmiÅŸ sipariÅŸ silinemez" });
 
             try
             {
                 _context.SalesOrders.Remove(order);
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Sipariş silindi" });
+                return Json(new { success = true, message = "SipariÅŸ silindi" });
             }
             catch (FSCTakip.Core.Entities.PeriodLockedException ex)
             {
@@ -282,11 +281,11 @@ namespace FSCTakip.WebUI.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"Bu sipariş silinemez. {ex.Message}" });
+                return Json(new { success = false, message = $"Bu sipariÅŸ silinemez. {ex.Message}" });
             }
         }
 
-        // POST /Sales/Dispatch/{id}  — Sevk Et: durum → TeslimEdildi + StockMovement
+        // POST /Sales/Dispatch/{id}  â€” Sevk Et: durum â†’ TeslimEdildi + StockMovement
         [HttpPost]
         public async Task<IActionResult> Dispatch(int id, DateTime? dispatchDate, string? dispatchNo, string? plateNumber)
         {
@@ -295,14 +294,14 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(s => s.Customer)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
-            if (order == null) return Json(new { success = false, message = "Sipariş bulunamadı" });
+            if (order == null) return Json(new { success = false, message = "SipariÅŸ bulunamadÄ±" });
             if (order.Status == SalesOrderStatus.TeslimEdildi)
-                return Json(new { success = false, message = "Sipariş zaten teslim edildi" });
+                return Json(new { success = false, message = "SipariÅŸ zaten teslim edildi" });
             if (order.Customer?.IsFscActive == false ||
                 (order.Customer?.FscExpiryDate.HasValue == true && order.Customer.FscExpiryDate.Value < DateTime.Today))
-                return Json(new { success = false, message = $"{order.Customer?.Name} firmasının FSC sertifikası geçersiz veya süresi dolmuş. Sevkiyat engellenmiştir." });
+                return Json(new { success = false, message = $"{order.Customer?.Name} firmasÄ±nÄ±n FSC sertifikasÄ± geÃ§ersiz veya sÃ¼resi dolmuÅŸ. Sevkiyat engellenmiÅŸtir." });
             if (!order.Lines.Any())
-                return Json(new { success = false, message = "Siparişte kalem yok, sevk edilemez" });
+                return Json(new { success = false, message = "SipariÅŸte kalem yok, sevk edilemez" });
 
             var actualDate = dispatchDate ?? DateTime.Today;
             order.DispatchDate = actualDate;
@@ -311,7 +310,7 @@ namespace FSCTakip.WebUI.Controllers
             order.Status = SalesOrderStatus.TeslimEdildi;
             order.UpdatedDate = DateTime.Now;
 
-            // Her kalem için StockMovement oluştur
+            // Her kalem iÃ§in StockMovement oluÅŸtur
             foreach (var line in order.Lines)
             {
                 _context.StockMovements.Add(new StockMovement
@@ -355,7 +354,7 @@ namespace FSCTakip.WebUI.Controllers
                     KalemSayisi   = s.Lines.Count(),
                     ToplamAdet    = s.Lines.Sum(l => l.Quantity),
                     Durum         = s.Status == SalesOrderStatus.Taslak ? "Taslak"
-                                    : s.Status == SalesOrderStatus.TeslimEdildi ? "Teslim Edildi" : "İptal"
+                                    : s.Status == SalesOrderStatus.TeslimEdildi ? "Teslim Edildi" : "Ä°ptal"
                 })
                 .ToListAsync();
 
@@ -363,3 +362,4 @@ namespace FSCTakip.WebUI.Controllers
         }
     }
 }
+

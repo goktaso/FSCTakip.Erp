@@ -74,6 +74,8 @@ namespace FSCTakip.DataAccess.Data
         public DbSet<EtlJob>        EtlJobs        { get; set; }
         #endregion
 
+        public DbSet<FscDocument> FscDocuments { get; set; }
+
         #region Denetim Günlüğü
         public DbSet<AuditLog> AuditLogs { get; set; }
         #endregion

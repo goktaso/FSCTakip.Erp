@@ -189,10 +189,10 @@
                     <td><span class="badge" style="background:@tur.Renk;font-weight:500;">@tur.Ad</span></td>
                     <td>
                         <div class="d-flex align-items-center gap-1">
-                            @lot.Supplier?.Name
-                            @if (!fscOk)
+                            @(lot.Supplier?.Name ?? "—")
+                            @if (!fscOk && lot.Supplier != null)
                             {
-                                <span class="badge badge-amber ms-1"><i class="fas fa-exclamation-triangle me-1"></i>FSC!</span>
+                                <span class="badge badge-amber ms-1" title="FSC sertifikası geçersiz veya süresi dolmuş"><i class="fas fa-exclamation-triangle me-1"></i>FSC!</span>
                             }
                         </div>
                     </td>
@@ -1051,7 +1051,17 @@ async function saveLot() {
     }
     const fscWarning = document.getElementById('supplierFscWarning');
     if (fscWarning && fscWarning.style.display !== 'none') {
-        if (!confirm('Seçili tedarikçinin FSC sertifikası geçersiz veya süresi dolmuş. Yine de devam etmek istiyor musunuz?')) return;
+        const ok = await appConfirm(
+            'Seçili tedarikçinin FSC sertifikası geçersiz veya süresi dolmuş. Yine de devam etmek istiyor musunuz?',
+            { title: 'FSC Sertifikası Geçersiz', confirmText: 'Devam Et', danger: false }
+        );
+        if (!ok) return;
+    }
+    const productId = document.getElementById('productId').value;
+    if (!productId) {
+        showToast('Ürün seçimi zorunludur.', 'warning');
+        document.getElementById('productId').focus();
+        return;
     }
     if (!fscTypeId || !arrivalDate) {
         showToast('FSC Tipi ve Geliş Tarihi zorunludur.', 'warning');
@@ -1095,8 +1105,7 @@ async function saveLot() {
     fd.append('SupplierId',  supplierId);
     fd.append('FscTypeId',   fscTypeId);
     fd.append('ArrivalDate', arrivalDate);
-    const pid = document.getElementById('productId').value;
-    if (pid) fd.append('ProductId', pid);
+    fd.append('ProductId', productId);
     fd.append('TruckPlate',  document.getElementById('truckPlate').value);
     fd.append('DispatchNo',  document.getElementById('dispatchNo').value);
     fd.append('InvoiceNo',   document.getElementById('invoiceNo').value);
