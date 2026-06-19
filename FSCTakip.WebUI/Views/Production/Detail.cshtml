@@ -563,27 +563,48 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
 <div class="searchable-dropdown" style="position:relative;">
                             <input type="text" id="serialSearch" class="form-control" placeholder="Seri no, parti no veya kod ile ara..."
                                    autocomplete="off" oninput="filterSerials()" onfocus="filterSerials(); document.getElementById('serialDropdown').style.display = 'block';" onblur="hideSerialDropdown()">
-                            <div id="serialDropdown" style="max-height:280px;overflow-y:auto; display:none;">
+                            <div id="serialDropdown" style="max-height:320px;overflow-y:auto; display:none;">
                                 @{
                                     var byLot = serials.GroupBy(s => new {
-                                        PartiNo  = s.Lot?.PartiNo  ?? "—",
-                                        Supplier = s.Lot?.Supplier?.Name ?? "Bilinmiyor"
+                                        PartiNo    = s.Lot?.PartiNo         ?? "—",
+                                        Supplier   = s.Lot?.Supplier?.Name  ?? "Bilinmiyor",
+                                        ProdCode   = s.Lot?.Product?.ProductCode   ?? "",
+                                        ExtCode    = s.Lot?.Product?.ExternalCode  ?? "",
+                                        ProdName   = s.Lot?.Product?.ProductName   ?? "",
+                                        FscType    = s.Lot?.FscType?.Code          ?? ""
                                     });
                                 }
                                 @foreach (var g in byLot)
                                 {
-                                    <div class="searchable-dropdown-group">@g.Key.PartiNo — @g.Key.Supplier</div>
+                                    @* Grup başlığı: ürün bilgileri + lot + tedarikçi *@
+                                    <div class="searchable-dropdown-group" style="padding:6px 10px;line-height:1.4;">
+                                        <div style="font-size:11px;font-weight:700;color:#1d4ed8;letter-spacing:0;">
+                                            @if (!string.IsNullOrEmpty(g.Key.ProdCode)) { <span>@g.Key.ProdCode</span> }
+                                            @if (!string.IsNullOrEmpty(g.Key.ExtCode))  { <span style="color:#6366f1;margin-left:4px;">@g.Key.ExtCode</span> }
+                                            @if (!string.IsNullOrEmpty(g.Key.FscType))  { <span style="background:#dcfce7;color:#166534;padding:1px 5px;border-radius:4px;font-size:10px;margin-left:4px;">@g.Key.FscType</span> }
+                                        </div>
+                                        <div style="font-size:11.5px;color:#111827;font-weight:600;">@g.Key.ProdName</div>
+                                        <div style="font-size:10.5px;color:#6b7280;margin-top:1px;">
+                                            Lot: <strong>@g.Key.PartiNo</strong> &nbsp;·&nbsp; @g.Key.Supplier
+                                        </div>
+                                    </div>
                                     @foreach (var s in g)
                                     {
-                                        <div class="searchable-dropdown-item" data-id="@s.Id"
+                                        <div class="searchable-dropdown-item"
+                                             data-id="@s.Id"
                                              data-kalan="@s.CurrentWeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)"
                                              data-lotno="@g.Key.PartiNo"
                                              data-supplier="@g.Key.Supplier"
                                              data-serialno="@s.SerialNo"
-                                             onclick="selectSerial(@s.Id, '@s.SerialNo', @s.CurrentWeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture), '@g.Key.PartiNo', '@g.Key.Supplier')">
-                                            <div class="d-flex justify-content-between">
-                                                <span>@s.SerialNo</span>
-                                                <span class="text-muted">@s.CurrentWeight.ToString("N2") kg</span>
+                                             data-prodcode="@g.Key.ProdCode"
+                                             data-extcode="@g.Key.ExtCode"
+                                             data-prodname="@g.Key.ProdName"
+                                             onclick="selectSerial(@s.Id, '@s.SerialNo', @s.CurrentWeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture), '@g.Key.PartiNo', '@g.Key.Supplier', '@g.Key.ProdCode', '@g.Key.ExtCode', '@g.Key.ProdName')">
+                                            <div class="d-flex justify-content-between align-items-center" style="padding:1px 0;">
+                                                <div>
+                                                    <span style="font-weight:600;font-size:12.5px;">@s.SerialNo</span>
+                                                </div>
+                                                <span style="font-size:12px;font-weight:600;color:#1d4ed8;white-space:nowrap;margin-left:8px;">@s.CurrentWeight.ToString("N2") kg</span>
                                             </div>
                                         </div>
                                     }
@@ -644,8 +665,12 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                     <div class="col-md-6">
                         <label class="form-label">Üretilen Miktar (adet) <span class="text-danger">*</span></label>
                         <div class="input-group">
-<input type="number" id="detailQty" class="form-control" step="1" min="1" placeholder="0" oninput="calcConsumedFromQty()">
+                            <input type="number" id="detailQty" class="form-control" step="1" min="1" placeholder="0"
+                                   oninput="this._manualEntry=true; document.getElementById('qtyAutoHint').style.display='none'; calcConsumedFromQty();">
                             <span class="input-group-text">adet</span>
+                        </div>
+                        <div id="qtyAutoHint" style="display:none;font-size:11px;color:#059669;margin-top:3px;">
+                            <i class="fas fa-calculator me-1"></i>Reçeteden tahmini hesaplandı — makine sayacıyla doğrulayın
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -823,10 +848,14 @@ function filterSerials() {
     } else {
         // Filter by term
         allItems.forEach(item => {
-            const serialNo = (item.dataset.serialno || '').toLowerCase();
-            const lotNo = (item.dataset.lotno || '').toLowerCase();
-            const supplier = (item.dataset.supplier || '').toLowerCase();
-            const matches = serialNo.includes(term) || lotNo.includes(term) || supplier.includes(term);
+            const serialNo  = (item.dataset.serialno  || '').toLowerCase();
+            const lotNo     = (item.dataset.lotno     || '').toLowerCase();
+            const supplier  = (item.dataset.supplier  || '').toLowerCase();
+            const prodCode  = (item.dataset.prodcode  || '').toLowerCase();
+            const extCode   = (item.dataset.extcode   || '').toLowerCase();
+            const prodName  = (item.dataset.prodname  || '').toLowerCase();
+            const matches = serialNo.includes(term) || lotNo.includes(term) || supplier.includes(term)
+                         || prodCode.includes(term)  || extCode.includes(term) || prodName.includes(term);
             item.style.display = matches ? '' : 'none';
             if (matches) visibleCount++;
         });
@@ -854,21 +883,27 @@ function filterSerials() {
     }
 }
 
-function selectSerial(id, serialNo, kalan, lotNo, supplier) {
+function selectSerial(id, serialNo, kalan, lotNo, supplier, prodCode, extCode, prodName) {
     const dropdown = document.getElementById('serialDropdown');
-    const input = document.getElementById('serialSearch');
+    const input    = document.getElementById('serialSearch');
     document.getElementById('detailSerialId').value = id;
-    // Show selected serial clearly - use placeholder to show selection and a badge
-    input.value = '';  // Clear search text but keep placeholder
-    input.placeholder = serialNo + ' ✓';  // Show selected with checkmark
-    input.style.background = '#dcfce7';  // Green background to show selection
+    input.value       = '';
+    input.placeholder = serialNo + ' ✓';
+    input.style.background  = '#dcfce7';
     input.style.borderColor = '#16a34a';
     if (dropdown) dropdown.style.display = 'none';
-    // Show info in the info div
+
     const info = document.getElementById('serialInfo');
     if (info) {
+        const codePart = [prodCode, extCode].filter(Boolean).join(' / ');
         info.style.display = 'block';
-        info.innerHTML = '<i class="fas fa-check-circle me-1 text-success"></i> <strong>' + lotNo + '</strong> · ' + supplier + ' · Kalan: <strong>' + kalan + ' kg</strong>';
+        info.innerHTML =
+            '<i class="fas fa-check-circle me-1 text-success"></i>' +
+            (codePart ? '<strong>' + codePart + '</strong> · ' : '') +
+            (prodName ? prodName + ' · ' : '') +
+            'Lot: <strong>' + lotNo + '</strong> · Seri: <strong>' + serialNo + '</strong>' +
+            ' · Tedarikçi: ' + supplier +
+            ' · Kalan: <strong style="color:#1d4ed8;">' + parseFloat(kalan).toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' kg</strong>';
     }
 }
 
@@ -952,8 +987,35 @@ function calcFireFromPct() {
 function onConsumedChange() {
     const mode = document.querySelector('input[name="fireMode"]:checked')?.value;
     if (mode === 'pct') calcFireFromPct();
-    // BOM bileşen ihtiyaç bilgisini güncelle (tüketim değeri değişince)
+    // Tüketim girilince → üretilen adet tahmini hesapla (qty henüz boşsa)
+    calcQtyFromConsumed();
     if (typeof updateRecipeNeedInfo === 'function') updateRecipeNeedInfo();
+}
+
+// ── Tüketilen kg → Üretilen Adet Tahmini (BOM'dan ters hesap) ────────────
+function calcQtyFromConsumed() {
+    const qtyField = document.getElementById('detailQty');
+    // Kullanıcı zaten manuel değer girmişse dokunma
+    if (qtyField._manualEntry) return;
+
+    const consumed = parseFloat(document.getElementById('detailConsumed').value) || 0;
+    if (consumed <= 0) return;
+
+    const recipeSelect = document.getElementById('detailRecipeId');
+    const selectedOpt  = recipeSelect?.options[recipeSelect.selectedIndex];
+    if (!selectedOpt || !selectedOpt.value) return;
+
+    const plannedKg = parseFloat(selectedOpt.dataset.plan) || 0;
+    if (plannedKg <= 0 || !(WORKORDER_PLANNED_QTY > 0)) return;
+
+    // kg/adet = BOM planlı kg / iş emri plan adedi
+    const kgPerUnit = plannedKg / WORKORDER_PLANNED_QTY;
+    const estQty    = Math.round(consumed / kgPerUnit);
+
+    qtyField.value = estQty;
+    // Tahmini olduğunu göster
+    const hint = document.getElementById('qtyAutoHint');
+    if (hint) hint.style.display = '';
 }
 
 // ── Üretilen Miktar → Tüketim Otomatik Hesaplama ─────────────────────
@@ -1059,7 +1121,10 @@ window.openAddDetailFn = function() {
     document.getElementById('detailRecipeId').value = '';
     document.getElementById('detailDate').value    = new Date().toISOString().split('T')[0];
     document.getElementById('detailConsumed').value = '';
-    document.getElementById('detailQty').value      = '';
+    const qtyFld = document.getElementById('detailQty');
+    qtyFld.value = '';
+    qtyFld._manualEntry = false;
+    document.getElementById('qtyAutoHint').style.display = 'none';
     document.getElementById('detailNotes').value    = '';
     document.getElementById('serialInfo').style.display = 'none';
 // Hide dropdown
@@ -1123,7 +1188,10 @@ function editDetail(id) {
             document.getElementById('detailRecipeId').value  = d.workOrderRecipeId || '';
             document.getElementById('detailDate').value      = d.productionDate;
             document.getElementById('detailConsumed').value  = d.consumedWeight;
-            document.getElementById('detailQty').value       = d.producedQuantity;
+            const qtyFldE = document.getElementById('detailQty');
+            qtyFldE.value = d.producedQuantity;
+            qtyFldE._manualEntry = true; // düzenleme: mevcut değere dokunma
+            document.getElementById('qtyAutoHint').style.display = 'none';
             document.getElementById('detailNotes').value     = d.notes || '';
             document.getElementById('detailModalTitle').textContent = 'Tüketim Kaydını Düzenle';
             // fire: always restore as kg on edit
@@ -1260,8 +1328,20 @@ function completeWO(id, no) {
         const fd = new FormData(); fd.append('id', id);
         fetch('/Production/CompleteWorkOrder', { method: 'POST', body: fd })
             .then(r => r.json()).then(res => {
-                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1200); }
-                else showToast(res.message, 'error');
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    // FSC bileşen eksikliği → detaylı Swal hata penceresi
+                    Swal.fire({
+                        title: 'FSC CoC Zinciri Eksik',
+                        html: '<div style="text-align:left;font-size:13px;line-height:1.7;">' +
+                              res.message.replace(/\n/g, '<br>') + '</div>',
+                        icon: 'error',
+                        confirmButtonText: 'Tamam, Tüketim Gireyim',
+                        confirmButtonColor: '#1565c0'
+                    });
+                }
             });
     });
 }

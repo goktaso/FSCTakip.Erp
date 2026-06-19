@@ -456,8 +456,19 @@ function completeWorkOrder(id, no) {
         const fd = new FormData(); fd.append('id', id);
         fetch('/Production/CompleteWorkOrder', { method: 'POST', body: fd })
             .then(r => r.json()).then(res => {
-                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1200); }
-                else showToast(res.message, 'error');
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    Swal.fire({
+                        title: 'FSC CoC Zinciri Eksik',
+                        html: '<div style="text-align:left;font-size:13px;line-height:1.7;">' +
+                              res.message.replace(/\n/g, '<br>') + '</div>',
+                        icon: 'error',
+                        confirmButtonText: 'Tamam',
+                        confirmButtonColor: '#1565c0'
+                    });
+                }
             });
     });
 }

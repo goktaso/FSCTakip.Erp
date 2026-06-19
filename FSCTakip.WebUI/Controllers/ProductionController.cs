@@ -1,4 +1,4 @@
-using FSCTakip.Core.Entities;
+﻿using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FSCTakip.WebUI.Controllers
 {
-    [Authorize]
     public class ProductionController : BaseController
     {
         public ProductionController(AppDbContext context) : base(context) { }
@@ -67,7 +66,7 @@ namespace FSCTakip.WebUI.Controllers
                 else
                 {
                     var existing = await _context.WorkOrders.FindAsync(model.Id);
-                    if (existing == null) return Json(new { success = false, message = "İş emri bulunamadı." });
+                    if (existing == null) return Json(new { success = false, message = "Ä°ÅŸ emri bulunamadÄ±." });
                     existing.WorkOrderNo    = model.WorkOrderNo;
                     existing.ProductId      = model.ProductId;
                     existing.MachineId      = model.MachineId;
@@ -79,7 +78,7 @@ namespace FSCTakip.WebUI.Controllers
                 }
 
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "İş emri kaydedildi.", workOrderNo = model.WorkOrderNo, workOrderId = model.Id });
+                return Json(new { success = true, message = "Ä°ÅŸ emri kaydedildi.", workOrderNo = model.WorkOrderNo, workOrderId = model.Id });
             }
             catch (Exception ex)
             {
@@ -97,13 +96,13 @@ namespace FSCTakip.WebUI.Controllers
                     .Include(w => w.ProductionDetails)
                     .FirstOrDefaultAsync(w => w.Id == id);
 
-                if (wo == null) return Json(new { success = false, message = "İş emri bulunamadı." });
+                if (wo == null) return Json(new { success = false, message = "Ä°ÅŸ emri bulunamadÄ±." });
                 if (wo.ProductionDetails.Any())
-                    return Json(new { success = false, message = "Bu iş emrine ait üretim kaydı var, silinemez." });
+                    return Json(new { success = false, message = "Bu iÅŸ emrine ait Ã¼retim kaydÄ± var, silinemez." });
 
                 _context.WorkOrders.Remove(wo);
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "İş emri silindi." });
+                return Json(new { success = true, message = "Ä°ÅŸ emri silindi." });
             }
             catch (Exception ex)
             {
@@ -120,10 +119,25 @@ namespace FSCTakip.WebUI.Controllers
                 var wo = await _context.WorkOrders.FindAsync(id);
                 if (wo == null) return Json(new { success = false, message = "İş emri bulunamadı." });
 
+                // FSC sertifikalı BOM bileşenlerinde tüketim zorunlu (CoC zinciri)
+                var fscExempt = await _context.WorkOrderRecipes
+                    .Include(r => r.Product).ThenInclude(p => p!.FscType)
+                    .Where(r => r.WorkOrderId == id && r.Product.FscTypeId != null && r.ActualConsumedQuantity == 0)
+                    .Select(r => r.Product.ProductName)
+                    .ToListAsync();
+
+                if (fscExempt.Any())
+                    return Json(new {
+                        success = false,
+                        message = "FSC sertifikalı bileşenler için tüketim kaydı eksik:\n• " +
+                                  string.Join("\n• ", fscExempt) +
+                                  "\n\nFSC CoC zinciri tamamlanmadan iş emri kapatılamaz."
+                    });
+
                 wo.Status        = WorkOrderStatus.Tamamlandi;
                 wo.CompletedDate = DateTime.Now;
-                // Üretilen adet: aynı gün içindeki tüm malzeme satırları aynı adeti taşır.
-                // Her tarih için Max alıp günleri topla → çok günlü üretimi de doğru hesaplar.
+                // Ãœretilen adet: aynÄ± gÃ¼n iÃ§indeki tÃ¼m malzeme satÄ±rlarÄ± aynÄ± adeti taÅŸÄ±r.
+                // Her tarih iÃ§in Max alÄ±p gÃ¼nleri topla â†’ Ã§ok gÃ¼nlÃ¼ Ã¼retimi de doÄŸru hesaplar.
                 var prodDetails = await _context.ProductionDetails
                     .Where(d => d.WorkOrderId == id)
                     .ToListAsync();
@@ -133,7 +147,7 @@ namespace FSCTakip.WebUI.Controllers
                         .Sum(g => g.Max(d => d.ProducedQuantity))
                     : 0;
 
-                // Mamul → bitmiş ürün stoğuna giriş (ProductionEntry). İş emriyle eşlenir; yeniden tamamlamada güncellenir.
+                // Mamul â†’ bitmiÅŸ Ã¼rÃ¼n stoÄŸuna giriÅŸ (ProductionEntry). Ä°ÅŸ emriyle eÅŸlenir; yeniden tamamlamada gÃ¼ncellenir.
                 var mamulEntry = await _context.StockMovements.FirstOrDefaultAsync(
                     m => m.Type == MovementType.ProductionEntry && m.WorkOrderId == wo.Id && m.ProductId == wo.ProductId);
                 if (wo.ActualQuantity > 0)
@@ -149,7 +163,7 @@ namespace FSCTakip.WebUI.Controllers
                             DocumentNo   = wo.WorkOrderNo,
                             DocumentDate = wo.CompletedDate ?? DateTime.Now,
                             WorkOrderId  = wo.Id,
-                            Description  = $"Üretimden giriş — {wo.WorkOrderNo}",
+                            Description  = $"Ãœretimden giriÅŸ â€” {wo.WorkOrderNo}",
                             CreatedBy    = User.Identity?.Name ?? "System",
                             CreatedDate  = DateTime.Now
                         });
@@ -166,7 +180,7 @@ namespace FSCTakip.WebUI.Controllers
                 }
 
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "İş emri tamamlandı olarak işaretlendi." });
+                return Json(new { success = true, message = "Ä°ÅŸ emri tamamlandÄ± olarak iÅŸaretlendi." });
             }
             catch (Exception ex)
             {
@@ -174,12 +188,12 @@ namespace FSCTakip.WebUI.Controllers
             }
         }
 
-        // POST /Production/RecalcAllActualQty — Mevcut yanlış ActualQuantity değerlerini düzelt (admin)
+        // POST /Production/RecalcAllActualQty â€” Mevcut yanlÄ±ÅŸ ActualQuantity deÄŸerlerini dÃ¼zelt (admin)
         [HttpPost]
         public async Task<IActionResult> RecalcAllActualQty()
         {
             if (!IsAdminUser)
-                return Json(new { success = false, message = "Bu işlem yalnızca admin tarafından yapılabilir." });
+                return Json(new { success = false, message = "Bu iÅŸlem yalnÄ±zca admin tarafÄ±ndan yapÄ±labilir." });
 
             var workOrders = await _context.WorkOrders
                 .Where(w => w.Status != WorkOrderStatus.Taslak)
@@ -204,7 +218,7 @@ namespace FSCTakip.WebUI.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return Json(new { success = true, message = $"{updated} iş emrinin üretim adedi güncellendi." });
+            return Json(new { success = true, message = $"{updated} iÅŸ emrinin Ã¼retim adedi gÃ¼ncellendi." });
         }
 
         // GET /Production/Detail/{id}
@@ -236,25 +250,26 @@ namespace FSCTakip.WebUI.Controllers
             var availableSerials = await _context.FscSerials
                 .Include(s => s.Lot).ThenInclude(l => l.Supplier)
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
+                .Include(s => s.Lot).ThenInclude(l => l.Product)
                 .Where(s => s.CurrentWeight > 0)
-                .OrderBy(s => s.SerialNo)
+                .OrderBy(s => s.Lot.PartiNo).ThenBy(s => s.SerialNo)
                 .ToListAsync();
 
-            // Ürünün tanımlı reçete bileşenleri (BOM dropdown için)
+            // ÃœrÃ¼nÃ¼n tanÄ±mlÄ± reÃ§ete bileÅŸenleri (BOM dropdown iÃ§in)
             var recipeComponents = await _context.ProductRecipes
                 .Include(r => r.ChildProduct).ThenInclude(p => p.FscType)
                 .Where(r => r.ParentProductId == wo.ProductId && r.IsActive)
                 .OrderBy(r => r.ChildProduct.ProductName)
                 .ToListAsync();
 
-            // WorkOrderRecipes — mevcut reçete satırları (varsa)
+            // WorkOrderRecipes â€” mevcut reÃ§ete satÄ±rlarÄ± (varsa)
             var workOrderRecipes = wo.WorkOrderRecipes.OrderBy(r => r.Product?.ProductName).ToList();
 
             ViewBag.AvailableSerials   = availableSerials;
             ViewBag.Machines           = await _context.Machines.OrderBy(m => m.Name).ToListAsync();
             ViewBag.RecipeComponents   = recipeComponents;
             ViewBag.WorkOrderRecipes   = workOrderRecipes;
-            ViewData["Title"] = $"İş Emri — {wo.WorkOrderNo}";
+            ViewData["Title"] = $"Ä°ÅŸ Emri â€” {wo.WorkOrderNo}";
             return View(wo);
         }
 
@@ -268,7 +283,7 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(s => s.Lot).ThenInclude(l => l.Product)
                 .FirstOrDefaultAsync(s => s.Id == serialId);
 
-            if (serial == null) return Json(new { success = false, message = "Bobin bulunamadı." });
+            if (serial == null) return Json(new { success = false, message = "Bobin bulunamadÄ±." });
 
             var lot = serial.Lot;
             return Json(new { success = true, data = new {
@@ -313,13 +328,13 @@ namespace FSCTakip.WebUI.Controllers
             try
             {
                 if (model.ConsumedWeight <= 0)
-                    return Json(new { success = false, message = "Tüketim miktarı sıfırdan büyük olmalıdır." });
+                    return Json(new { success = false, message = "TÃ¼ketim miktarÄ± sÄ±fÄ±rdan bÃ¼yÃ¼k olmalÄ±dÄ±r." });
                 if (model.WasteWeight < 0)
-                    return Json(new { success = false, message = "Fire miktarı negatif olamaz." });
+                    return Json(new { success = false, message = "Fire miktarÄ± negatif olamaz." });
                 if (model.ProducedQuantity <= 0)
-                    return Json(new { success = false, message = "Üretilen adet sıfırdan büyük olmalıdır." });
+                    return Json(new { success = false, message = "Ãœretilen adet sÄ±fÄ±rdan bÃ¼yÃ¼k olmalÄ±dÄ±r." });
                 if (model.WasteWeight > model.ConsumedWeight)
-                    return Json(new { success = false, message = "Fire miktarı tüketim miktarını aşamaz." });
+                    return Json(new { success = false, message = "Fire miktarÄ± tÃ¼ketim miktarÄ±nÄ± aÅŸamaz." });
 
                 var serial = await _context.FscSerials
                     .Include(s => s.ProductionDetails)
@@ -327,16 +342,16 @@ namespace FSCTakip.WebUI.Controllers
                     .FirstOrDefaultAsync(s => s.Id == model.FscSerialId);
 
                 if (serial == null)
-                    return Json(new { success = false, message = "Bobin bulunamadı." });
+                    return Json(new { success = false, message = "Bobin bulunamadÄ±." });
 
                 int? oldRecipeId = null;
                 decimal oldConsumed = 0, oldWaste = 0, oldQty = 0;
 
                 if (model.Id == 0)
                 {
-                    // Yeni kayıt: stok düş
+                    // Yeni kayÄ±t: stok dÃ¼ÅŸ
                     if (model.ConsumedWeight > serial.CurrentWeight)
-                        return Json(new { success = false, message = $"Tüketim miktarı ({model.ConsumedWeight:N2} kg) bobinin kalan ağırlığını ({serial.CurrentWeight:N2} kg) aşıyor." });
+                        return Json(new { success = false, message = $"TÃ¼ketim miktarÄ± ({model.ConsumedWeight:N2} kg) bobinin kalan aÄŸÄ±rlÄ±ÄŸÄ±nÄ± ({serial.CurrentWeight:N2} kg) aÅŸÄ±yor." });
 
                     serial.CurrentWeight -= model.ConsumedWeight;
                     _context.ProductionDetails.Add(model);
@@ -345,17 +360,17 @@ namespace FSCTakip.WebUI.Controllers
                 {
                     var existing = await _context.ProductionDetails.FindAsync(model.Id);
                     if (existing == null)
-                        return Json(new { success = false, message = "Kayıt bulunamadı." });
+                        return Json(new { success = false, message = "KayÄ±t bulunamadÄ±." });
 
                     oldRecipeId = existing.WorkOrderRecipeId;
                     oldConsumed = existing.ConsumedWeight;
                     oldWaste    = existing.WasteWeight;
                     oldQty      = existing.ProducedQuantity;
 
-                    // Eski tüketimi iade et, yenisini düş
+                    // Eski tÃ¼ketimi iade et, yenisini dÃ¼ÅŸ
                     var diff = model.ConsumedWeight - existing.ConsumedWeight;
                     if (diff > serial.CurrentWeight)
-                        return Json(new { success = false, message = $"Güncellenmiş tüketim bobinin kalan ağırlığını aşıyor." });
+                        return Json(new { success = false, message = $"GÃ¼ncellenmiÅŸ tÃ¼ketim bobinin kalan aÄŸÄ±rlÄ±ÄŸÄ±nÄ± aÅŸÄ±yor." });
 
                     serial.CurrentWeight         -= diff;
                     existing.FscSerialId         = model.FscSerialId;
@@ -368,13 +383,13 @@ namespace FSCTakip.WebUI.Controllers
                     existing.WorkOrderRecipeId   = model.WorkOrderRecipeId;
                 }
 
-                // İş emrini "Üretimde" durumuna geçir
+                // Ä°ÅŸ emrini "Ãœretimde" durumuna geÃ§ir
                 var wo = await _context.WorkOrders.FindAsync(model.WorkOrderId);
                 if (wo != null && wo.Status == WorkOrderStatus.Taslak)
                     wo.Status = WorkOrderStatus.Uretimde;
 
-                // ── WorkOrderRecipe güncelle (BOM bileşen bazlı toplamlar) ────────
-                // Eski reçete satırını güncelle (düzenleme durumu)
+                // â”€â”€ WorkOrderRecipe gÃ¼ncelle (BOM bileÅŸen bazlÄ± toplamlar) â”€â”€â”€â”€â”€â”€â”€â”€
+                // Eski reÃ§ete satÄ±rÄ±nÄ± gÃ¼ncelle (dÃ¼zenleme durumu)
                 if (oldRecipeId.HasValue && oldRecipeId != model.WorkOrderRecipeId)
                 {
                     var oldRecipe = await _context.WorkOrderRecipes.FindAsync(oldRecipeId.Value);
@@ -386,29 +401,29 @@ namespace FSCTakip.WebUI.Controllers
                     }
                 }
 
-                // Yeni/güncel reçete satırını güncelle
+                // Yeni/gÃ¼ncel reÃ§ete satÄ±rÄ±nÄ± gÃ¼ncelle
                 if (model.WorkOrderRecipeId.HasValue)
                 {
                     var recipe = await _context.WorkOrderRecipes.FindAsync(model.WorkOrderRecipeId.Value);
                     if (recipe != null)
                     {
-                        // Düzenleme: eski değerleri çıkar, yenileri ekle
+                        // DÃ¼zenleme: eski deÄŸerleri Ã§Ä±kar, yenileri ekle
                         var prevConsumed = (model.Id > 0 && oldRecipeId == model.WorkOrderRecipeId) ? oldConsumed : 0;
                         var prevWaste    = (model.Id > 0 && oldRecipeId == model.WorkOrderRecipeId) ? oldWaste    : 0;
                         var prevQty      = (model.Id > 0 && oldRecipeId == model.WorkOrderRecipeId) ? oldQty      : 0;
 
                         recipe.ActualConsumedQuantity += model.ConsumedWeight - prevConsumed;
                         recipe.WasteQuantity          += model.WasteWeight    - prevWaste;
-                        // ProducedQuantity biriktirme YAPMA: aynı iş emrindeki her malzeme satırı
-                        // aynı üretim adedini taşır. Reçete bileşeni için en son (max) değeri al.
+                        // ProducedQuantity biriktirme YAPMA: aynÄ± iÅŸ emrindeki her malzeme satÄ±rÄ±
+                        // aynÄ± Ã¼retim adedini taÅŸÄ±r. ReÃ§ete bileÅŸeni iÃ§in en son (max) deÄŸeri al.
                         recipe.ProducedQuantity        = Math.Max(recipe.ProducedQuantity, model.ProducedQuantity);
-                        recipe.FscSerialId             = model.FscSerialId; // son kullanılan bobin
+                        recipe.FscSerialId             = model.FscSerialId; // son kullanÄ±lan bobin
                     }
                 }
 
                 await _context.SaveChangesAsync();
 
-                // Stok hareketi: tüketim (çıkış) — tüketilen malzemenin ürünü için. Detay ile ErpReferenceId üzerinden eşlenir.
+                // Stok hareketi: tÃ¼ketim (Ã§Ä±kÄ±ÅŸ) â€” tÃ¼ketilen malzemenin Ã¼rÃ¼nÃ¼ iÃ§in. Detay ile ErpReferenceId Ã¼zerinden eÅŸlenir.
                 if (serial.Lot?.ProductId != null)
                 {
                     var consMov = await _context.StockMovements
@@ -425,7 +440,7 @@ namespace FSCTakip.WebUI.Controllers
                             DocumentNo     = wo?.WorkOrderNo ?? "",
                             DocumentDate   = model.ProductionDate,
                             WorkOrderId    = model.WorkOrderId,
-                            Description    = $"Üretim tüketimi — {wo?.WorkOrderNo}",
+                            Description    = $"Ãœretim tÃ¼ketimi â€” {wo?.WorkOrderNo}",
                             CreatedBy      = User.Identity?.Name ?? "System",
                             CreatedDate    = DateTime.Now
                         });
@@ -439,7 +454,7 @@ namespace FSCTakip.WebUI.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                // Üretim firesi → İmha Kayıtları (WasteManagement) tek defter. Detay ile WasteCode üzerinden eşlenir.
+                // Ãœretim firesi â†’ Ä°mha KayÄ±tlarÄ± (WasteManagement) tek defter. Detay ile WasteCode Ã¼zerinden eÅŸlenir.
                 var fireCode = $"FIRE-D{model.Id}";
                 var fireRec = await _context.WasteManagements.FirstOrDefaultAsync(w => w.WasteCode == fireCode);
                 if (model.WasteWeight > 0)
@@ -451,11 +466,11 @@ namespace FSCTakip.WebUI.Controllers
                             WasteCode      = fireCode,
                             WorkOrderId    = model.WorkOrderId,
                             Category       = WasteCategory.KesimArtigi,
-                            Description    = $"Üretim firesi — {wo?.WorkOrderNo}",
+                            Description    = $"Ãœretim firesi â€” {wo?.WorkOrderNo}",
                             Quantity       = model.WasteWeight,
                             Unit           = "kg",
                             DisposalDate   = model.ProductionDate,
-                            DisposalMethod = "Geri Dönüşüm",
+                            DisposalMethod = "Geri DÃ¶nÃ¼ÅŸÃ¼m",
                             CreatedBy      = User.Identity?.Name ?? "System",
                             CreatedDate    = DateTime.Now
                         });
@@ -473,7 +488,7 @@ namespace FSCTakip.WebUI.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                return Json(new { success = true, message = "Tüketim kaydedildi.", kalanKg = serial.CurrentWeight });
+                return Json(new { success = true, message = "TÃ¼ketim kaydedildi.", kalanKg = serial.CurrentWeight });
             }
             catch (Exception ex)
             {
@@ -492,12 +507,12 @@ namespace FSCTakip.WebUI.Controllers
                     .FirstOrDefaultAsync(d => d.Id == id);
 
                 if (detail == null)
-                    return Json(new { success = false, message = "Kayıt bulunamadı." });
+                    return Json(new { success = false, message = "KayÄ±t bulunamadÄ±." });
 
-                // Tüketimi iade et
+                // TÃ¼ketimi iade et
                 detail.FscSerial.CurrentWeight += detail.ConsumedWeight;
 
-                // WorkOrderRecipe toplamlılarını güncelle
+                // WorkOrderRecipe toplamlÄ±larÄ±nÄ± gÃ¼ncelle
                 if (detail.WorkOrderRecipeId.HasValue)
                 {
                     var recipe = await _context.WorkOrderRecipes.FindAsync(detail.WorkOrderRecipeId.Value);
@@ -505,7 +520,7 @@ namespace FSCTakip.WebUI.Controllers
                     {
                         recipe.ActualConsumedQuantity = Math.Max(0, recipe.ActualConsumedQuantity - detail.ConsumedWeight);
                         recipe.WasteQuantity          = Math.Max(0, recipe.WasteQuantity          - detail.WasteWeight);
-                        // ProducedQuantity: silme sonrası kalan detayların max'ını hesapla
+                        // ProducedQuantity: silme sonrasÄ± kalan detaylarÄ±n max'Ä±nÄ± hesapla
                         var remainingDetails = await _context.ProductionDetails
                             .Where(d => d.WorkOrderRecipeId == detail.WorkOrderRecipeId && d.Id != detail.Id)
                             .ToListAsync();
@@ -515,20 +530,20 @@ namespace FSCTakip.WebUI.Controllers
                     }
                 }
 
-                // İlgili tüketim (çıkış) stok hareketini de kaldır
+                // Ä°lgili tÃ¼ketim (Ã§Ä±kÄ±ÅŸ) stok hareketini de kaldÄ±r
                 var consMovs = await _context.StockMovements
                     .Where(sm => sm.Type == MovementType.ProductionConsumption && sm.ErpReferenceId == id)
                     .ToListAsync();
                 if (consMovs.Count > 0) _context.StockMovements.RemoveRange(consMovs);
 
-                // İlgili üretim firesi imha kaydını da kaldır
+                // Ä°lgili Ã¼retim firesi imha kaydÄ±nÄ± da kaldÄ±r
                 var fireCode = $"FIRE-D{id}";
                 var fireRec = await _context.WasteManagements.FirstOrDefaultAsync(w => w.WasteCode == fireCode);
                 if (fireRec != null) _context.WasteManagements.Remove(fireRec);
 
                 _context.ProductionDetails.Remove(detail);
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Tüketim kaydı silindi." });
+                return Json(new { success = true, message = "TÃ¼ketim kaydÄ± silindi." });
             }
             catch (Exception ex)
             {
@@ -536,7 +551,7 @@ namespace FSCTakip.WebUI.Controllers
             }
         }
 
-        // POST /Production/SaveWorkOrderRecipe — İş emrine reçete satırı ekle/güncelle
+        // POST /Production/SaveWorkOrderRecipe â€” Ä°ÅŸ emrine reÃ§ete satÄ±rÄ± ekle/gÃ¼ncelle
         [HttpPost]
         public async Task<IActionResult> SaveWorkOrderRecipe(int workOrderId, int productId, decimal plannedQuantity, int? existingId)
         {
@@ -545,16 +560,16 @@ namespace FSCTakip.WebUI.Controllers
                 if (existingId.HasValue)
                 {
                     var rec = await _context.WorkOrderRecipes.FindAsync(existingId.Value);
-                    if (rec == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+                    if (rec == null) return Json(new { success = false, message = "KayÄ±t bulunamadÄ±." });
                     rec.PlannedQuantity = plannedQuantity;
                     rec.ProductId       = productId;
                 }
                 else
                 {
-                    // Aynı iş emri + bileşen zaten var mı?
+                    // AynÄ± iÅŸ emri + bileÅŸen zaten var mÄ±?
                     var exists = await _context.WorkOrderRecipes.AnyAsync(r => r.WorkOrderId == workOrderId && r.ProductId == productId);
                     if (exists)
-                        return Json(new { success = false, message = "Bu bileşen zaten bu iş emrinde mevcut." });
+                        return Json(new { success = false, message = "Bu bileÅŸen zaten bu iÅŸ emrinde mevcut." });
 
                     _context.WorkOrderRecipes.Add(new WorkOrderRecipe {
                         WorkOrderId       = workOrderId,
@@ -565,7 +580,7 @@ namespace FSCTakip.WebUI.Controllers
                     });
                 }
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Reçete satırı kaydedildi." });
+                return Json(new { success = true, message = "ReÃ§ete satÄ±rÄ± kaydedildi." });
             }
             catch (Exception ex)
             {
@@ -580,9 +595,9 @@ namespace FSCTakip.WebUI.Controllers
             try
             {
                 var rec = await _context.WorkOrderRecipes.FindAsync(id);
-                if (rec == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+                if (rec == null) return Json(new { success = false, message = "KayÄ±t bulunamadÄ±." });
                 if (rec.ActualConsumedQuantity > 0)
-                    return Json(new { success = false, message = "Bu bileşene bağlı tüketim kaydı var. Önce tüketim kayıtlarını silin." });
+                    return Json(new { success = false, message = "Bu bileÅŸene baÄŸlÄ± tÃ¼ketim kaydÄ± var. Ã–nce tÃ¼ketim kayÄ±tlarÄ±nÄ± silin." });
                 _context.WorkOrderRecipes.Remove(rec);
                 await _context.SaveChangesAsync();
                 return Json(new { success = true });
@@ -633,9 +648,9 @@ namespace FSCTakip.WebUI.Controllers
 
             var details = await query.OrderByDescending(d => d.ProductionDate).ToListAsync();
 
-            // Makine bazlı özet
+            // Makine bazlÄ± Ã¶zet
             var byMachine = details
-                .GroupBy(d => new { d.MachineId, Name = d.Machine?.Name ?? "—" })
+                .GroupBy(d => new { d.MachineId, Name = d.Machine?.Name ?? "â€”" })
                 .Select(g => new WasteGroupRow {
                     Label          = g.Key.Name,
                     RecordCount    = g.Count(),
@@ -645,9 +660,9 @@ namespace FSCTakip.WebUI.Controllers
                 .OrderByDescending(r => r.WasteRate)
                 .ToList();
 
-            // Ürün bazlı özet
+            // ÃœrÃ¼n bazlÄ± Ã¶zet
             var byProduct = details
-                .GroupBy(d => new { Id = d.WorkOrder?.ProductId, Name = d.WorkOrder?.Product?.ProductName ?? "—" })
+                .GroupBy(d => new { Id = d.WorkOrder?.ProductId, Name = d.WorkOrder?.Product?.ProductName ?? "â€”" })
                 .Select(g => new WasteGroupRow {
                     Label         = g.Key.Name,
                     RecordCount   = g.Count(),
@@ -657,7 +672,7 @@ namespace FSCTakip.WebUI.Controllers
                 .OrderByDescending(r => r.WasteRate)
                 .ToList();
 
-            // Aylık trend (son 6 ay)
+            // AylÄ±k trend (son 6 ay)
             var monthly = details
                 .GroupBy(d => new { d.ProductionDate.Year, d.ProductionDate.Month })
                 .Select(g => new {
@@ -719,12 +734,12 @@ namespace FSCTakip.WebUI.Controllers
             return ExportToExcel(rows, "FireRaporu");
         }
 
-        // ─── WasteManagement (İmha Kayıtları) ───────────────────────────────
+        // â”€â”€â”€ WasteManagement (Ä°mha KayÄ±tlarÄ±) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         // GET /Production/WasteManagement
         public async Task<IActionResult> WasteManagement()
         {
-            ViewData["Title"] = "İmha / Atık Kayıtları";
+            ViewData["Title"] = "Ä°mha / AtÄ±k KayÄ±tlarÄ±";
             var list = await _context.WasteManagements
                 .Include(w => w.WorkOrder).ThenInclude(wo => wo!.Product)
                 .OrderByDescending(w => w.DisposalDate)
@@ -771,7 +786,7 @@ namespace FSCTakip.WebUI.Controllers
                 else
                 {
                     var existing = await _context.WasteManagements.FindAsync(model.Id);
-                    if (existing == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+                    if (existing == null) return Json(new { success = false, message = "KayÄ±t bulunamadÄ±." });
 
                     existing.WorkOrderId    = model.WorkOrderId;
                     existing.Category       = model.Category;
@@ -786,7 +801,7 @@ namespace FSCTakip.WebUI.Controllers
                     existing.UpdatedBy      = User.Identity?.Name ?? "System";
                 }
                 await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Kayıt kaydedildi." });
+                return Json(new { success = true, message = "KayÄ±t kaydedildi." });
             }
             catch (Exception ex)
             {
@@ -798,7 +813,7 @@ namespace FSCTakip.WebUI.Controllers
         public async Task<IActionResult> DeleteWaste(int id)
         {
             var item = await _context.WasteManagements.FindAsync(id);
-            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            if (item == null) return Json(new { success = false, message = "KayÄ±t bulunamadÄ±." });
             try
             {
                 _context.WasteManagements.Remove(item);
@@ -811,7 +826,7 @@ namespace FSCTakip.WebUI.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"Bu atık kaydı silinemez. {ex.Message}" });
+                return Json(new { success = false, message = $"Bu atÄ±k kaydÄ± silinemez. {ex.Message}" });
             }
         }
     }
@@ -825,3 +840,4 @@ public class WasteGroupRow
     public decimal TotalWaste   { get; set; }
     public decimal WasteRate    => TotalConsumed > 0 ? Math.Round(TotalWaste / TotalConsumed * 100, 2) : 0;
 }
+

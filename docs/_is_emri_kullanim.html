@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>İş Emri Modülü Kullanım Kılavuzu</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:12.5px;color:#1a1a2e;background:#fff;line-height:1.6}
+.cover{background:linear-gradient(135deg,#1565c0,#0d47a1 60%,#1e3d14);color:#fff;padding:56px 50px 44px;page-break-after:always}
+.cover-logo{font-size:10px;opacity:.6;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cover-title{font-size:26px;font-weight:700;line-height:1.25;margin-bottom:8px}
+.cover-sub{font-size:14px;opacity:.8;margin-bottom:22px}
+.cover-meta{font-size:10px;opacity:.55;border-top:1px solid rgba(255,255,255,.2);padding-top:10px;display:flex;gap:28px}
+.page{padding:28px 42px}
+h1{font-size:16px;font-weight:700;color:#0d47a1;border-bottom:2px solid #1565c0;padding-bottom:5px;margin:24px 0 12px}
+h2{font-size:13px;font-weight:700;color:#1e3d14;margin:16px 0 6px}
+h3{font-size:12px;font-weight:600;color:#374151;margin:12px 0 5px}
+p{margin-bottom:7px}
+ul{padding-left:17px;margin-bottom:8px}
+li{margin-bottom:3px}
+.pb{page-break-before:always}
+table{width:100%;border-collapse:collapse;margin:8px 0 12px;font-size:11.5px}
+th{background:#1565c0;color:#fff;padding:6px 9px;text-align:left;font-weight:600}
+td{padding:5px 9px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+tr:nth-child(even) td{background:#f8fafc}
+.info{background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:9px 13px;margin:8px 0;font-size:11.5px;color:#1d4ed8}
+.warn{background:#fff7ed;border:1px solid #fed7aa;border-radius:5px;padding:9px 13px;margin:8px 0;font-size:11.5px;color:#92400e}
+.ok{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:5px;padding:9px 13px;margin:8px 0;font-size:11.5px;color:#166534}
+.err{background:#fff5f5;border:1px solid #fecaca;border-radius:5px;padding:9px 13px;margin:8px 0;font-size:11.5px;color:#dc2626}
+pre{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:5px;padding:10px 12px;font-family:'Consolas',monospace;font-size:10.5px;color:#1e293b;margin:6px 0 10px;white-space:pre-wrap;line-height:1.45}
+code{background:#f1f5f9;padding:1px 4px;border-radius:3px;font-family:'Consolas',monospace;font-size:10.5px;color:#d63384}
+.ascii{background:#0f172a;color:#7dd3fc;font-family:'Consolas',monospace;font-size:10.5px;border-radius:5px;padding:12px 14px;margin:6px 0 10px;white-space:pre;line-height:1.45}
+.step{border:1px solid #e5e7eb;border-radius:7px;margin:8px 0;overflow:hidden}
+.step-h{background:#1565c0;color:#fff;padding:6px 12px;font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:8px}
+.step-n{background:rgba(255,255,255,.25);width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex-shrink:0}
+.step-b{padding:9px 13px;font-size:11.5px}
+.badge{display:inline-block;padding:1px 7px;border-radius:9px;font-size:10px;font-weight:600;margin:0 2px}
+.bl{background:#dbeafe;color:#1d4ed8}.bg{background:#dcfce7;color:#166534}.br{background:#fee2e2;color:#dc2626}.ba{background:#fef3c7;color:#92400e}
+@page{margin:13mm 13mm 16mm;size:A4}
+</style>
+</head>
+<body>
+
+<!-- KAPAK -->
+<div class="cover">
+  <div class="cover-logo">ARD Sistem ve Danışmanlık · FSCTakip ERP</div>
+  <div class="cover-title">İş Emri Modülü<br>Kullanım Kılavuzu</div>
+  <div class="cover-sub">Üretim Takibi · BOM Bileşen Analizi · Tüketim Girişi · FSC CoC İzleme</div>
+  <div class="cover-meta">
+    <span>Versiyon 1.0</span><span>ARD Sistem ve Danışmanlık</span><span>Haziran 2026</span><span>Dahili Kullanım</span>
+  </div>
+</div>
+
+<!-- SAYFA 1 -->
+<div class="page">
+
+<h1>1. Sayfanın Genel Yapısı</h1>
+
+<div class="ascii">┌────────────────────────┬──────────────────────────────────────────────────┐
+│  SOL PANEL (1/3)       │  SAĞ PANEL (2/3)                                 │
+│                        │  Üst köşe: [Reçeteden Yükle] [+ Tüketim Gir]    │
+│  ■ İş emri bilgileri   │  ─────────────────────────────────────────────   │
+│  ■ Özet metrik kartlar │  Tüketim Kayıtları Tablosu:                      │
+│    Üretilen (adet)     │  Tarih | Bobin | Lot/Tedarikçi |                 │
+│    Tüketim (kg)        │  Tüketim(kg) | Fire(kg) | Üretim(adet) | İşlem  │
+│    Fire (kg)           │  ─────────────────────────────────────────────   │
+│    Fire Oranı (%)      │  Tablo footer: Toplamlar                         │
+│  ■ İlerleme çubuğu     │                                                  │
+│  ■ BOM Bileşen Analizi │                                                  │
+└────────────────────────┴──────────────────────────────────────────────────┘
+
+Topbar: [← Listeye Dön]  [+ Tüketim Gir]  [✓ ÜRETİMİ TAMAMLA]</div>
+
+<h1>2. İş Emri Listesi — Sütun Açıklamaları</h1>
+
+<table>
+  <tr><th>Sütun</th><th>Veri Kaynağı</th><th>Açıklama</th></tr>
+  <tr><td>İş Emri No</td><td>WorkOrder.WorkOrderNo</td><td>Otomatik: IE2026-001, IE2026-002…</td></tr>
+  <tr><td>Plan (adet)</td><td>WorkOrder.PlannedQuantity</td><td>İş emri açılırken girilen hedef</td></tr>
+  <tr><td>Gerçek (adet)</td><td>WorkOrder.ActualQuantity</td><td>"Üretimi Tamamla" butonu basılınca hesaplanır</td></tr>
+  <tr><td>Tüketim (kg)</td><td>ProductionDetails toplamı</td><td>Tüm tüketim satırlarının sum(ConsumedWeight)</td></tr>
+  <tr><td>Fire (kg)</td><td>ProductionDetails toplamı</td><td>Tüm satırların sum(WasteWeight)</td></tr>
+  <tr><td>Durum</td><td>WorkOrder.Status</td><td>Taslak / Üretimde / Tamamlandı / İptal</td></tr>
+</table>
+
+<div class="info"><strong>Yeni İş Emri:</strong> "Kaydet &amp; Başlat" basılınca durum <span class="badge ba">Üretimde</span> olur ve otomatik detay sayfasına yönlendirilirsiniz. Numara <code>IE{yıl}-{sıra:D3}</code> formatında otomatik atanır.</div>
+
+<h1>3. Detay Sayfası — Sol Panel Özet Kartlar</h1>
+
+<table>
+  <tr><th>Kart</th><th>Formül</th><th>Renk Mantığı</th></tr>
+  <tr><td><strong>Üretilen (adet)</strong></td><td>Her günün MAX üretim adedini topla</td><td>—</td></tr>
+  <tr><td><strong>Tüketim (kg)</strong></td><td>sum(ConsumedWeight) tüm satırlar</td><td>—</td></tr>
+  <tr><td><strong>Fire (kg)</strong></td><td>sum(WasteWeight) tüm satırlar</td><td>—</td></tr>
+  <tr><td><strong>Fire Oranı (%)</strong></td><td>Fire ÷ Tüketim × 100</td><td>Yeşil &lt;%3 · Sarı %3–6 · Kırmızı &gt;%6</td></tr>
+</table>
+
+<div class="warn"><strong>Üretilen adet neden basit toplama değil?</strong><br>
+Aynı günde birden fazla bobinden tüketim girilirse (3 bobin, hepsine 5.000 adet yazılmış) basit toplama 15.000 verir — yanlış. Sistem şunu yapar: <em>her güne ait satırların en büyük değerini al, günleri topla.</em><br><br>
+15.06: 3 satır, hepsi 5.000 → max = <strong>5.000</strong><br>
+16.06: 2 satır, hepsi 4.200 → max = <strong>4.200</strong><br>
+<strong>Toplam = 9.200 adet ✓</strong> (15.000 değil)</div>
+
+</div>
+
+<!-- SAYFA 2 -->
+<div class="page pb">
+
+<h1>4. BOM Bileşen Analizi</h1>
+
+<h2>4.1 Ne İşe Yarar?</h2>
+<p>Sol panelin altında her hammadde bileşeni için mass-balance (kütle dengesi) takibi yapar. Şu soruları yanıtlar:</p>
+<ul>
+  <li>Bu bileşenden kaç kg kullanmam planlandı?</li>
+  <li>Şimdiye kadar kaç kg tüketildi? Kaç kg fire çıktı?</li>
+  <li>Hedefe ulaşmak için kaç kg daha gerekli?</li>
+  <li>Tamamlanma yüzdesi nedir?</li>
+</ul>
+
+<h2>4.2 Rakamlar Nereden Gelir?</h2>
+<p>Bu panel <code>WorkOrderRecipe</code> tablosunu okur. İş emri + bileşen kombinasyonu başına ayrı satır tutulur:</p>
+
+<table>
+  <tr><th>Alan</th><th>Anlamı</th><th>Ne Zaman Değişir?</th></tr>
+  <tr><td>PlannedQuantity</td><td>Bu bileşenden planlanan kg</td><td>"Reçeteden Yükle" veya "Bileşen Ekle" ile</td></tr>
+  <tr><td>ActualConsumedQuantity</td><td>Net tüketilen kg</td><td>Her tüketim kaydı eklenince / silinince</td></tr>
+  <tr><td>WasteQuantity</td><td>Bu bileşene ait fire kg</td><td>Her tüketim kaydı eklenince / silinince</td></tr>
+  <tr><td>ProducedQuantity</td><td>İlgili üretim adedi</td><td>Tüketim satırlarında MAX alınarak güncellenir</td></tr>
+</table>
+
+<pre>Toplam Tüketim = ActualConsumedQuantity + WasteQuantity
+Kalan          = PlannedQuantity − Toplam Tüketim
+Yüzde (%)      = (Toplam Tüketim / PlannedQuantity) × 100</pre>
+
+<p><strong>İlerleme çubuğu rengi:</strong>
+<span class="badge ba">Sarı</span> %90 altı — daha fazla tüketim gerekmekte &nbsp;|&nbsp;
+<span class="badge bg">Yeşil</span> %90–110 — hedefe ulaşıldı &nbsp;|&nbsp;
+<span class="badge br">Kırmızı</span> %110 üstü — planı aştı!</p>
+
+<div class="ok"><strong>Örnek:</strong> Flat Handle Bag için 1.238 kg Kraft kağıt planlandı. Bugüne kadar 620 kg tüketildi, 18 kg fire çıktı.<br>
+Toplam: 638 kg · Kalan: <strong>600 kg</strong> · İlerleme: <span class="badge ba">%52</span></div>
+
+<h1>5. "Reçeteden Yükle" Butonu</h1>
+
+<p>Tüketim kayıtları panelinin üst sağ köşesindedir. <strong>Tek tıkla</strong> ürünün standart BOM reçetesini bu iş emrine bağlar.</p>
+
+<div class="step">
+  <div class="step-h"><span class="step-n">1</span> Standart Reçeteyi Çek</div>
+  <div class="step-b">Ürünler → Reçete'de tanımlı aktif bileşenler getirilir (örn: Kraft kağıt 0.0258 kg/adet).</div>
+</div>
+<div class="step">
+  <div class="step-h"><span class="step-n">2</span> Planlı Miktarı Hesapla</div>
+  <div class="step-b"><strong>Planlı kg = Standart kg/adet × İş Emri Plan Adedi</strong><br>
+  Örnek: 0.0258 × 48.000 = <strong>1.238,4 kg</strong></div>
+</div>
+<div class="step">
+  <div class="step-h"><span class="step-n">3</span> Onay ve Kayıt</div>
+  <div class="step-b">Eklenecek bileşenler listelenir. "BOM'a Ekle" onaylanınca her bileşen için <code>WorkOrderRecipe</code> kaydı oluşturulur. Zaten eklenmiş olanlar atlanır.</div>
+</div>
+
+<div class="warn"><strong>Ön koşullar:</strong> Ürünün Ürünler → Reçete sayfasında aktif bileşenleri tanımlı olmalı ve iş emrinde PlannedQuantity dolu olmalıdır. Reçete yoksa "aktif reçete bulunamadı" uyarısı verilir.</div>
+
+<div class="info"><strong>Ne zaman kullanılır?</strong> İş emri açıldıktan hemen sonra, ilk tüketimi girmeden önce basın. Bir kez yeterlidir.</div>
+
+</div>
+
+<!-- SAYFA 3 -->
+<div class="page pb">
+
+<h1>6. "Tüketim Gir" Modalı — Her Alan Açıklaması</h1>
+
+<div class="ascii">┌──────────────────────────────────────────────────────────────────────┐
+│  Tüketim Kaydı                                                       │
+│  ─────────────────────────────────────────────────────────────────   │
+│  Bobin *                                                             │
+│  [Seri no, parti no veya kod ile ara...                           ]  │
+│    └─ L2026-001 — KMK HAYAT SANAYİ                                  │
+│         S2026-001-01  ........................... 1.200,50 kg ←tıkla │
+│         S2026-001-02  .............................  850,00 kg        │
+│  [✓ L2026-001 · KMK HAYAT · Kalan: 1.200,50 kg]  (seçim sonrası)   │
+│  ─────────────────────────────────────────────────────────────────   │
+│  Üretim Tarihi *    Tüketilen (kg) *       Fire / Atık               │
+│  [15.06.2026    ]   [128.99       ] kg     [3.87  ] kg  / [%] [kg]  │
+│  ─────────────────────────────────────────────────────────────────   │
+│  Üretilen Miktar (adet) *    Makine                                  │
+│  [5000           ] adet      [Makine 1                ]              │
+│  ─────────────────────────────────────────────────────────────────   │
+│  Notlar (opsiyonel)                                                  │
+│  ─────────────────────────────────────────────────────────────────   │
+│  ▶ FSC CoC İzleme  [Opsiyonel — tıklayınca açılır]                  │
+│    Reçete Bileşeni: [KMK MBMF070 — Plan:1238 kg · Kalan:600 kg  ]  │
+│    → Sarı: +X kg daha gerekli  /  Kırmızı: aşım!  /  Yeşil: tamam  │
+│  ─────────────────────────────────────────────────────────────────   │
+│                                   [Vazgeç]  [💾 Kaydet]             │
+└──────────────────────────────────────────────────────────────────────┘</div>
+
+<h2>Alan Açıklamaları</h2>
+
+<table>
+  <tr><th>Alan</th><th>Ne Yapar?</th><th>Zorunlu?</th></tr>
+  <tr><td><strong>Bobin</strong></td><td>CurrentWeight &gt; 0 olan tüm bobinler lot gruplu listelenir. Seri no, parti no veya tedarikçiyle arama yapılır. Seçince kalan ağırlık gösterilir.</td><td>Evet</td></tr>
+  <tr><td><strong>Üretim Tarihi</strong></td><td>Hangi güne ait üretim. Varsayılan bugün. Çok günlü üretimlerde değiştirin.</td><td>Evet</td></tr>
+  <tr><td><strong>Tüketilen (kg)</strong></td><td>Bu bobinden kaç kg tüketildi. Bobinin CurrentWeight'ından düşülür. Bobinde kalanı aşamazsınız.</td><td>Evet</td></tr>
+  <tr><td><strong>Fire / Atık</strong></td><td>kg veya % modunda girilebilir. % modunda tüketim üzerinden otomatik kg hesaplar. Sıfır olabilir.</td><td>Hayır</td></tr>
+  <tr><td><strong>Üretilen Miktar</strong></td><td>Bu oturumda kaç adet üretildi. Aynı güne ait TÜM tüketim satırlarına aynı değeri yazın.</td><td>Evet</td></tr>
+  <tr><td><strong>Makine</strong></td><td>Üretimin yapıldığı makine. İş emrindeki makine otomatik seçilidir.</td><td>Hayır</td></tr>
+  <tr><td><strong>FSC CoC İzleme</strong></td><td>Tüketimi hangi BOM bileşenine bağlayacağınızı seçin. BOM paneli anlık güncellenir. FSC denetim izlenebilirliği için önemlidir.</td><td>Hayır</td></tr>
+</table>
+
+<h2>Tüketim Miktarı Otomatik Hesaplama</h2>
+
+<p>"Üretilen Miktar" alanı doldurulunca <strong>ve</strong> FSC CoC bölümünden bir BOM bileşeni seçiliyse, sistem tüketimi otomatik hesaplayabilir:</p>
+
+<pre>Beklenen Tüketim = (Üretilen Adet × BOM Planlı kg) / İş Emri Planlanan Adedi
+
+Örnek: (5.000 adet × 1.238,4 kg) / 48.000 adet = 128,99 kg</pre>
+
+<div class="info">Bu değer bir öneridir — dilediğiniz gibi değiştirebilirsiniz. BOM bileşeni seçilmemişse otomatik hesaplama çalışmaz, kg'ı manuel girin.</div>
+
+<h2>FSC CoC İzleme Bölümü (Gizli, Opsiyonel)</h2>
+
+<p>"FSC CoC İzleme" başlığına tıklayarak bu bölümü açarsınız. Tüketimi bir BOM bileşenine bağladığınızda:</p>
+<ul>
+  <li>Sol paneldeki BOM bileşeninin sayaçları anlık güncellenir</li>
+  <li>Kalan ihtiyaç dinamik gösterilir: <span class="badge ba">Sarı = daha gerekli</span> · <span class="badge br">Kırmızı = aşım</span> · <span class="badge bg">Yeşil = tamam</span></li>
+  <li>FSC Chain of Custody raporlaması için hammadde → ürün bağlantısı kurulmuş olur</li>
+</ul>
+
+</div>
+
+<!-- SAYFA 4 -->
+<div class="page pb">
+
+<h1>7. Bobin Bobin / Lot Lot Giriş — Senaryolar</h1>
+
+<p>Sistemde ayrı bir "lot giriş" seçeneği yoktur; her tüketim kaydı tek bir bobin (seri no) üzerine kurulur. Ancak farklı kombinasyonlar mümkündür:</p>
+
+<div class="step">
+  <div class="step-h"><span class="step-n">A</span> Tek Lot — Tek Bobin</div>
+  <div class="step-b">
+    Tüketim Gir → S2026-001-01 seç → 850 kg → 5.000 adet → Kaydet<br>
+    <em>Bobin S2026-001-01 CurrentWeight → 0 olur</em>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="step-n">B</span> Tek Lot — Birden Fazla Bobin</div>
+  <div class="step-b">
+    <strong>Tüketim 1:</strong> S2026-001-01 → 1.200 kg → 5.000 adet → Kaydet<br>
+    <strong>Tüketim 2:</strong> S2026-001-02 → 850 kg → 5.000 adet → Kaydet<br>
+    <strong>Tüketim 3:</strong> S2026-001-03 → 950 kg → 5.000 adet → Kaydet<br>
+    3 satır var, ama üretim adedi hepsinde 5.000. Sistem max alır: <strong>toplam = 5.000 adet, 3.000 kg tüketim</strong>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="step-n">C</span> Farklı Lotlar — Karma Kullanım</div>
+  <div class="step-b">
+    <strong>Tüketim 1:</strong> S2026-001-01 (Lot KMK, FSC-MIX) → 1.200 kg → 3.000 adet<br>
+    <strong>Tüketim 2:</strong> S2026-002-01 (Lot NATRON, FSC-100) → 600 kg → 3.000 adet<br>
+    FSC CoC açısından her tüketimi ilgili BOM bileşenine bağlamak önemlidir.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="step-n">D</span> Çok Günlü Üretim</div>
+  <div class="step-b">
+    <strong>15.06 Tüketim 1:</strong> Bobin A → 500 kg → 2.000 adet<br>
+    <strong>15.06 Tüketim 2:</strong> Bobin B → 480 kg → 2.000 adet (aynı gün, aynı adet!)<br>
+    <strong>16.06 Tüketim 3:</strong> Bobin C → 520 kg → 2.100 adet<br>
+    <strong>16.06 Tüketim 4:</strong> Bobin D → 500 kg → 2.100 adet (aynı gün, aynı adet!)<br>
+    Toplam üretim = 2.000 + 2.100 = <strong>4.100 adet</strong> · Toplam tüketim = <strong>2.000 kg</strong>
+  </div>
+</div>
+
+<div class="warn"><strong>Kritik Kural:</strong> Aynı güne ait tüm tüketim satırlarına AYNI üretim adedini yazın. Farklı değer yazılırsa sistem max alır — bu tutarsız veri oluşturur.</div>
+
+<h1>8. "Üretimi Tamamla" — Ne Yapar?</h1>
+
+<p>İş emrini kapatır ve aşağıdaki işlemleri sırayla gerçekleştirir:</p>
+
+<table>
+  <tr><th>#</th><th>İşlem</th><th>Sonuç</th></tr>
+  <tr><td>1</td><td>İş emri durumu güncellenir</td><td>WorkOrder.Status = Tamamlandı</td></tr>
+  <tr><td>2</td><td>ActualQuantity hesaplanır</td><td>Her günün max adedi toplanır</td></tr>
+  <tr><td>3</td><td>Mamul stoka girer</td><td>StockMovement (ProductionEntry) kaydı oluşturulur</td></tr>
+  <tr><td>4</td><td>Satış modülüne hazır hale gelir</td><td>Ürün artık satış çıkışında görünür</td></tr>
+</table>
+
+<div class="info">Tamamlandı işareti kaldırılamaz. Hata yapıldıysa admin "Üretim Adeti Düzelt" işlevi ile ActualQuantity'yi yeniden hesaplatabilir.</div>
+
+<h1>9. Tüketim Silindiğinde Ne Olur?</h1>
+
+<p>Tek "Sil" butonu 4 tabloyu birlikte günceller:</p>
+<ul>
+  <li><strong>FscSerial.CurrentWeight</strong> artırılır — tüketim iade edilir, bobin dolgunluğu geri gelir</li>
+  <li><strong>WorkOrderRecipe</strong> sayaçları azaltılır (ActualConsumedQuantity, WasteQuantity)</li>
+  <li><strong>StockMovement</strong> (hammadde çıkış hareketi) silinir</li>
+  <li><strong>WasteManagement</strong> (fire/atık kaydı) silinir</li>
+</ul>
+
+<div class="ok">Veri tutarlılığı korunur. Silme işlemi geri alınamaz — önce Swal.fire onay penceresi çıkar.</div>
+
+</div>
+
+<!-- SAYFA 5 -->
+<div class="page pb">
+
+<h1>10. Baştan Sona Kullanım Akışı</h1>
+
+<div class="step">
+  <div class="step-h"><span class="step-n">1</span> İş Emri Aç</div>
+  <div class="step-b">
+    Üretim → İş Emirleri → <strong>[+ Yeni Üretim Başlat]</strong><br>
+    • Ürün seç (kod / dış kod / ürün adıyla ara)<br>
+    • Makine seç<br>
+    • Üretim tarihi gir<br>
+    • Planlanan adet gir (örn: 48.000)<br>
+    • Opsiyonel: Harici İş Emri No (Netsis/ERP numarası), Notlar<br>
+    → <strong>[Kaydet &amp; Başlat]</strong> → Detay sayfasına yönlendirilirsiniz
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="step-n">2</span> BOM Bileşenlerini Yükle</div>
+  <div class="step-b">
+    <strong>[Reçeteden Yükle]</strong> butonuna basın<br>
+    → Sistem reçeteden planlı miktarları hesaplayıp gösterir<br>
+    → "BOM'a Ekle" onaylayın<br>
+    → Sol panelde BOM Bileşen Analizi dolar<br>
+    <em>Not: Reçete tanımlı değilse "Bileşen Ekle" ile manuel ekleyebilirsiniz</em>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="step-n">3</span> Her Bobin Kullanımı İçin Tüketim Gir</div>
+  <div class="step-b">
+    <strong>[+ Tüketim Gir]</strong> → Modal açılır<br>
+    1. Bobin arama kutusunda seri no veya parti no yazın → bobini seçin<br>
+    2. Tarih kontrol edin (varsayılan bugün)<br>
+    3. Üretilen miktarı yazın → tüketim otomatik hesaplanır (veya manuel girin)<br>
+    4. Fire varsa kg veya % ile girin<br>
+    5. "FSC CoC İzleme" bölümünü açın → ilgili BOM bileşenini seçin<br>
+    6. <strong>[Kaydet]</strong><br>
+    Bu adımı her bobin için tekrarlayın. BOM paneli her kayıtta güncellenir.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="step-n">4</span> BOM'u Kontrol Et</div>
+  <div class="step-b">
+    Sol paneldeki BOM Bileşen Analizi'nde tüm bileşenler <span class="badge bg">yeşil / %90+</span> olunca üretim hedefine ulaşılmış demektir. Kalan değerler sıfıra yaklaşıncaya kadar tüketim girmeye devam edin.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="step-n">5</span> Üretimi Tamamla</div>
+  <div class="step-b">
+    <strong>[ÜRETİMİ TAMAMLA]</strong> butonuna basın → Onay penceresi<br>
+    → İş emri <span class="badge bg">Tamamlandı</span> olur<br>
+    → Mamul ürün stoğa girer (StockMovement: ProductionEntry)<br>
+    → Satış modülünden bu ürün artık gönderilebilir
+  </div>
+</div>
+
+<h1>11. Yaygın Hatalar ve Çözümleri</h1>
+
+<table>
+  <tr><th>Hata</th><th>Neden Oluşur</th><th>Çözüm</th></tr>
+  <tr>
+    <td>Üretilen adet 2 kat büyük çıkıyor</td>
+    <td>Aynı güne ait satırlara farklı adetler yazıldı</td>
+    <td>Aynı günün tüm tüketim satırlarına aynı üretim adedini yazın</td>
+  </tr>
+  <tr>
+    <td>BOM panelinde tüketim 0 kalıyor</td>
+    <td>Tüketim girilirken FSC CoC bölümünden bileşen seçilmedi</td>
+    <td>Tüketim modalında "FSC CoC İzleme"yi açıp bileşeni seçin</td>
+  </tr>
+  <tr>
+    <td>"Tüketim miktarı bobinin kalan ağırlığını aşıyor"</td>
+    <td>Girilen kg bobinde kalan miktardan fazla</td>
+    <td>Bobin seçince görünen kalan ağırlığa bakın, miktarı düşürün</td>
+  </tr>
+  <tr>
+    <td>"Üretimi Tamamla" sonrası stokta görünmüyor</td>
+    <td>ActualQuantity = 0 (tüketim girilmemiş)</td>
+    <td>Önce tüketim kaydı girin, sonra tamamlayın</td>
+  </tr>
+  <tr>
+    <td>Reçeteden Yükle "aktif reçete bulunamadı" diyor</td>
+    <td>Ürünün reçetesi tanımlı değil</td>
+    <td>Ürünler → Reçete sayfasından bileşen ekleyin</td>
+  </tr>
+  <tr>
+    <td>Otomatik tüketim hesaplanmıyor</td>
+    <td>FSC CoC bölümünden bileşen seçilmemiş veya PlannedQuantity = 0</td>
+    <td>Önce bileşeni seçin, sonra üretilen miktarı yazın</td>
+  </tr>
+  <tr>
+    <td>Bobin listesinde bobin görünmüyor</td>
+    <td>Bobinin CurrentWeight = 0 (tükenmiş)</td>
+    <td>Hammadde Girişi'nden yeni lot/bobin ekleyin</td>
+  </tr>
+</table>
+
+<div style="margin-top:32px;padding:14px 16px;background:#f8fafc;border-radius:6px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280;text-align:center;">
+  © 2026 ARD Sistem ve Danışmanlık · FSCTakip ERP · İş Emri Modülü Kullanım Kılavuzu v1.0<br>
+  Bu belge dahili kullanım içindir. Yetkisiz kopyalama ve dağıtım yasaktır.
+</div>
+
+</div>
+</body>
+</html>
