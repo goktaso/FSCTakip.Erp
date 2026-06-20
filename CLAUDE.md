@@ -290,6 +290,64 @@ query = query.Where(sm => sm.ProductId == productId);  // ✓
 
 **Neden:** StockMovement daima bir ürün ile ilişkili olmalıdır. Veri tabanında NOT NULL constraint sağlanmalıdır. Eski kayıtlarda NULL varsa migration ile backfill edilir.
 
+### ⚠️ HTML Yorum Satırında Razor Direktifi Hata Vermesi
+
+**Sorun:** HTML yorum satırında `@section` yazması Razor compile hatasına yol açar ("Unexpected character in tag helper").
+
+**Kök neden:** Razor parser HTML yorum `<!-- ... -->` bloğunun içini parse eder; `@` karakterleri directive olarak yorumlanır.
+
+**Çözüm:** Açıklama satırında `@` karakteri bulunacaksa Razor yorum `@* ... *@` kullan veya `@` kaldır:
+```razor
+// YANLIŞ
+<!-- @section Scripts bloğu tanımlanır -->
+
+// DOĞRU
+<!-- Section Scripts bolumu tanimlanir -->
+// veya
+@* @section Scripts bloğu açıklaması *@
+```
+
+### ⚠️ MCD Filtresi — CSS display:block + flex-column Wrapper Layout Kuralı
+
+Tekli dropdown yerine multi-select MCD komponenti içeren sayfalarda filtre paneli layout'unda iki düzeltme gerekli:
+
+**1. Global CSS** (_Layout.cshtml / mcd stil bloğu):
+```css
+.mcd {
+    position: relative;
+    display: block;  /* ← inline-block değil; flex container'da dikey hizalama sağlasın */
+}
+```
+
+**2. View'de MCD gruplarının wrapper'ı** (her MCD etiketi + MCD konteynerini kapsayan div):
+```html
+<div style="display:flex; flex-direction:column; min-width:160px;">
+    <label class="form-label small fw-semibold mb-1">Tedarikçi</label>
+    <div class="mcd" id="mcd-id" data-placeholder="...">
+        <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-id')">
+            ...
+        </button>
+        <div class="mcd-panel" id="mcd-id-panel">
+            ...
+        </div>
+    </div>
+</div>
+```
+
+**Filtre paneli hizalama:** Birden çok MCD grubu yan yana basıldığında `row g-2 align-items-end` yerine:
+```html
+<div class="d-flex align-items-end gap-2 flex-wrap">
+    <!-- her grup kendi min-width taşır -->
+    <div style="min-width:130px;">...</div>
+    <div style="display:flex;flex-direction:column;min-width:160px;">
+        <label>...</label>
+        <div class="mcd">...</div>
+    </div>
+</div>
+```
+
+**Neden:** `display:inline-block` flex container'da hizalama kontrol edilemiyor; dikey etiket-input çiftinde input alanı etiketin yanına gelir (aynı satır). `display:block` ile wrapper flex-direction:column ayarıyla etiket tamamen üstte, input tamamen alta iner.
+
 ## Dosya Yükleme Konvansiyonu
 
 PDF belgeler (irsaliye, fatura) şu dizine kaydedilmeli:

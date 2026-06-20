@@ -7,6 +7,8 @@
     var allWorkOrders = ViewBag.AllWorkOrders as List<SelectListItem> ?? new List<SelectListItem>();
     int? selWoId = ViewBag.WorkOrderId as int?;
     var woLabel = allWorkOrders.FirstOrDefault(w => w.Value == selWoId?.ToString())?.Text ?? "— Tümü —";
+    var productIds  = ViewBag.ProductIds  as int[] ?? Array.Empty<int>();
+    var allProducts = ViewBag.AllProducts as List<FSCTakip.Core.Entities.Product> ?? new();
 }
 
 @section TopbarActions {
@@ -21,16 +23,16 @@
 
 <!-- Filtre Paneli -->
 <div class="filter-panel mb-3">
-    <form method="get" class="row g-2 align-items-end">
-        <div class="col-md-3">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+        <div style="display:flex;flex-direction:column;min-width:140px;">
             <label class="form-label" style="font-size:12px;">Başlangıç Tarihi</label>
             <input type="date" name="startDate" class="form-control form-control-sm" value="@ViewBag.StartDate">
         </div>
-        <div class="col-md-3">
+        <div style="display:flex;flex-direction:column;min-width:140px;">
             <label class="form-label" style="font-size:12px;">Bitiş Tarihi</label>
             <input type="date" name="endDate" class="form-control form-control-sm" value="@ViewBag.EndDate">
         </div>
-        <div class="col-md-4">
+        <div style="display:flex;flex-direction:column;min-width:220px;">
             <label class="form-label" style="font-size:12px;">İş Emri (Opsiyonel)</label>
             <div class="mcd" id="mcd-bom-wo" data-placeholder="— Tümü —" style="min-width:220px;">
                 <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-bom-wo')">
@@ -62,8 +64,41 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100 btn-sm">
+        <div style="display:flex;flex-direction:column;min-width:220px;">
+            <label class="form-label" style="font-size:12px;">Ürün / Mamul</label>
+            <div class="mcd" id="mcd-bom-prod" data-placeholder="— Tümü —">
+                <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-bom-prod')">
+                    <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " seçildi" : "— Tümü —")</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-bom-prod-panel" style="display:none;">
+                    <div class="mcd-search-row">
+                        <input type="text" class="mcd-search" placeholder="Ürün ara..." oninput="mcdSearch(this)">
+                    </div>
+                    <label class="mcd-row mcd-header">
+                        <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-bom-prod')">
+                        <span>Tümünü Seç / Temizle</span>
+                    </label>
+                    <div class="mcd-items">
+                        @foreach (var p in allProducts)
+                        {
+                            bool sel = productIds.Contains(p.Id);
+                            <label class="mcd-row">
+                                <input type="checkbox" name="productIds" value="@p.Id" class="mcd-cb"
+                                       onchange="mcdUpdate('mcd-bom-prod')"
+                                       checked="@(sel ? "checked" : null)">
+                                <span class="mcd-name" title="@p.ProductName">@p.ProductName</span>
+                                @if (!string.IsNullOrEmpty(p.ProductCode))  { <span class="mcd-sub">@p.ProductCode</span> }
+                                @if (!string.IsNullOrEmpty(p.ExternalCode)) { <span class="mcd-ext">@p.ExternalCode</span> }
+                            </label>
+                        }
+                    </div>
+                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex align-items-end pb-1">
+            <button type="submit" class="btn btn-primary btn-sm">
                 <i class="fas fa-search me-1"></i> Filtrele
             </button>
         </div>

@@ -294,3 +294,70 @@ Iki yeni view eklendi:
 - Hata ayıklama için teknik alanlar (CreatedBy, UpdatedDate vb.)
 
 **Menüde:** "Stok" → "Stok Özeti" (Summary), "Yönetici Stok" (AdminStock)
+
+## Razor yorum satırında @section direktifi hata vermesi (2026-06-21)
+
+**Belirti:** _Layout.cshtml compile hatası — "Unexpected character in tag helper element".
+
+**Kök neden:** Razor parser HTML yorum satırında (`<!-- ... @section ... -->`) bulunan `@section` ifadesini Razor direktifi olarak yorumlamaya çalışıyor ve hata veriyor. Açıklama: HTML yorum `<!-- ... -->` Razor'un gözüne saydam değil; içindeki `@` karakterleri directive olarak parse edilir.
+
+**Çözüm:** HTML yorumda `@` karakteri bulunacaksa kaldır veya Razor `@*...*@` yorum bloğu kullan:
+```razor
+// YANLIŞ
+<!-- @section Scripts bloğu hata veriyordu -->
+
+// DOĞRU
+<!-- Section Scripts blogu -->
+// veya
+@* @section Scripts bloğu açıklaması *@
+```
+
+## MCD (Multi-Choice Dropdown) filtre layout — display:block + flex-column wrapper (2026-06-21)
+
+**Belirti:** MCD butonları yanyana hizalanıyor ama içindeki input alanı alta inmiyor (label ve input aynı satırda).
+
+**Kök neden:** MCD'nin CSS `display:inline-block` ayarından dolayı flex container içinde yatay yaygınlık buluyor. Etiket-input dikey hizalama için wrapper üzerine flex kuralı uygulanmıyor.
+
+**Çözüm (iki adım):**
+1. **Global CSS (_Layout):** `.mcd { display: inline-block; }` → `.mcd { display: block; }` 
+2. **View'deki MCD grubu:** Her MCD etiketi ve MCD konteynerini kapsayan `<div>` üzerine flex-direction:column ve min-width ekle:
+   ```html
+   <div style="display:flex;flex-direction:column;min-width:160px;">
+       <label class="form-label small fw-semibold mb-1">Tedarikçi</label>
+       <div class="mcd" id="mcd-id" ...><!-- MCD buton ve panel --></div>
+   </div>
+   ```
+
+**Nerede uygulandı:** Purchase/Index (Tedarikçi/Ürün/FSC Tipi MCD'leri), Production/WasteReport (Makine/Ürün MCD'leri).
+
+**Filtre paneli hizalama (Purchase/Index):** `row g-2 align-items-end` → `d-flex align-items-end gap-2 flex-wrap` + her grup kendi min-width taşıyor.
+
+## Razor option tag helper — seçili attribute'u dinamik yapabilme (2026-06-21)
+
+**Durum güncelle:** lessons.md'deki eski uyarı hâlâ geçerli ama çözüm biraz farklı:
+```razor
+// DOĞRU (eski)
+@{ var isSel = condition; }
+<option value="@s.Id" selected="@(isSel ? "selected" : null)">
+
+// DOĞRU (alternatif — teşekkürler)
+<option value="@s.Id" selected="@condition">
+// Razor null değer HTML'de attribute çıkarmaz; bool true → selected="selected"
+```
+
+## 5 sayfa MCD uyumluluğu sağlandı (2026-06-21)
+
+**Yapılan:**
+1. **Purchase/Index** — productIds[] eklenip filtre çalışıyor
+2. **Stock/Summary** — productIds[] + ViewBag.AllProducts
+3. **Production/Index** — woProductId select gizlendi (compat); MCD eklendi
+4. **Conversion/Index** — sourceSerialId MCD + targetProductId MCD
+5. **Production/WasteReport** — Makine/Ürün MCD + layout düzeltme
+
+**Pattern:** Her sayfada MCD güncelleme şu adımları takip eder:
+- HTML: `<div class="mcd" id="mcd-[page-id]">` yapısı
+- Script: `window._mcdReady` guard ile coklu tanımlama önlenir
+- Controller: `int? id` → `int[]? ids` parametresi; `WHERE IN (ids)` query filtresi
+- ViewBag: seçili ID'leri tutup view'de checkbox durumunu korur
+
+**Excel export:** Form action'ı veya href URL'de `productIds=1&productIds=2` şeklinde çoklu value geçişi — ASP.NET Core otomatik array binding yapar.

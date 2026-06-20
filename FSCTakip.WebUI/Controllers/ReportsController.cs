@@ -652,7 +652,7 @@ namespace FSCTakip.WebUI.Controllers
 
         // ── 6. BOM Bileşen Analizi ──────────────────────────────────────────────
         // GET /Reports/BomAnalysis
-        public async Task<IActionResult> BomAnalysis(DateTime? startDate, DateTime? endDate, int? workOrderId)
+        public async Task<IActionResult> BomAnalysis(DateTime? startDate, DateTime? endDate, int? workOrderId, int[]? productIds)
         {
             var sd     = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
             var ed     = endDate   ?? DateTime.Today;
@@ -680,6 +680,9 @@ namespace FSCTakip.WebUI.Controllers
 
             if (workOrderId.HasValue)
                 woQuery = woQuery.Where(w => w.Id == workOrderId.Value);
+
+            if (productIds != null && productIds.Length > 0)
+                woQuery = woQuery.Where(w => productIds.Contains(w.ProductId));
 
             var workOrders = await woQuery.OrderByDescending(w => w.PlannedDate).ToListAsync();
 
@@ -770,10 +773,16 @@ namespace FSCTakip.WebUI.Controllers
 
             ViewBag.StartDate    = sd.ToString("yyyy-MM-dd");
             ViewBag.EndDate      = ed.ToString("yyyy-MM-dd");
+            ViewBag.WorkOrderId  = workOrderId;
+            ViewBag.ProductIds   = productIds ?? Array.Empty<int>();
             ViewBag.AllWorkOrders = await _context.WorkOrders
                 .Where(w => w.Status != WorkOrderStatus.Taslak)
                 .OrderByDescending(w => w.PlannedDate)
                 .Select(w => new SelectListItem { Value = w.Id.ToString(), Text = w.WorkOrderNo })
+                .ToListAsync();
+            ViewBag.AllProducts  = await _context.Products
+                .Where(p => p.IsActive)
+                .OrderBy(p => p.ProductName)
                 .ToListAsync();
             ViewData["Title"] = "BOM Bileşen Analizi";
             return View(model);

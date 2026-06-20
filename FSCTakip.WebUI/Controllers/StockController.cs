@@ -120,7 +120,7 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // GET /Stock/AdminStock — TUM stok hareketleri, orijinal birimde (sadece admin)
-        public async Task<IActionResult> AdminStock(int? productGroupId, string? search)
+        public async Task<IActionResult> AdminStock(int? productGroupId, string? search, int[]? productIds)
         {
             var allGroups = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
 
@@ -139,6 +139,9 @@ namespace FSCTakip.WebUI.Controllers
                     (m.Product.ExternalCode != null && m.Product.ExternalCode.ToLower().Contains(q)) ||
                     m.Product.ProductName.ToLower().Contains(q)));
             }
+
+            if (productIds != null && productIds.Length > 0)
+                mvQuery = mvQuery.Where(m => productIds.Contains(m.ProductId));
 
             var movements = await mvQuery.ToListAsync();
 
@@ -181,6 +184,11 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.Search           = search;
             ViewBag.TotalProducts    = rows.Count;
             ViewBag.GrandTotalKg     = rows.Sum(r => r.NetKg ?? r.NetQty);
+            ViewBag.ProductIds       = productIds ?? Array.Empty<int>();
+            ViewBag.AllProducts      = await _context.Products
+                .Where(p => p.IsActive)
+                .OrderBy(p => p.ProductName)
+                .ToListAsync();
 
             return View(rows);
         }

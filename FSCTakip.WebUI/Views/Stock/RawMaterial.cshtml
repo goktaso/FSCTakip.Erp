@@ -42,9 +42,9 @@
 <!-- Filtre paneli -->
 <div class="filter-panel" id="filterPanel" style="display:none;">
     <form method="get" action="/Stock/RawMaterial">
-        <div class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label class="filter-label">FSC Tipi</label>
+        <div class="d-flex flex-wrap gap-2 align-items-end">
+            <div style="display:flex;flex-direction:column;">
+                <label class="form-label small fw-semibold mb-1">FSC Tipi</label>
                 <div class="mcd" id="mcd-raw-fsc" data-placeholder="— Tümü —" style="min-width:140px;">
                     <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-raw-fsc')">
                         <span class="mcd-lbl">@(fscTypeIds.Length > 0 ? fscTypeIds.Length + " seçildi" : "— Tümü —")</span>
@@ -74,8 +74,8 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <label class="filter-label">Tedarikçi</label>
+            <div style="display:flex;flex-direction:column;">
+                <label class="form-label small fw-semibold mb-1">Tedarikçi</label>
                 <div class="mcd" id="mcd-raw-sup" data-placeholder="— Tümü —" style="min-width:180px;">
                     <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-raw-sup')">
                         <span class="mcd-lbl">@(supplierIds.Length > 0 ? supplierIds.Length + " seçildi" : "— Tümü —")</span>
@@ -106,8 +106,8 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <label class="filter-label">Stok / Ürün</label>
+            <div style="display:flex;flex-direction:column;">
+                <label class="form-label small fw-semibold mb-1">Stok / Ürün</label>
                 <div class="mcd" id="mcd-raw-prod" data-placeholder="— Tümü —">
                     <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-raw-prod')">
                         <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " seçildi" : "— Tümü —")</span>
@@ -138,12 +138,12 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-2 d-flex align-items-center gap-2 pt-3">
+            <div class="d-flex align-items-end pb-1 gap-2">
                 <input type="checkbox" name="showEmpty" id="chkEmpty" value="true" @(showEmpty ? "checked" : "") class="form-check-input">
-                <label for="chkEmpty" class="filter-label mb-0">Tükenenler dahil</label>
+                <label for="chkEmpty" class="form-label small fw-semibold mb-1">Tükenenler dahil</label>
             </div>
-            <div class="col-md-1 d-flex gap-1">
-                <button type="submit" class="topbar-btn w-100">Uygula</button>
+            <div class="d-flex align-items-end pb-1">
+                <button type="submit" class="topbar-btn">Uygula</button>
             </div>
         </div>
     </form>

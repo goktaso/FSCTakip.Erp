@@ -7,6 +7,8 @@
     string search     = ViewBag.Search ?? "";
     int totalProducts = ViewBag.TotalProducts ?? 0;
     decimal grandKg   = ViewBag.GrandTotalKg ?? 0m;
+    var productIds    = ViewBag.ProductIds  as int[] ?? Array.Empty<int>();
+    var allProducts   = ViewBag.AllProducts as List<FSCTakip.Core.Entities.Product> ?? new();
 }
 
 <!-- Topbar -->
@@ -71,7 +73,7 @@
 <!-- Filtre -->
 <form method="get" action="/Stock/AdminStock">
     <div class="filter-card">
-        <div class="filter-form">
+        <div class="filter-form" style="flex-wrap:wrap;gap:8px;align-items:flex-end;">
             <select name="productGroupId" class="form-control form-control-sm" style="max-width:200px;">
                 <option value="">— Tüm Gruplar —</option>
                 @foreach (var g in allGroups)
@@ -81,6 +83,39 @@
             </select>
             <input type="text" name="search" class="form-control form-control-sm"
                    placeholder="Ürün adı, kodu ara..." value="@search" style="max-width:220px;" />
+            <!-- Ürün MCD -->
+            <div style="display:flex;flex-direction:column;min-width:200px;">
+                <div class="mcd" id="mcd-admin-prod" data-placeholder="— Tüm Ürünler —">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-admin-prod')">
+                        <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " seçildi" : "— Tüm Ürünler —")</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-admin-prod-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Ürün ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <label class="mcd-row mcd-header">
+                            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-admin-prod')">
+                            <span>Tümünü Seç / Temizle</span>
+                        </label>
+                        <div class="mcd-items">
+                            @foreach (var p in allProducts)
+                            {
+                                bool sel = productIds.Contains(p.Id);
+                                <label class="mcd-row">
+                                    <input type="checkbox" name="productIds" value="@p.Id" class="mcd-cb"
+                                           onchange="mcdUpdate('mcd-admin-prod')"
+                                           checked="@(sel ? "checked" : null)">
+                                    <span class="mcd-name" title="@p.ProductName">@p.ProductName</span>
+                                    @if (!string.IsNullOrEmpty(p.ProductCode))  { <span class="mcd-sub">@p.ProductCode</span> }
+                                    @if (!string.IsNullOrEmpty(p.ExternalCode)) { <span class="mcd-ext">@p.ExternalCode</span> }
+                                </label>
+                            }
+                        </div>
+                        <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                    </div>
+                </div>
+            </div>
             <button type="submit" class="btn btn-primary btn-sm">
                 <i class="fas fa-filter me-1"></i>Filtrele
             </button>

@@ -32,17 +32,20 @@
                             <span class="mcd-lbl">— Stoktaki bobin seçin —</span>
                             <i class="fas fa-angle-down mcd-arrow"></i>
                         </button>
-                        <div class="mcd-panel" id="mcd-src-bobin-panel" style="display:none;width:100%;">
+                        <div class="mcd-panel" id="mcd-src-bobin-panel" style="display:none;width:100%;min-width:400px;max-width:100%;">
                             <div class="mcd-search-row">
                                 <input type="text" class="mcd-search" placeholder="Dış kod, stok adı veya seri no ile filtrele..." oninput="mcdSearch(this)">
                             </div>
-                            <div class="mcd-items" style="max-height:200px;">
+                            <div class="mcd-items" style="max-height:260px;">
                                 @foreach (var s in sources)
                                 {
-                                    <label class="mcd-row" onclick="srcBobinSelect(@s.Id); return false;">
-                                        @if (!string.IsNullOrEmpty(s.UrunIcKod)) { <span class="mcd-sub">@s.UrunIcKod</span> }
-                                        @if (!string.IsNullOrEmpty(s.UrunKod))   { <span class="mcd-ext">@s.UrunKod</span> }
-                                        <span class="mcd-name">@s.UrunAd · @s.SerialNo · kalan @s.CurrentWeight.ToString("N2") kg</span>
+                                    <label class="mcd-row" onclick="srcBobinSelect(@s.Id); return false;" style="white-space:normal;">
+                                        <input type="radio" name="_srcRb" value="@s.Id" class="mcd-rb" style="flex-shrink:0;">
+                                        @if (!string.IsNullOrEmpty(s.UrunIcKod)) { <span class="mcd-sub" style="flex-shrink:0;">@s.UrunIcKod</span> }
+                                        @if (!string.IsNullOrEmpty(s.UrunKod))   { <span class="mcd-ext" style="flex-shrink:0;">@s.UrunKod</span> }
+                                        <span class="mcd-name" style="white-space:normal;overflow:visible;text-overflow:unset;max-width:none;">
+                                            @s.UrunAd · @s.SerialNo · kalan @s.CurrentWeight.ToString("N2") kg
+                                        </span>
                                     </label>
                                 }
                             </div>
@@ -74,17 +77,18 @@
                             <span class="mcd-lbl">— Hedef seçin —</span>
                             <i class="fas fa-angle-down mcd-arrow"></i>
                         </button>
-                        <div class="mcd-panel" id="mcd-tgt-prod-panel" style="display:none;width:100%;">
+                        <div class="mcd-panel" id="mcd-tgt-prod-panel" style="display:none;width:100%;min-width:400px;max-width:100%;">
                             <div class="mcd-search-row">
                                 <input type="text" class="mcd-search" placeholder="Kod / ad ile ara (örn: 23357)..." oninput="mcdSearch(this)">
                             </div>
-                            <div class="mcd-items" style="max-height:200px;">
+                            <div class="mcd-items" style="max-height:260px;">
                                 @foreach (var t in targets)
                                 {
-                                    <label class="mcd-row" onclick="tgtProdSelect(@t.Id, '@t.Ad.Replace("'", "\\'")', '@t.Kod'); return false;">
-                                        <span class="mcd-sub">@t.Kod</span>
-                                        @if (!string.IsNullOrEmpty(t.ExtKod)) { <span class="mcd-ext">@t.ExtKod</span> }
-                                        <span class="mcd-name">@t.Ad</span>
+                                    <label class="mcd-row" onclick="tgtProdSelect(@t.Id, '@t.Ad.Replace("'", "\\'")' ,'@t.Kod'); return false;" style="white-space:normal;">
+                                        <input type="radio" name="_tgtRb" value="@t.Id" class="mcd-rb" style="flex-shrink:0;">
+                                        <span class="mcd-sub" style="flex-shrink:0;">@t.Kod</span>
+                                        @if (!string.IsNullOrEmpty(t.ExtKod)) { <span class="mcd-ext" style="flex-shrink:0;">@t.ExtKod</span> }
+                                        <span class="mcd-name" style="white-space:normal;overflow:visible;text-overflow:unset;max-width:none;">@t.Ad</span>
                                     </label>
                                 }
                             </div>
@@ -210,6 +214,9 @@ function srcBobinSelect(id) {
         var txt = opt.textContent.trim();
         lbl.textContent = txt.length > 60 ? txt.substring(0, 60) + '…' : txt;
     }
+    // Radio button'ı güncelle
+    var rb = document.querySelector('input[name="_srcRb"][value="'+id+'"]');
+    if (rb) rb.checked = true;
     document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
 }
 
@@ -218,6 +225,8 @@ function tgtProdSelect(id, name, kod) {
     if (sel) sel.value = id;
     var lbl = document.querySelector('#mcd-tgt-prod .mcd-lbl');
     if (lbl) lbl.textContent = kod + ' — ' + name;
+    var rb = document.querySelector('input[name="_tgtRb"][value="'+id+'"]');
+    if (rb) rb.checked = true;
     document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
 }
 
