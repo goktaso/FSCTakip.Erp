@@ -313,8 +313,26 @@ namespace FSCTakip.WebUI.Controllers
 
                 await _context.SaveChangesAsync();
 
+                // Yeni seri eklendiğinde StockMovement kaydı oluştur
+                if (model.Id == 0 && lot.ProductId.HasValue)
+                {
+                    _context.StockMovements.Add(new StockMovement
+                    {
+                        Type         = MovementType.PurchaseEntry,
+                        ProductId    = lot.ProductId.Value,
+                        Quantity     = weightKg,
+                        Unit         = "KG",
+                        DocumentNo   = lot.DispatchNo ?? lot.PartiNo,
+                        DocumentDate = lot.ArrivalDate,
+                        Description  = $"Bobin giriş — {model.SerialNo} ({lot.PartiNo})",
+                        CreatedDate  = DateTime.Now,
+                        CreatedBy    = User.Identity?.Name ?? "System"
+                    });
+                    await _context.SaveChangesAsync();
+                }
+
                 var unitMsg = convFactor.HasValue
-                    ? $"Seri kaydedildi. {enteredQty:N3} {productUnit} â†’ {weightKg:N4} KG olarak dÃ¶nÃ¼ÅŸtÃ¼rÃ¼ldÃ¼."
+                    ? $"Seri kaydedildi. {enteredQty:N3} {productUnit} → {weightKg:N4} KG olarak dönüştürüldü."
                     : "Seri kaydedildi.";
                 return Json(new { success = true, message = unitMsg, convertedKg = weightKg });
             }

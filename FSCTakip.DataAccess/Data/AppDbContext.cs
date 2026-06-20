@@ -481,6 +481,16 @@ namespace FSCTakip.DataAccess.Data
 
             modelBuilder.Entity<AppUser>().HasIndex(u => u.Username).IsUnique();
 
+            // Veri bütünlüğü: aynı lot içinde aynı seri numarası girilemesin
+            modelBuilder.Entity<FscSerial>()
+                .HasIndex(s => new { s.LotId, s.SerialNo })
+                .IsUnique()
+                .HasDatabaseName("IX_FscSerials_LotId_SerialNo_Unique");
+
+            // Negatif stok koruması: CurrentWeight sıfırın altına inemez
+            modelBuilder.Entity<FscSerial>()
+                .ToTable(t => t.HasCheckConstraint("CK_FscSerials_CurrentWeight", "[CurrentWeight] >= -0.001"));
+
             // AuditLog: büyük Id (long) için IDENTITY
             modelBuilder.Entity<AuditLog>().HasKey(a => a.Id);
 

@@ -5,13 +5,25 @@ using FSCTakip.Business.Services;
 using FSCTakip.WebUI.Filters;
 using FSCTakip.WebUI.Binders;
 using FSCTakip.WebUI.Services;
+using Serilog;
+using Serilog.Events;
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File("logs/fsc-erp-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 30)
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog();
 
 // 1. Gerekli Servisleri Ekle
 var mvcBuilder = builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<SessionAuthFilter>();
+    options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
     // Decimal form alanlarını kültürden bağımsız bağla (tr-TR'de "6000.00" → 60000000 bug'ı)
     options.ModelBinderProviders.Insert(0, new InvariantDecimalModelBinderProvider());
 });
@@ -36,6 +48,7 @@ builder.Services.AddSession(options =>
 builder.Services.AddScoped<PermissionService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+builder.Services.AddHostedService<EtlBackgroundService>();
 
 // DbContext kayd�
 builder.Services.AddDbContext<AppDbContext>(options =>

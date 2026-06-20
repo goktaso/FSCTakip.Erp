@@ -1,4 +1,4 @@
-﻿using FSCTakip.Core.Entities;
+using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -337,6 +337,13 @@ namespace FSCTakip.WebUI.Controllers
                 if (model.WasteWeight > model.ConsumedWeight)
                     return Json(new { success = false, message = "Fire miktarÄ± tÃ¼ketim miktarÄ±nÄ± aÅŸamaz." });
 
+                // Tamamlanmis is emrine tuketim kaydedilemez
+                var wo = await _context.WorkOrders.FindAsync(model.WorkOrderId);
+                if (wo == null)
+                    return Json(new { success = false, message = "Is emri bulunamadi." });
+                if (wo.Status == WorkOrderStatus.Tamamlandi)
+                    return Json(new { success = false, message = "Tamamlanmis is emrine tuketim kaydedilemez." });
+
                 var serial = await _context.FscSerials
                     .Include(s => s.ProductionDetails)
                     .Include(s => s.Lot)
@@ -385,8 +392,8 @@ namespace FSCTakip.WebUI.Controllers
                 }
 
                 // Ä°ÅŸ emrini "Ãœretimde" durumuna geÃ§ir
-                var wo = await _context.WorkOrders.FindAsync(model.WorkOrderId);
-                if (wo != null && wo.Status == WorkOrderStatus.Taslak)
+                // Is emrini 'Uretimde' durumuna gecir
+                if (wo.Status == WorkOrderStatus.Taslak)
                     wo.Status = WorkOrderStatus.Uretimde;
 
                 // â”€â”€ WorkOrderRecipe gÃ¼ncelle (BOM bileÅŸen bazlÄ± toplamlar) â”€â”€â”€â”€â”€â”€â”€â”€

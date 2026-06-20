@@ -644,7 +644,7 @@ namespace FSCTakip.WebUI.Controllers
                         return Json(new { success = false, message = $"Bağlı hammadde lot kaydı mevcut ({await _context.FscLots.CountAsync()} lot). Önce lot kayıtlarını silin." });
 
                     var count = await _context.Suppliers.CountAsync();
-                    await _context.Database.ExecuteSqlRawAsync("DELETE FROM Suppliers");
+                    await _context.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM Suppliers");
                     return Json(new { success = true, message = $"{count} tedarikçi silindi.", deleted = count });
                 }
                 else if (recordType == "Customers")
@@ -654,7 +654,7 @@ namespace FSCTakip.WebUI.Controllers
                         return Json(new { success = false, message = $"Bağlı satış siparişi mevcut ({await _context.SalesOrders.CountAsync()} sipariş). Önce siparişleri silin." });
 
                     var count = await _context.Customers.CountAsync();
-                    await _context.Database.ExecuteSqlRawAsync("DELETE FROM Customers");
+                    await _context.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM Customers");
                     return Json(new { success = true, message = $"{count} müşteri silindi.", deleted = count });
                 }
                 return Json(new { success = false, message = "Geçersiz kayıt türü." });

@@ -1208,6 +1208,12 @@
                     <span class="nav-label">BOM Analizi</span>
                 </a>
             </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="Warnings"?"active":"")" href="/Reports/Warnings">
+                    <span class="nav-icon"><i class="fas fa-exclamation-triangle" style="color:#fbbf24;"></i></span>
+                    <span class="nav-label">Uyarı Paneli</span>
+                </a>
+            </div>
         </div>
 
         <!-- ── BELGE YÖNETİMİ ───────────────────────────────────── -->
@@ -2807,5 +2813,15 @@ async function fetchJson(url, options) {
     return res;
 }
 </script>
-</body>
+
+<!-- Global CSRF: tum jQuery AJAX POST isteklerine token ekler -->
+@Html.AntiForgeryToken()
+<script>
+(function() {
+    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+    if (token && window.jQuery) {
+        $.ajaxSetup({ headers: { 'RequestVerificationToken': token.value } });
+    }
+})();
+</script></body>
 </html>

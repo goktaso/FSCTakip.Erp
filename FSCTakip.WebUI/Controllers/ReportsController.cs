@@ -377,31 +377,51 @@ namespace FSCTakip.WebUI.Controllers
                 .GroupBy(d => d.FscSerial?.Lot?.FscType?.Name ?? "—")
                 .ToDictionary(g => g.Key, g => (Consumed: g.Sum(d => d.ConsumedWeight), Waste: g.Sum(d => d.WasteWeight)));
 
+            // YM donusum girisleri (FscLot.SourceSerialId != null): FSC tipine gore kg
+            var ymInputByType = data.YmLots
+                .GroupBy(l => l.FscType?.Name ?? "—")
+                .ToDictionary(g => g.Key, g => g.Sum(l => l.Serials.Sum(s => s.InitialWeight)));
+
+            // Donusum firesi: nullable ConversionFireKg toplami
+            var convFireByType = data.YmLots
+                .GroupBy(l => l.FscType?.Name ?? "—")
+                .ToDictionary(g => g.Key, g => g.Sum(l => l.ConversionFireKg ?? 0m));
+
+            ViewBag.YmInputByFscType       = ymInputByType;
+            ViewBag.ConversionFireByFscType = convFireByType;
+
             // Tüm FSC tiplerini birleştir
             var allFscTypes = lots.Select(l => l.FscType?.Name ?? "—")
                 .Union(preSerials.Select(s => s.Lot?.FscType?.Name ?? "—"))
                 .Union(prodDetails.Select(d => d.FscSerial?.Lot?.FscType?.Name ?? "—"))
+                .Union(data.YmLots.Select(l => l.FscType?.Name ?? "—"))
                 .Distinct();
 
             var balanceRows = allFscTypes.Select(type => {
                     openingByType.TryGetValue(type, out var openingKg);
                     consumedByType.TryGetValue(type, out var cons);
                     currentStockByType.TryGetValue(type, out var currentStock);
-                    var inputKg   = lots.Where(l => l.FscType?.Name == type).Sum(l => l.Serials.Sum(s => s.InitialWeight));
-                    var closingKg = openingKg + inputKg - cons.Consumed - cons.Waste;
+                    ymInputByType.TryGetValue(type, out var ymInput);
+                    convFireByType.TryGetValue(type, out var convFire);
+                    // Sadece gercek satin alma lotlari (SourceSerialId null)
+                    var inputKg   = lots.Where(l => l.FscType?.Name == type && l.SourceSerialId == null).Sum(l => l.Serials.Sum(s => s.InitialWeight));
+                    // Kapanis = Acilis + HammaddeGirisi + YMDonusumGirisi - Tuketim - DonusumFire - UretimFire
+                    var closingKg = openingKg + inputKg + ymInput - cons.Consumed - convFire - cons.Waste;
                     if (closingKg < 0) closingKg = 0;
                     return new AuditBalanceRow {
-                        FscType        = type,
-                        OpeningKg      = openingKg < 0 ? 0 : openingKg,
-                        InputKg        = inputKg,
-                        ConsumedKg     = cons.Consumed,
-                        WasteKg        = cons.Waste,
-                        ClosingKg      = closingKg,
-                        CurrentStockKg = currentStock,
-                        IsBalanced     = (cons.Consumed + cons.Waste) <= (openingKg + inputKg) + 0.01m
+                        FscType          = type,
+                        OpeningKg        = openingKg < 0 ? 0 : openingKg,
+                        InputKg          = inputKg,
+                        YmConversionKg   = ymInput,
+                        ConversionFireKg = convFire,
+                        ConsumedKg       = cons.Consumed,
+                        WasteKg          = cons.Waste,
+                        ClosingKg        = closingKg,
+                        CurrentStockKg   = currentStock,
+                        IsBalanced       = (cons.Consumed + cons.Waste + convFire) <= (openingKg + inputKg + ymInput) + 0.01m
                     };
                 })
-                .Where(r => r.OpeningKg > 0 || r.InputKg > 0 || r.ConsumedKg > 0)
+                .Where(r => r.OpeningKg > 0 || r.InputKg > 0 || r.ConsumedKg > 0 || r.YmConversionKg > 0)
                 .OrderBy(r => r.FscType)
                 .ToList();
 
@@ -530,17 +550,20 @@ namespace FSCTakip.WebUI.Controllers
             var fscTypes2 = lots.Select(l => l.FscType?.Name ?? "—")
                 .Union(data.PreSerials.Select(s => s.Lot?.FscType?.Name ?? "—"))
                 .Union(prodDetails.Select(d => d.FscSerial?.Lot?.FscType?.Name ?? "—"))
+                .Union(data.YmLots.Select(l => l.FscType?.Name ?? "—"))
                 .Distinct();
             int r4 = 3;
             foreach (var ft in fscTypes2.OrderBy(x => x)) {
-                var inputKg = lots.Where(l => l.FscType?.Name == ft).Sum(l => l.Serials.Sum(s => s.InitialWeight));
+                var inputKg = lots.Where(l => l.FscType?.Name == ft && l.SourceSerialId == null).Sum(l => l.Serials.Sum(s => s.InitialWeight));
                 openingMap2.TryGetValue(ft, out var openingKg2);
                 if (openingKg2 < 0) openingKg2 = 0;
                 consumedMap2.TryGetValue(ft, out var cons);
                 var stockKg = data.AllSerials.Where(s => s.Lot?.FscType?.Name == ft).Sum(s => s.CurrentWeight);
-                var closingKg2 = openingKg2 + inputKg - cons.Consumed - cons.Waste;
+                var ymInput2 = data.YmLots.Where(l => l.FscType?.Name == ft).Sum(l => l.Serials.Sum(s => s.InitialWeight));
+                var convFire2 = data.YmLots.Where(l => l.FscType?.Name == ft).Sum(l => l.ConversionFireKg ?? 0m);
+                var closingKg2 = openingKg2 + inputKg + ymInput2 - cons.Consumed - convFire2 - cons.Waste;
                 if (closingKg2 < 0) closingKg2 = 0;
-                var ok = (cons.Consumed + cons.Waste) <= (openingKg2 + inputKg) + 0.01m;
+                var ok = (cons.Consumed + cons.Waste + convFire2) <= (openingKg2 + inputKg + ymInput2) + 0.01m;
                 ws4.Cell(r4,1).Value = ft;
                 ws4.Cell(r4,2).Value = (double)openingKg2;
                 ws4.Cell(r4,3).Value = (double)inputKg;
@@ -979,7 +1002,14 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
                 .ToListAsync();
 
-            return new AuditReportData(lots, prodDetails, salesLines, preSerials, allSerials);
+            // YM donusum cikti lotlari: SourceSerialId != null olan donem lotlari
+            var ymLots = await _context.FscLots
+                .Include(l => l.FscType)
+                .Include(l => l.Serials)
+                .Where(l => l.SourceSerialId != null && l.ArrivalDate >= sd && l.ArrivalDate < edNext)
+                .ToListAsync();
+
+            return new AuditReportData(lots, ymLots, prodDetails, salesLines, preSerials, allSerials);
         }
 
         // ── 9. Hammadde / Mamul / Lot İzleme ───────────────────────────────────
@@ -1284,6 +1314,73 @@ namespace FSCTakip.WebUI.Controllers
             return View(model);
         }
 
+        // ── Uyarı Paneli ────────────────────────────────────────────────────────
+        // GET /Reports/Warnings
+        public async Task<IActionResult> Warnings()
+        {
+            var today = DateTime.Today;
+            var soon  = today.AddDays(30);
+
+            // Eksik belgeli lotlar (fatura NO veya irsaliye NO eksik, VEYA her iki PDF de yok)
+            var missingDocLots = await _context.FscLots
+                .Include(l => l.Supplier)
+                .Include(l => l.Product)
+                .Where(l => string.IsNullOrEmpty(l.InvoiceNo) ||
+                            string.IsNullOrEmpty(l.DispatchNo) ||
+                            (l.InvoicePdfPath == null && l.DispatchPdfPath == null))
+                .OrderByDescending(l => l.ArrivalDate)
+                .ToListAsync();
+
+            // Süresi dolmuş tedarikçi FSC sertifikaları
+            var expiredSuppliers = await _context.Suppliers
+                .Where(s => s.IsActive && s.FscExpiryDate != null && s.FscExpiryDate < today)
+                .OrderBy(s => s.FscExpiryDate)
+                .ToListAsync();
+
+            // 30 gün içinde dolacak tedarikçi FSC sertifikaları
+            var expiringSoonSuppliers = await _context.Suppliers
+                .Where(s => s.IsActive && s.FscExpiryDate != null &&
+                            s.FscExpiryDate >= today && s.FscExpiryDate <= soon)
+                .OrderBy(s => s.FscExpiryDate)
+                .ToListAsync();
+
+            // FSC kodu tanımlanmamış aktif tedarikçiler
+            var noFscSuppliers = await _context.Suppliers
+                .Where(s => s.IsActive && string.IsNullOrEmpty(s.FscCode))
+                .OrderBy(s => s.Name)
+                .ToListAsync();
+
+            // Süresi dolmuş müşteri FSC lisansları
+            var expiredCustomers = await _context.Customers
+                .Where(c => c.IsActive && c.FscExpiryDate != null && c.FscExpiryDate < today)
+                .OrderBy(c => c.FscExpiryDate)
+                .ToListAsync();
+
+            // 30 gün içinde dolacak müşteri FSC lisansları
+            var expiringSoonCustomers = await _context.Customers
+                .Where(c => c.IsActive && c.FscExpiryDate != null &&
+                            c.FscExpiryDate >= today && c.FscExpiryDate <= soon)
+                .OrderBy(c => c.FscExpiryDate)
+                .ToListAsync();
+
+            ViewBag.MissingDocLots        = missingDocLots;
+            ViewBag.ExpiredSuppliers      = expiredSuppliers;
+            ViewBag.ExpiringSoonSuppliers = expiringSoonSuppliers;
+            ViewBag.NoFscSuppliers        = noFscSuppliers;
+            ViewBag.ExpiredCustomers      = expiredCustomers;
+            ViewBag.ExpiringSoonCustomers = expiringSoonCustomers;
+
+            int criticalCount = expiredSuppliers.Count + expiredCustomers.Count;
+            int warningCount  = expiringSoonSuppliers.Count + expiringSoonCustomers.Count + noFscSuppliers.Count;
+            ViewBag.CriticalCount   = criticalCount;
+            ViewBag.WarningCount    = warningCount;
+            ViewBag.MissingDocCount = missingDocLots.Count;
+            ViewBag.TotalCount      = criticalCount + warningCount + missingDocLots.Count;
+
+            ViewData["Title"] = "Uyarı Paneli";
+            return View();
+        }
+
         // GET /Reports/FscConsumption — Yıllık FSC CoC tüketim denetim raporu (mamul → kategori → bileşen)
         public async Task<IActionResult> FscConsumption(DateTime? startDate, DateTime? endDate, int? productId)
         {
@@ -1341,6 +1438,24 @@ namespace FSCTakip.WebUI.Controllers
                 TotalWaste    = mamuller.Sum(m => m.WasteKg),
                 TotalProduced = (int)mamuller.Sum(m => m.ProducedQty)
             };
+
+            // Donem acilis/kapanis bakiyesi hesabi
+            var _openingSerials = await _context.FscSerials
+                .Include(s => s.Lot)
+                .Where(s => s.Lot.ArrivalDate < sd && s.Lot.SourceSerialId == null)
+                .ToListAsync();
+            var _openingKg = _openingSerials.Sum(s => s.CurrentWeight);
+            var _periodInputKg = await _context.FscSerials
+                .Where(s => s.Lot.ArrivalDate >= sd && s.Lot.ArrivalDate < edNext && s.Lot.SourceSerialId == null)
+                .SumAsync(s => s.InitialWeight);
+            var _closingKg = await _context.FscSerials
+                .Where(s => s.Lot.SourceSerialId == null)
+                .SumAsync(s => s.CurrentWeight);
+            ViewBag.OpeningKg        = _openingKg;
+            ViewBag.PeriodInputKg    = _periodInputKg;
+            ViewBag.PeriodConsumedKg = model.TotalConsumed;
+            ViewBag.PeriodFireKg     = model.TotalWaste;
+            ViewBag.ClosingKg        = _closingKg;
 
             ViewBag.StartDate = sd.ToString("yyyy-MM-dd");
             ViewBag.EndDate   = ed.ToString("yyyy-MM-dd");
@@ -1444,6 +1559,7 @@ namespace FSCTakip.WebUI.Controllers
     /// </summary>
     public record AuditReportData(
         List<FscLot>           Lots,
+        List<FscLot>           YmLots,
         List<ProductionDetail> ProdDetails,
         List<SalesOrderLine>   SalesLines,
         List<FscSerial>        PreSerials,
@@ -1524,14 +1640,16 @@ namespace FSCTakip.WebUI.Controllers
 
     public class AuditBalanceRow
     {
-        public string  FscType        { get; set; } = "";
-        public decimal OpeningKg      { get; set; }  // dönem başı devir bakiye
-        public decimal InputKg        { get; set; }  // dönem girişi
-        public decimal ConsumedKg     { get; set; }  // dönem tüketimi
-        public decimal WasteKg        { get; set; }  // dönem firesi
-        public decimal ClosingKg      { get; set; }  // dönem sonu kapanış (hesaplanan)
-        public decimal CurrentStockKg { get; set; }  // canlı stok (CurrentWeight)
-        public bool    IsBalanced     { get; set; }
+        public string  FscType          { get; set; } = "";
+        public decimal OpeningKg        { get; set; }  // donem basi devir bakiye
+        public decimal InputKg          { get; set; }  // donem hammadde girisi (satin alma)
+        public decimal YmConversionKg   { get; set; }  // YM donusum girisi
+        public decimal ConversionFireKg { get; set; }  // donusum firesi
+        public decimal ConsumedKg       { get; set; }  // donem uretim tuketimi
+        public decimal WasteKg          { get; set; }  // donem uretim firesi
+        public decimal ClosingKg        { get; set; }  // donem sonu kapanis (hesaplanan)
+        public decimal CurrentStockKg   { get; set; }  // canli stok (CurrentWeight)
+        public bool    IsBalanced        { get; set; }
     }
 
     public class LotTraceResult

@@ -1,0 +1,405 @@
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "Uyarı Paneli";
+    DateTime today = DateTime.Today;
+
+    var missingDocLots        = (List<FscLot>)ViewBag.MissingDocLots;
+    var expiredSuppliers      = (List<Supplier>)ViewBag.ExpiredSuppliers;
+    var expiringSoonSuppliers = (List<Supplier>)ViewBag.ExpiringSoonSuppliers;
+    var noFscSuppliers        = (List<Supplier>)ViewBag.NoFscSuppliers;
+    var expiredCustomers      = (List<Customer>)ViewBag.ExpiredCustomers;
+    var expiringSoonCustomers = (List<Customer>)ViewBag.ExpiringSoonCustomers;
+
+    int totalCount      = (int)ViewBag.TotalCount;
+    int criticalCount   = (int)ViewBag.CriticalCount;
+    int warningCount    = (int)ViewBag.WarningCount;
+    int missingDocCount = (int)ViewBag.MissingDocCount;
+}
+
+<div class="page-header">
+    <h4 class="page-title">
+        <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Uyarı Paneli
+        @if (totalCount > 0)
+        {
+            <span class="badge badge-danger ms-2">@totalCount</span>
+        }
+        else
+        {
+            <span class="badge badge-success ms-2">Temiz</span>
+        }
+    </h4>
+</div>
+
+<!-- Özet Sayaç Kartları -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:1.5rem;">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(220,38,38,.15);color:#f87171;">
+            <i class="fas fa-bell"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value" style="color:#f87171;">@totalCount</div>
+            <div class="stat-label">Toplam Uyarı</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-times-circle"></i></div>
+        <div class="stat-info">
+            <div class="stat-value" style="color:#f87171;">@criticalCount</div>
+            <div class="stat-label">Kritik (Süresi Dolmuş)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="stat-info">
+            <div class="stat-value" style="color:#fbbf24;">@warningCount</div>
+            <div class="stat-label">Uyarı (Yaklaşan / Eksik)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(99,102,241,.15);color:#a5b4fc;">
+            <i class="fas fa-file-alt"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value" style="color:#a5b4fc;">@missingDocCount</div>
+            <div class="stat-label">Eksik Belge</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── BÖLÜM 1: FSC Sertifika Uyarıları ────────────────────────────── -->
+@{
+    int fscWarningTotal = expiredSuppliers.Count + expiringSoonSuppliers.Count + noFscSuppliers.Count
+                        + expiredCustomers.Count + expiringSoonCustomers.Count;
+}
+<div class="table-card mb-3">
+    <div class="d-flex align-items-center justify-content-between"
+         style="padding:1rem 1.25rem; cursor:pointer; user-select:none;"
+         data-bs-toggle="collapse" data-bs-target="#sec-fsc" aria-expanded="true">
+        <h6 class="mb-0 fw-semibold">
+            <i class="fas fa-certificate me-2 text-warning"></i>
+            FSC Sertifika Uyarıları
+            @if (fscWarningTotal > 0)
+            {
+                <span class="badge badge-danger ms-2">@fscWarningTotal</span>
+            }
+        </h6>
+        <i class="fas fa-chevron-down text-muted small"></i>
+    </div>
+    <div class="collapse show" id="sec-fsc">
+        <div style="padding:0 1.25rem 1.25rem;">
+
+            <!-- Tedarikçi: Süresi Dolmuş -->
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge badge-danger me-2">@expiredSuppliers.Count</span>
+                    <strong class="small" style="color:#f87171;">
+                        <i class="fas fa-times-circle me-1"></i>Süresi Dolmuş Tedarikçi FSC Sertifikası
+                    </strong>
+                </div>
+                @if (expiredSuppliers.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-truck me-1"></i>TEDARİKÇİ</th>
+                                    <th>FSC KODU</th>
+                                    <th>SON GEÇERLİLİK</th>
+                                    <th>DURUM</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in expiredSuppliers)
+                                {
+                                    int daysAgo = (int)(today - s.FscExpiryDate!.Value).TotalDays;
+                                    <tr class="table-danger">
+                                        <td><strong>@s.Name</strong> <span class="text-muted small">(@s.SupplierCode)</span></td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(s.FscCode))
+                                            { <span class="badge badge-primary">@s.FscCode</span> }
+                                            else
+                                            { <span class="text-muted small">—</span> }
+                                        </td>
+                                        <td class="small fw-semibold" style="color:#f87171;">@s.FscExpiryDate.Value.ToString("dd.MM.yyyy")</td>
+                                        <td><span class="badge badge-danger">@daysAgo gün önce doldu</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-success small"><i class="fas fa-check-circle me-1"></i>Süresi dolmuş tedarikçi sertifikası yok.</div>
+                }
+            </div>
+
+            <!-- Tedarikçi: Yakında Dolacak -->
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge badge-warning me-2">@expiringSoonSuppliers.Count</span>
+                    <strong class="small" style="color:#fbbf24;">
+                        <i class="fas fa-clock me-1"></i>30 Gün İçinde Dolacak Tedarikçi Sertifikası
+                    </strong>
+                </div>
+                @if (expiringSoonSuppliers.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-truck me-1"></i>TEDARİKÇİ</th>
+                                    <th>FSC KODU</th>
+                                    <th>SON GEÇERLİLİK</th>
+                                    <th>KALAN SÜRE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in expiringSoonSuppliers)
+                                {
+                                    int daysLeft = (int)(s.FscExpiryDate!.Value - today).TotalDays;
+                                    <tr class="table-warning">
+                                        <td><strong>@s.Name</strong> <span class="text-muted small">(@s.SupplierCode)</span></td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(s.FscCode))
+                                            { <span class="badge badge-primary">@s.FscCode</span> }
+                                            else
+                                            { <span class="text-muted small">—</span> }
+                                        </td>
+                                        <td class="small">@s.FscExpiryDate.Value.ToString("dd.MM.yyyy")</td>
+                                        <td><span class="badge badge-warning">@daysLeft gün kaldı</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-success small"><i class="fas fa-check-circle me-1"></i>30 gün içinde dolacak tedarikçi sertifikası yok.</div>
+                }
+            </div>
+
+            <!-- Tedarikçi: FSC Kodu Tanımlanmamış -->
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge" style="background:rgba(99,102,241,.2);color:#a5b4fc;" class="me-2">@noFscSuppliers.Count</span>
+                    <strong class="small ms-2" style="color:#a5b4fc;">
+                        <i class="fas fa-question-circle me-1"></i>FSC Kodu Tanımlanmamış Aktif Tedarikçiler
+                    </strong>
+                </div>
+                @if (noFscSuppliers.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-truck me-1"></i>TEDARİKÇİ</th>
+                                    <th>KOD</th>
+                                    <th>İŞLEM</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in noFscSuppliers)
+                                {
+                                    <tr>
+                                        <td><strong>@s.Name</strong></td>
+                                        <td class="text-muted small">@s.SupplierCode</td>
+                                        <td>
+                                            <a href="/Suppliers/Edit/@s.Id" class="btn btn-sm" style="background:var(--brand);color:#fff;font-size:.75rem;padding:.25rem .65rem;border-radius:6px;">
+                                                <i class="fas fa-edit me-1"></i>Düzenle
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-success small"><i class="fas fa-check-circle me-1"></i>Tüm aktif tedarikçilerde FSC kodu tanımlı.</div>
+                }
+            </div>
+
+            <hr style="border-color:var(--border-soft);">
+
+            <!-- Müşteri: Süresi Dolmuş -->
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge badge-danger me-2">@expiredCustomers.Count</span>
+                    <strong class="small" style="color:#f87171;">
+                        <i class="fas fa-times-circle me-1"></i>Süresi Dolmuş Müşteri FSC Lisansı
+                    </strong>
+                </div>
+                @if (expiredCustomers.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-building me-1"></i>MÜŞTERİ</th>
+                                    <th>FSC LİSANS KODU</th>
+                                    <th>SON GEÇERLİLİK</th>
+                                    <th>DURUM</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in expiredCustomers)
+                                {
+                                    int daysAgo = (int)(today - c.FscExpiryDate!.Value).TotalDays;
+                                    <tr class="table-danger">
+                                        <td><strong>@c.Name</strong> <span class="text-muted small">(@c.CustomerCode)</span></td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(c.FscLicenseCode))
+                                            { <span class="badge badge-primary">@c.FscLicenseCode</span> }
+                                            else
+                                            { <span class="text-muted small">—</span> }
+                                        </td>
+                                        <td class="small fw-semibold" style="color:#f87171;">@c.FscExpiryDate.Value.ToString("dd.MM.yyyy")</td>
+                                        <td><span class="badge badge-danger">@daysAgo gün önce doldu</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-success small"><i class="fas fa-check-circle me-1"></i>Süresi dolmuş müşteri FSC lisansı yok.</div>
+                }
+            </div>
+
+            <!-- Müşteri: Yakında Dolacak -->
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge badge-warning me-2">@expiringSoonCustomers.Count</span>
+                    <strong class="small" style="color:#fbbf24;">
+                        <i class="fas fa-clock me-1"></i>30 Gün İçinde Dolacak Müşteri FSC Lisansı
+                    </strong>
+                </div>
+                @if (expiringSoonCustomers.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-building me-1"></i>MÜŞTERİ</th>
+                                    <th>FSC LİSANS KODU</th>
+                                    <th>SON GEÇERLİLİK</th>
+                                    <th>KALAN SÜRE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in expiringSoonCustomers)
+                                {
+                                    int daysLeft = (int)(c.FscExpiryDate!.Value - today).TotalDays;
+                                    <tr class="table-warning">
+                                        <td><strong>@c.Name</strong> <span class="text-muted small">(@c.CustomerCode)</span></td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(c.FscLicenseCode))
+                                            { <span class="badge badge-primary">@c.FscLicenseCode</span> }
+                                            else
+                                            { <span class="text-muted small">—</span> }
+                                        </td>
+                                        <td class="small">@c.FscExpiryDate.Value.ToString("dd.MM.yyyy")</td>
+                                        <td><span class="badge badge-warning">@daysLeft gün kaldı</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-success small"><i class="fas fa-check-circle me-1"></i>30 gün içinde dolacak müşteri FSC lisansı yok.</div>
+                }
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ── BÖLÜM 2: Eksik Belge Uyarıları ─────────────────────────────── -->
+<div class="table-card mb-3">
+    <div class="d-flex align-items-center justify-content-between"
+         style="padding:1rem 1.25rem; cursor:pointer; user-select:none;"
+         data-bs-toggle="collapse" data-bs-target="#sec-docs" aria-expanded="true">
+        <h6 class="mb-0 fw-semibold">
+            <i class="fas fa-file-alt me-2" style="color:#a5b4fc;"></i>
+            Eksik Belge Uyarıları
+            @if (missingDocLots.Any())
+            {
+                <span class="badge ms-2" style="background:rgba(99,102,241,.25);color:#a5b4fc;">@missingDocLots.Count</span>
+            }
+        </h6>
+        <i class="fas fa-chevron-down text-muted small"></i>
+    </div>
+    <div class="collapse show" id="sec-docs">
+        @if (missingDocLots.Any())
+        {
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-barcode me-1"></i>PARTİ NO</th>
+                            <th>TEDARİKÇİ</th>
+                            <th>ÜRÜN</th>
+                            <th>GİRİŞ TARİHİ</th>
+                            <th>EKSİK OLAN</th>
+                            <th>İŞLEM</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var lot in missingDocLots)
+                        {
+                            var missing = new List<string>();
+                            if (string.IsNullOrEmpty(lot.InvoiceNo))   missing.Add("Fatura No");
+                            if (string.IsNullOrEmpty(lot.DispatchNo))  missing.Add("İrsaliye No");
+                            if (lot.InvoicePdfPath == null && lot.DispatchPdfPath == null) missing.Add("PDF");
+
+                            <tr>
+                                <td><strong>@lot.PartiNo</strong></td>
+                                <td class="small">@(lot.Supplier?.Name ?? "—")</td>
+                                <td class="small">@(lot.Product?.ProductName ?? "—")</td>
+                                <td class="small text-muted">@lot.ArrivalDate.ToString("dd.MM.yyyy")</td>
+                                <td>
+                                    @foreach (var m in missing)
+                                    {
+                                        <span class="badge badge-danger me-1" style="font-size:.7rem;">@m</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a href="/Purchase/Detail/@lot.Id" class="btn btn-sm" style="background:var(--brand);color:#fff;font-size:.75rem;padding:.25rem .65rem;border-radius:6px;">
+                                        <i class="fas fa-eye me-1"></i>Detay
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div style="padding:1.25rem;" class="text-success small">
+                <i class="fas fa-check-circle me-1"></i>Eksik belgeli lot kaydı bulunamadı.
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Collapse ikonunu döndür
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(btn => {
+        const target = document.querySelector(btn.getAttribute('data-bs-target'));
+        if (!target) return;
+        const icon = btn.querySelector('.fa-chevron-down');
+        target.addEventListener('show.bs.collapse',  () => icon && (icon.style.transform = 'rotate(180deg)'));
+        target.addEventListener('hide.bs.collapse',  () => icon && (icon.style.transform = 'rotate(0deg)'));
+        // Başlangıç durumu
+        if (target.classList.contains('show')) icon && (icon.style.transform = 'rotate(180deg)');
+    });
+</script>
+}

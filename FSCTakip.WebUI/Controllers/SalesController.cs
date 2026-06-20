@@ -1,4 +1,4 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using FSCTakip.WebUI.Services;
@@ -88,6 +88,21 @@ namespace FSCTakip.WebUI.Controllers
                 .OrderByDescending(w => w.Id)
                 .ToListAsync();
 
+            return View(order);
+        }
+
+        // GET /Sales/Print/{id} -- FSC beyanli sevk belgesi
+        public async Task<IActionResult> Print(int id)
+        {
+            var order = await _context.SalesOrders
+                .Include(s => s.Customer)
+                .Include(s => s.Lines)
+                    .ThenInclude(l => l.Product).ThenInclude(p => p!.FscType)
+                .Include(s => s.Lines)
+                    .ThenInclude(l => l.WorkOrder)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (order == null) return NotFound();
             return View(order);
         }
 
