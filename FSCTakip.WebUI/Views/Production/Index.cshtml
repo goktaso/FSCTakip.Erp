@@ -309,20 +309,38 @@
                 <div class="row g-3">
                     <div class="col-md-7">
                         <label class="form-label fw-semibold">Üretilecek Ürün <span class="text-danger">*</span></label>
-                        <input type="text" id="woProductSearch" class="form-control mb-2"
-                               placeholder="Stok kodu, dış kod veya ürün adı ile arayın (örn: 10191, URN-024)...">
-                        <select id="woProductId" class="form-select" size="8" style="height:auto;">
-                            <option value="">— Seçiniz (stok hareketine işlenir) —</option>
+                        <!-- MCD görsel panel — gizli select'in üstünde -->
+                        <div class="mcd" id="mcd-wo-prod" data-placeholder="— Ürün seçiniz —" style="width:100%;margin-bottom:8px;">
+                            <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-wo-prod')">
+                                <span class="mcd-lbl">— Ürün seçiniz —</span>
+                                <i class="fas fa-angle-down mcd-arrow"></i>
+                            </button>
+                            <div class="mcd-panel" id="mcd-wo-prod-panel" style="display:none;width:100%;">
+                                <div class="mcd-search-row">
+                                    <input type="text" class="mcd-search" placeholder="Stok kodu, dış kod veya ürün adı ile ara..." oninput="mcdSearch(this)">
+                                </div>
+                                <div class="mcd-items" style="max-height:220px;">
+                                    @foreach (var p in products)
+                                    {
+                                        var pc  = (p.ProductCode  ?? "").Trim();
+                                        var ec  = (p.ExternalCode ?? "").Trim();
+                                        var pn  = (p.ProductName  ?? "").Trim();
+                                        <label class="mcd-row" onclick="woProductSelect(@p.Id, '@pn.Replace("'", "\\'")'); return false;">
+                                            <span class="mcd-name" title="@pn">@pn</span>
+                                            @if (!string.IsNullOrEmpty(pc)) { <span class="mcd-sub">@pc</span> }
+                                            @if (!string.IsNullOrEmpty(ec)) { <span class="mcd-ext">@ec</span> }
+                                        </label>
+                                    }
+                                </div>
+                                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                            </div>
+                        </div>
+                        <!-- Gizli select — JS compatibility için korunuyor -->
+                        <select id="woProductId" class="form-select" size="1" style="display:none;">
+                            <option value="">— Seçiniz —</option>
                             @foreach (var p in products)
                             {
-                                var productCode = (p.ProductCode ?? "").Trim();
-                                var externalCode = (p.ExternalCode ?? "").Trim();
-                                var productName = (p.ProductName ?? "").Trim();
-                                var externalCodeText = string.IsNullOrWhiteSpace(externalCode) ? "—" : externalCode;
-                                var searchText = $"{productCode} {externalCode} {productName}".ToLowerInvariant();
-                                <option value="@p.Id" data-search="@searchText">
-                                    @productCode | @externalCodeText | @productName
-                                </option>
+                                <option value="@p.Id">@p.ProductName</option>
                             }
                         </select>
                     </div>
@@ -405,12 +423,14 @@ function openNewWorkOrder() {
     document.getElementById('woNo').value        = '';
     document.getElementById('woDate').value      = new Date().toISOString().split('T')[0];
     document.getElementById('woProductId').value = '';
-    document.getElementById('woProductSearch').value = '';
     document.getElementById('woMachineId').value = '';
     document.getElementById('woQty').value       = '';
     document.getElementById('woNotes').value            = '';
     document.getElementById('woExternalOrderNo').value  = '';
     document.getElementById('woEditFields').style.display = 'none';
+    // MCD'yi sıfırla
+    var lbl = document.querySelector('#mcd-wo-prod .mcd-lbl');
+    if (lbl) lbl.textContent = '— Ürün seçiniz —';
     document.getElementById('woModalTitle').textContent   = 'Yeni Üretim';
     document.getElementById('woModalSubtitle').textContent = 'İş emri numarası otomatik atanacak';
     document.getElementById('woSaveBtn').innerHTML = '<i class="fas fa-save me-1"></i> Kaydet & Başlat';
@@ -428,9 +448,7 @@ function editWorkOrder(id) {
             document.getElementById('woDate').value      = d.plannedDate;
             document.getElementById('woProductId').value = d.productId;
             document.getElementById('woMachineId').value = d.machineId;
-            if (typeof setWorkOrderProductSearchFromSelection === 'function') {
-                setWorkOrderProductSearchFromSelection();
-            }
+            setTimeout(updateWoProdLabel, 50);
             document.getElementById('woQty').value       = d.plannedQuantity;
             document.getElementById('woStatus').value    = d.status;
             document.getElementById('woNotes').value           = d.notes || '';
@@ -542,67 +560,21 @@ function deleteWorkOrder(id, no) {
     });
 }
 
-/* ─── WO ÜRÜN ARAMA + LİSTE FİLTRELEME (TEK ALAN) ───────────── */
-function initWorkOrderProductSelectSearch() {
-    const searchInput = document.getElementById('woProductSearch');
-    const productSelect = document.getElementById('woProductId');
-    if (!searchInput || !productSelect) return;
-
-    const originalOptions = Array.from(productSelect.options).map(o => ({
-        value: o.value,
-        text: o.textContent || '',
-        search: o.dataset.search || ''
-    }));
-
-    function renderOptions(term, keepValue) {
-        const q = (term || '').trim().toLowerCase();
-        const selectedVal = keepValue ?? productSelect.value;
-
-        productSelect.innerHTML = '';
-        originalOptions.forEach(item => {
-            if (!q || !item.value || item.search.includes(q)) {
-                const opt = document.createElement('option');
-                opt.value = item.value;
-                opt.textContent = item.text;
-                if (item.search) opt.dataset.search = item.search;
-                productSelect.appendChild(opt);
-            }
-        });
-
-        if (selectedVal && Array.from(productSelect.options).some(o => o.value === selectedVal)) {
-            productSelect.value = selectedVal;
-        }
-    }
-
-    window.setWorkOrderProductSearchFromSelection = function () {
-        const selected = Array.from(productSelect.options).find(o => o.value === productSelect.value);
-        if (!selected || !selected.value) return;
-        const selectedId = selected.value;
-        const selectedText = selected.textContent || '';
-        const selectedSearch = selected.dataset.search || '';
-
-        productSelect.innerHTML = '';
-        const opt = document.createElement('option');
-        opt.value = selectedId;
-        opt.textContent = selectedText;
-        opt.dataset.search = selectedSearch;
-        productSelect.appendChild(opt);
-        productSelect.value = selectedId;
-    };
-
-    searchInput.addEventListener('input', function () {
-        renderOptions(this.value, '');
-    });
-
-    productSelect.addEventListener('change', function () {
-        if (!this.value) return;
-        window.setWorkOrderProductSearchFromSelection();
-    });
-
-    renderOptions('', '');
+/* ─── WO ÜRÜN MCD FONKSİYONLARI ───────────── */
+function woProductSelect(id, name) {
+    document.getElementById('woProductId').value = id;
+    var lbl = document.querySelector('#mcd-wo-prod .mcd-lbl');
+    if (lbl) lbl.textContent = name;
+    document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
 }
 
-initWorkOrderProductSelectSearch();
+function updateWoProdLabel() {
+    var sel = document.getElementById('woProductId');
+    var opt = sel ? sel.options[sel.selectedIndex] : null;
+    var lbl = document.querySelector('#mcd-wo-prod .mcd-lbl');
+    if (lbl && opt && opt.value) lbl.textContent = opt.text;
+    else if (lbl) lbl.textContent = '— Ürün seçiniz —';
+}
 
 function recalcQty() {
     Swal.fire({

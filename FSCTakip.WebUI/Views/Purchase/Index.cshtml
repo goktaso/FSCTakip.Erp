@@ -5,7 +5,8 @@
     var fscTypes     = ViewBag.FscTypes  as List<FSCTakip.Core.Entities.FscType>  ?? new();
     var supplierIds  = ViewBag.SupplierIds as int[] ?? Array.Empty<int>();
     var fscTypeIds   = ViewBag.FscTypeIds  as int[] ?? Array.Empty<int>();
-    var products  = ViewBag.Products  as List<FSCTakip.Core.Entities.Product>  ?? new();
+    var products     = ViewBag.Products    as List<FSCTakip.Core.Entities.Product> ?? new();
+    var productIds   = ViewBag.ProductIds  as int[] ?? Array.Empty<int>();
 
     var totalLot   = Model.Count();
     var totalKg    = Model.Sum(l => l.Serials.Sum(s => s.InitialWeight));
@@ -104,11 +105,11 @@
                 <label class="form-label">Stok Kodu</label>
                 <input type="text" name="stockCode" value="@ViewBag.StockCode" class="form-control form-control-sm" placeholder="ör. URN-024">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Stok Adı</label>
                 <input type="text" name="stockName" value="@ViewBag.StockName" class="form-control form-control-sm" placeholder="ör. KMK RBMF">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Tedarikçi</label>
                 <div class="mcd" id="mcd-pur-sup" data-placeholder="— Tümü —" style="min-width:180px;">
                     <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-pur-sup')">
@@ -133,6 +134,39 @@
                                            checked="@(sel ? "checked" : null)">
                                     <span class="mcd-name">@s.Name</span>
                                     @if (!string.IsNullOrEmpty(s.FscCode)) { <span class="mcd-sub">@s.FscCode</span> }
+                                </label>
+                            }
+                        </div>
+                        <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Ürün</label>
+                <div class="mcd" id="mcd-pur-prod" data-placeholder="— Tümü —">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-pur-prod')">
+                        <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " seçildi" : "— Tümü —")</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-pur-prod-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Stok adı / kodu ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <label class="mcd-row mcd-header">
+                            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-pur-prod')">
+                            <span>Tümünü Seç / Temizle</span>
+                        </label>
+                        <div class="mcd-items">
+                            @foreach (var p in products)
+                            {
+                                bool sel = productIds.Contains(p.Id);
+                                <label class="mcd-row">
+                                    <input type="checkbox" name="productIds" value="@p.Id" class="mcd-cb"
+                                           onchange="mcdUpdate('mcd-pur-prod')"
+                                           checked="@(sel ? "checked" : null)">
+                                    <span class="mcd-name" title="@p.ProductName">@p.ProductName</span>
+                                    @if (!string.IsNullOrEmpty(p.ProductCode))  { <span class="mcd-sub">@p.ProductCode</span> }
+                                    @if (!string.IsNullOrEmpty(p.ExternalCode)) { <span class="mcd-ext">@p.ExternalCode</span> }
                                 </label>
                             }
                         </div>

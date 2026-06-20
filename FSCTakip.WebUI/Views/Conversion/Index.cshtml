@@ -26,17 +26,38 @@
             <div class="card-body">
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Kaynak Bobin (Ham / YM) <span class="text-danger">*</span></label>
-                    <input type="text" id="sourceSearch" class="form-control mb-2"
-                           placeholder="Dış kod, stok adı veya seri no ile filtrele..."
-                           oninput="filterSource()">
-                    <select id="sourceSerialId" class="form-select" size="6" style="height:180px;" onchange="onSourceChange()">
+                    <!-- MCD panel -->
+                    <div class="mcd" id="mcd-src-bobin" data-placeholder="— Stoktaki bobin seçin —" style="width:100%;">
+                        <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-src-bobin')">
+                            <span class="mcd-lbl">— Stoktaki bobin seçin —</span>
+                            <i class="fas fa-angle-down mcd-arrow"></i>
+                        </button>
+                        <div class="mcd-panel" id="mcd-src-bobin-panel" style="display:none;width:100%;">
+                            <div class="mcd-search-row">
+                                <input type="text" class="mcd-search" placeholder="Dış kod, stok adı veya seri no ile filtrele..." oninput="mcdSearch(this)">
+                            </div>
+                            <div class="mcd-items" style="max-height:200px;">
+                                @foreach (var s in sources)
+                                {
+                                    <label class="mcd-row" onclick="srcBobinSelect(@s.Id); return false;">
+                                        @if (!string.IsNullOrEmpty(s.UrunIcKod)) { <span class="mcd-sub">@s.UrunIcKod</span> }
+                                        @if (!string.IsNullOrEmpty(s.UrunKod))   { <span class="mcd-ext">@s.UrunKod</span> }
+                                        <span class="mcd-name">@s.UrunAd · @s.SerialNo · kalan @s.CurrentWeight.ToString("N2") kg</span>
+                                    </label>
+                                }
+                            </div>
+                            <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                        </div>
+                    </div>
+                    <!-- Gizli select — onSourceChange() için -->
+                    <select id="sourceSerialId" style="display:none;" onchange="onSourceChange()">
                         <option value="">— Stoktaki bobin seçin —</option>
                         @foreach (var s in sources)
                         {
-                            <option value="@s.Id" data-kalan="@s.CurrentWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-fsc="@s.FscType">
-                                @if (!string.IsNullOrEmpty(s.UrunIcKod)) { <text>[@s.UrunIcKod] </text> }
-                                @if (!string.IsNullOrEmpty(s.UrunKod)) { <text>(@s.UrunKod) </text> }
-                                @s.UrunAd · @s.SerialNo · kalan @s.CurrentWeight.ToString("N2") kg
+                            <option value="@s.Id"
+                                    data-kalan="@s.CurrentWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                    data-fsc="@s.FscType">
+                                @s.UrunAd · @s.SerialNo
                             </option>
                         }
                     </select>
@@ -47,13 +68,34 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Hedef Yarı Mamül (BB) <span class="text-danger">*</span></label>
-                    <input type="text" id="targetSearch" class="form-control mb-2" placeholder="Kod / ad ile filtrele (örn: 23357)" oninput="filterTarget()">
-                    <select id="targetProductId" class="form-select" size="6" style="height:auto;">
+                    <!-- MCD panel -->
+                    <div class="mcd" id="mcd-tgt-prod" data-placeholder="— Hedef seçin —" style="width:100%;">
+                        <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-tgt-prod')">
+                            <span class="mcd-lbl">— Hedef seçin —</span>
+                            <i class="fas fa-angle-down mcd-arrow"></i>
+                        </button>
+                        <div class="mcd-panel" id="mcd-tgt-prod-panel" style="display:none;width:100%;">
+                            <div class="mcd-search-row">
+                                <input type="text" class="mcd-search" placeholder="Kod / ad ile ara (örn: 23357)..." oninput="mcdSearch(this)">
+                            </div>
+                            <div class="mcd-items" style="max-height:200px;">
+                                @foreach (var t in targets)
+                                {
+                                    <label class="mcd-row" onclick="tgtProdSelect(@t.Id, '@t.Ad.Replace("'", "\\'")', '@t.Kod'); return false;">
+                                        <span class="mcd-sub">@t.Kod</span>
+                                        @if (!string.IsNullOrEmpty(t.ExtKod)) { <span class="mcd-ext">@t.ExtKod</span> }
+                                        <span class="mcd-name">@t.Ad</span>
+                                    </label>
+                                }
+                            </div>
+                            <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                        </div>
+                    </div>
+                    <!-- Gizli select — convertNow() için -->
+                    <select id="targetProductId" style="display:none;">
                         @foreach (var t in targets)
                         {
-                            <option value="@t.Id" data-text="@((t.Kod + " " + (t.ExtKod ?? "") + " " + t.Ad).ToLower())">
-                                @t.Kod@(!string.IsNullOrEmpty(t.ExtKod) ? " (" + t.ExtKod + ")" : "") — @t.Ad
-                            </option>
+                            <option value="@t.Id">@t.Kod — @t.Ad</option>
                         }
                     </select>
                 </div>
@@ -143,21 +185,44 @@
 
 @section Scripts {
 <script>
+if(!window._mcdReady){window._mcdReady=true;
+window.mcdOpen=function(id){var p=document.getElementById(id+'-panel');var o=p&&p.style.display!=='none';document.querySelectorAll('.mcd-panel').forEach(function(x){x.style.display='none'});if(!o&&p){p.style.display='flex';mcdUpdate(id)}};
+window.mcdSearch=function(el){var t=el.value.toLowerCase();el.closest('.mcd-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(t)?'':'none'});var panel=el.closest('.mcd-panel');var items=panel.querySelectorAll('.mcd-items .mcd-row');var visible=Array.from(items).some(function(r){return r.style.display!=='none'});var empty=panel.querySelector('.mcd-empty');if(empty)empty.style.display=visible?'none':'block'};
+window.mcdToggleAll=function(cb,id){document.getElementById(id+'-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){if(r.style.display!=='none'){var c=r.querySelector('.mcd-cb');if(c)c.checked=cb.checked}});mcdUpdate(id)};
+window.mcdUpdate=function(id){var p=document.getElementById(id+'-panel');var c=document.getElementById(id);if(!p||!c)return;var n=p.querySelectorAll('.mcd-cb:checked').length;var l=c.querySelector('.mcd-lbl');if(l)l.textContent=n===0?(c.dataset.placeholder||'— Seçiniz —'):n+' seçildi';var a=p.querySelector('.mcd-all-cb');var v=p.querySelectorAll('.mcd-row:not(.mcd-header):not([style*="none"]) .mcd-cb').length;if(a&&v>0)a.checked=(n>=v)};
+document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'})});}
+</script>
+<style>
+.mcd{position:relative}.mcd-btn{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:#fff;border:1px solid #d1d5db;color:#111;padding:5px 10px;border-radius:6px;font-size:13px}.mcd-btn:hover{border-color:#1976d2}.mcd-panel{position:absolute;top:calc(100% + 4px);left:0;min-width:300px;width:100%;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:1050;display:flex;flex-direction:column;overflow:hidden}.mcd-search-row{padding:8px 10px;border-bottom:1px solid #f1f5f9}.mcd-search{width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:5px 10px;font-size:12.5px;outline:none}.mcd-items{overflow-y:auto}.mcd-row{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:12.5px;user-select:none}.mcd-row:hover{background:#eff6ff}.mcd-name{flex:1;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mcd-sub{font-size:10.5px;color:#374151;background:#f3f4f6;padding:1px 5px;border-radius:4px;white-space:nowrap}.mcd-ext{font-size:10.5px;color:#3730a3;background:#eef2ff;padding:1px 5px;border-radius:4px;white-space:nowrap}.mcd-arrow{color:#6b7280;font-size:11px}.mcd-empty{padding:8px 12px;font-size:12px;color:#9ca3af;text-align:center}
+</style>
+<script>
 document.getElementById('convDate').value = new Date().toISOString().slice(0,10);
 
-function filterSource() {
-    const term = (document.getElementById('sourceSearch').value || '').toLowerCase().trim();
-    document.querySelectorAll('#sourceSerialId option').forEach(function(o) {
-        if (!o.value) return; // placeholder'ı koru
-        o.style.display = (!term || o.textContent.toLowerCase().includes(term)) ? '' : 'none';
-    });
-    // Filtre sonrası seçimi sıfırla
-    const sel = document.getElementById('sourceSerialId');
-    if (sel.selectedOptions[0] && sel.selectedOptions[0].style.display === 'none') {
-        sel.value = '';
-        document.getElementById('srcInfo').style.display = 'none';
+function srcBobinSelect(id) {
+    var sel = document.getElementById('sourceSerialId');
+    if (!sel) return;
+    sel.value = id;
+    var evt = new Event('change');
+    sel.dispatchEvent(evt);
+    var opt = sel.querySelector('option[value="'+id+'"]');
+    var lbl = document.querySelector('#mcd-src-bobin .mcd-lbl');
+    if (lbl && opt) {
+        var txt = opt.textContent.trim();
+        lbl.textContent = txt.length > 60 ? txt.substring(0, 60) + '…' : txt;
     }
+    document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
 }
+
+function tgtProdSelect(id, name, kod) {
+    var sel = document.getElementById('targetProductId');
+    if (sel) sel.value = id;
+    var lbl = document.querySelector('#mcd-tgt-prod .mcd-lbl');
+    if (lbl) lbl.textContent = kod + ' — ' + name;
+    document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
+}
+
+function filterSource() { /* MCD kendi aramasını yapıyor — eski fonksiyon korunuyor */ }
+function filterTarget() { /* MCD kendi aramasını yapıyor — eski fonksiyon korunuyor */ }
 
 function onSourceChange() {
     const opt = document.getElementById('sourceSerialId').selectedOptions[0];

@@ -17,7 +17,7 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // GET /Purchase/Index
-        public async Task<IActionResult> Index(int[]? supplierIds, int[]? fscTypeIds, string? stockCode, string? stockName)
+        public async Task<IActionResult> Index(int[]? supplierIds, int[]? fscTypeIds, string? stockCode, string? stockName, int[]? productIds)
         {
             var query = _context.FscLots
                 .Include(l => l.Supplier)
@@ -43,6 +43,8 @@ namespace FSCTakip.WebUI.Controllers
             }
             if (!string.IsNullOrWhiteSpace(stockName))
                 query = query.Where(l => l.Product != null && l.Product.ProductName.Contains(stockName.Trim()));
+            if (productIds != null && productIds.Length > 0)
+                query = query.Where(l => l.ProductId.HasValue && productIds.Contains(l.ProductId.Value));
 
             ViewBag.Suppliers   = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
             ViewBag.FscTypes    = await _context.FscTypes.Where(f => f.IsActive).ToListAsync();
@@ -53,6 +55,7 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.StockName   = stockName;
             ViewBag.SupplierIds = supplierIds ?? Array.Empty<int>();
             ViewBag.FscTypeIds  = fscTypeIds  ?? Array.Empty<int>();
+            ViewBag.ProductIds  = productIds  ?? Array.Empty<int>();
 
             // Urun basina birim ve donusum katsayisi -- iki ayri sozluk (value tuple ViewBag'den cast edilmez)
             var conversions    = await _context.UnitConversions.Where(c => c.IsActive).ToListAsync();

@@ -12,7 +12,7 @@ namespace FSCTakip.WebUI.Controllers
 
         // GET /Stock/Summary — standart stok ozeti (HAMMADDE+BURGU SAP+YARI MAMUL, KG bazli)
         // Kaynak: StockMovements.QuantityKg — FscSerials.CurrentWeight kullanilmaz (eski kayitlar MT degerini KG olarak sakliyor)
-        public async Task<IActionResult> Summary(int[]? groupIds, int? fscTypeId, string? search)
+        public async Task<IActionResult> Summary(int[]? groupIds, int? fscTypeId, string? search, int[]? productIds)
         {
             var allGroups = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
 
@@ -98,11 +98,19 @@ namespace FSCTakip.WebUI.Controllers
                 .OrderBy(r => r.GroupName).ThenBy(r => r.ProductName)
                 .ToList();
 
+            if (productIds != null && productIds.Length > 0)
+                rows = rows.Where(r => productIds.Contains(r.ProductId)).ToList();
+
             ViewBag.ProductGroups    = allGroups;
             ViewBag.FscTypes         = await _context.FscTypes.Where(f => f.IsActive).ToListAsync();
             ViewBag.SelectedGroupIds = selectedIds;
             ViewBag.FscTypeId        = fscTypeId;
             ViewBag.Search           = search;
+            ViewBag.ProductIds       = productIds ?? Array.Empty<int>();
+            ViewBag.AllProducts      = await _context.Products
+                .Where(p => p.IsActive && p.ProductGroupId != null && selectedIds.Contains(p.ProductGroupId!.Value))
+                .OrderBy(p => p.ProductName)
+                .ToListAsync();
             ViewBag.TotalKg          = rows.Sum(r => r.TotalKg);
             ViewBag.TotalProducts    = rows.Count;
             ViewBag.TotalLots        = rows.Sum(r => r.LotCount);

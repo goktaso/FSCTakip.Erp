@@ -39,17 +39,17 @@
 <!-- Filtre -->
 <div id="filterPanel" class="filter-panel" style="display:none;">
     <form method="get" action="/Production/WasteReport">
-        <div class="row g-2 align-items-end">
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold">Başlangıç</label>
-                <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control form-control-sm">
+        <div class="d-flex align-items-end gap-2 flex-wrap">
+            <div>
+                <label class="form-label small fw-semibold mb-1">Başlangıç</label>
+                <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control form-control-sm" style="width:140px;">
             </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold">Bitiş</label>
-                <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control form-control-sm">
+            <div>
+                <label class="form-label small fw-semibold mb-1">Bitiş</label>
+                <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control form-control-sm" style="width:140px;">
             </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-semibold">Makine</label>
+            <div>
+                <label class="form-label small fw-semibold mb-1">Makine</label>
                 <div class="mcd" id="mcd-wr-mac" data-placeholder="— Tümü —" style="min-width:180px;">
                     <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-wr-mac')">
                         <span class="mcd-lbl">@machineLabel</span>
@@ -80,8 +80,8 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-semibold">Ürün</label>
+            <div>
+                <label class="form-label small fw-semibold mb-1">Ürün</label>
                 <div class="mcd" id="mcd-waste-prod" data-placeholder="— Tümü —">
                     <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-waste-prod')">
                         <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " seçildi" : "— Tümü —")</span>
@@ -102,7 +102,7 @@
                                 <label class="mcd-row">
                                     <input type="checkbox" name="productIds" value="@p.Id" class="mcd-cb"
                                            onchange="mcdUpdate('mcd-waste-prod')"
-                                           @(sel ? "checked" : "")>
+                                           checked="@(sel ? "checked" : null)">
                                     <span class="mcd-name" title="@p.ProductName">@p.ProductName</span>
                                     @if (!string.IsNullOrEmpty(p.ProductCode))  { <span class="mcd-sub">@p.ProductCode</span> }
                                     @if (!string.IsNullOrEmpty(p.ExternalCode)) { <span class="mcd-ext">@p.ExternalCode</span> }
@@ -112,8 +112,8 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-primary btn-sm flex-fill">
+            <div class="d-flex gap-2 align-self-end">
+                <button type="submit" class="btn btn-primary btn-sm">
                     <i class="fas fa-search me-1"></i> Sorgula
                 </button>
                 <a href="/Production/WasteReport" class="btn btn-outline-secondary btn-sm">
