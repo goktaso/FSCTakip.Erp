@@ -109,9 +109,9 @@
                 <label class="form-label small fw-semibold mb-1">Stok Adı</label>
                 <input type="text" name="stockName" value="@ViewBag.StockName" class="form-control form-control-sm" placeholder="ör. KMK RBMF">
             </div>
-            <div>
+            <div style="display:flex;flex-direction:column;min-width:160px;">
                 <label class="form-label small fw-semibold mb-1">Tedarikçi</label>
-                <div class="mcd" id="mcd-pur-sup" data-placeholder="— Tümü —" style="min-width:160px;">
+                <div class="mcd" id="mcd-pur-sup" data-placeholder="— Tümü —">
                     <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-pur-sup')">
                         <span class="mcd-lbl">@(supplierIds.Length > 0 ? supplierIds.Length + " seçildi" : "— Tümü —")</span>
                         <i class="fas fa-angle-down mcd-arrow"></i>
@@ -141,9 +141,9 @@
                     </div>
                 </div>
             </div>
-            <div>
+            <div style="display:flex;flex-direction:column;min-width:160px;">
                 <label class="form-label small fw-semibold mb-1">Ürün</label>
-                <div class="mcd" id="mcd-pur-prod" data-placeholder="— Tümü —" style="min-width:160px;">
+                <div class="mcd" id="mcd-pur-prod" data-placeholder="— Tümü —">
                     <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-pur-prod')">
                         <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " seçildi" : "— Tümü —")</span>
                         <i class="fas fa-angle-down mcd-arrow"></i>
@@ -174,9 +174,9 @@
                     </div>
                 </div>
             </div>
-            <div>
+            <div style="display:flex;flex-direction:column;min-width:130px;">
                 <label class="form-label small fw-semibold mb-1">FSC Tipi</label>
-                <div class="mcd" id="mcd-pur-fsc" data-placeholder="— Tümü —" style="min-width:130px;">
+                <div class="mcd" id="mcd-pur-fsc" data-placeholder="— Tümü —">
                     <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-pur-fsc')">
                         <span class="mcd-lbl">@(fscTypeIds.Length > 0 ? fscTypeIds.Length + " seçildi" : "— Tümü —")</span>
                         <i class="fas fa-angle-down mcd-arrow"></i>

@@ -48,9 +48,9 @@
                 <label class="form-label small fw-semibold mb-1">Bitiş</label>
                 <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control form-control-sm" style="width:140px;">
             </div>
-            <div>
+            <div style="display:flex;flex-direction:column;min-width:160px;">
                 <label class="form-label small fw-semibold mb-1">Makine</label>
-                <div class="mcd" id="mcd-wr-mac" data-placeholder="— Tümü —" style="min-width:180px;">
+                <div class="mcd" id="mcd-wr-mac" data-placeholder="— Tümü —">
                     <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-wr-mac')">
                         <span class="mcd-lbl">@machineLabel</span>
                         <i class="fas fa-angle-down mcd-arrow"></i>
@@ -80,7 +80,7 @@
                     </div>
                 </div>
             </div>
-            <div>
+            <div style="display:flex;flex-direction:column;min-width:160px;">
                 <label class="form-label small fw-semibold mb-1">Ürün</label>
                 <div class="mcd" id="mcd-waste-prod" data-placeholder="— Tümü —">
                     <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-waste-prod')">
