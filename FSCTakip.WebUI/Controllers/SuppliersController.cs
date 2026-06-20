@@ -24,7 +24,8 @@ namespace FSCTakip.WebUI.Controllers
             string? TaxOffice,
             string? TaxNumber,
             string? FscCode,
-            DateTime? FscExpiryDate)
+            DateTime? FscExpiryDate,
+            bool IsFscActive = false)
         {
             if (string.IsNullOrWhiteSpace(Name))
                 return Json(new { success = false, message = "Tedarikçi adı zorunludur." });
@@ -53,7 +54,7 @@ namespace FSCTakip.WebUI.Controllers
                 TaxNumber     = TaxNumber?.Trim(),
                 FscCode       = FscCode?.Trim().ToUpperInvariant(),
                 FscExpiryDate = FscExpiryDate,
-                IsFscActive   = !string.IsNullOrEmpty(FscCode),
+                IsFscActive   = IsFscActive,
                 IsActive      = true,
                 CreatedDate   = DateTime.Now,
                 CreatedBy     = User.Identity?.Name ?? "System"

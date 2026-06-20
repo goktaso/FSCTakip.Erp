@@ -123,9 +123,10 @@
             @foreach (var item in Model ?? Enumerable.Empty<FSCTakip.Core.Entities.Supplier>())
             {
                 var fscDays  = item.FscExpiryDate.HasValue ? (int)(item.FscExpiryDate.Value - DateTime.Today).TotalDays : (int?)null;
-                var fscClass = item.IsFscActive && fscDays.HasValue && fscDays.Value > 30 ? "fsc-badge active"
+                var fscClass = !item.IsFscActive ? "fsc-badge none"
+                             : item.IsFscActive && fscDays.HasValue && fscDays.Value > 30 ? "fsc-badge active"
                              : fscDays.HasValue && fscDays.Value <= 0 ? "fsc-badge expired"
-                             : item.IsFscActive ? "fsc-badge warning" : "fsc-badge expired";
+                             : "fsc-badge warning";
                 <tr>
                     <td>
                         <div class="fw-semibold" style="font-size:13px;color:#1d4ed8;">@item.Name</div>
@@ -162,7 +163,11 @@
                         <div class="text-muted" style="font-size:11px;">@(item.TaxNumber ?? "—")</div>
                     </td>
                     <td>
-                        @if (!string.IsNullOrEmpty(item.FscCode))
+                        @if (!item.IsFscActive)
+                        {
+                            <span class="fsc-badge none"><i class="fas fa-times-circle"></i> FSC Yok</span>
+                        }
+                        else if (!string.IsNullOrEmpty(item.FscCode))
                         {
                             <span class="@fscClass">
                                 <i class="fas fa-certificate"></i> @item.FscCode
@@ -174,7 +179,7 @@
                                 }
                             </div>
                         }
-                        else { <span class="text-muted" style="font-size:12px;">FSC kodu yok</span> }
+                        else { <span class="fsc-badge warning"><i class="fas fa-exclamation-circle"></i> Kod eksik</span> }
                     </td>
                     <td class="text-center">
                         <span class="badge @(item.IsActive ? "badge-green" : "badge-gray")" id="badge_@item.Id">
@@ -270,7 +275,17 @@
                                     <i class="fas fa-certificate text-success"></i>
                                     <span class="fw-semibold" style="font-size:13px;color:#166534;">FSC Sertifika Bilgileri</span>
                                 </div>
-                                <div class="row g-2">
+                                <div class="mb-2">
+                                    <input type="hidden" name="IsFscActive" value="false">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="IsFscActive" value="true"
+                                               id="suppIsFsc" onchange="toggleSuppFscFields(this.checked)">
+                                        <label class="form-check-label fw-semibold" for="suppIsFsc" style="font-size:13px;color:#166534;">
+                                            FSC Belgeli Tedarikçi
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="row g-2" id="suppFscFields" style="display:none;">
                                     <div class="col-md-6">
                                         <label class="form-label">FSC Sertifika No</label>
                                         <input type="text" class="form-control" name="FscCode" id="suppFsc"
@@ -345,6 +360,14 @@
 
 @section Scripts {
 <script>
+    function toggleSuppFscFields(checked) {
+        document.getElementById('suppFscFields').style.display = checked ? '' : 'none';
+        if (!checked) {
+            document.getElementById('suppFsc').value = '';
+            document.getElementById('suppDate').value = '';
+        }
+    }
+
     function filterSuppliers() {
         var search = (document.getElementById('supplierSearch').value || '').toLowerCase();
         var fscVal = document.getElementById('fscFilter').value;
@@ -391,6 +414,8 @@
         document.getElementById('supplierForm').reset();
         document.getElementById('suppId').value = 0;
         document.getElementById('supplierModalTitle').textContent = 'Yeni Tedarikçi Ekle';
+        document.getElementById('suppIsFsc').checked = false;
+        toggleSuppFscFields(false);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('supplierModal')).show();
     }
 
@@ -407,6 +432,9 @@
                 document.getElementById('suppCity').value    = res.data.city || '';
                 document.getElementById('suppTaxOffice').value = res.data.taxOffice || '';
                 document.getElementById('suppTaxNumber').value = res.data.taxNumber || '';
+                const isFsc = !!res.data.isFscActive;
+                document.getElementById('suppIsFsc').checked = isFsc;
+                toggleSuppFscFields(isFsc);
                 document.getElementById('suppFsc').value     = res.data.fscCode || '';
                 if (res.data.fscExpiryDate)
                     document.getElementById('suppDate').value = res.data.fscExpiryDate.split('T')[0];

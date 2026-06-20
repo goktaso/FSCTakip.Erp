@@ -595,7 +595,7 @@ namespace FSCTakip.WebUI.Controllers
             var today = DateTime.Today;
             ViewBag.Valid    = suppliers.Count(s => s.IsFscActive && (s.FscExpiryDate == null || s.FscExpiryDate > today.AddDays(30)));
             ViewBag.Expiring = suppliers.Count(s => s.IsFscActive && s.FscExpiryDate.HasValue && s.FscExpiryDate <= today.AddDays(30) && s.FscExpiryDate > today);
-            ViewBag.Expired  = suppliers.Count(s => !s.IsFscActive || (s.FscExpiryDate.HasValue && s.FscExpiryDate <= today));
+            ViewBag.Expired  = suppliers.Count(s => s.IsFscActive && s.FscExpiryDate.HasValue && s.FscExpiryDate <= today);
             ViewBag.Today    = today;
 
             return View(suppliers);
@@ -612,7 +612,7 @@ namespace FSCTakip.WebUI.Controllers
             var today = DateTime.Today;
             ViewBag.Valid    = customers.Count(c => c.IsFscActive && (c.FscExpiryDate == null || c.FscExpiryDate > today.AddDays(30)));
             ViewBag.Expiring = customers.Count(c => c.IsFscActive && c.FscExpiryDate.HasValue && c.FscExpiryDate <= today.AddDays(30) && c.FscExpiryDate > today);
-            ViewBag.Expired  = customers.Count(c => !c.IsFscActive || (c.FscExpiryDate.HasValue && c.FscExpiryDate <= today));
+            ViewBag.Expired  = customers.Count(c => c.IsFscActive && c.FscExpiryDate.HasValue && c.FscExpiryDate <= today);
             ViewBag.Today    = today;
 
             return View(customers);
@@ -1331,34 +1331,34 @@ namespace FSCTakip.WebUI.Controllers
                 .OrderByDescending(l => l.ArrivalDate)
                 .ToListAsync();
 
-            // Süresi dolmuş tedarikçi FSC sertifikaları
+            // Süresi dolmuş tedarikçi FSC sertifikaları (sadece FSC belgeli firmalar)
             var expiredSuppliers = await _context.Suppliers
-                .Where(s => s.IsActive && s.FscExpiryDate != null && s.FscExpiryDate < today)
+                .Where(s => s.IsActive && s.IsFscActive && s.FscExpiryDate != null && s.FscExpiryDate < today)
                 .OrderBy(s => s.FscExpiryDate)
                 .ToListAsync();
 
-            // 30 gün içinde dolacak tedarikçi FSC sertifikaları
+            // 30 gün içinde dolacak tedarikçi FSC sertifikaları (sadece FSC belgeli firmalar)
             var expiringSoonSuppliers = await _context.Suppliers
-                .Where(s => s.IsActive && s.FscExpiryDate != null &&
+                .Where(s => s.IsActive && s.IsFscActive && s.FscExpiryDate != null &&
                             s.FscExpiryDate >= today && s.FscExpiryDate <= soon)
                 .OrderBy(s => s.FscExpiryDate)
                 .ToListAsync();
 
-            // FSC kodu tanımlanmamış aktif tedarikçiler
+            // FSC kodu tanımlanmamış aktif tedarikçiler (sadece FSC belgeli olarak işaretlenenler)
             var noFscSuppliers = await _context.Suppliers
-                .Where(s => s.IsActive && string.IsNullOrEmpty(s.FscCode))
+                .Where(s => s.IsActive && s.IsFscActive && string.IsNullOrEmpty(s.FscCode))
                 .OrderBy(s => s.Name)
                 .ToListAsync();
 
-            // Süresi dolmuş müşteri FSC lisansları
+            // Süresi dolmuş müşteri FSC lisansları (sadece FSC belgeli firmalar)
             var expiredCustomers = await _context.Customers
-                .Where(c => c.IsActive && c.FscExpiryDate != null && c.FscExpiryDate < today)
+                .Where(c => c.IsActive && c.IsFscActive && c.FscExpiryDate != null && c.FscExpiryDate < today)
                 .OrderBy(c => c.FscExpiryDate)
                 .ToListAsync();
 
-            // 30 gün içinde dolacak müşteri FSC lisansları
+            // 30 gün içinde dolacak müşteri FSC lisansları (sadece FSC belgeli firmalar)
             var expiringSoonCustomers = await _context.Customers
-                .Where(c => c.IsActive && c.FscExpiryDate != null &&
+                .Where(c => c.IsActive && c.IsFscActive && c.FscExpiryDate != null &&
                             c.FscExpiryDate >= today && c.FscExpiryDate <= soon)
                 .OrderBy(c => c.FscExpiryDate)
                 .ToListAsync();

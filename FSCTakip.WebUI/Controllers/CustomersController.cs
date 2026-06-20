@@ -20,7 +20,8 @@ namespace FSCTakip.WebUI.Controllers
             string? City,
             string? Address,
             string? FscLicenseCode,
-            DateTime? FscExpiryDate)
+            DateTime? FscExpiryDate,
+            bool IsFscActive = false)
         {
             if (string.IsNullOrWhiteSpace(Name))
                 return Json(new { success = false, message = "Müşteri adı zorunludur." });
@@ -46,7 +47,7 @@ namespace FSCTakip.WebUI.Controllers
                 Address        = Address?.Trim(),
                 FscLicenseCode = FscLicenseCode?.Trim().ToUpperInvariant(),
                 FscExpiryDate  = FscExpiryDate,
-                IsFscActive    = !string.IsNullOrEmpty(FscLicenseCode),
+                IsFscActive    = IsFscActive,
                 IsActive       = true,
                 CreatedDate    = DateTime.Now,
                 CreatedBy      = User.Identity?.Name ?? "System"

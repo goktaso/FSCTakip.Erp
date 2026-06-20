@@ -105,7 +105,7 @@ namespace FSCTakip.WebUI.Controllers
                     model.DispatchPdfPath = await _storage.SaveAsync(dispatchFile, "Dispatch");
 
                 string fscUyari = string.Empty;
-                if (supplier != null && (!supplier.IsFscActive || (supplier.FscExpiryDate.HasValue && supplier.FscExpiryDate.Value < DateTime.Today)))
+                if (supplier != null && supplier.IsFscActive && supplier.FscExpiryDate.HasValue && supplier.FscExpiryDate.Value < DateTime.Today)
                     fscUyari = $"{supplier.Name} firmasÄ±nÄ±n FSC sertifikasÄ± geÃ§ersiz veya sÃ¼resi dolmuÅŸ!";
 
                 if (model.Id == 0)

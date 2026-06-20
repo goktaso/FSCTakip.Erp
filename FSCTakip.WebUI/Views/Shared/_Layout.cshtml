@@ -871,6 +871,7 @@
         .fsc-badge.active  { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .fsc-badge.warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
         .fsc-badge.expired { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .fsc-badge.none    { background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; }
 
         /* ── PROGRESS STACKED BAR ───────────────────────── */
         .stock-bar {
@@ -2814,14 +2815,34 @@ async function fetchJson(url, options) {
 }
 </script>
 
-<!-- Global CSRF: tum jQuery AJAX POST isteklerine token ekler -->
+<!-- Global CSRF: jQuery AJAX + fetch POST isteklerine token ekler -->
 @Html.AntiForgeryToken()
 <script>
 (function() {
-    var token = document.querySelector('input[name="__RequestVerificationToken"]');
-    if (token && window.jQuery) {
-        $.ajaxSetup({ headers: { 'RequestVerificationToken': token.value } });
+    var tokenEl  = document.querySelector('input[name="__RequestVerificationToken"]');
+    var tokenVal = tokenEl ? tokenEl.value : '';
+
+    // jQuery icin
+    if (tokenVal && window.jQuery) {
+        $.ajaxSetup({ headers: { 'RequestVerificationToken': tokenVal } });
     }
+
+    // fetch() icin global sarmalayici — POST/PUT/DELETE isteklerine otomatik token ekler
+    var _origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+        opts = opts || {};
+        var method = (opts.method || 'GET').toUpperCase();
+        if (method !== 'GET' && method !== 'HEAD' && tokenVal) {
+            if (opts.headers instanceof Headers) {
+                if (!opts.headers.has('RequestVerificationToken'))
+                    opts.headers.set('RequestVerificationToken', tokenVal);
+            } else {
+                opts.headers = opts.headers || {};
+                opts.headers['RequestVerificationToken'] = opts.headers['RequestVerificationToken'] || tokenVal;
+            }
+        }
+        return _origFetch.call(this, url, opts);
+    };
 })();
 </script></body>
 </html>

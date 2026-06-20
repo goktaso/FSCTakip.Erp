@@ -117,9 +117,10 @@
             @foreach (var item in Model ?? Enumerable.Empty<FSCTakip.Core.Entities.Customer>())
             {
                 var fscDays  = item.FscExpiryDate.HasValue ? (int)(item.FscExpiryDate.Value - DateTime.Today).TotalDays : (int?)null;
-                var fscClass = item.IsFscActive && fscDays.HasValue && fscDays.Value > 30 ? "fsc-badge active"
+                var fscClass = !item.IsFscActive ? "fsc-badge none"
+                             : item.IsFscActive && fscDays.HasValue && fscDays.Value > 30 ? "fsc-badge active"
                              : fscDays.HasValue && fscDays.Value <= 0 ? "fsc-badge expired"
-                             : item.IsFscActive ? "fsc-badge warning" : "fsc-badge expired";
+                             : "fsc-badge warning";
                 <tr>
                     <td>
                         <div class="fw-semibold" style="font-size:13px;color:#1d4ed8;">@(item.Name ?? "—")</div>
@@ -154,7 +155,11 @@
                         }
                     </td>
                     <td>
-                        @if (!string.IsNullOrEmpty(item.FscLicenseCode))
+                        @if (!item.IsFscActive)
+                        {
+                            <span class="fsc-badge none"><i class="fas fa-times-circle"></i> FSC Yok</span>
+                        }
+                        else if (!string.IsNullOrEmpty(item.FscLicenseCode))
                         {
                             <span class="@fscClass">
                                 <i class="fas fa-certificate"></i> @item.FscLicenseCode
@@ -169,7 +174,7 @@
                         }
                         else
                         {
-                            <span class="text-muted" style="font-size:12px;">—</span>
+                            <span class="fsc-badge warning"><i class="fas fa-exclamation-circle"></i> Kod eksik</span>
                         }
                     </td>
                     <td class="text-center">
@@ -251,7 +256,17 @@
                                     <i class="fas fa-certificate text-success"></i>
                                     <span class="fw-semibold" style="font-size:13px;color:#166534;">FSC Lisans Bilgileri</span>
                                 </div>
-                                <div class="row g-2">
+                                <div class="mb-2">
+                                    <input type="hidden" name="IsFscActive" value="false">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="IsFscActive" value="true"
+                                               id="custFscActive" onchange="toggleCustFscFields(this.checked)">
+                                        <label class="form-check-label fw-semibold" for="custFscActive" style="font-size:13px;color:#166534;">
+                                            FSC Belgeli Müşteri
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="row g-2" id="custFscFields" style="display:none;">
                                     <div class="col-md-6">
                                         <label class="form-label">FSC Lisans Kodu</label>
                                         <input type="text" class="form-control" name="FscLicenseCode" id="custFscCode"
@@ -260,16 +275,6 @@
                                     <div class="col-md-6">
                                         <label class="form-label">Sertifika Bitiş Tarihi</label>
                                         <input type="date" class="form-control" name="FscExpiryDate" id="custFscDate">
-                                    </div>
-                                    <div class="col-12">
-                                        <!-- bool bind: hidden(false) + checkbox(true) → işaretliyse "true,false" gelir, binder ilk değeri alır -->
-                                        <input type="hidden" name="IsFscActive" value="false">
-                                        <div class="form-check mt-1">
-                                            <input class="form-check-input" type="checkbox" name="IsFscActive" value="true" id="custFscActive" checked>
-                                            <label class="form-check-label" for="custFscActive" style="font-size:13px;">
-                                                FSC Aktif (sertifika geçerli)
-                                            </label>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -308,10 +313,19 @@
         filterCustomers();
     }
 
+    function toggleCustFscFields(checked) {
+        document.getElementById('custFscFields').style.display = checked ? '' : 'none';
+        if (!checked) {
+            document.getElementById('custFscCode').value = '';
+            document.getElementById('custFscDate').value = '';
+        }
+    }
+
     function openAddModal() {
         document.getElementById('customerForm').reset();
         document.getElementById('custId').value = 0;
-        document.getElementById('custFscActive').checked = true;   // yeni müşteride varsayılan FSC aktif
+        document.getElementById('custFscActive').checked = false;
+        toggleCustFscFields(false);
         document.getElementById('customerModalTitle').textContent = 'Yeni Müşteri Ekle';
         bootstrap.Modal.getOrCreateInstance(document.getElementById('customerModal')).show();
     }
@@ -329,8 +343,10 @@
                 document.getElementById('custEmail').value = res.data.email || '';
                 document.getElementById('custCity').value  = res.data.city  || '';
                 document.getElementById('custAddress').value = res.data.address || '';
+                const isFsc = !!res.data.isFscActive;
+                document.getElementById('custFscActive').checked = isFsc;
+                toggleCustFscFields(isFsc);
                 document.getElementById('custFscCode').value = res.data.fscLicenseCode || '';
-                document.getElementById('custFscActive').checked = !!res.data.isFscActive;
                 if (res.data.fscExpiryDate)
                     document.getElementById('custFscDate').value = res.data.fscExpiryDate.split('T')[0];
                 document.getElementById('customerModalTitle').textContent = 'Müşteri Düzenle';
