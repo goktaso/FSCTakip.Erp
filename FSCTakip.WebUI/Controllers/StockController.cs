@@ -178,14 +178,14 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // GET /Stock/Index — ürün bazlı net stok özeti
-        public async Task<IActionResult> Index(int? productGroupId, int? productId, string? stockCode, string? erpCode)
+        public async Task<IActionResult> Index(int? productGroupId, int[]? productIds, string? stockCode, string? erpCode)
         {
             // Ürün filtrelerini DB'de uygula — tüm hareketleri belleğe çekme
             var productQuery = _context.Products.AsQueryable();
             if (productGroupId.HasValue)
                 productQuery = productQuery.Where(p => p.ProductGroupId == productGroupId.Value);
-            if (productId.HasValue)
-                productQuery = productQuery.Where(p => p.Id == productId.Value);
+            if (productIds != null && productIds.Length > 0)
+                productQuery = productQuery.Where(p => productIds.Contains(p.Id));
             if (!string.IsNullOrWhiteSpace(stockCode))
                 productQuery = productQuery.Where(p => p.ProductCode.Contains(stockCode.Trim()));
             if (!string.IsNullOrWhiteSpace(erpCode))
@@ -215,7 +215,7 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.Products      = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
             ViewBag.Warehouses    = await _context.Warehouses.Where(w => w.IsActive).OrderBy(w => w.Name).ToListAsync();
             ViewBag.ProductGroupId = productGroupId;
-            ViewBag.ProductId      = productId;
+            ViewBag.ProductIds     = productIds ?? Array.Empty<int>();
             ViewBag.StockCode      = stockCode;
             ViewBag.ErpCode        = erpCode;
 
@@ -371,7 +371,7 @@ namespace FSCTakip.WebUI.Controllers
 
         // GET /Stock/RawMaterial — FscSerial bazlı hammadde stoğu
         public async Task<IActionResult> RawMaterial(
-            int? fscTypeId, int? supplierId, int? productId,
+            int? fscTypeId, int? supplierId, int[]? productIds,
             bool? showEmpty = false)
         {
             var query = _context.FscSerials
@@ -387,8 +387,8 @@ namespace FSCTakip.WebUI.Controllers
                 query = query.Where(s => s.Lot.FscTypeId == fscTypeId.Value);
             if (supplierId.HasValue)
                 query = query.Where(s => s.Lot.SupplierId == supplierId.Value);
-            if (productId.HasValue)
-                query = query.Where(s => s.Lot.ProductId == productId.Value);
+            if (productIds != null && productIds.Length > 0)
+                query = query.Where(s => s.Lot.ProductId.HasValue && productIds.Contains(s.Lot.ProductId.Value));
 
             var serials = await query
                 .OrderBy(s => s.Lot.FscType.Name)
@@ -428,7 +428,7 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.Products  = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
             ViewBag.FscTypeId  = fscTypeId;
             ViewBag.SupplierId = supplierId;
-            ViewBag.ProductId  = productId;
+            ViewBag.ProductIds = productIds ?? Array.Empty<int>();
             ViewBag.ShowEmpty  = showEmpty ?? false;
 
             return View(serials);
@@ -436,7 +436,7 @@ namespace FSCTakip.WebUI.Controllers
 
         // GET /Stock/ExportRawMaterial
         public async Task<IActionResult> ExportRawMaterial(
-            int? fscTypeId, int? supplierId, int? productId, bool? showEmpty = false)
+            int? fscTypeId, int? supplierId, int[]? productIds, bool? showEmpty = false)
         {
             var query = _context.FscSerials
                 .Include(s => s.Lot).ThenInclude(l => l.Supplier)
@@ -450,8 +450,8 @@ namespace FSCTakip.WebUI.Controllers
                 query = query.Where(s => s.Lot.FscTypeId == fscTypeId.Value);
             if (supplierId.HasValue)
                 query = query.Where(s => s.Lot.SupplierId == supplierId.Value);
-            if (productId.HasValue)
-                query = query.Where(s => s.Lot.ProductId == productId.Value);
+            if (productIds != null && productIds.Length > 0)
+                query = query.Where(s => s.Lot.ProductId.HasValue && productIds.Contains(s.Lot.ProductId.Value));
 
             var rows = await query
                 .OrderBy(s => s.Lot.FscType.Name)

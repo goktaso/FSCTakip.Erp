@@ -11,7 +11,7 @@ namespace FSCTakip.WebUI.Controllers
         public ProductionController(AppDbContext context) : base(context) { }
 
         // GET /Production/Index
-        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, int? productId, WorkOrderStatus? status)
+        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, int[]? productIds, WorkOrderStatus? status)
         {
             var query = _context.WorkOrders
                 .Include(w => w.Product)
@@ -21,13 +21,15 @@ namespace FSCTakip.WebUI.Controllers
 
             if (startDate.HasValue) query = query.Where(w => w.PlannedDate >= startDate.Value);
             if (endDate.HasValue)   query = query.Where(w => w.PlannedDate <= endDate.Value.AddDays(1));
-            if (productId.HasValue) query = query.Where(w => w.ProductId == productId.Value);
+            if (productIds != null && productIds.Length > 0)
+                query = query.Where(w => productIds.Contains(w.ProductId));
             if (status.HasValue)    query = query.Where(w => w.Status == status.Value);
 
             ViewBag.Products  = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
             ViewBag.Machines  = await _context.Machines.OrderBy(m => m.Name).ToListAsync();
             ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
             ViewBag.EndDate   = endDate?.ToString("yyyy-MM-dd");
+            ViewBag.ProductIds = productIds ?? Array.Empty<int>();
 
             return View(await query.OrderByDescending(w => w.Id).ToListAsync());
         }
@@ -640,7 +642,7 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // GET /Production/WasteReport
-        public async Task<IActionResult> WasteReport(DateTime? startDate, DateTime? endDate, int? machineId, int? productId)
+        public async Task<IActionResult> WasteReport(DateTime? startDate, DateTime? endDate, int? machineId, int[]? productIds)
         {
             var query = _context.ProductionDetails
                 .Include(d => d.WorkOrder).ThenInclude(w => w.Product)
@@ -652,7 +654,8 @@ namespace FSCTakip.WebUI.Controllers
             if (startDate.HasValue) query = query.Where(d => d.ProductionDate >= startDate.Value);
             if (endDate.HasValue)   query = query.Where(d => d.ProductionDate <= endDate.Value.AddDays(1));
             if (machineId.HasValue) query = query.Where(d => d.MachineId == machineId.Value);
-            if (productId.HasValue) query = query.Where(d => d.WorkOrder.ProductId == productId.Value);
+            if (productIds != null && productIds.Length > 0)
+                query = query.Where(d => productIds.Contains(d.WorkOrder.ProductId));
 
             var details = await query.OrderByDescending(d => d.ProductionDate).ToListAsync();
 
@@ -702,13 +705,13 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.StartDate  = startDate?.ToString("yyyy-MM-dd");
             ViewBag.EndDate    = endDate?.ToString("yyyy-MM-dd");
             ViewBag.MachineId  = machineId;
-            ViewBag.ProductId  = productId;
+            ViewBag.ProductIds = productIds ?? Array.Empty<int>();
             ViewData["Title"]  = "Fire Raporu";
             return View(details);
         }
 
         // GET /Production/ExportWasteReport
-        public async Task<IActionResult> ExportWasteReport(DateTime? startDate, DateTime? endDate, int? machineId, int? productId)
+        public async Task<IActionResult> ExportWasteReport(DateTime? startDate, DateTime? endDate, int? machineId, int[]? productIds)
         {
             var query = _context.ProductionDetails
                 .Include(d => d.WorkOrder).ThenInclude(w => w.Product)
@@ -720,7 +723,8 @@ namespace FSCTakip.WebUI.Controllers
             if (startDate.HasValue) query = query.Where(d => d.ProductionDate >= startDate.Value);
             if (endDate.HasValue)   query = query.Where(d => d.ProductionDate <= endDate.Value.AddDays(1));
             if (machineId.HasValue) query = query.Where(d => d.MachineId == machineId.Value);
-            if (productId.HasValue) query = query.Where(d => d.WorkOrder.ProductId == productId.Value);
+            if (productIds != null && productIds.Length > 0)
+                query = query.Where(d => productIds.Contains(d.WorkOrder.ProductId));
 
             var data = await query.OrderByDescending(d => d.ProductionDate).ToListAsync();
             var rows = data.Select(d => {

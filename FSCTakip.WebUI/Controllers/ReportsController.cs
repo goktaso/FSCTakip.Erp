@@ -1441,7 +1441,7 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // GET /Reports/FscConsumption — Yıllık FSC CoC tüketim denetim raporu (mamul → kategori → bileşen)
-        public async Task<IActionResult> FscConsumption(DateTime? startDate, DateTime? endDate, int? productId)
+        public async Task<IActionResult> FscConsumption(DateTime? startDate, DateTime? endDate, int[]? productIds)
         {
             var sd = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
             var ed = endDate ?? DateTime.Today;
@@ -1452,7 +1452,8 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
                 .Include(d => d.FscSerial).ThenInclude(s => s.Lot).ThenInclude(l => l.FscType)
                 .Where(d => d.ProductionDate >= sd && d.ProductionDate < edNext && d.WorkOrder.Status != WorkOrderStatus.Taslak);
-            if (productId.HasValue) q = q.Where(d => d.WorkOrder.ProductId == productId.Value);
+            if (productIds != null && productIds.Length > 0)
+                q = q.Where(d => productIds.Contains(d.WorkOrder.ProductId));
             var details = await q.ToListAsync();
 
             var mamuller = details
@@ -1521,17 +1522,16 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.Products  = await _context.Products
                 .Where(p => p.ExternalCode != null && p.ExternalCode.StartsWith("3"))
                 .OrderBy(p => p.ProductName)
-                .Select(p => new SelectListItem { Value = p.Id.ToString(), Text = (p.ExternalCode ?? "") + " — " + p.ProductName })
                 .ToListAsync();
-            ViewBag.ProductId = productId;
+            ViewBag.ProductIds = productIds ?? Array.Empty<int>();
             ViewData["Title"] = "FSC Tüketim Denetim Raporu";
             return View(model);
         }
 
         // GET /Reports/ExportFscConsumption
-        public async Task<IActionResult> ExportFscConsumption(DateTime? startDate, DateTime? endDate, int? productId)
+        public async Task<IActionResult> ExportFscConsumption(DateTime? startDate, DateTime? endDate, int[]? productIds)
         {
-            var result = await FscConsumption(startDate, endDate, productId) as ViewResult;
+            var result = await FscConsumption(startDate, endDate, productIds) as ViewResult;
             var model = result?.Model as FscConsumptionModel ?? new FscConsumptionModel();
             var rows = model.Mamuller.SelectMany(m => m.Components.Select(c => new
             {

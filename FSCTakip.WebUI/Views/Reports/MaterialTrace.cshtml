@@ -85,15 +85,36 @@
         {
             <div class="col-md-5">
                 <label class="form-label small fw-semibold mb-1">Mamul <span class="text-danger">*</span></label>
-                <select name="mamulId" class="form-select form-select-sm" required>
-                    <option value="">— Mamul seçiniz —</option>
-                    @foreach (var p in mamuller)
-                    {
-                        <option value="@p.Id" selected="@(mamulId == p.Id ? "selected" : null)">
-                            @p.ProductCode — @p.ProductName
-                        </option>
-                    }
-                </select>
+                <div class="mcd" id="mcd-mat-mamul" data-placeholder="— Mamul seçiniz —">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-mat-mamul')">
+                        <span class="mcd-lbl">
+                            @{
+                                var selMamulText = mamuller.FirstOrDefault(p => p.Id == mamulId)?.ProductName;
+                            }
+                            @(selMamulText ?? "— Mamul seçiniz —")
+                        </span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-mat-mamul-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Mamul ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <div class="mcd-items">
+                            @foreach (var p in mamuller)
+                            {
+                                bool isSel = mamulId == p.Id;
+                                <label class="mcd-row" onclick="mcdSingleSelect('mcd-mat-mamul', @p.Id, '@Html.Raw(p.ProductName?.Replace("'", "\\'") ?? "")')">
+                                    <input type="radio" name="mamulId" value="@p.Id"
+                                           @(isSel ? "checked" : "")
+                                           style="accent-color:#1976d2;min-width:15px;cursor:pointer;">
+                                    <span class="mcd-name" title="@p.ProductName">@p.ProductName</span>
+                                    @if (!string.IsNullOrEmpty(p.ProductCode))  { <span class="mcd-sub">@p.ProductCode</span> }
+                                    @if (!string.IsNullOrEmpty(p.ExternalCode)) { <span class="mcd-ext">@p.ExternalCode</span> }
+                                </label>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold mb-1">Üretim Başlangıç</label>
@@ -445,6 +466,28 @@ else if (hasHammaddeFilter || mamulId.HasValue || !string.IsNullOrEmpty(partiNo)
 }
 
 @section Scripts {
+<style>
+.mcd{position:relative}
+.mcd-btn{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:#fff;border:1px solid #d1d5db;color:#111;padding:5px 10px;border-radius:6px;font-size:13px}
+.mcd-btn:hover{border-color:#1976d2}
+.mcd-panel{position:absolute;top:calc(100% + 4px);left:0;min-width:300px;max-width:400px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:1050;display:flex;flex-direction:column;overflow:hidden}
+.mcd-search-row{padding:8px 10px;border-bottom:1px solid #f1f5f9}
+.mcd-search{width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:5px 10px;font-size:12.5px;outline:none}
+.mcd-items{overflow-y:auto;max-height:260px}
+.mcd-row{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:12.5px;user-select:none}
+.mcd-row:hover{background:#eff6ff}
+.mcd-name{flex:1;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.mcd-sub{font-size:10.5px;color:#374151;background:#f3f4f6;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.mcd-ext{font-size:10.5px;color:#3730a3;background:#eef2ff;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.mcd-arrow{color:#6b7280;font-size:11px}
+</style>
+<script>
+if(!window._mcdReady){window._mcdReady=true;
+window.mcdOpen=function(id){var p=document.getElementById(id+'-panel');var o=p&&p.style.display!=='none';document.querySelectorAll('.mcd-panel').forEach(function(x){x.style.display='none'});if(!o&&p){p.style.display='flex'}};
+window.mcdSearch=function(el){var t=el.value.toLowerCase();el.closest('.mcd-panel').querySelectorAll('.mcd-row').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(t)?'':'none'})};
+document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'})});}
+window.mcdSingleSelect=function(id,val,label){var container=document.getElementById(id);var lbl=container&&container.querySelector('.mcd-lbl');if(lbl)lbl.textContent=label;setTimeout(function(){document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'});},100);};
+</script>
 <script>
     $(document).on('init.dt', 'table.data-table', function() {
         var dt = $(this).DataTable();
