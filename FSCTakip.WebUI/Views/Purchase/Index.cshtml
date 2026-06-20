@@ -416,7 +416,7 @@
                                 var productName = (p.ProductName ?? "").Trim();
                                 var externalCodeText = string.IsNullOrWhiteSpace(externalCode) ? "—" : externalCode;
                                 var searchText = $"{productCode} {externalCode} {productName}".ToLowerInvariant();
-                                <option value="@p.Id" data-search="@searchText">
+                                <option value="@p.Id" data-search="@searchText" data-code="@productCode">
                                     @productCode | @externalCodeText | @productName
                                 </option>
                             }
@@ -487,16 +487,25 @@
                             <i class="fas fa-scroll me-2"></i>Bobinler / Miktarlar
                             <span class="text-muted fw-normal" style="font-size:11px;margin-left:4px;">(düzenleme modunda detay sayfasından eklenebilir)</span>
                         </div>
-                        <!-- Mod seçici -->
-                        <div class="btn-group btn-group-sm" role="group" id="bobinModeGroup">
-                            <input type="radio" class="btn-check" name="bobinMode" id="modeEqual" value="equal" autocomplete="off" checked>
-                            <label class="btn btn-outline-success" for="modeEqual">
-                                <i class="fas fa-equals me-1"></i> Eşit Ağırlıklı
-                            </label>
-                            <input type="radio" class="btn-check" name="bobinMode" id="modeDiff" value="diff" autocomplete="off">
-                            <label class="btn btn-outline-success" for="modeDiff">
-                                <i class="fas fa-list-ol me-1"></i> Farklı Ağırlıklı
-                            </label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <!-- Ölçü Birimi Seçici -->
+                            <div class="btn-group btn-group-sm" role="group" id="weightUnitGroup" title="Giriş birimi (KG = kilogram, MT = metrik ton)">
+                                <input type="radio" class="btn-check" name="weightUnit" id="unitKg" value="kg" autocomplete="off" checked onchange="applyWeightUnit('kg')">
+                                <label class="btn btn-outline-secondary" for="unitKg" style="font-size:11px;padding:3px 8px;">KG</label>
+                                <input type="radio" class="btn-check" name="weightUnit" id="unitMt" value="mt" autocomplete="off" onchange="applyWeightUnit('mt')">
+                                <label class="btn btn-outline-secondary" for="unitMt" style="font-size:11px;padding:3px 8px;">MT</label>
+                            </div>
+                            <!-- Mod seçici -->
+                            <div class="btn-group btn-group-sm" role="group" id="bobinModeGroup">
+                                <input type="radio" class="btn-check" name="bobinMode" id="modeEqual" value="equal" autocomplete="off" checked>
+                                <label class="btn btn-outline-success" for="modeEqual">
+                                    <i class="fas fa-equals me-1"></i> Eşit Ağırlıklı
+                                </label>
+                                <input type="radio" class="btn-check" name="bobinMode" id="modeDiff" value="diff" autocomplete="off">
+                                <label class="btn btn-outline-success" for="modeDiff">
+                                    <i class="fas fa-list-ol me-1"></i> Farklı Ağırlıklı
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -509,16 +518,16 @@
                             </div>
                             <div class="col-auto d-flex align-items-end pb-2" style="font-size:20px;color:#9ca3af;">×</div>
                             <div class="col-md-3">
-                                <label class="form-label fw-semibold">Birim Ağırlık (kg) <span class="text-danger">*</span></label>
+                                <label class="form-label fw-semibold" id="eqWeightLabel">Birim Ağırlık (kg) <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <input type="number" id="eqWeight" class="form-control" min="0.001" step="0.001" placeholder="Örn: 500" oninput="updateEqualTotal()">
-                                    <span class="input-group-text">kg</span>
+                                    <span class="input-group-text" id="eqWeightUnit">kg</span>
                                 </div>
                             </div>
                             <div class="col-auto d-flex align-items-end pb-2" style="font-size:20px;color:#9ca3af;">=</div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Toplam</label>
-                                <div id="eqTotal" style="font-size:22px;font-weight:700;color:#166534;line-height:38px;">—</div>
+                                <div id="eqTotal" style="font-size:20px;font-weight:700;color:#166534;line-height:38px;">—</div>
                             </div>
                         </div>
                     </div>
@@ -530,7 +539,7 @@
                                 <thead style="background:#dcfce7;">
                                     <tr>
                                         <th style="width:50px;padding:8px 12px;font-size:12px;">#</th>
-                                        <th style="padding:8px 12px;font-size:12px;">Ağırlık (kg)</th>
+                                        <th style="padding:8px 12px;font-size:12px;" id="diffWeightColHeader">Ağırlık (kg)</th>
                                         <th style="width:50px;"></th>
                                     </tr>
                                 </thead>
@@ -673,6 +682,8 @@ function resetLotForm() {
     document.getElementById('eqWeight').value = '';
     document.getElementById('eqTotal').textContent = '—';
     document.getElementById('modeEqual').checked = true;
+    document.getElementById('unitKg').checked = true;
+    applyWeightUnit('kg');
     showEqualMode();
     _diffRowCount = 0;
     document.getElementById('diffRows').innerHTML = '';
@@ -740,19 +751,48 @@ function showDiffMode() {
     if (_diffRowCount === 0) addDiffRow();
 }
 
+/* ─── AĞIRLIK BİRİMİ YÖNETİMİ ───────────────────────────────── */
+function currentWeightUnit() {
+    const u = document.querySelector('input[name="weightUnit"]:checked');
+    return u ? u.value : 'kg';
+}
+
+function applyWeightUnit(unit) {
+    const isMt = unit === 'mt';
+    const label = isMt ? 'mt' : 'kg';
+    // Eşit mod
+    document.getElementById('eqWeightLabel').innerHTML =
+        `Birim Ağırlık (${label}) <span class="text-danger">*</span>`;
+    document.getElementById('eqWeightUnit').textContent = label;
+    // Farklı mod başlık
+    document.getElementById('diffWeightColHeader').textContent = `Ağırlık (${label})`;
+    // Mevcut diff satırlarındaki suffix etiketlerini güncelle
+    document.querySelectorAll('.diff-unit-label').forEach(el => el.textContent = label);
+    updateEqualTotal();
+    updateDiffTotal();
+}
+
 /* ─── EŞİT MOD TOPLAM ────────────────────────────────────────── */
 function updateEqualTotal() {
-    const cnt = parseFloat(document.getElementById('eqCount').value) || 0;
-    const wgt = parseFloat(document.getElementById('eqWeight').value) || 0;
-    const total = cnt * wgt;
-    document.getElementById('eqTotal').textContent = total > 0
-        ? total.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' kg'
-        : '—';
+    const unit  = currentWeightUnit();
+    const isMt  = unit === 'mt';
+    const cnt   = parseFloat(document.getElementById('eqCount').value) || 0;
+    const wgt   = parseFloat(document.getElementById('eqWeight').value) || 0;
+    const totalInput = cnt * wgt;
+    const totalKg    = isMt ? totalInput * 1000 : totalInput;
+    if (totalInput <= 0) {
+        document.getElementById('eqTotal').textContent = '—';
+        return;
+    }
+    let txt = totalInput.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + ' ' + unit;
+    if (isMt) txt += ` = ${totalKg.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kg`;
+    document.getElementById('eqTotal').textContent = txt;
 }
 
 /* ─── FARKLI MOD SATIRLARI ───────────────────────────────────── */
 function addDiffRow() {
     _diffRowCount++;
+    const unit = currentWeightUnit();
     const tbody = document.getElementById('diffRows');
     const tr = document.createElement('tr');
     tr.id = 'diffRow_' + _diffRowCount;
@@ -762,7 +802,7 @@ function addDiffRow() {
             <div class="input-group input-group-sm">
                 <input type="number" class="form-control diff-weight" min="0.001" step="0.001"
                        placeholder="0.000" oninput="updateDiffTotal()">
-                <span class="input-group-text">kg</span>
+                <span class="input-group-text diff-unit-label">${unit}</span>
             </div>
         </td>
         <td style="padding:4px 8px;text-align:center;">
@@ -782,13 +822,20 @@ function removeDiffRow(id) {
 }
 
 function updateDiffTotal() {
+    const unit = currentWeightUnit();
+    const isMt = unit === 'mt';
     let sum = 0;
     document.querySelectorAll('.diff-weight').forEach(inp => {
         sum += parseFloat(inp.value) || 0;
     });
-    document.getElementById('diffTotal').textContent = sum > 0
-        ? sum.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' kg'
-        : '— kg';
+    if (sum <= 0) {
+        document.getElementById('diffTotal').textContent = '— kg';
+        return;
+    }
+    const sumKg = isMt ? sum * 1000 : sum;
+    let txt = sum.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + ' ' + unit;
+    if (isMt) txt += ` = ${sumKg.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kg`;
+    document.getElementById('diffTotal').textContent = txt;
 }
 
 /* ─── PDF DROPZONE YARDIMCILARI ─────────────────────────────── */
@@ -848,7 +895,8 @@ function initProductSelectSearch() {
     const allOptions = Array.from(productSelect.options).map(o => ({
         value: o.value,
         text: o.textContent,
-        search: (o.dataset.search || '').toLowerCase()
+        search: (o.dataset.search || '').toLowerCase(),
+        code: (o.dataset.code || '')
     }));
 
     function renderOptions(term) {
@@ -869,6 +917,7 @@ function initProductSelectSearch() {
             opt.value = item.value;
             opt.textContent = item.text;
             opt.dataset.search = item.search;
+            opt.dataset.code = item.code;
             productSelect.appendChild(opt);
         });
 
@@ -888,6 +937,12 @@ function initProductSelectSearch() {
 
         const selected = Array.from(this.options).find(o => o.value === this.value);
         if (!selected) return;
+
+        // Ürün koduna göre otomatik birim tespiti: "4" ile başlayanlar MT
+        const code = (selected.dataset.code || '').trim();
+        const autoUnit = code.startsWith('4') ? 'mt' : 'kg';
+        document.getElementById(autoUnit === 'mt' ? 'unitMt' : 'unitKg').checked = true;
+        applyWeightUnit(autoUnit);
 
         // Seçim yapıldıktan sonra liste tek satıra düşsün ama arama kutusu aynen kalsın
         const selectedId = selected.value;
@@ -1071,7 +1126,9 @@ async function saveLot() {
     // Bobin validasyonu (sadece yeni kayıt)
     let serialsJson = null;
     if (!_lotEditMode) {
-        const mode = document.querySelector('input[name="bobinMode"]:checked').value;
+        const mode   = document.querySelector('input[name="bobinMode"]:checked').value;
+        const isMt   = currentWeightUnit() === 'mt';
+        const toKg   = v => isMt ? v * 1000 : v;   // MT → KG dönüşümü
         if (mode === 'equal') {
             const cnt = parseInt(document.getElementById('eqCount').value);
             const wgt = parseFloat(document.getElementById('eqWeight').value);
@@ -1079,12 +1136,12 @@ async function saveLot() {
                 showToast('Bobin sayısı ve birim ağırlık giriniz.', 'warning');
                 return;
             }
-            serialsJson = `equal:${cnt}:${wgt}`;
+            serialsJson = `equal:${cnt}:${toKg(wgt)}`;   // server'a her zaman kg
         } else {
             const weights = [];
             document.querySelectorAll('.diff-weight').forEach(inp => {
                 const v = parseFloat(inp.value);
-                if (v > 0) weights.push(v);
+                if (v > 0) weights.push(toKg(v));         // server'a her zaman kg
             });
             if (weights.length === 0) {
                 showToast('En az 1 bobin ağırlığı giriniz.', 'warning');
