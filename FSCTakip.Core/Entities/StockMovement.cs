@@ -27,8 +27,9 @@ namespace FSCTakip.Core.Entities
         public int ProductId { get; set; }
         public virtual Product Product { get; set; }
 
-        public decimal Quantity { get; set; }
-        public string Unit { get; set; } // Adet, Kg, Ton vb.
+        public decimal Quantity   { get; set; }          // Orijinal birim cinsinden miktar (MT, ADET vb.)
+        public string  Unit      { get; set; }           // Orijinal birim
+        public decimal? QuantityKg { get; set; }         // KG karsiligi (birim KG ise null, dönüsüm varsa dolu)
 
         // --- DEPO YÖNETİMİ ---
         public int? FromWarehouseId { get; set; } // Çıkış yapılan depo

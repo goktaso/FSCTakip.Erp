@@ -15,7 +15,7 @@ namespace FSCTakip.WebUI.Controllers
         // GET /Reports/ChainOfCustody
         public async Task<IActionResult> ChainOfCustody(
             DateTime? startDate, DateTime? endDate,
-            int? customerId, int? productId)
+            int? customerId, int[]? productIds)
         {
             var query = _context.SalesOrderLines
                 .Include(l => l.SalesOrder).ThenInclude(o => o.Customer)
@@ -36,7 +36,8 @@ namespace FSCTakip.WebUI.Controllers
             if (startDate.HasValue) query = query.Where(l => l.SalesOrder.DispatchDate >= startDate.Value);
             if (endDate.HasValue)   query = query.Where(l => l.SalesOrder.DispatchDate <= endDate.Value.AddDays(1));
             if (customerId.HasValue) query = query.Where(l => l.SalesOrder.CustomerId == customerId.Value);
-            if (productId.HasValue)  query = query.Where(l => l.ProductId == productId.Value);
+            if (productIds != null && productIds.Length > 0)
+                query = query.Where(l => productIds.Contains(l.ProductId));
 
             var lines = await query.OrderByDescending(l => l.SalesOrder.DispatchDate).ToListAsync();
 
@@ -47,7 +48,7 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.StartDate   = startDate?.ToString("yyyy-MM-dd");
             ViewBag.EndDate     = endDate?.ToString("yyyy-MM-dd");
             ViewBag.CustomerId  = customerId;
-            ViewBag.ProductId   = productId;
+            ViewBag.ProductIds  = productIds ?? Array.Empty<int>();
 
             ViewBag.TotalLines    = rows.Count;
             ViewBag.FullChain     = rows.Count(r => r.ChainComplete);
@@ -105,7 +106,7 @@ namespace FSCTakip.WebUI.Controllers
 
         // GET /Reports/ExportCoc
         public async Task<IActionResult> ExportCoc(
-            DateTime? startDate, DateTime? endDate, int? customerId, int? productId)
+            DateTime? startDate, DateTime? endDate, int? customerId, int[]? productIds)
         {
             var query = _context.SalesOrderLines
                 .Include(l => l.SalesOrder).ThenInclude(o => o.Customer)
@@ -125,7 +126,8 @@ namespace FSCTakip.WebUI.Controllers
             if (startDate.HasValue) query = query.Where(l => l.SalesOrder.DispatchDate >= startDate.Value);
             if (endDate.HasValue)   query = query.Where(l => l.SalesOrder.DispatchDate <= endDate.Value.AddDays(1));
             if (customerId.HasValue) query = query.Where(l => l.SalesOrder.CustomerId == customerId.Value);
-            if (productId.HasValue)  query = query.Where(l => l.ProductId == productId.Value);
+            if (productIds != null && productIds.Length > 0)
+                query = query.Where(l => productIds.Contains(l.ProductId));
 
             var lines = await query.OrderByDescending(l => l.SalesOrder.DispatchDate).ToListAsync();
             var rows = lines.Select(l => BuildCocRow(l)).Select(r => new
@@ -151,17 +153,47 @@ namespace FSCTakip.WebUI.Controllers
 
         // ── 2. Lot Takip Raporu ─────────────────────────────────────────────────
         // GET /Reports/LotTrace
-        public async Task<IActionResult> LotTrace(int? lotId, string? search)
+        public async Task<IActionResult> LotTrace(int? lotId, string? search, int? supplierId, int? fscTypeId, string? startDate, string? endDate,
+            string? productCode, string? externalCode, string? productName, int[]? productIds)
         {
-            var lots = await _context.FscLots
+            var lotsQuery = _context.FscLots
                 .Include(l => l.Supplier)
                 .Include(l => l.FscType)
                 .Include(l => l.Product)
-                .OrderByDescending(l => l.ArrivalDate)
-                .ToListAsync();
+                .AsQueryable();
 
-            ViewBag.Lots   = lots;
-            ViewBag.Search = search;
+            if (supplierId.HasValue)
+                lotsQuery = lotsQuery.Where(l => l.SupplierId == supplierId);
+            if (fscTypeId.HasValue)
+                lotsQuery = lotsQuery.Where(l => l.FscTypeId == fscTypeId);
+            if (DateTime.TryParse(startDate, out var sd))
+                lotsQuery = lotsQuery.Where(l => l.ArrivalDate >= sd);
+            if (DateTime.TryParse(endDate, out var ed))
+                lotsQuery = lotsQuery.Where(l => l.ArrivalDate <= ed);
+            if (!string.IsNullOrWhiteSpace(productCode))
+                lotsQuery = lotsQuery.Where(l => l.Product != null && l.Product.ProductCode.Contains(productCode));
+            if (!string.IsNullOrWhiteSpace(externalCode))
+                lotsQuery = lotsQuery.Where(l => l.Product != null && l.Product.ExternalCode != null && l.Product.ExternalCode.Contains(externalCode));
+            if (!string.IsNullOrWhiteSpace(productName))
+                lotsQuery = lotsQuery.Where(l => l.Product != null && l.Product.ProductName.Contains(productName));
+            if (productIds != null && productIds.Length > 0)
+                lotsQuery = lotsQuery.Where(l => l.ProductId.HasValue && productIds.Contains(l.ProductId.Value));
+
+            var lots = await lotsQuery.OrderByDescending(l => l.ArrivalDate).ToListAsync();
+
+            ViewBag.Lots         = lots;
+            ViewBag.Search       = search;
+            ViewBag.SupplierId   = supplierId;
+            ViewBag.FscTypeId    = fscTypeId;
+            ViewBag.StartDate    = startDate;
+            ViewBag.EndDate      = endDate;
+            ViewBag.ProductCode  = productCode;
+            ViewBag.ExternalCode = externalCode;
+            ViewBag.ProductName  = productName;
+            ViewBag.ProductIds   = productIds ?? Array.Empty<int>();
+            ViewBag.AllProducts  = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
+            ViewBag.Suppliers    = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
+            ViewBag.FscTypes     = await _context.FscTypes.OrderBy(f => f.Name).ToListAsync();
 
             // Metin araması ile parti/seri no'ya göre lot bul
             if (!lotId.HasValue && !string.IsNullOrWhiteSpace(search))
@@ -1015,13 +1047,16 @@ namespace FSCTakip.WebUI.Controllers
         // ── 9. Hammadde / Mamul / Lot İzleme ───────────────────────────────────
         // GET /Reports/MaterialTrace
         public async Task<IActionResult> MaterialTrace(
-            string  mode      = "hammadde",
-            int?    hammaddeId = null,
-            int?    mamulId    = null,
-            string? partiNo   = null,
-            string? serialNo  = null,
+            string  mode        = "hammadde",
+            int[]?  hammaddeIds = null,
+            int?    mamulId     = null,
+            string? partiNo     = null,
+            string? serialNo    = null,
             DateTime? startDate = null,
-            DateTime? endDate   = null)
+            DateTime? endDate   = null,
+            string? stockSearch = null,
+            int? supplierId = null,
+            int? fscTypeId = null)
         {
             var sd = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
             var ed = endDate   ?? DateTime.Today;
@@ -1042,16 +1077,23 @@ namespace FSCTakip.WebUI.Controllers
                 .Where(p => mamulProductIds.Contains(p.Id))
                 .OrderBy(p => p.ProductName).ToListAsync();
 
-            ViewBag.Mode       = mode;
-            ViewBag.HammaddeId = hammaddeId;
-            ViewBag.MamulId    = mamulId;
-            ViewBag.PartiNo    = partiNo?.Trim();
-            ViewBag.SerialNo   = serialNo?.Trim();
-            ViewBag.StartDate  = sd.ToString("yyyy-MM-dd");
-            ViewBag.EndDate    = ed.ToString("yyyy-MM-dd");
+            ViewBag.Mode        = mode;
+            ViewBag.HammaddeIds = hammaddeIds;
+            ViewBag.MamulId     = mamulId;
+            ViewBag.PartiNo     = partiNo?.Trim();
+            ViewBag.SerialNo    = serialNo?.Trim();
+            ViewBag.StartDate   = sd.ToString("yyyy-MM-dd");
+            ViewBag.EndDate     = ed.ToString("yyyy-MM-dd");
+            ViewBag.StockSearch = stockSearch;
+            ViewBag.SupplierId  = supplierId;
+            ViewBag.FscTypeId   = fscTypeId;
+            ViewBag.Suppliers   = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
+            ViewBag.FscTypes    = await _context.FscTypes.OrderBy(f => f.Name).ToListAsync();
+
+            bool hasHammadde = hammaddeIds != null && hammaddeIds.Length > 0;
 
             bool hasFilter = mode switch {
-                "hammadde" => hammaddeId.HasValue,
+                "hammadde" => hasHammadde,
                 "mamul"    => mamulId.HasValue,
                 "parti"    => !string.IsNullOrWhiteSpace(partiNo) || !string.IsNullOrWhiteSpace(serialNo),
                 _          => false
@@ -1080,7 +1122,7 @@ namespace FSCTakip.WebUI.Controllers
                 case "hammadde":
                     query = query.Where(pd => pd.FscSerial != null
                         && pd.FscSerial.Lot != null
-                        && pd.FscSerial.Lot.ProductId == hammaddeId!.Value);
+                        && hammaddeIds!.Contains(pd.FscSerial.Lot.ProductId!.Value));
                     query = query.Where(pd => pd.ProductionDate >= sd && pd.ProductionDate < ed.AddDays(1));
                     if (!string.IsNullOrWhiteSpace(partiNo))
                         query = query.Where(pd => pd.FscSerial!.Lot.PartiNo.Contains(partiNo.Trim()));
@@ -1137,27 +1179,44 @@ namespace FSCTakip.WebUI.Controllers
                 UretilenAdet = pd.ProducedQuantity
             }).ToList();
 
+            // Ek filtreler (post-query)
+            if (!string.IsNullOrWhiteSpace(stockSearch))
+                rows = rows.Where(r => r.HammaddeAdi.Contains(stockSearch, StringComparison.OrdinalIgnoreCase)
+                                    || r.HammaddeKodu.Contains(stockSearch, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (supplierId.HasValue)
+            {
+                var supName = await _context.Suppliers.Where(x => x.Id == supplierId).Select(x => x.Name).FirstOrDefaultAsync();
+                if (supName != null)
+                    rows = rows.Where(r => r.Tedarikci.Contains(supName, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+            if (fscTypeId.HasValue)
+            {
+                var fscName = await _context.FscTypes.Where(x => x.Id == fscTypeId).Select(x => x.Name).FirstOrDefaultAsync();
+                if (fscName != null)
+                    rows = rows.Where(r => r.FscTipi.Contains(fscName, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
             var model = new MaterialTraceModel
             {
-                Mode       = mode,
-                HammaddeId = hammaddeId,
-                MamulId    = mamulId,
-                PartiNo    = partiNo?.Trim(),
-                SerialNo   = serialNo?.Trim(),
-                StartDate  = sd,
-                EndDate    = ed,
-                Rows       = rows
+                Mode        = mode,
+                HammaddeIds = hammaddeIds,
+                MamulId     = mamulId,
+                PartiNo     = partiNo?.Trim(),
+                SerialNo    = serialNo?.Trim(),
+                StartDate   = sd,
+                EndDate     = ed,
+                Rows        = rows
             };
             return View(model);
         }
 
         // GET /Reports/ExportMaterialTrace
         public async Task<IActionResult> ExportMaterialTrace(
-            string  mode      = "hammadde",
-            int?    hammaddeId = null,
-            int?    mamulId    = null,
-            string? partiNo   = null,
-            string? serialNo  = null,
+            string  mode        = "hammadde",
+            int[]?  hammaddeIds = null,
+            int?    mamulId     = null,
+            string? partiNo     = null,
+            string? serialNo    = null,
             DateTime? startDate = null,
             DateTime? endDate   = null)
         {
@@ -1175,8 +1234,8 @@ namespace FSCTakip.WebUI.Controllers
             switch (mode)
             {
                 case "hammadde":
-                    if (!hammaddeId.HasValue) return BadRequest();
-                    query = query.Where(pd => pd.FscSerial != null && pd.FscSerial.Lot != null && pd.FscSerial.Lot.ProductId == hammaddeId.Value);
+                    if (hammaddeIds == null || hammaddeIds.Length == 0) return BadRequest();
+                    query = query.Where(pd => pd.FscSerial != null && pd.FscSerial.Lot != null && hammaddeIds.Contains(pd.FscSerial.Lot.ProductId!.Value));
                     query = query.Where(pd => pd.ProductionDate >= sd && pd.ProductionDate < ed.AddDays(1));
                     if (!string.IsNullOrWhiteSpace(partiNo)) query = query.Where(pd => pd.FscSerial!.Lot.PartiNo.Contains(partiNo.Trim()));
                     break;
@@ -1774,9 +1833,9 @@ namespace FSCTakip.WebUI.Controllers
     // ── MaterialTrace View Models ──────────────────────────────────────────────
     public class MaterialTraceModel
     {
-        public string    Mode       { get; set; } = "hammadde";
-        public int?      HammaddeId { get; set; }
-        public int?      MamulId    { get; set; }
+        public string    Mode        { get; set; } = "hammadde";
+        public int[]?    HammaddeIds { get; set; }
+        public int?      MamulId     { get; set; }
         public string?   PartiNo    { get; set; }
         public string?   SerialNo   { get; set; }
         public DateTime  StartDate  { get; set; }

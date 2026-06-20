@@ -66,7 +66,7 @@
                 <i class="fas fa-industry"></i>
             </div>
             <div>
-                <div class="stat-value" style="font-size:18px;">@totalWOs</div>
+                <div class="stat-value" id="cardWOs" style="font-size:18px;">@totalWOs</div>
                 <div class="stat-label">İş Emri</div>
             </div>
         </div>
@@ -77,7 +77,7 @@
                 <i class="fas fa-weight-hanging"></i>
             </div>
             <div>
-                <div class="stat-value" style="font-size:18px;">@totalConsumed.ToString("N0")</div>
+                <div class="stat-value" id="cardConsumed" style="font-size:18px;">@totalConsumed.ToString("N0")</div>
                 <div class="stat-label">Toplam Tüketim (kg)</div>
             </div>
         </div>
@@ -88,7 +88,7 @@
                 <i class="fas fa-burn"></i>
             </div>
             <div>
-                <div class="stat-value" style="font-size:18px;">@totalWaste.ToString("N0")</div>
+                <div class="stat-value" id="cardWaste" style="font-size:18px;">@totalWaste.ToString("N0")</div>
                 <div class="stat-label">Toplam Fire (kg)</div>
             </div>
         </div>
@@ -99,7 +99,7 @@
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
             <div>
-                <div class="stat-value" style="font-size:18px;">@overPlanComps</div>
+                <div class="stat-value" id="cardOverPlan" style="font-size:18px;">@overPlanComps</div>
                 <div class="stat-label">Plan Aşımı</div>
             </div>
         </div>
@@ -127,7 +127,7 @@ else
         };
         var fireRate = wo.TotalConsumedKg > 0 ? (wo.TotalWasteKg / wo.TotalConsumedKg * 100) : 0;
 
-        <div class="table-card mb-3">
+        <div class="table-card mb-3 wo-card">
             <!-- İş Emri Başlığı -->
             <div style="background:var(--table-header-bg);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -391,4 +391,44 @@ else
             }
         </div>
     }
+}
+
+@section Scripts {
+<script>
+    // Topbar globalSearch → WO kartlarını filtrele (ürün adı / WO no / FSC tipi ile)
+    var si = document.getElementById('globalSearch');
+    var sd = document.getElementById('searchDropdown');
+    if (si) {
+        if (sd) sd.classList.remove('show');
+        si.addEventListener('input', function (e) {
+            if (sd) sd.classList.remove('show');
+            var q = this.value.toLowerCase().trim();
+            var cards = document.querySelectorAll('.wo-card');
+            var vis = 0;
+            cards.forEach(function (card) {
+                var text = card.textContent.toLowerCase();
+                var show = q === '' || text.includes(q);
+                card.style.display = show ? '' : 'none';
+                if (show) vis++;
+            });
+            // Stat kartları güncelle
+            var g = function (id) { return document.getElementById(id); };
+            if (q === '') {
+                if (g('cardWOs')) g('cardWOs').textContent = cards.length;
+            } else {
+                if (g('cardWOs')) g('cardWOs').textContent = vis + ' / ' + cards.length;
+            }
+            e.stopPropagation();
+        }, true);
+        si.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                document.querySelectorAll('.wo-card').forEach(function (c) { c.style.display = ''; });
+                var g = function (id) { return document.getElementById(id); };
+                if (g('cardWOs')) g('cardWOs').textContent = document.querySelectorAll('.wo-card').length;
+                e.preventDefault(); e.stopPropagation();
+            }
+        }, true);
+    }
+</script>
 }

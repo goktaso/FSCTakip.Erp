@@ -85,6 +85,84 @@ Tüm mesaj/onay kutuları `_Layout.cshtml`'de tanımlı tek bir ARD temalı sist
 
 **Çözüm:** ViewBag/dynamic'e geçen projeksiyonlarda **public view-model sınıfı** kullan (`public class ConvSourceVM {...}`), `@using`'le tipe cast et (`ViewBag.X as List<ConvSourceVM>`). EF `.Select(s => new ConvSourceVM {...})` ile projeksiyon yapılabilir.
 
+## DataTables v2 arama kutusu ID değişti (2026-06-20)
+
+**Belirti:** `.dataTables_filter input` selector ile topbar arama kutusu bulunamıyor.
+
+**Kök neden:** DataTables v2'de arama input ID'si `#dt-search-0` — eski v1 class selector `.dataTables_filter input` artık çalışmıyor.
+
+**Çözüm:** Topbar global arama kutusunu DataTables API üzerinden bağla:
+```javascript
+$(document).on('init.dt', 'table.data-table', function () {
+    var dt = $(this).DataTable();
+    document.getElementById('globalSearch').addEventListener('input', function() {
+        dt.search(this.value).draw();
+    }, true);
+});
+```
+`rows({ search: 'applied' })` tüm sayfalar dahil filtrelenmiş satırları verir.
+
+## draw.dt + stat kartı senkronizasyon pattern'i (2026-06-20)
+
+Filtre/arama sonrası stat kartlarının güncellenmesi için:
+1. Her `<tr>`'ye `data-giris`, `data-kalan` vb. InvariantCulture decimal attribute ekle
+2. `$(document).on('draw.dt', ...)` ile `dt.rows({ search: 'applied' }).nodes()` topla
+3. Server-side Razor `<tfoot>` toplamları DataTables filtresiyle UYUMSUZ — asla sadece server-side bırakma
+
+## Razor option tag helper — inline ternary yasak (2026-06-20)
+
+**Hata:** `The tag helper 'option' must not have C# in the element's attribute declaration area`
+```razor
+// YANLIŞ
+<option value="@s.Id" @(cond ? "selected" : "")>
+
+// DOĞRU
+@{ var isSel = condition; }
+<option value="@s.Id" selected="@(isSel ? "selected" : null)">
+```
+
+## Grup subtotal duplikasyon — tek mekanizma kuralı (2026-06-20)
+
+Razor'da grup satırı ve ara toplam ikisi için de aynı anda `newGroup` bayrağı kullanılırsa duplikat oluşabilir. Çözüm: grup-header için `newGroup`, subtotal için `lastInGrp` — iki ayrı bayrak, hiç çakışmasın.
+
+## ExternalCode OR filtresi (2026-06-20)
+
+Purchase ve stok filtrelerinde kullanıcı hem iç stok kodu (ProductCode) hem dış kod (ExternalCode) ile arama yapabilmeli:
+```csharp
+query = query.Where(l => l.Product != null &&
+    (l.Product.ProductCode.Contains(sc) ||
+     (l.Product.ExternalCode != null && l.Product.ExternalCode.Contains(sc))));
+```
+**Uygulandığı yerler:** `PurchaseController.Index` (Stok Kodu filtresi), `StockController.Summary` (arama), `StockController.RawMaterial` (arama).
+**Neden:** Bazı ürünlerin dış kodu tercih edilir (örn. tedarikçi kodları); her iki alan da taranmalı.
+
+## Proaktif test disiplini — build sonrası Playwright zorunlu (2026-06-20)
+
+**Sorun:** Kod değişikliği yapıldı ama IIS Express yeni build'i yüklemedi; Playwright eski davranışı test etti → "çalışıyor" yanılsaması.
+
+**Kural:** Her değişiklikten sonra:
+1. Kullanıcıdan `Ctrl+Shift+B` build istenecek (`.cs` değiştiyse IIS Express restart da)
+2. Playwright testi çalıştırılacak
+3. PASS olmadan "tamamlandı" denmeyecek
+
+**Not:** DataTables pagination varsa Playwright testi "Tümü" ile çalıştır; subtotal/istatistik 2. sayfada olabilir.
+
+## Ürün birimi KG/MT/ADET ile otomatik dönüşüm (2026-06-20)
+
+**Amaç:** Bazı ürünler MT (metrik ton), ADET, vb. ile giriliyor; stok takibi için KG'ye çevrilmesi gerekiyor.
+
+**Yapı:**
+- `FscSerial`: `OriginalQuantity` (orijinal birim cinsinden), `OriginalUnit` (MT/ADET) eklendi. `InitialWeight` hep KG.
+- `StockMovement`: `Quantity` (orijinal birim), `Unit` (MT/ADET), `QuantityKg` (KG karşılığı) — birim KG ise `QuantityKg` NULL olabilir.
+- `UnitConversions` tablosu: `(SourceUnit, ProductId, ProductGroupId, ConversionFactor)` — örn. (MT, null, 1, 1000) = 1 MT = 1000 KG.
+- `UnitConversionController.FindFactor()`: Ürün bazlı factor aranır; yoksa grup bazlı; yoksa default. MT→KG = 1000, ADET için yapılandırılan factor.
+- **Purchase modal:** Ürün seçilince birim badge gösterilir. Kullanıcı MT giri,
+ş yaparsa `500 MT → 500.000 KG` otomatik dönüştürülür (server tarafında).
+- **Stok Durumu:** `StockMovement.QuantityKg` varsa onu, yoksa `Quantity` kullan (legacy uyumluluğu). Net = `(giriş − çıkış) KG`.
+- **İlgili alanlar:** Purchase.Index filtresi (ProductCode + ExternalCode), Stock.Index (input birim gösterimi), RawMaterial (giriş/çıkış vb. hep KG gösterilir).
+
+**Not:** Eski kayıtlarda `StockMovement.Quantity` MT olabilir ama `Unit="KG"` yazılı (bug). Migration ile `QuantityKg` backfill'i yapıldı. Yeni kod hep `QuantityKg`'ye yazıyor.
+
 ## Yarı Mamül Dönüşüm özelliği eklendi (2026-06-14)
 
 3 katmanlı yapı: **1xxxx ham kağıt → 23xxx BB yarı mamül (baskılı) → 3xxxx mamul**. Netsis'te 2xxxx ürünlerin reçetesi 1xxxx ham + 4xxxx boyaya bağlı (oran 1:1 kg). Mevcut üretim akışı çıktı stoğu üretmiyordu; bu yüzden yeni izole ekran eklendi:

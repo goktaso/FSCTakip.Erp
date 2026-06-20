@@ -47,7 +47,7 @@
         <div class="stat-card">
             <div class="stat-icon green"><i class="fas fa-boxes"></i></div>
             <div>
-                <div class="stat-value">@totalLot</div>
+                <div class="stat-value" id="cardLot">@totalLot</div>
                 <div class="stat-label">Toplam Lot</div>
             </div>
         </div>
@@ -56,7 +56,7 @@
         <div class="stat-card">
             <div class="stat-icon blue"><i class="fas fa-weight-hanging"></i></div>
             <div>
-                <div class="stat-value">@totalKg.ToString("N0")</div>
+                <div class="stat-value" id="cardGiris">@totalKg.ToString("N0")</div>
                 <div class="stat-label">Toplam Giriş (kg)</div>
             </div>
         </div>
@@ -65,7 +65,7 @@
         <div class="stat-card">
             <div class="stat-icon purple"><i class="fas fa-scroll"></i></div>
             <div>
-                <div class="stat-value">@totalBobin</div>
+                <div class="stat-value" id="cardBobin">@totalBobin</div>
                 <div class="stat-label">Toplam Bobin</div>
             </div>
         </div>
@@ -76,7 +76,7 @@
                 <i class="fas fa-battery-half"></i>
             </div>
             <div>
-                <div class="stat-value">@kalanKg.ToString("N0")</div>
+                <div class="stat-value" id="cardKalan">@kalanKg.ToString("N0")</div>
                 <div class="stat-label">Kalan Hammadde (kg)</div>
             </div>
         </div>
@@ -99,12 +99,12 @@
     <form method="get" action="/Purchase/Index">
         <div class="row g-2 align-items-end">
             <div class="col-md-2">
-                <label class="form-label">Başlangıç Tarihi</label>
-                <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control form-control-sm">
+                <label class="form-label">Stok Kodu</label>
+                <input type="text" name="stockCode" value="@ViewBag.StockCode" class="form-control form-control-sm" placeholder="ör. URN-024">
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Bitiş Tarihi</label>
-                <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control form-control-sm">
+            <div class="col-md-3">
+                <label class="form-label">Stok Adı</label>
+                <input type="text" name="stockName" value="@ViewBag.StockName" class="form-control form-control-sm" placeholder="ör. KMK RBMF">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Tedarikçi</label>
@@ -112,7 +112,8 @@
                     <option value="">— Tümü —</option>
                     @foreach (var s in suppliers)
                     {
-                        <option value="@s.Id">@s.Name</option>
+                        var selSup = ViewBag.SupplierId != null && (int)ViewBag.SupplierId == s.Id;
+                        <option value="@s.Id" selected="@(selSup ? "selected" : null)">@s.Name</option>
                     }
                 </select>
             </div>
@@ -122,11 +123,12 @@
                     <option value="">— Tümü —</option>
                     @foreach (var f in fscTypes)
                     {
-                        <option value="@f.Id">@f.Name</option>
+                        var selFsc = ViewBag.FscTypeId != null && (int)ViewBag.FscTypeId == f.Id;
+                        <option value="@f.Id" selected="@(selFsc ? "selected" : null)">@f.Name</option>
                     }
                 </select>
             </div>
-            <div class="col-md-3 d-flex gap-2 align-items-end">
+            <div class="col-md-2 d-flex gap-2 align-items-end">
                 <button type="submit" class="btn btn-primary btn-sm flex-fill">
                     <i class="fas fa-search me-1"></i> Sorgula
                 </button>
@@ -179,7 +181,9 @@
                 var kKg    = lot.Serials.Sum(s => s.CurrentWeight);
                 var oran   = gKg > 0 ? kKg / gKg * 100 : 0;
                 var fscOk  = lot.Supplier?.IsFscActive == true && (lot.Supplier.FscExpiryDate == null || lot.Supplier.FscExpiryDate >= DateTime.Today);
-                <tr>
+                <tr data-giris="@gKg.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                    data-kalan="@kKg.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                    data-bobin="@lot.Serials.Count">
                     <td>
                         <a href="/Purchase/Detail/@lot.Id" class="table-link fw-semibold">
                             @lot.PartiNo
@@ -409,14 +413,21 @@
                                placeholder="Ürün kodu / dış kod / ürün adı ile ara (örn: 30444)">
                         <select id="productId" class="form-select" size="10" style="font-family:inherit;">
                             <option value="">— Ürün seçiniz (stok hareketine işlenir) —</option>
+                            @{
+                                var pUnits   = ViewBag.ProductUnits   as Dictionary<int, string>  ?? new();
+                                var pFactors = ViewBag.ProductFactors as Dictionary<int, decimal> ?? new();
+                            }
                             @foreach (var p in products)
                             {
-                                var productCode = (p.ProductCode ?? "").Trim();
+                                var productCode  = (p.ProductCode  ?? "").Trim();
                                 var externalCode = (p.ExternalCode ?? "").Trim();
-                                var productName = (p.ProductName ?? "").Trim();
+                                var productName  = (p.ProductName  ?? "").Trim();
                                 var externalCodeText = string.IsNullOrWhiteSpace(externalCode) ? "—" : externalCode;
                                 var searchText = $"{productCode} {externalCode} {productName}".ToLowerInvariant();
-                                <option value="@p.Id" data-search="@searchText" data-code="@productCode">
+                                var pUnit   = pUnits.TryGetValue(p.Id, out var u)   ? u : (p.Unit ?? "KG").ToUpperInvariant();
+                                var pFactor = pFactors.TryGetValue(p.Id, out var f) ? f.ToString("G", System.Globalization.CultureInfo.InvariantCulture) : "";
+                                <option value="@p.Id" data-search="@searchText" data-code="@productCode"
+                                        data-unit="@pUnit" data-factor="@pFactor">
                                     @productCode | @externalCodeText | @productName
                                 </option>
                             }
@@ -488,13 +499,8 @@
                             <span class="text-muted fw-normal" style="font-size:11px;margin-left:4px;">(düzenleme modunda detay sayfasından eklenebilir)</span>
                         </div>
                         <div class="d-flex gap-2 align-items-center">
-                            <!-- Ölçü Birimi Seçici -->
-                            <div class="btn-group btn-group-sm" role="group" id="weightUnitGroup" title="Giriş birimi (KG = kilogram, MT = metrik ton)">
-                                <input type="radio" class="btn-check" name="weightUnit" id="unitKg" value="kg" autocomplete="off" checked onchange="applyWeightUnit('kg')">
-                                <label class="btn btn-outline-secondary" for="unitKg" style="font-size:11px;padding:3px 8px;">KG</label>
-                                <input type="radio" class="btn-check" name="weightUnit" id="unitMt" value="mt" autocomplete="off" onchange="applyWeightUnit('mt')">
-                                <label class="btn btn-outline-secondary" for="unitMt" style="font-size:11px;padding:3px 8px;">MT</label>
-                            </div>
+                            <!-- Ölçü birimi etiketi (üründen gelir, otomatik güncellenir) -->
+                            <span id="weightUnitBadge" class="badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-size:11px;font-weight:600;">KG</span>
                             <!-- Mod seçici -->
                             <div class="btn-group btn-group-sm" role="group" id="bobinModeGroup">
                                 <input type="radio" class="btn-check" name="bobinMode" id="modeEqual" value="equal" autocomplete="off" checked>
@@ -550,7 +556,7 @@
                         </div>
                         <div class="d-flex align-items-center gap-3 mt-2">
                             <button type="button" class="btn btn-sm btn-outline-success" onclick="addDiffRow()">
-                                <i class="fas fa-plus me-1"></i> Bobin Ekle
+                                <i class="fas fa-plus me-1"></i> Hammadde Ekle
                             </button>
                             <div class="ms-auto text-end">
                                 <div style="font-size:11px;color:#6b7280;">Toplam</div>
@@ -682,8 +688,7 @@ function resetLotForm() {
     document.getElementById('eqWeight').value = '';
     document.getElementById('eqTotal').textContent = '—';
     document.getElementById('modeEqual').checked = true;
-    document.getElementById('unitKg').checked = true;
-    applyWeightUnit('kg');
+    setProductUnit('KG', null);
     showEqualMode();
     _diffRowCount = 0;
     document.getElementById('diffRows').innerHTML = '';
@@ -751,22 +756,25 @@ function showDiffMode() {
     if (_diffRowCount === 0) addDiffRow();
 }
 
-/* ─── AĞIRLIK BİRİMİ YÖNETİMİ ───────────────────────────────── */
-function currentWeightUnit() {
-    const u = document.querySelector('input[name="weightUnit"]:checked');
-    return u ? u.value : 'kg';
-}
+/* ─── AĞIRLIK BİRİMİ YÖNETİMİ (ürün bazlı, dinamik) ────────── */
+let _currentUnit   = 'KG';
+let _currentFactor = null;   // null = bilinmiyor (dönüşüm yok)
 
-function applyWeightUnit(unit) {
-    const isMt = unit === 'mt';
-    const label = isMt ? 'mt' : 'kg';
-    // Eşit mod
+function setProductUnit(unit, factor) {
+    _currentUnit   = (unit || 'KG').toUpperCase();
+    _currentFactor = factor > 0 ? factor : null;
+    const label = _currentUnit;
+    // Birim rozeti
+    const badge = document.getElementById('weightUnitBadge');
+    badge.textContent = _currentUnit;
+    badge.style.display = '';
+    // Eşit mod label
     document.getElementById('eqWeightLabel').innerHTML =
         `Birim Ağırlık (${label}) <span class="text-danger">*</span>`;
     document.getElementById('eqWeightUnit').textContent = label;
-    // Farklı mod başlık
+    // Farklı mod tablo başlığı
     document.getElementById('diffWeightColHeader').textContent = `Ağırlık (${label})`;
-    // Mevcut diff satırlarındaki suffix etiketlerini güncelle
+    // Mevcut diff satır etiketlerini güncelle
     document.querySelectorAll('.diff-unit-label').forEach(el => el.textContent = label);
     updateEqualTotal();
     updateDiffTotal();
@@ -774,25 +782,26 @@ function applyWeightUnit(unit) {
 
 /* ─── EŞİT MOD TOPLAM ────────────────────────────────────────── */
 function updateEqualTotal() {
-    const unit  = currentWeightUnit();
-    const isMt  = unit === 'mt';
-    const cnt   = parseFloat(document.getElementById('eqCount').value) || 0;
-    const wgt   = parseFloat(document.getElementById('eqWeight').value) || 0;
+    const cnt        = parseFloat(document.getElementById('eqCount').value) || 0;
+    const wgt        = parseFloat(document.getElementById('eqWeight').value) || 0;
     const totalInput = cnt * wgt;
-    const totalKg    = isMt ? totalInput * 1000 : totalInput;
     if (totalInput <= 0) {
         document.getElementById('eqTotal').textContent = '—';
         return;
     }
-    let txt = totalInput.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + ' ' + unit;
-    if (isMt) txt += ` = ${totalKg.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kg`;
+    let txt = totalInput.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
+              + ' ' + _currentUnit;
+    if (_currentFactor && _currentUnit !== 'KG') {
+        const totalKg = totalInput * _currentFactor;
+        txt += ` = ${totalKg.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kg`;
+    }
     document.getElementById('eqTotal').textContent = txt;
 }
 
 /* ─── FARKLI MOD SATIRLARI ───────────────────────────────────── */
 function addDiffRow() {
     _diffRowCount++;
-    const unit = currentWeightUnit();
+    const unit = _currentUnit;
     const tbody = document.getElementById('diffRows');
     const tr = document.createElement('tr');
     tr.id = 'diffRow_' + _diffRowCount;
@@ -822,8 +831,6 @@ function removeDiffRow(id) {
 }
 
 function updateDiffTotal() {
-    const unit = currentWeightUnit();
-    const isMt = unit === 'mt';
     let sum = 0;
     document.querySelectorAll('.diff-weight').forEach(inp => {
         sum += parseFloat(inp.value) || 0;
@@ -832,9 +839,12 @@ function updateDiffTotal() {
         document.getElementById('diffTotal').textContent = '— kg';
         return;
     }
-    const sumKg = isMt ? sum * 1000 : sum;
-    let txt = sum.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + ' ' + unit;
-    if (isMt) txt += ` = ${sumKg.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kg`;
+    let txt = sum.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
+              + ' ' + _currentUnit;
+    if (_currentFactor && _currentUnit !== 'KG') {
+        const sumKg = sum * _currentFactor;
+        txt += ` = ${sumKg.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} kg`;
+    }
     document.getElementById('diffTotal').textContent = txt;
 }
 
@@ -893,10 +903,12 @@ function initProductSelectSearch() {
     if (!searchInput || !productSelect) return;
 
     const allOptions = Array.from(productSelect.options).map(o => ({
-        value: o.value,
-        text: o.textContent,
+        value:  o.value,
+        text:   o.textContent,
         search: (o.dataset.search || '').toLowerCase(),
-        code: (o.dataset.code || '')
+        code:   o.dataset.code   || '',
+        unit:   o.dataset.unit   || '',
+        factor: o.dataset.factor || ''
     }));
 
     function renderOptions(term) {
@@ -917,7 +929,9 @@ function initProductSelectSearch() {
             opt.value = item.value;
             opt.textContent = item.text;
             opt.dataset.search = item.search;
-            opt.dataset.code = item.code;
+            opt.dataset.code   = item.code;
+            opt.dataset.unit   = item.unit;
+            opt.dataset.factor = item.factor;
             productSelect.appendChild(opt);
         });
 
@@ -926,6 +940,16 @@ function initProductSelectSearch() {
         } else if (productSelect.options.length > 1) {
             productSelect.selectedIndex = 1;
         }
+        // selectedIndex ile programatik seçim change event tetiklemez — manuel uygula
+        applySelectedProductUnit();
+    }
+
+    function applySelectedProductUnit() {
+        const sel = Array.from(productSelect.options).find(o => o.value === productSelect.value);
+        if (!sel || !sel.value) return;
+        const unit   = (sel.dataset.unit   || 'KG').trim().toUpperCase();
+        const factor = parseFloat(sel.dataset.factor) || null;
+        setProductUnit(unit, factor);
     }
 
     searchInput.addEventListener('input', function () {
@@ -938,22 +962,27 @@ function initProductSelectSearch() {
         const selected = Array.from(this.options).find(o => o.value === this.value);
         if (!selected) return;
 
-        // Ürün koduna göre otomatik birim tespiti: "4" ile başlayanlar MT
-        const code = (selected.dataset.code || '').trim();
-        const autoUnit = code.startsWith('4') ? 'mt' : 'kg';
-        document.getElementById(autoUnit === 'mt' ? 'unitMt' : 'unitKg').checked = true;
-        applyWeightUnit(autoUnit);
+        // Ürün birimini UnitConversion tablosundan gelen data-unit/data-factor ile uygula
+        const unit   = (selected.dataset.unit   || 'KG').trim().toUpperCase();
+        const factor = parseFloat(selected.dataset.factor) || null;
+        setProductUnit(unit, factor);
 
         // Seçim yapıldıktan sonra liste tek satıra düşsün ama arama kutusu aynen kalsın
-        const selectedId = selected.value;
-        const selectedText = selected.textContent || '';
+        const selectedId     = selected.value;
+        const selectedText   = selected.textContent || '';
         const selectedSearch = selected.dataset.search || '';
+        const selectedCode   = selected.dataset.code   || '';
+        const selectedUnit   = selected.dataset.unit   || '';
+        const selectedFactor = selected.dataset.factor || '';
 
         productSelect.innerHTML = '';
         const opt = document.createElement('option');
         opt.value = selectedId;
         opt.textContent = selectedText;
         opt.dataset.search = selectedSearch;
+        opt.dataset.code   = selectedCode;
+        opt.dataset.unit   = selectedUnit;
+        opt.dataset.factor = selectedFactor;
         productSelect.appendChild(opt);
         productSelect.value = selectedId;
     });
@@ -1016,70 +1045,57 @@ if (invoiceAmountInput) {
     });
 }
 
-/* ─── PURCHASE SAYFASI: ÜST GLOBAL ARAMAYI TABLOYA BAĞLA ───── */
-(function initPurchaseTopbarGlobalSearch() {
-    const searchInput = document.getElementById('globalSearch');
-    const searchDropdown = document.getElementById('searchDropdown');
-    const table = document.querySelector('.data-table');
-    if (!searchInput || !table) return;
+/* ─── PURCHASE SAYFASI: TÜM ARAMA → DataTables API ─────────────── */
+// Tek gerçek kaynağı DataTables: hem "Ara:" kutusu hem topbar globalSearch
+// DataTables.search().draw() üzerinden geçer → draw.dt → kartlar güncellenir.
+$(document).on('init.dt', 'table.data-table', function () {
+    var dt = $(this).DataTable();
+    var searchInput  = document.getElementById('globalSearch');
+    var searchDropdown = document.getElementById('searchDropdown');
 
-    const tbody = table.querySelector('tbody');
-    if (!tbody) return;
-
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-
-    // Purchase sayfasında endpoint dropdown'unu kapat; lokal filtre kullanılacak
-    if (searchDropdown) searchDropdown.classList.remove('show');
-
-    function normalize(v) {
-        return (v || '').toString().toLowerCase().trim();
-    }
-
-    function rowText(row) {
-        const tds = row.querySelectorAll('td');
-        // Beklenen kolonlar:
-        // 0 Parti, 1 Tedarikçi, 2 Stok Kodu, 3 Stok Adı, 5 İrsaliye/Fatura
-        const parts = [
-            tds[0]?.innerText || '',
-            tds[1]?.innerText || '',
-            tds[2]?.innerText || '',
-            tds[3]?.innerText || '',
-            tds[5]?.innerText || ''
-        ];
-        return normalize(parts.join(' '));
-    }
-
-    function applyFilter() {
-        const q = normalize(searchInput.value);
-        rows.forEach(r => {
-            if (!q) {
-                r.style.display = '';
-                return;
-            }
-            r.style.display = rowText(r).includes(q) ? '' : 'none';
-        });
-    }
-
-    // Capture ile dinleyip _Layout içindeki global search handler'dan önce davran
-    searchInput.addEventListener('input', function (e) {
+    // Topbar globalSearch → DataTables arama API'sine yönlendir
+    if (searchInput) {
         if (searchDropdown) searchDropdown.classList.remove('show');
-        applyFilter();
-        e.stopPropagation();
-    }, true);
 
-    searchInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-            this.value = '';
-            applyFilter();
+        searchInput.addEventListener('input', function (e) {
             if (searchDropdown) searchDropdown.classList.remove('show');
-            e.preventDefault();
+            dt.search(this.value).draw();
             e.stopPropagation();
-        }
-    }, true);
+        }, true);
 
-    // İlk yüklemede input doluysa uygula
-    applyFilter();
-})();
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                dt.search('').draw();
+                if (searchDropdown) searchDropdown.classList.remove('show');
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }, true);
+
+        // Sayfa ilk yüklendiğinde topbar'da değer varsa DataTables'a uygula
+        if (searchInput.value) dt.search(searchInput.value).draw();
+    }
+});
+
+/* ─── STAT KART: Her draw (filtre/sayfa/sıralama) sonrası güncelle ─ */
+// rows({ search:'applied' }) → filtre uygulanmış TÜM satırlar (paginate'den bağımsız)
+$(document).on('draw.dt', 'table.data-table', function () {
+    var dt = $(this).DataTable();
+    var lot = 0, giris = 0, bobin = 0, kalan = 0;
+    dt.rows({ search: 'applied' }).nodes().each(function (tr) {
+        lot++;
+        giris += parseFloat(tr.dataset.giris) || 0;
+        bobin += parseInt(tr.dataset.bobin)   || 0;
+        kalan += parseFloat(tr.dataset.kalan) || 0;
+    });
+    function fmtN(n) { return Math.round(n).toLocaleString('tr-TR'); }
+    var g = function (id) { return document.getElementById(id); };
+    if (g('cardLot'))   g('cardLot').textContent   = lot;
+    if (g('cardGiris')) g('cardGiris').textContent = fmtN(giris);
+    if (g('cardBobin')) g('cardBobin').textContent = bobin;
+    if (g('cardKalan')) g('cardKalan').textContent = fmtN(kalan);
+});
 
 /* ─── TEDARİKÇİ FSC UYARI ───────────────────────────────────── */
 document.getElementById('supplierId').addEventListener('change', function () {
@@ -1126,9 +1142,7 @@ async function saveLot() {
     // Bobin validasyonu (sadece yeni kayıt)
     let serialsJson = null;
     if (!_lotEditMode) {
-        const mode   = document.querySelector('input[name="bobinMode"]:checked').value;
-        const isMt   = currentWeightUnit() === 'mt';
-        const toKg   = v => isMt ? v * 1000 : v;   // MT → KG dönüşümü
+        const mode = document.querySelector('input[name="bobinMode"]:checked').value;
         if (mode === 'equal') {
             const cnt = parseInt(document.getElementById('eqCount').value);
             const wgt = parseFloat(document.getElementById('eqWeight').value);
@@ -1136,12 +1150,12 @@ async function saveLot() {
                 showToast('Bobin sayısı ve birim ağırlık giriniz.', 'warning');
                 return;
             }
-            serialsJson = `equal:${cnt}:${toKg(wgt)}`;   // server'a her zaman kg
+            serialsJson = `equal:${cnt}:${wgt}`;   // ham değer; server UnitConversion ile KG'ye çevirir
         } else {
             const weights = [];
             document.querySelectorAll('.diff-weight').forEach(inp => {
                 const v = parseFloat(inp.value);
-                if (v > 0) weights.push(toKg(v));         // server'a her zaman kg
+                if (v > 0) weights.push(v);         // ham değer; server dönüştürür
             });
             if (weights.length === 0) {
                 showToast('En az 1 bobin ağırlığı giriniz.', 'warning');
@@ -1197,5 +1211,6 @@ async function saveLot() {
             : '<i class="fas fa-save me-1"></i> Kaydet';
     }
 }
+
 </script>
 }

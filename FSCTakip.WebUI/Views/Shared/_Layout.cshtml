@@ -1096,15 +1096,21 @@
                 </a>
             </div>
             <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Stock"&&action=="RawMaterial"?"active":"")" href="/Stock/RawMaterial">
-                    <span class="nav-icon"><i class="fas fa-scroll"></i></span>
-                    <span class="nav-label">Hammadde Stoğu</span>
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="Summary"?"active":"")" href="/Stock/Summary">
+                    <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+                    <span class="nav-label">Stok Özeti</span>
                 </a>
             </div>
             <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Stock"&&action=="Index"?"active":"")" href="/Stock/Index">
-                    <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
-                    <span class="nav-label">Stok Durumu</span>
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="AdminStock"?"active":"")" href="/Stock/AdminStock">
+                    <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
+                    <span class="nav-label">Tüm Stok (Admin)</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="RawMaterial"?"active":"")" href="/Stock/RawMaterial">
+                    <span class="nav-icon"><i class="fas fa-scroll"></i></span>
+                    <span class="nav-label">Hammadde Stoğu</span>
                 </a>
             </div>
             <div class="nav-item">

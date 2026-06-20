@@ -33,7 +33,7 @@
         <div class="stat-card">
             <div class="stat-icon green"><i class="fas fa-truck"></i></div>
             <div>
-                <div class="stat-value">@total</div>
+                <div class="stat-value" id="cardTotal">@total</div>
                 <div class="stat-label">Toplam Tedarikçi</div>
             </div>
         </div>
@@ -42,7 +42,7 @@
         <div class="stat-card">
             <div class="stat-icon blue"><i class="fas fa-check-circle"></i></div>
             <div>
-                <div class="stat-value">@active</div>
+                <div class="stat-value" id="cardActive">@active</div>
                 <div class="stat-label">Aktif Tedarikçi</div>
             </div>
         </div>
@@ -51,7 +51,7 @@
         <div class="stat-card">
             <div class="stat-icon @(fscOk > 0 ? "green" : "red")"><i class="fas fa-certificate"></i></div>
             <div>
-                <div class="stat-value">@fscOk</div>
+                <div class="stat-value" id="cardFscOk">@fscOk</div>
                 <div class="stat-label">FSC Sertifikalı</div>
             </div>
         </div>
@@ -60,7 +60,7 @@
         <div class="stat-card">
             <div class="stat-icon @(expiring > 0 ? "amber" : "green")"><i class="fas fa-exclamation-triangle"></i></div>
             <div>
-                <div class="stat-value">@expiring</div>
+                <div class="stat-value" id="cardExpiring">@expiring</div>
                 <div class="stat-label">90 Günde Bitiyor</div>
                 @if (expiring > 0)
                 {
@@ -371,15 +371,43 @@
     function filterSuppliers() {
         var search = (document.getElementById('supplierSearch').value || '').toLowerCase();
         var fscVal = document.getElementById('fscFilter').value;
+        var total=0, active=0, fscOk=0, expiring=0;
         document.querySelectorAll('#suppliersTable tbody tr').forEach(function(tr) {
             var text    = tr.textContent.toLowerCase();
             var badge   = tr.querySelector('.fsc-badge');
+            var statusBadge = tr.querySelector('.badge.badge-green, .badge.badge-gray');
             var fscMatch = fscVal === '' ? true
                 : fscVal === 'active'   ? (badge && badge.classList.contains('active'))
                 : (badge && badge.classList.contains('warning'));
-            tr.style.display = (text.includes(search) && fscMatch) ? '' : 'none';
+            var show = (text.includes(search) && fscMatch);
+            tr.style.display = show ? '' : 'none';
+            if (show) {
+                total++;
+                if (statusBadge && statusBadge.textContent.trim() === 'Aktif') active++;
+                if (badge && badge.classList.contains('active')) fscOk++;
+                if (badge && badge.classList.contains('warning')) expiring++;
+            }
         });
+        var g = function(id) { return document.getElementById(id); };
+        if (g('cardTotal'))    g('cardTotal').textContent    = total;
+        if (g('cardActive'))   g('cardActive').textContent   = active;
+        if (g('cardFscOk'))    g('cardFscOk').textContent    = fscOk;
+        if (g('cardExpiring')) g('cardExpiring').textContent = expiring;
     }
+
+    $(document).on('init.dt', '#suppliersTable', function() {
+        var si = document.getElementById('globalSearch');
+        var sd = document.getElementById('searchDropdown');
+        if (!si) return;
+        if (sd) sd.classList.remove('show');
+        si.addEventListener('input', function(e) {
+            if (sd) sd.classList.remove('show');
+            var supplierSearch = document.getElementById('supplierSearch');
+            if (supplierSearch) { supplierSearch.value = this.value; }
+            filterSuppliers();
+            e.stopPropagation();
+        }, true);
+    });
 
     function clearFilter() {
         document.getElementById('supplierSearch').value = '';

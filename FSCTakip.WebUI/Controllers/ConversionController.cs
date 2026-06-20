@@ -29,7 +29,8 @@ namespace FSCTakip.WebUI.Controllers
                     CurrentWeight = s.CurrentWeight,
                     FscType       = s.Lot.FscType.Name,
                     UrunKod       = s.Lot.Product != null ? s.Lot.Product.ExternalCode : null,
-                    UrunAd        = s.Lot.Product != null ? s.Lot.Product.ProductName : "—"
+                    UrunAd        = s.Lot.Product != null ? s.Lot.Product.ProductName : "—",
+                    UrunIcKod     = s.Lot.Product != null ? s.Lot.Product.ProductCode : null
                 })
                 .ToListAsync();
 
@@ -37,7 +38,7 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.TargetProducts = await _context.Products
                 .Where(p => p.ExternalCode != null && p.ExternalCode.StartsWith("2"))
                 .OrderBy(p => p.ProductName)
-                .Select(p => new ConvTargetVM { Id = p.Id, Kod = p.ExternalCode!, Ad = p.ProductName })
+                .Select(p => new ConvTargetVM { Id = p.Id, Kod = p.ExternalCode!, Ad = p.ProductName, ExtKod = p.ExternalCode })
                 .ToListAsync();
 
             // Son dönüşümler (kaynak bobin/ürün bilgisiyle)
@@ -228,8 +229,9 @@ namespace FSCTakip.WebUI.Controllers
         public string SerialNo { get; set; } = "";
         public decimal CurrentWeight { get; set; }
         public string FscType { get; set; } = "";
-        public string? UrunKod { get; set; }
+        public string? UrunKod { get; set; }      // ExternalCode (dış kod)
         public string UrunAd { get; set; } = "";
+        public string? UrunIcKod { get; set; }    // ProductCode (iç stok kodu)
     }
 
     public class ConvTargetVM
@@ -237,6 +239,7 @@ namespace FSCTakip.WebUI.Controllers
         public int Id { get; set; }
         public string Kod { get; set; } = "";
         public string Ad { get; set; } = "";
+        public string? ExtKod { get; set; }       // ExternalCode
     }
 
     public class ConvRecentVM

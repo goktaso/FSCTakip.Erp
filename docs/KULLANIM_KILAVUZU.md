@@ -391,9 +391,12 @@ Her lot için listede şunlar görünür:
 
 **Filtrele** butonuna tıkladığınızda filtre paneli açılır:
 
-- **Başlangıç / Bitiş Tarihi:** Belirli tarih aralığındaki lotları listeler
+- **Stok Kodu:** Ürünün iç stok koduyla arama yapılabilir (örn. "10001")
+- **Stok Adı (Dış Kod):** Ürünün dış koduyla veya adıyla arama yapılabilir — hem `ProductCode` hem `ExternalCode` alanları taranır
 - **Tedarikçi:** Sadece seçilen tedarikçinin lotlarını gösterir
 - **FSC Tipi:** FSC-100%, FSC-MIX gibi tipe göre filtreler
+
+> **ℹ️ Not:** Filtreleme sonrası üstte görünen özet kartları (Toplam Lot, Giriş (kg), Toplam Bobin, Kalan Hmm(kg)) otomatik olarak filtrelenmiş veriye göre güncellenir.
 
 ### Excel Dışa Aktarma
 

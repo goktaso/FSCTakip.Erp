@@ -38,11 +38,11 @@
     </div>
     <div class="stat-card">
         <div class="stat-icon amber"><i class="fas fa-arrow-down"></i></div>
-        <div class="stat-info"><div class="stat-value">@(((decimal)ViewBag.TotalIn).ToString("N0"))</div><div class="stat-label">Toplam Giriş</div></div>
+        <div class="stat-info"><div class="stat-value">@(((decimal)ViewBag.TotalIn).ToString("N0")) <small style="font-size:13px;">KG</small></div><div class="stat-label">Toplam Giriş</div></div>
     </div>
     <div class="stat-card">
         <div class="stat-icon purple"><i class="fas fa-arrow-up"></i></div>
-        <div class="stat-info"><div class="stat-value">@(((decimal)ViewBag.TotalOut).ToString("N0"))</div><div class="stat-label">Toplam Çıkış</div></div>
+        <div class="stat-info"><div class="stat-value">@(((decimal)ViewBag.TotalOut).ToString("N0")) <small style="font-size:13px;">KG</small></div><div class="stat-label">Toplam Çıkış</div></div>
     </div>
 </div>
 
@@ -104,7 +104,9 @@
                 }
                 @foreach (var row in Model)
                 {
-                    var net = row.NetAdet;
+                    var net     = row.NetAdet;
+                    var unit    = (row.Product.Unit ?? "KG").Trim().ToUpper();
+                    var hasConv = unit != "KG" && unit != "";
                     string statusClass = net > 0 ? "badge-success" : "badge-danger";
                     string statusText  = net > 0 ? "Var" : "Yok";
                     <tr>
@@ -112,10 +114,17 @@
                         <td class="text-muted small">@(row.Product.ExternalCode ?? "—")</td>
                         <td><strong>@row.Product.ProductName</strong></td>
                         <td class="small text-muted">@(row.Product.ProductGroup?.GroupName ?? "—")</td>
-                        <td class="text-end text-success fw-semibold">@row.GirisAdet.ToString("N0")</td>
-                        <td class="text-end text-danger fw-semibold">@row.CikisAdet.ToString("N0")</td>
-                        <td class="text-end fw-bold @(net <= 0 ? "text-danger" : "")">@net.ToString("N0")</td>
-                        <td class="small text-muted">@row.Product.Unit</td>
+                        <td class="text-end text-success fw-semibold">
+                            @row.GirisAdet.ToString("N3") <small class="text-muted fw-normal">KG</small>
+                            @if (hasConv)
+                            {
+                                <br><small class="text-muted">(@unit cinsinden girildi)</small>
+                            }
+                        </td>
+                        <td class="text-end text-danger fw-semibold">@row.CikisAdet.ToString("N3") <small class="text-muted fw-normal">KG</small></td>
+                        <td class="text-end fw-bold @(net <= 0 ? "text-danger" : "")">
+                            @net.ToString("N3") <small class="text-muted fw-normal">KG</small>
+                        </td>
                         <td class="small text-muted">@(row.LastMovementDate?.ToString("dd.MM.yyyy") ?? "—")</td>
                         <td><span class="badge @statusClass">@statusText</span></td>
                     </tr>

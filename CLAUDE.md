@@ -122,6 +122,72 @@ new string(phone.Where(char.IsDigit).ToArray())
 - Lot/Seri İşlemleri: Satır içi (inline) hesaplamalar ve dinamik badge'ler (FSC Mix/100%) ile kullanıcı anlık olarak kütle girdisini görecek.
 - Estetik: Endüstriyel ERP ciddiyetinde, temiz padding'li, oval köşeli (rounded-3) modern kart tasarımları tercih edilecek.
 
+### ⚠️ Filtre/Arama — Zorunlu Tam Ekran Güncelleme Kuralı
+
+**Her sayfada filtre veya arama kutusu varsa**, ekrandaki TÜM öğeler filtreye göre güncellenmelidir:
+- Stat kartları (Toplam Lot, Toplam KG, vb.)
+- Tablo footer toplamları (`<tfoot>`)
+- Grup/ara toplamlar
+- Badge sayaçları
+
+**Uygulama pattern'i (DataTables kullanan sayfalar):**
+```javascript
+// 1. Her <tr>'ye data attribute ekle (InvariantCulture!)
+<tr data-giris="@val.ToString(CultureInfo.InvariantCulture)"
+    data-kalan="@val2.ToString(CultureInfo.InvariantCulture)">
+
+// 2. Stat kart/tfoot elementlerine ID ekle
+<div class="stat-value" id="cardGiris">...</div>
+<td id="ftGiris">...</td>
+
+// 3. draw.dt + input event'e bağla
+function recalcCards() {
+    var rows = table.querySelectorAll('tbody tr');
+    var giris = 0;
+    rows.forEach(tr => { if (tr.style.display !== 'none') giris += parseFloat(tr.dataset.giris) || 0; });
+    document.getElementById('cardGiris').textContent = Math.round(giris).toLocaleString('tr-TR');
+}
+$(table).on('draw.dt', recalcCards);
+searchInput.addEventListener('input', () => setTimeout(recalcCards, 60));
+recalcCards(); // ilk yüklemede de çalıştır
+```
+
+**Sunucu tarafı Razor `<tfoot>` toplamları DataTables ile UYUMSUZ** — filtreden bağımsız tüm satırları toplar. Çözüm: `data-val` attribute + JS recalc (yukarıdaki pattern). Hiçbir zaman sadece server-side toplam bırakma.
+
+### ⚠️ Mesaj/Onay Kutusu Standardı
+
+Native `confirm()` / `alert()` KULLANMA. Bunun yerine `_Layout.cshtml`'de tanımlı ARD temalı sistemleri kullan:
+- `await appConfirm('mesaj', { danger, title })` → Promise\<bool\>
+- `showToast('mesaj', 'success|error|warning|info')` → sağ-alt toast
+- `await appAlert('mesaj')` → OK-only uyarı
+
+### ⚠️ StockMovement Senkronizasyon Kuralı
+
+FscSerial ağırlığı değiştiğinde ilgili StockMovement da güncellenmelidir (1 lot = 1 SM kaydı):
+```csharp
+// SaveSerial() sonunda: lot toplamını hesapla, SM'yi bul ve güncelle
+// Anahtar: sm.DocumentNo == lot.DispatchNo ?? lot.PartiNo
+// Toplam KG: FscSerials.Sum(s => s.InitialWeight)
+// Orijinal birim: FscSerials.Sum(s => s.OriginalQuantity ?? s.InitialWeight)
+```
+SM yoksa oluştur, varsa güncelle. Bakınız: `PurchaseController.SaveSerial()`.
+
+### ⚠️ Decimal → JS/HTML Attribute Güvenliği
+
+JS'e veya `data-*` attribute'üne basılan her decimal **InvariantCulture** (nokta) kullanmalı:
+```cshtml
+// DOĞRU
+data-val="@item.Weight.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+var x = @item.Weight.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+// YANLIŞ — JS SyntaxError'a yol açar (tr-TR virgüllü yazar)
+data-val="@item.Weight"
+var x = @item.Weight;
+
+// YANLIŞ — JS argümanında virgül kaydırır
+onclick="fn(@item.Weight.ToString("N2"))"  // N0/N2 binlik ayraç ekler!
+```
+
 ## Dosya Yükleme Konvansiyonu
 
 PDF belgeler (irsaliye, fatura) şu dizine kaydedilmeli:
@@ -156,6 +222,41 @@ FscLot entity'sinde `InvoicePdfPath` ve `DispatchPdfPath` alanları mevcuttur.
    - Staging tabloları
    - ERP bağlantı yönetimi
    - Otomatik senkronizasyon
+
+## ⚠️ Özellik Tamamlama Kontrol Listesi (Her Yeni Sayfa/Özellik İçin ZORUNLU)
+
+Her yeni sayfa veya özellik tamamlandığında aşağıdaki adımlar **otomatik** yapılır — kullanıcı sormadan:
+
+1. **Filtre/arama varsa:** filtreye tıkla/yaz → tüm stat kartları, tfoot toplamları, badge sayaçları güncellendi mi? (JS `draw.dt` pattern uygulandı mı?)
+2. **Modal/form varsa:** kaydet → başarı mesajı, iptal → state sıfırlandı mı?
+3. **Boş durum:** veri yokken sayfa kırılıyor mu?
+4. **Build + webapp-testing ile tarayıcı doğrulaması** (ZORUNLU):
+   - Kullanıcıdan `Ctrl+Shift+B` (build) basmasını iste; build hatası yoksa devam et
+   - Playwright ile Golden Path + kenar durum testi çalıştır
+   - Test PASS olmadan "tamamlandı" deme — FAIL/PASS raporunu kullanıcıya bildir
+5. **KULLANIM_KILAVUZU.md güncelle** (bkz. "Kullanım Kılavuzu Güncelleme Kuralı" bölümü)
+6. **tasks/lessons.md güncelle** — Bu özellikte karşılaşılan teknik tuzakları, DataTables davranışlarını, Razor kısıtlamalarını ekle
+
+> **`webapp-testing` skill'i her özelliğin sonunda ZORUNLUDUR.** Sadece "kod doğru görünüyor" yetmez — çalıştırarak kanıtla.
+
+## ⚠️ Çapraz-Ekip Etki Kuralı (Cross-Impact Cascade)
+
+Bir alan değiştiğinde, **aşağıdaki ilgili alanlar otomatik kontrol edilmeli**; gerekirse güncellenmeli:
+
+| Değişen Alan | Etkilenen Alanlar |
+|---|---|
+| FscSerial ağırlığı (InitialWeight / CurrentWeight) | StockMovement (PurchaseEntry SM'i güncelle), Stok kartları, RawMaterial sayfası |
+| StockMovement yeni tip eklendi | StockController.Index/ExportStock filtreleri, Movements sayfası badge'leri, Net hesaplaması |
+| Product / ExternalCode | Purchase filtresi (ExternalCode OR ProductCode), StockSummary |
+| FscLot / DispatchNo | StockMovement.DocumentNo eşleşmesi |
+| Filtre paneli değişti (yeni alan eklendi/kaldırıldı) | Tüm stat kartları, tfoot toplamları, draw.dt recalc — MUTLAKA güncelle |
+| Yeni Controller / Action eklendi | _Layout.cshtml sidebar menü, KULLANIM_KILAVUZU.md |
+| Entity eklendi/değişti | Migration, AppDbContext, ilgili servis, ilgili controller/view |
+| Enum değeri eklendi (MovementType vb.) | Tüm switch/if blokları, badge renkleri, filtre dropdown'ları |
+
+**Kural:** Bir dosyada değişiklik yaparken yukarıdaki tabloyu zihinsel olarak tara. Etkilenen alan varsa aynı PR'da güncelle veya kullanıcıyı uyar.
+
+**Ekip yöneticisi (Ali) yükümlülüğü:** Uygulama ekibi bir alan teslim ettiğinde, etki tablosuna göre diğer ekip üyelerini (Ayşe/Ahmet/Nuri/Kadir) bilgilendir. "Bu stok hareketi tipi eklemesi RawMaterial sayfasını etkiliyor — Ayşe kontrol etsin" gibi açık bildirimler yapılmalıdır.
 
 ## Migration Komutları
 

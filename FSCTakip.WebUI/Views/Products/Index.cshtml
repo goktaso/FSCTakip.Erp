@@ -84,7 +84,7 @@
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="productsTable">
+            <table class="table table-hover align-middle mb-0 data-table" id="productsTable">
                 <thead class="bg-light text-dark text-uppercase small font-weight-bold">
                     <tr>
                         <th style="width: 100px;">Ürün Kodu</th>
@@ -326,12 +326,22 @@
             });
         }
 
-        function filterProducts() {
-            var val = $("#productSearch").val().toLowerCase();
-            $("#productsTable tbody tr").filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1);
-            });
-        }
+        // Topbar globalSearch → DataTables
+        $(document).on('init.dt', '#productsTable', function() {
+            var dt = $(this).DataTable();
+            var si = document.getElementById('globalSearch');
+            var sd = document.getElementById('searchDropdown');
+            if (!si) return;
+            if (sd) sd.classList.remove('show');
+            si.addEventListener('input', function(e) {
+                if (sd) sd.classList.remove('show');
+                dt.search(this.value).draw();
+                e.stopPropagation();
+            }, true);
+            si.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') { this.value = ''; dt.search('').draw(); e.preventDefault(); e.stopPropagation(); }
+            }, true);
+        });
 
         function exportToExcel() {
             const params = new URLSearchParams(window.location.search);

@@ -3,11 +3,16 @@
 @{
     ViewData["Title"] = "Stok Hareketleri";
     var products       = ViewBag.Products       as List<Product>                           ?? new();
+    var suppliers      = ViewBag.Suppliers      as List<FSCTakip.Core.Entities.Supplier>   ?? new();
+    var fscTypes       = ViewBag.FscTypes       as List<FSCTakip.Core.Entities.FscType>    ?? new();
     var purchaseLotMap = ViewBag.PurchaseLotMap as Dictionary<string, FscLot>              ?? new();
     var salesOrderMap  = ViewBag.SalesOrderMap  as Dictionary<string, SalesOrder>          ?? new();
     string? start      = ViewBag.StartDate;
     string? end        = ViewBag.EndDate;
     string? stockCode  = ViewBag.StockCode as string;
+    int? filtSupp      = ViewBag.SupplierId as int?;
+    int? filtFsc       = ViewBag.FscTypeId  as int?;
+    var productIds     = ViewBag.ProductIds as int[] ?? Array.Empty<int>();
 }
 
 <div class="page-header">
@@ -20,13 +25,37 @@
         <input type="text" name="stockCode" class="form-control form-control-sm"
                value="@stockCode" placeholder="Stok kodu / adı..." style="max-width:180px;"
                title="Stok kodu (ERP/dahili) veya stok adı ile ara" />
-        <select name="productId" class="form-control form-control-sm">
-            <option value="">— Ürün —</option>
-            @foreach (var p in products)
-            {
-                <option value="@p.Id">@p.ProductName</option>
-            }
-        </select>
+        <div class="mcd" id="mcd-products" data-placeholder="— Ürün —" style="min-width:220px;">
+            <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-products')">
+                <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " ürün seçildi" : "— Ürün —")</span>
+                <i class="fas fa-angle-down mcd-arrow"></i>
+            </button>
+            <div class="mcd-panel" id="mcd-products-panel" style="display:none;">
+                <div class="mcd-search-row">
+                    <input type="text" class="mcd-search" placeholder="Ürün ara..." oninput="mcdSearch(this)">
+                </div>
+                <label class="mcd-row mcd-header">
+                    <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-products')">
+                    <span>Tümünü Seç / Temizle</span>
+                </label>
+                <div class="mcd-items">
+                    @foreach (var p in products)
+                    {
+                        bool sel = productIds.Contains(p.Id);
+                        <label class="mcd-row">
+                            <input type="checkbox" name="productIds" value="@p.Id" class="mcd-cb"
+                                   onchange="mcdUpdate('mcd-products')"
+                                   checked="@(sel ? "checked" : null)">
+                            <span class="mcd-name" title="@p.ProductName">@p.ProductName</span>
+                            @if (!string.IsNullOrEmpty(p.ProductCode))
+                            { <span class="mcd-sub">@p.ProductCode</span> }
+                            @if (!string.IsNullOrEmpty(p.ExternalCode))
+                            { <span class="mcd-ext">@p.ExternalCode</span> }
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
         <select name="type" class="form-control form-control-sm">
             <option value="">— Hareket Tipi —</option>
             <option value="4">Satın Alma Girişi</option>
@@ -34,6 +63,20 @@
             <option value="3">Satış Çıkışı</option>
             <option value="5">Üretim Tüketimi (Çıkış)</option>
             <option value="2">Depo Transferi</option>
+        </select>
+        <select name="supplierId" class="form-control form-control-sm" style="max-width:160px;">
+            <option value="">— Tedarikçi —</option>
+            @foreach (var s in suppliers)
+            {
+                <option value="@s.Id" selected="@(filtSupp == s.Id ? "selected" : null)">@s.Name</option>
+            }
+        </select>
+        <select name="fscTypeId" class="form-control form-control-sm" style="max-width:130px;">
+            <option value="">— FSC Tipi —</option>
+            @foreach (var f in fscTypes)
+            {
+                <option value="@f.Id" selected="@(filtFsc == f.Id ? "selected" : null)">@f.Name</option>
+            }
         </select>
         <input type="date" name="startDate" class="form-control form-control-sm" value="@start" title="Başlangıç" />
         <input type="date" name="endDate"   class="form-control form-control-sm" value="@end"   title="Bitiş" />
@@ -47,6 +90,37 @@
 
 <!-- Table -->
 <div class="table-card">
+    @if (Model.Any())
+    {
+        <div class="d-flex align-items-center justify-content-between px-4 py-2 mb-2 rounded-3"
+             style="background:rgba(25,118,210,.08);border:1px solid rgba(25,118,210,.2);font-size:13px;">
+            <div class="d-flex align-items-center gap-3">
+                <i class="fas fa-sigma text-primary"></i>
+                <span style="font-weight:600;">Filtreye Göre Toplam</span>
+                <span class="text-muted small">(<span id="bandCount">@Model.Count</span> hareket)</span>
+            </div>
+            <div class="d-flex gap-4">
+                <div>
+                    <span class="text-muted small">Giriş:</span>
+                    <strong class="text-success ms-1" id="bandGiris">
+                        @Model.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity).ToString("N0")
+                    </strong>
+                </div>
+                <div>
+                    <span class="text-muted small">Çıkış:</span>
+                    <strong class="text-danger ms-1" id="bandCikis">
+                        @Model.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity).ToString("N0")
+                    </strong>
+                </div>
+                <div>
+                    <span class="text-muted small">Net:</span>
+                    <strong class="ms-1" id="bandNet">
+                        @((Model.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity) - Model.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity)).ToString("N0"))
+                    </strong>
+                </div>
+            </div>
+        </div>
+    }
     <div class="table-responsive">
         <table class="data-table">
             <thead>
@@ -102,10 +176,25 @@
                     if (m.Type == MovementType.SalesDispatch && m.DocumentNo != null)
                         salesOrderMap.TryGetValue(m.DocumentNo, out salesOrder);
 
-                    <tr>
+                    <tr class="data-row"
+                        data-qty="@m.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                        data-giris="@(isGiris ? m.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0")"
+                        data-cikis="@(isCikis ? m.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0")">
                         <td class="small text-muted">@m.DocumentDate.ToString("dd.MM.yyyy")</td>
                         <td><span class="badge @tipClass">@tipText</span></td>
-                        <td><strong class="small">@(m.Product?.ProductName ?? "—")</strong></td>
+                        <td>
+                            <strong class="small">@(m.Product?.ProductName ?? "—")</strong>
+                            @if (!string.IsNullOrEmpty(m.Product?.ProductCode))
+                            {
+                                <div class="text-muted" style="font-size:10px;">
+                                    <i class="fas fa-tag me-1"></i>@m.Product.ProductCode
+                                    @if (!string.IsNullOrEmpty(m.Product.ExternalCode))
+                                    {
+                                        <span class="ms-1 badge" style="background:#eef2ff;color:#3730a3;font-size:9px;">@m.Product.ExternalCode</span>
+                                    }
+                                </div>
+                            }
+                        </td>
                         <td class="text-end fw-semibold @(isGiris ? "text-success" : isCikis ? "text-danger" : "")">
                             @(isGiris ? "+" : isCikis ? "-" : "")@m.Quantity.ToString("N0")
                         </td>
@@ -205,16 +294,110 @@
     @if (Model.Any())
     {
         <div class="table-footer d-flex justify-content-between align-items-center px-3 py-2 border-top small text-muted">
-            <span>@Model.Count kayıt</span>
+            <span id="footerCount">@Model.Count kayıt</span>
             <span>
-                Toplam Giriş: <strong class="text-success">
+                Toplam Giriş: <strong class="text-success" id="footerGiris">
                     @Model.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity).ToString("N0")
                 </strong>
                 &nbsp;|&nbsp;
-                Toplam Çıkış: <strong class="text-danger">
+                Toplam Çıkış: <strong class="text-danger" id="footerCikis">
                     @Model.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity).ToString("N0")
                 </strong>
             </span>
         </div>
     }
 </div>
+
+@section Scripts {
+<style>
+.mcd { position: relative; }
+.mcd-btn { width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:var(--surface,#fff); border:1px solid var(--border,#d1d5db); color:var(--text,#111); padding:5px 10px; border-radius:6px; font-size:13px; }
+.mcd-btn:hover { border-color:#1976d2; }
+.mcd-panel { position:absolute; top:calc(100% + 4px); left:0; min-width:280px; max-width:380px; background:#fff; border:1px solid #d1d5db; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.12); z-index:1050; display:flex; flex-direction:column; overflow:hidden; }
+.mcd-search-row { padding:8px 10px; border-bottom:1px solid #f1f5f9; }
+.mcd-search { width:100%; border:1px solid #e5e7eb; border-radius:6px; padding:5px 10px; font-size:12.5px; outline:none; }
+.mcd-search:focus { border-color:#1976d2; box-shadow:0 0 0 2px rgba(25,118,210,.15); }
+.mcd-header { background:#f8fafc; border-bottom:1px solid #e5e7eb; font-weight:600; font-size:12.5px; color:#374151; }
+.mcd-items { overflow-y:auto; max-height:260px; }
+.mcd-row { display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:12.5px; user-select:none; }
+.mcd-row:hover { background:#eff6ff; }
+.mcd-cb, .mcd-all-cb { cursor:pointer; accent-color:#1976d2; min-width:15px; height:15px; }
+.mcd-name { flex:1; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; }
+.mcd-sub { font-size:10.5px; color:#374151; background:#f3f4f6; padding:1px 5px; border-radius:4px; white-space:nowrap; }
+.mcd-ext { font-size:10.5px; color:#3730a3; background:#eef2ff; padding:1px 5px; border-radius:4px; white-space:nowrap; }
+.mcd-arrow { color:#6b7280; font-size:11px; }
+</style>
+<script>
+(function(){
+    window.mcdOpen = function(id) {
+        var panel = document.getElementById(id+'-panel');
+        var isOpen = panel && panel.style.display !== 'none';
+        document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
+        if (!isOpen && panel) { panel.style.display='flex'; mcdUpdate(id); }
+    };
+    window.mcdSearch = function(input) {
+        var term = input.value.toLowerCase();
+        input.closest('.mcd-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(row){
+            row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+        });
+    };
+    window.mcdToggleAll = function(cb, id) {
+        document.getElementById(id+'-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(row){
+            if (row.style.display !== 'none') { var c = row.querySelector('.mcd-cb'); if(c) c.checked = cb.checked; }
+        });
+        mcdUpdate(id);
+    };
+    window.mcdUpdate = function(id) {
+        var panel = document.getElementById(id+'-panel');
+        var container = document.getElementById(id);
+        if (!panel || !container) return;
+        var checked = panel.querySelectorAll('.mcd-cb:checked').length;
+        var lbl = container.querySelector('.mcd-lbl');
+        if (lbl) lbl.textContent = checked === 0 ? (container.dataset.placeholder||'— Seçiniz —') : checked + ' ürün seçildi';
+        var allCb = panel.querySelector('.mcd-all-cb');
+        var visible = panel.querySelectorAll('.mcd-row:not(.mcd-header):not([style*="none"]) .mcd-cb').length;
+        if (allCb && visible > 0) allCb.checked = (checked >= visible);
+    };
+    document.addEventListener('mousedown', function(e){
+        if (!e.target.closest('.mcd')) document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
+    });
+})();
+</script>
+<script>
+    $(document).on('init.dt', 'table.data-table', function() {
+        var dt = $(this).DataTable();
+        var si = document.getElementById('globalSearch');
+        var sd = document.getElementById('searchDropdown');
+        if (!si) return;
+        if (sd) sd.classList.remove('show');
+        si.addEventListener('input', function(e) {
+            if (sd) sd.classList.remove('show');
+            dt.search(this.value).draw();
+            e.stopPropagation();
+        }, true);
+        si.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { this.value = ''; dt.search('').draw(); e.preventDefault(); e.stopPropagation(); }
+        }, true);
+    });
+
+    $(document).on('draw.dt', 'table.data-table', function() {
+        var dt = $(this).DataTable();
+        var count = 0, giris = 0, cikis = 0;
+        dt.rows({ search: 'applied' }).nodes().each(function(tr) {
+            if (!tr.classList.contains('data-row')) return;
+            count++;
+            giris += parseFloat(tr.dataset.giris) || 0;
+            cikis += parseFloat(tr.dataset.cikis) || 0;
+        });
+        var fmt = function(n) { return Math.round(n).toLocaleString('tr-TR'); };
+        var g = function(id) { return document.getElementById(id); };
+        if (g('bandCount'))  g('bandCount').textContent  = count;
+        if (g('bandGiris'))  g('bandGiris').textContent  = fmt(giris);
+        if (g('bandCikis'))  g('bandCikis').textContent  = fmt(cikis);
+        if (g('bandNet'))    g('bandNet').textContent    = fmt(giris - cikis);
+        if (g('footerCount')) g('footerCount').textContent = count + ' kayıt';
+        if (g('footerGiris')) g('footerGiris').textContent = fmt(giris);
+        if (g('footerCikis')) g('footerCikis').textContent = fmt(cikis);
+    });
+</script>
+}

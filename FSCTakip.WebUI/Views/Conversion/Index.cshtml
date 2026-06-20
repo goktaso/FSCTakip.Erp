@@ -26,12 +26,17 @@
             <div class="card-body">
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Kaynak Bobin (Ham / YM) <span class="text-danger">*</span></label>
-                    <select id="sourceSerialId" class="form-select" onchange="onSourceChange()">
+                    <input type="text" id="sourceSearch" class="form-control mb-2"
+                           placeholder="Dış kod, stok adı veya seri no ile filtrele..."
+                           oninput="filterSource()">
+                    <select id="sourceSerialId" class="form-select" size="6" style="height:180px;" onchange="onSourceChange()">
                         <option value="">— Stoktaki bobin seçin —</option>
                         @foreach (var s in sources)
                         {
                             <option value="@s.Id" data-kalan="@s.CurrentWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-fsc="@s.FscType">
-                                @(s.UrunKod ?? "—") · @s.UrunAd · @s.SerialNo · kalan @s.CurrentWeight.ToString("N2") kg
+                                @if (!string.IsNullOrEmpty(s.UrunIcKod)) { <text>[@s.UrunIcKod] </text> }
+                                @if (!string.IsNullOrEmpty(s.UrunKod)) { <text>(@s.UrunKod) </text> }
+                                @s.UrunAd · @s.SerialNo · kalan @s.CurrentWeight.ToString("N2") kg
                             </option>
                         }
                     </select>
@@ -46,7 +51,9 @@
                     <select id="targetProductId" class="form-select" size="6" style="height:auto;">
                         @foreach (var t in targets)
                         {
-                            <option value="@t.Id" data-text="@((t.Kod + " " + t.Ad).ToLower())">@t.Kod — @t.Ad</option>
+                            <option value="@t.Id" data-text="@((t.Kod + " " + (t.ExtKod ?? "") + " " + t.Ad).ToLower())">
+                                @t.Kod@(!string.IsNullOrEmpty(t.ExtKod) ? " (" + t.ExtKod + ")" : "") — @t.Ad
+                            </option>
                         }
                     </select>
                 </div>
@@ -137,6 +144,20 @@
 @section Scripts {
 <script>
 document.getElementById('convDate').value = new Date().toISOString().slice(0,10);
+
+function filterSource() {
+    const term = (document.getElementById('sourceSearch').value || '').toLowerCase().trim();
+    document.querySelectorAll('#sourceSerialId option').forEach(function(o) {
+        if (!o.value) return; // placeholder'ı koru
+        o.style.display = (!term || o.textContent.toLowerCase().includes(term)) ? '' : 'none';
+    });
+    // Filtre sonrası seçimi sıfırla
+    const sel = document.getElementById('sourceSerialId');
+    if (sel.selectedOptions[0] && sel.selectedOptions[0].style.display === 'none') {
+        sel.value = '';
+        document.getElementById('srcInfo').style.display = 'none';
+    }
+}
 
 function onSourceChange() {
     const opt = document.getElementById('sourceSerialId').selectedOptions[0];

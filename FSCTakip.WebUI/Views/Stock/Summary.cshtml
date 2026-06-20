@@ -1,0 +1,388 @@
+@model List<FSCTakip.WebUI.Controllers.StockSummaryItem>
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "Stok Durumu";
+    var allGroups      = ViewBag.ProductGroups  as List<ProductGroup> ?? new();
+    var fscTypes       = ViewBag.FscTypes       as List<FscType>      ?? new();
+    var selectedIds    = ViewBag.SelectedGroupIds as int[] ?? Array.Empty<int>();
+    int?   selFsc      = ViewBag.FscTypeId;
+    string search      = ViewBag.Search ?? "";
+    decimal totalKg    = ViewBag.TotalKg ?? 0m;
+    int totalProducts  = ViewBag.TotalProducts ?? 0;
+    int totalLots      = ViewBag.TotalLots ?? 0;
+    int totalSerials   = ViewBag.TotalSerials ?? 0;
+    if (selectedIds.Length == 0) selectedIds = new[] { 1, 4, 3 };
+}
+
+<!-- Topbar -->
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fw-semibold" style="color:var(--text);font-size:14px;">
+            <i class="fas fa-chart-bar me-2 text-primary"></i>Stok Özeti
+        </span>
+    </div>
+    <div class="d-flex gap-2 ms-auto">
+        <a href="/Stock/RawMaterial" class="topbar-btn">
+            <i class="fas fa-scroll me-1"></i> Hammadde Detayı
+        </a>
+        <span class="topbar-user">
+            <i class="fas fa-user-circle"></i>
+            @(User.Identity?.Name ?? "Kullanıcı")
+        </span>
+    </div>
+</div>
+
+<!-- Özet Kartlar -->
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#dbeafe;color:#1d4ed8;"><i class="fas fa-boxes"></i></div>
+            <div class="stat-body">
+                <div class="stat-val" id="cardProducts">@totalProducts</div>
+                <div class="stat-lbl">Ürün Çeşidi</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#dcfce7;color:#166534;"><i class="fas fa-weight-hanging"></i></div>
+            <div class="stat-body">
+                <div class="stat-val" id="cardTotalKg">@totalKg.ToString("N0") <small style="font-size:13px;">KG</small></div>
+                <div class="stat-lbl">Genel Toplam (KG)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#fef3c7;color:#92400e;"><i class="fas fa-layer-group"></i></div>
+            <div class="stat-body">
+                <div class="stat-val" id="cardLots">@totalLots</div>
+                <div class="stat-lbl">Lot Sayısı</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#ede9fe;color:#5b21b6;"><i class="fas fa-scroll"></i></div>
+            <div class="stat-body">
+                <div class="stat-val" id="cardSerials">@totalSerials</div>
+                <div class="stat-lbl">Bobin / Seri</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtre -->
+<form method="get" action="/Stock/Summary" id="summaryForm">
+    <div class="filter-card" style="padding:14px 18px;">
+
+        <!-- Satır 1: Ürün Grubu Checkbox'ları -->
+        <div class="d-flex align-items-center gap-3 flex-wrap mb-3">
+            <span style="font-size:12px;font-weight:600;color:var(--text-muted);min-width:80px;">
+                <i class="fas fa-filter me-1 text-primary" style="font-size:10px;"></i>Ürün Grubu
+            </span>
+            <div class="d-flex gap-1 flex-wrap" id="groupChecks">
+                @foreach (var g in allGroups)
+                {
+                    bool chk = selectedIds.Contains(g.Id);
+                    <label class="grp-pill @(chk ? "grp-pill-on" : "")">
+                        <input type="checkbox" name="groupIds" value="@g.Id"
+                               @(chk ? "checked=\"checked\"" : "") />
+                        @g.GroupName
+                    </label>
+                }
+            </div>
+            <div class="d-flex gap-1 ms-auto">
+                <button type="button" onclick="setAllGroups(true)"
+                        class="btn btn-sm"
+                        style="font-size:11px;padding:2px 10px;background:rgba(255,255,255,.07);color:var(--text-muted);border:1px solid var(--border);">
+                    Tümü
+                </button>
+                <button type="button" onclick="setAllGroups(false)"
+                        class="btn btn-sm"
+                        style="font-size:11px;padding:2px 10px;background:rgba(255,255,255,.07);color:var(--text-muted);border:1px solid var(--border);">
+                    Temizle
+                </button>
+            </div>
+        </div>
+
+        <!-- Satır 2: Arama + Butonlar -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span style="font-size:12px;font-weight:600;color:var(--text-muted);min-width:80px;">
+                <i class="fas fa-search me-1 text-primary" style="font-size:10px;"></i>Arama
+            </span>
+            <input type="text" name="search" class="form-control form-control-sm"
+                   placeholder="Ürün adı, kodu ara..." value="@search"
+                   style="max-width:260px;" />
+            <button type="submit" class="btn btn-primary btn-sm px-3">
+                <i class="fas fa-check me-1"></i>Uygula
+            </button>
+            <a href="/Stock/Summary" class="btn btn-outline-secondary btn-sm">Sıfırla</a>
+        </div>
+
+    </div>
+</form>
+
+<!-- Tablo -->
+<div class="table-card">
+    <div class="table-header" style="display:flex;align-items:center;flex-wrap:nowrap;">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-chart-bar text-primary"></i>
+            <span>Ürün Bazında Stok</span>
+            <span class="badge" style="background:rgba(25,118,210,.2);color:#90caf9;">@Model.Count ürün</span>
+        </div>
+        <!-- Genel Toplam — başlık içinde sağda -->
+        <div class="d-flex align-items-center gap-2" style="margin-left:auto;">
+            <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">Genel Toplam (KG):</span>
+            <span id="headerTotalKg" style="color:#4ade80;font-size:18px;font-weight:700;white-space:nowrap;">
+                @totalKg.ToString("N0") <span style="font-size:12px;font-weight:500;color:#86efac;">KG</span>
+            </span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ERP KODU</th>
+                    <th>STOK KODU</th>
+                    <th>ÜRÜN ADI</th>
+                    <th>GRUP</th>
+                    <th class="text-end">STOK MİKTARI</th>
+                    <th class="text-end">KG KARŞILIĞI</th>
+                    <th class="text-center">LOT</th>
+                    <th class="text-center">BOBİN</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="9">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-warehouse"></i></div>
+                                <h6>Seçili gruplarda stok bulunamadı</h6>
+                                <p>Farklı ürün grubu seçin veya hammadde girişi yapın.</p>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @{
+                    string? lastGroup = null;
+                    decimal groupKg = 0;
+                    int groupCount = 0;
+                    var rows = Model.OrderBy(r => r.GroupName).ThenBy(r => r.ProductName).ToList();
+                    for (int idx = 0; idx < rows.Count; idx++)
+                    {
+                        var row = rows[idx];
+                        bool newGroup  = row.GroupName != lastGroup;
+                        bool lastInGrp = (idx == rows.Count - 1) || rows[idx + 1].GroupName != row.GroupName;
+                        bool hasConv   = row.Unit != "KG" && row.OriginalTotal.HasValue;
+
+                        if (newGroup)
+                        {
+                            groupKg = 0; groupCount = 0;
+                            lastGroup = row.GroupName;
+                            int grpTotal = rows.Count(r => r.GroupName == row.GroupName);
+                            <tr class="group-header-row">
+                                <td colspan="9">
+                                    <i class="fas fa-folder-open me-2"></i>@row.GroupName
+                                    <span class="ms-2" style="font-weight:400;opacity:.7;">(@grpTotal ürün)</span>
+                                </td>
+                            </tr>
+                        }
+
+                        groupKg += row.TotalKg;
+                        groupCount++;
+
+                        <tr class="data-row" data-kg="@row.TotalKg.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-lots="@row.LotCount" data-serials="@row.SerialCount">
+                            <td>
+                                @if (!string.IsNullOrEmpty(row.ExternalCode))
+                                {
+                                    <span class="badge" style="background:#eef2ff;color:#3730a3;font-size:11px;">@row.ExternalCode</span>
+                                }
+                                else { <span class="text-muted">—</span> }
+                            </td>
+                            <td class="text-muted small">@row.ProductCode</td>
+                            <td><strong>@row.ProductName</strong></td>
+                            <td class="small text-muted">@row.GroupName</td>
+                            <!-- Stok Miktarı (orijinal birim) -->
+                            <td class="text-end fw-semibold">
+                                @if (hasConv)
+                                {
+                                    @row.OriginalTotal!.Value.ToString("N3")
+                                    <small class="text-muted fw-normal ms-1">@row.Unit</small>
+                                }
+                                else
+                                {
+                                    @row.TotalKg.ToString("N3")
+                                    <small class="text-muted fw-normal ms-1">KG</small>
+                                }
+                            </td>
+                            <!-- KG Karşılığı -->
+                            <td class="text-end">
+                                @if (hasConv)
+                                {
+                                    <span style="color:#86efac;font-size:12px;">
+                                        @row.TotalKg.ToString("N3")
+                                        <small class="text-muted fw-normal ms-1">KG</small>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">—</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <span class="badge" style="background:rgba(255,255,255,.1);color:var(--text-muted);">@row.LotCount</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge" style="background:rgba(255,255,255,.1);color:var(--text-muted);">@row.SerialCount</span>
+                            </td>
+                            <td>
+                                <a href="/Stock/RawMaterial?productId=@row.ProductId" class="topbar-btn" style="font-size:11px;padding:3px 8px;">
+                                    <i class="fas fa-eye me-1"></i>Detay
+                                </a>
+                            </td>
+                        </tr>
+
+                        @if (lastInGrp)
+                        {
+                            <tr class="group-subtotal">
+                                <td colspan="4" class="text-end">@row.GroupName — Ara Toplam</td>
+                                <td colspan="2" class="text-end" style="color:#4ade80;">@groupKg.ToString("N0") KG</td>
+                                <td colspan="3"></td>
+                            </tr>
+                        }
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    /* Grup pill checkbox */
+    .grp-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        border: 1.5px solid var(--border);
+        color: var(--text-muted);
+        background: transparent;
+        transition: all .18s;
+        user-select: none;
+    }
+    .grp-pill input[type="checkbox"] { display: none; }
+    .grp-pill::before {
+        content: '';
+        display: inline-block;
+        width: 13px; height: 13px;
+        border-radius: 3px;
+        border: 1.5px solid var(--border);
+        background: transparent;
+        flex-shrink: 0;
+        transition: all .18s;
+    }
+    .grp-pill-on,
+    .grp-pill:has(input:checked) {
+        border-color: var(--brand);
+        color: #fff;
+        background: rgba(25,118,210,.18);
+    }
+    .grp-pill-on::before,
+    .grp-pill:has(input:checked)::before {
+        background: var(--brand);
+        border-color: var(--brand);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 8'%3E%3Cpath d='M1 4l3 3L9 1' stroke='white' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-size: 9px;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    .grp-pill:hover { border-color: var(--brand); color: var(--text); }
+
+    .group-header-row td {
+        background: rgba(25,118,210,.08);
+        font-weight: 700;
+        font-size: 12px;
+        padding: 6px 14px;
+        color: var(--brand);
+        letter-spacing: .04em;
+    }
+    .group-subtotal td {
+        background: rgba(255,255,255,.04);
+        font-weight: 600;
+        font-size: 12px;
+        padding: 5px 14px;
+        color: var(--text-muted);
+    }
+</style>
+
+@section Scripts {
+<script>
+    // Pill tıklandığında checkbox durumunu ve stilini güncelle
+    document.querySelectorAll('.grp-pill').forEach(function(pill) {
+        pill.addEventListener('click', function() {
+            var cb = this.querySelector('input[type="checkbox"]');
+            cb.checked = !cb.checked;
+            this.classList.toggle('grp-pill-on', cb.checked);
+        });
+    });
+
+    // Tümünü seç / Temizle
+    function setAllGroups(state) {
+        document.querySelectorAll('#groupChecks input[type="checkbox"]').forEach(function(cb) {
+            cb.checked = state;
+            cb.closest('.grp-pill').classList.toggle('grp-pill-on', state);
+        });
+    }
+
+    // DataTables: topbar globalSearch → DT API bağlantısı
+    $(document).on('init.dt', 'table.data-table', function () {
+        var dt = $(this).DataTable();
+        var searchInput = document.getElementById('globalSearch');
+        var searchDropdown = document.getElementById('searchDropdown');
+        if (searchInput) {
+            if (searchDropdown) searchDropdown.classList.remove('show');
+            searchInput.addEventListener('input', function (e) {
+                if (searchDropdown) searchDropdown.classList.remove('show');
+                dt.search(this.value).draw();
+                e.stopPropagation();
+            }, true);
+            searchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    this.value = ''; dt.search('').draw();
+                    if (searchDropdown) searchDropdown.classList.remove('show');
+                    e.preventDefault(); e.stopPropagation();
+                }
+            }, true);
+            if (searchInput.value) dt.search(searchInput.value).draw();
+        }
+    });
+
+    // draw.dt: görünür satırlardan stat kartları ve başlık toplamını güncelle
+    $(document).on('draw.dt', 'table.data-table', function () {
+        var dt = $(this).DataTable();
+        var totalKg = 0, totalProducts = 0, totalLots = 0, totalSerials = 0;
+        dt.rows({ search: 'applied' }).nodes().each(function (tr) {
+            if (!tr.classList.contains('data-row')) return; // grup başlığı / ara toplam satırlarını atla
+            totalKg       += parseFloat(tr.dataset.kg)      || 0;
+            totalProducts += 1;
+            totalLots     += parseInt(tr.dataset.lots)      || 0;
+            totalSerials  += parseInt(tr.dataset.serials)   || 0;
+        });
+        var fmt = function (n) { return Math.round(n).toLocaleString('tr-TR'); };
+        var g   = function (id) { return document.getElementById(id); };
+        if (g('cardProducts'))  g('cardProducts').textContent  = totalProducts;
+        if (g('cardTotalKg'))   g('cardTotalKg').innerHTML     = fmt(totalKg) + ' <small style="font-size:13px;">KG</small>';
+        if (g('cardLots'))      g('cardLots').textContent      = fmt(totalLots);
+        if (g('cardSerials'))   g('cardSerials').textContent   = fmt(totalSerials);
+        if (g('headerTotalKg')) g('headerTotalKg').innerHTML   = fmt(totalKg) + ' <span style="font-size:12px;font-weight:500;color:#86efac;">KG</span>';
+    });
+</script>
+}

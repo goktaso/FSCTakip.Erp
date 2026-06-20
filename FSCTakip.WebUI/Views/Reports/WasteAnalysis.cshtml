@@ -35,14 +35,14 @@
     <div class="stat-card">
         <div class="stat-icon amber"><i class="fas fa-weight-hanging"></i></div>
         <div class="stat-info">
-            <div class="stat-value">@Model.TotalConsumedKg.ToString("N0") kg</div>
+            <div class="stat-value" id="cardConsumed">@Model.TotalConsumedKg.ToString("N0") kg</div>
             <div class="stat-label">Toplam Tüketim</div>
         </div>
     </div>
     <div class="stat-card">
         <div class="stat-icon red"><i class="fas fa-trash-alt"></i></div>
         <div class="stat-info">
-            <div class="stat-value">@Model.TotalWasteKg.ToString("N0") kg</div>
+            <div class="stat-value" id="cardWaste">@Model.TotalWasteKg.ToString("N0") kg</div>
             <div class="stat-label">Üretim Kaynaklı Fire</div>
         </div>
     </div>
@@ -51,14 +51,14 @@
             <i class="fas fa-percentage"></i>
         </div>
         <div class="stat-info">
-            <div class="stat-value">%@Model.OverallFireRate.ToString("N1")</div>
+            <div class="stat-value" id="cardFireRate">%@Model.OverallFireRate.ToString("N1")</div>
             <div class="stat-label">Genel Fire Oranı</div>
         </div>
     </div>
     <div class="stat-card">
         <div class="stat-icon blue"><i class="fas fa-recycle"></i></div>
         <div class="stat-info">
-            <div class="stat-value">@Model.TotalWasteRecordKg.ToString("N0") kg</div>
+            <div class="stat-value" id="cardWasteRecord">@Model.TotalWasteRecordKg.ToString("N0") kg</div>
             <div class="stat-label">Atık Yönetim Kaydı</div>
         </div>
     </div>
@@ -89,7 +89,10 @@
                         @foreach (var row in Model.ByMachine)
                         {
                             var rateClass = row.FireRate > 5 ? "text-danger fw-bold" : row.FireRate > 3 ? "text-warning fw-semibold" : "text-success";
-                            <tr>
+                            <tr class="data-row"
+                                data-consumed="@row.TotalConsumedKg.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-waste="@row.TotalWasteKg.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-count="@row.RecordCount">
                                 <td><strong>@row.MachineName</strong><br><span class="text-muted small">@row.RecordCount kayıt</span></td>
                                 <td class="text-end small">@row.TotalConsumedKg.ToString("N0") kg</td>
                                 <td class="text-end small">@row.TotalWasteKg.ToString("N0") kg</td>
@@ -180,4 +183,44 @@
     </div>
 }
 
-> **Bilgi:** Fire oranı %3'ün altında **yeşil**, %3–5 arası **turuncu**, %5 üzeri **kırmızı** olarak işaretlenir. FSC CoC denetiminde fire kayıtları ile üretim detaylarının tutarlı olması gerekir.
+<div class="alert alert-info mt-3" style="font-size:13px;">
+    <i class="fas fa-info-circle me-2"></i>
+    Fire oranı %3'ün altında <strong>yeşil</strong>, %3–5 arası <strong>turuncu</strong>, %5 üzeri <strong>kırmızı</strong> olarak işaretlenir.
+    FSC CoC denetiminde fire kayıtları ile üretim detaylarının tutarlı olması gerekir.
+</div>
+
+@section Scripts {
+<script>
+    $(document).on('init.dt', 'table.data-table', function () {
+        var dt = $(this).DataTable();
+        var si = document.getElementById('globalSearch');
+        var sd = document.getElementById('searchDropdown');
+        if (!si) return;
+        if (sd) sd.classList.remove('show');
+        si.addEventListener('input', function (e) {
+            if (sd) sd.classList.remove('show');
+            dt.search(this.value).draw();
+            e.stopPropagation();
+        }, true);
+        si.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { this.value = ''; dt.search('').draw(); e.preventDefault(); e.stopPropagation(); }
+        }, true);
+    });
+
+    $(document).on('draw.dt', 'table.data-table', function () {
+        var dt = $(this).DataTable();
+        var consumed = 0, waste = 0;
+        dt.rows({ search: 'applied' }).nodes().each(function (tr) {
+            if (!tr.classList.contains('data-row')) return;
+            consumed += parseFloat(tr.dataset.consumed) || 0;
+            waste    += parseFloat(tr.dataset.waste)    || 0;
+        });
+        var fireRate = consumed > 0 ? (waste / consumed * 100) : 0;
+        var fmt = function (n) { return Math.round(n).toLocaleString('tr-TR') + ' kg'; };
+        var g = function (id) { return document.getElementById(id); };
+        if (g('cardConsumed')) g('cardConsumed').textContent = fmt(consumed);
+        if (g('cardWaste'))    g('cardWaste').textContent    = fmt(waste);
+        if (g('cardFireRate')) g('cardFireRate').textContent = '%' + fireRate.toFixed(1).replace('.', ',');
+    });
+</script>
+}

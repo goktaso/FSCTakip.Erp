@@ -191,8 +191,10 @@
                     <th>FSC TİPİ</th>
                     <th class="text-end" style="color:#7c3aed;">AÇILIŞ BAKİYESİ (kg)</th>
                     <th class="text-end" style="color:#1d4ed8;">DÖNEM GİRİŞİ (kg)</th>
+                    <th class="text-end" style="color:#0369a1;">YM DÖNÜŞÜM GİRİŞİ (kg)</th>
                     <th class="text-end">DÖNEM TÜKETİMİ (kg)</th>
                     <th class="text-end text-danger">FİRE (kg)</th>
+                    <th class="text-end" style="color:#b45309;">DÖNÜŞÜM FİRESİ (kg)</th>
                     <th class="text-end text-success">KAPANIŞ BAKİYESİ (kg)</th>
                     @if (isCurrentPeriod)
                     {
@@ -204,7 +206,7 @@
             <tbody>
                 @if (!Model.BalanceRows.Any())
                 {
-                    <tr><td colspan="7" class="text-center text-muted py-4">Dönemde veri bulunamadı.</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted py-4">Dönemde veri bulunamadı.</td></tr>
                 }
                 @foreach (var b in Model.BalanceRows)
                 {
@@ -214,8 +216,10 @@
                         </td>
                         <td class="text-end fw-semibold" style="color:#7c3aed;">@b.OpeningKg.ToString("N2")</td>
                         <td class="text-end fw-semibold text-primary">@b.InputKg.ToString("N2")</td>
+                        <td class="text-end fw-semibold" style="color:@(b.YmConversionKg > 0 ? "#0369a1" : "#9ca3af");">@b.YmConversionKg.ToString("N2")</td>
                         <td class="text-end fw-semibold">@b.ConsumedKg.ToString("N2")</td>
                         <td class="text-end text-danger">@b.WasteKg.ToString("N2")</td>
+                        <td class="text-end" style="color:@(b.ConversionFireKg > 0 ? "#b45309" : "#9ca3af");">@b.ConversionFireKg.ToString("N2")</td>
                         <td class="text-end fw-semibold text-success">@b.ClosingKg.ToString("N2")</td>
                         @if (isCurrentPeriod)
                         {
@@ -243,8 +247,10 @@
                         <td class="text-muted">TOPLAM</td>
                         <td class="text-end" style="color:#7c3aed;">@Model.BalanceRows.Sum(r => r.OpeningKg).ToString("N2")</td>
                         <td class="text-end text-primary">@Model.BalanceRows.Sum(r => r.InputKg).ToString("N2")</td>
+                        <td class="text-end" style="color:#0369a1;">@Model.BalanceRows.Sum(r => r.YmConversionKg).ToString("N2")</td>
                         <td class="text-end">@Model.BalanceRows.Sum(r => r.ConsumedKg).ToString("N2")</td>
                         <td class="text-end text-danger">@Model.BalanceRows.Sum(r => r.WasteKg).ToString("N2")</td>
+                        <td class="text-end" style="color:#b45309;">@Model.BalanceRows.Sum(r => r.ConversionFireKg).ToString("N2")</td>
                         <td class="text-end text-success">@Model.BalanceRows.Sum(r => r.ClosingKg).ToString("N2")</td>
                         @if (isCurrentPeriod)
                         {
@@ -377,6 +383,69 @@
     </div>
 </div>
 
+<!-- FSC Tipi Bazında Tüketim Özeti -->
+@{
+    var fscGroups = Model.ProductionRows
+        .SelectMany(r => (r.FscTypes?.Split(',') ?? new[] { "Tanımsız" })
+            .Select(f => new { FscTip = f.Trim(), r.ConsumedKg, r.WasteKg }))
+        .GroupBy(x => x.FscTip)
+        .Select(g => new { FscTip = g.Key, Consumed = g.Sum(x => x.ConsumedKg), Waste = g.Sum(x => x.WasteKg) })
+        .OrderBy(x => x.FscTip)
+        .ToList();
+}
+@if (fscGroups.Any())
+{
+    <div class="table-card mb-4">
+        <div class="p-3 border-bottom d-flex align-items-center gap-2">
+            <span style="width:28px;height:28px;border-radius:8px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-leaf" style="color:#16a34a;font-size:12px;"></i>
+            </span>
+            <strong style="font-size:13px;">FSC Tipi Bazında Tüketim ve Fire</strong>
+            <span class="badge badge-success ms-1">@fscGroups.Count FSC tipi</span>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>FSC TİPİ</th>
+                        <th class="text-end">TÜKETİM (kg)</th>
+                        <th class="text-end">FİRE (kg)</th>
+                        <th class="text-end">FİRE %</th>
+                        <th>DURUM</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var fg in fscGroups)
+                    {
+                        var fr = fg.Consumed > 0 ? fg.Waste / fg.Consumed * 100 : 0;
+                        <tr>
+                            <td><span class="badge badge-success">@fg.FscTip</span></td>
+                            <td class="text-end fw-semibold">@fg.Consumed.ToString("N2")</td>
+                            <td class="text-end @(fg.Waste > 0 ? "text-danger" : "text-muted")">@fg.Waste.ToString("N2")</td>
+                            <td class="text-end">
+                                <span style="color:@(fr >= 5 ? "#dc2626" : fr >= 3 ? "#d97706" : "#16a34a");font-weight:600;">%@fr.ToString("N1")</span>
+                            </td>
+                            <td>
+                                @if (fr < 3) { <span class="badge badge-success">Normal</span> }
+                                else if (fr < 5) { <span class="badge" style="background:#fef3c7;color:#92400e;">Dikkat</span> }
+                                else { <span class="badge badge-danger">Yüksek</span> }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="background:#f8fafc;font-weight:700;font-size:12.5px;">
+                        <td class="text-muted">TOPLAM</td>
+                        <td class="text-end">@fscGroups.Sum(x => x.Consumed).ToString("N2")</td>
+                        <td class="text-end text-danger">@fscGroups.Sum(x => x.Waste).ToString("N2")</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+}
+
 <!-- Satış Sevkiyatları -->
 <div class="table-card mb-4">
     <div class="p-3 border-bottom d-flex align-items-center gap-2">
@@ -493,6 +562,23 @@
 
 @section Scripts {
 <script>
+    // Topbar globalSearch → DataTables (her tablo için)
+    $(document).on('init.dt', 'table.data-table', function() {
+        var dt = $(this).DataTable();
+        var si = document.getElementById('globalSearch');
+        var sd = document.getElementById('searchDropdown');
+        if (!si) return;
+        if (sd) sd.classList.remove('show');
+        si.addEventListener('input', function(e) {
+            if (sd) sd.classList.remove('show');
+            dt.search(this.value).draw();
+            e.stopPropagation();
+        }, true);
+        si.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { this.value = ''; dt.search('').draw(); e.preventDefault(); e.stopPropagation(); }
+        }, true);
+    });
+
     // Kayıtlı dönemleri yükle ve aktif dönemi seç
     (function loadPeriods() {
         var curStart = '@Model.StartDate.ToString("yyyy-MM-dd")';
