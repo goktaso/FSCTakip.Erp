@@ -246,7 +246,7 @@ namespace FSCTakip.WebUI.Controllers
                 .AsQueryable();
 
             if (productIds != null && productIds.Length > 0)
-                query = query.Where(m => m.ProductId.HasValue && productIds.Contains(m.ProductId.Value));
+                query = query.Where(m => productIds.Contains(m.ProductId));
             if (type.HasValue)      query = query.Where(m => m.Type == type.Value);
             if (startDate.HasValue) query = query.Where(m => m.DocumentDate >= startDate.Value);
             if (endDate.HasValue)   query = query.Where(m => m.DocumentDate <= endDate.Value.AddDays(1));
