@@ -169,3 +169,128 @@ query = query.Where(l => l.Product != null &&
 - `ConversionController` (Index + Convert) + `Views/Conversion/Index.cshtml` + sidebar "Yarı Mamül Dönüşüm".
 - Kaynak ham bobin tüketilir → hedef yarı mamül için **yeni FscLot+FscSerial+ProductionEntry** oluşur, **FSC tipi kaynaktan devralınır** (CoC). Şema değişmedi. Boya yok (manuel, kullanıcı kararı).
 - Doğru zincir artık: **Hammadde Girişi (1xxxx) → Yarı Mamül Dönüşüm (→23xxx) → İş Emri/Tüketim (23xxx tüket)**. Yani satın alma/irsaliye/fatura **1xxxx ham kağıt** için olmalı (BB için değil).
+
+## MCD (Multi-Choice Dropdown) — coklu ürün/stok filtresi (2026-06-21)
+
+**Amaç:** Tek tek ürün seçimi yerine bir seferde birden fazla ürün/hammadde seçebilme.
+
+**Bileşen:**
+```html
+<div class="mcd" id="mcd-[page-id]" data-placeholder="— Ürün/Stok —">
+    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-[id]')">
+        <span class="mcd-lbl">[selected count]</span>
+        <i class="fas fa-angle-down mcd-arrow"></i>
+    </button>
+    <div class="mcd-panel" id="mcd-[id]-panel">
+        <div class="mcd-search-row">
+            <input type="text" class="mcd-search" placeholder="Kod/ad ara..." oninput="mcdSearch(this)">
+        </div>
+        <label class="mcd-row mcd-header">
+            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-[id]')">
+            <span>Tümünü Seç/Temizle</span>
+        </label>
+        <div class="mcd-items">
+            @foreach (var item in items) {
+                <label class="mcd-row">
+                    <input type="checkbox" name="itemIds" value="@item.Id" class="mcd-cb"
+                           onchange="mcdUpdate('mcd-[id]')">
+                    <span>@item.Code</span>
+                    <span class="mcd-sub">@item.Name</span>
+                    <span class="mcd-ext" title="Dış kod">@item.ExtCode</span>
+                </label>
+            }
+        </div>
+    </div>
+</div>
+```
+
+**İnline JavaScript (view'de tanımlı, _mcdReady guard ile):**
+- `window.mcdOpen(id)` → panel aç/kapat, öteki panelleri kapat
+- `window.mcdSearch(inputEl)` → arama kutusuna göre satırları filtrele
+- `window.mcdToggleAll(checkboxEl, id)` → "Tümünü seç" butonu
+- `window.mcdUpdate(id)` → seçili sayısını label'e yaz, "Tümü seç" checkbox durumunu güncelle
+- Dışarı tıklanınca tüm paneller kapanır (`mousedown` event)
+
+**CSS:** `.mcd` flex container, `.mcd-panel` hidden default, `.mcd-row` label → input + metin + badge'ler, `.mcd-search` filtre input, `.mcd-sub` / `.mcd-ext` ürün kodu/dış kod badge'leri.
+
+**Etkilenen sayfalar (2026-06-21 commit fc7c101):**
+- `Stock/RawMaterial` — `productId` → `productIds[]` (MCD id=mcd-raw-prod)
+- `Stock/Index` (Stok Durumu) — MCD id=mcd-idx-prod
+- `Production/Index` (İş Emirleri) — MCD id=mcd-prod-idx
+- `Production/WasteReport` (Fire Raporu) — MCD id=mcd-waste-prod
+- `Reports/FscConsumption` — MCD id=mcd-fsc-prod
+- `Reports/MaterialTrace` — mamul modu radio-button MCD
+
+**Controller değişiklikleri:** `productId?: int` → `productIds?: int[]` parametreleri, query `.Where(w => productIds.Contains(w.ProductId))` ile `IN` sözdizimi. Excel export href'leri loop'la güncellendi:
+```csharp
+// Örnek: ReportsController.ChainOfCustody
+if (productIds != null && productIds.Length > 0)
+    query = query.Where(l => productIds.Contains(l.Product.Id));
+```
+
+**ViewBag değişiklikleri:** `ViewBag.ProductIds = productIds ?? Array.Empty<int>();` ile view'de checkbox durumları tutuluyor (`checked="@(prodIds.Contains(p.Id))"`).
+
+## MCD entegrasyon uyarıları (2026-06-21)
+
+1. **Birden çok MCD varsa ID'leri benzersiz yapma:** İki `mcdOpen` fonksiyonu yoksa ilki hiç açılmaz. Çözüm: her sayfada `window._mcdReady = true` guard ile coklu tanımlama engelleniyor; view'de ilk MCD'nin hemen sonuna `<script>window._mcdReady=true;</script>` ekle.
+
+2. **Excel export href'i doğru loop'yla:** MCD seçimleri varsa link şu şekilde:
+```html
+<a href="@Url.Action("ExportChainOfCustody", 
+    new RouteValueDictionary(
+        new { supplierId, fscTypeId, stockCode, stockName, 
+              productIds = string.Join(",", prodIds) }))">
+```
+Ya da form action'ı: `<form method="get" action="@Url.Action("ExportPage")">` + hidden input'lar + `onclick="form.submit()"`.
+
+3. **Checkbox state tutulması:** View'de `prodIds` = `ViewBag.ProductIds as int[]`, checkbox template:
+```razor
+@{ var prodIds = ViewBag.ProductIds as int[] ?? Array.Empty<int>(); }
+<input type="checkbox" name="productIds" value="@p.Id" class="mcd-cb"
+       checked="@(prodIds.Contains(p.Id))" onchange="mcdUpdate('mcd-xyz')">
+```
+
+## MCD + draw.dt kombinasyon (2026-06-21)
+
+Filtre ekranlarında MCD seçildikten sonra tablo yenilenmez (JS yenileme gerekli). Çözüm:
+```html
+<!-- Tablo yüklenmişse form gönderimi otomatik (normal), yoksa button: -->
+<form method="get" id="filterForm">
+    <!-- MCD + diğer input'lar -->
+    <button type="submit" class="btn btn-primary">Filtrele</button>
+</form>
+```
+Veya DataTables draw → stat kartlarını yenile (draw.dt + recalc pattern, bkz. lessons.md daha yukarıda).
+
+Ama **form.submit()** yaparken url parametreleri doğru olmalı. Checkbox array'i `productIds=1&productIds=2` veya `productIds[]=1&productIds[]=2` ama ASP.NET Core `int[]? productIds` ile otomatik bind ediyor; hiçbir şey yapma — form normal şekilde submit et.
+
+## StockMovement.ProductId nullable → non-nullable (2026-06-21)
+
+**Değişiklik:** `public int? ProductId` → `public int ProductId` (non-nullable)
+
+**Neden:** Tüm hareketi kayıt, ProductId şart. Entity'de nullable ise `== null` ve `.HasValue` yapılan tüm yerlerde karmaşa artıyor.
+
+**Etkilenen kod:**
+- `PurchaseController.SaveLot`: `sm.ProductId = model.ProductId.Value;` → `sm.ProductId = model.ProductId.Value;` (zaten guarded)
+- `Stock/Index` / `Stock/RawMaterial`: `sm.ProductId?.ToString()` → `sm.ProductId.ToString()`
+- Query'ler: `WHERE ProductId IS NOT NULL` döngüleri kaldırıldı
+
+**Migration:** `StockMovement` tablosunda `ProductId INT NOT NULL` constraint eklendi (mevcut NULL kayıtlar yoksa, varsa backfill lazım).
+
+## Stock Summary + Admin Stock sayfaları (2026-06-21)
+
+Iki yeni view eklendi:
+
+**Stock/Summary.cshtml:**
+- Grup bazlı stok özeti (her ürün grubu + toplamlar)
+- Checkbox filtresi (grup seçimi)
+- Dinamik kartlar (toplam KG, giriş, çıkış, kalan)
+- Detay butonuyla `Stock/RawMaterial`'a drill-down
+
+**Stock/AdminStock.cshtml:**
+- Tam stok admin görünümü (hesaplama adımları)
+- Orijinal birimler (`InitialWeight` vs `OriginalQuantity`, dönüşüm faktörü)
+- Sarf/döngü analizi
+- Hata ayıklama için teknik alanlar (CreatedBy, UpdatedDate vb.)
+
+**Menüde:** "Stok" → "Stok Özeti" (Summary), "Yönetici Stok" (AdminStock)

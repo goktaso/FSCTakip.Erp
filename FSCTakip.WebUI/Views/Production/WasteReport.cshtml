@@ -9,6 +9,8 @@
     var machines    = ViewBag.Machines as List<FSCTakip.Core.Entities.Machine>  ?? new();
     var products    = ViewBag.Products as List<FSCTakip.Core.Entities.Product>  ?? new();
     var productIds  = ViewBag.ProductIds as int[] ?? Array.Empty<int>();
+    int? selMachineId = ViewBag.MachineId as int?;
+    var machineLabel = machines.FirstOrDefault(m => m.Id == selMachineId)?.Name ?? "— Tümü —";
 
     var toplamFire    = Model.Sum(d => d.WasteWeight);
     var toplamTuketim = Model.Sum(d => d.ConsumedWeight);
@@ -48,13 +50,35 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Makine</label>
-                <select name="machineId" class="form-select form-select-sm">
-                    <option value="">— Tümü —</option>
-                    @foreach (var m in machines)
-                    {
-                        <option value="@m.Id" selected="@(ViewBag.MachineId != null && ViewBag.MachineId == m.Id ? "selected" : null)">@m.Name</option>
-                    }
-                </select>
+                <div class="mcd" id="mcd-wr-mac" data-placeholder="— Tümü —" style="min-width:180px;">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-wr-mac')">
+                        <span class="mcd-lbl">@machineLabel</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-wr-mac-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Makine ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <div class="mcd-items">
+                            <label class="mcd-row">
+                                <input type="radio" name="machineId" value="" class="mcd-rb"
+                                       onchange="mcdSingleSelect('mcd-wr-mac','','— Tümü —')"
+                                       checked="@(selMachineId == null ? "checked" : null)">
+                                <span class="mcd-name">— Tümü —</span>
+                            </label>
+                            @foreach (var m in machines)
+                            {
+                                <label class="mcd-row">
+                                    <input type="radio" name="machineId" value="@m.Id" class="mcd-rb"
+                                           onchange="mcdSingleSelect('mcd-wr-mac','@m.Id','@m.Name')"
+                                           checked="@(selMachineId == m.Id ? "checked" : null)">
+                                    <span class="mcd-name">@m.Name</span>
+                                </label>
+                            }
+                        </div>
+                        <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                    </div>
+                </div>
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Ürün</label>

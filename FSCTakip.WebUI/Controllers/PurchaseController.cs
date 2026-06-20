@@ -17,7 +17,7 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // GET /Purchase/Index
-        public async Task<IActionResult> Index(int? supplierId, int? fscTypeId, string? stockCode, string? stockName)
+        public async Task<IActionResult> Index(int[]? supplierIds, int[]? fscTypeIds, string? stockCode, string? stockName)
         {
             var query = _context.FscLots
                 .Include(l => l.Supplier)
@@ -31,8 +31,10 @@ namespace FSCTakip.WebUI.Controllers
                 .Where(l => l.SourceSerialId == null)
                 .AsQueryable();
 
-            if (supplierId.HasValue) query = query.Where(l => l.SupplierId == supplierId.Value);
-            if (fscTypeId.HasValue)  query = query.Where(l => l.FscTypeId == fscTypeId.Value);
+            if (supplierIds != null && supplierIds.Length > 0)
+                query = query.Where(l => l.SupplierId.HasValue && supplierIds.Contains(l.SupplierId.Value));
+            if (fscTypeIds != null && fscTypeIds.Length > 0)
+                query = query.Where(l => fscTypeIds.Contains(l.FscTypeId));
             if (!string.IsNullOrWhiteSpace(stockCode))
             {
                 var sc = stockCode.Trim();
@@ -49,8 +51,8 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.Products    = products;
             ViewBag.StockCode   = stockCode;
             ViewBag.StockName   = stockName;
-            ViewBag.SupplierId  = supplierId;
-            ViewBag.FscTypeId   = fscTypeId;
+            ViewBag.SupplierIds = supplierIds ?? Array.Empty<int>();
+            ViewBag.FscTypeIds  = fscTypeIds  ?? Array.Empty<int>();
 
             // Urun basina birim ve donusum katsayisi -- iki ayri sozluk (value tuple ViewBag'den cast edilmez)
             var conversions    = await _context.UnitConversions.Where(c => c.IsActive).ToListAsync();

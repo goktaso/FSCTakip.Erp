@@ -1,9 +1,9 @@
 @model List<FSCTakip.Core.Entities.FscSerial>
 @{
     ViewData["Title"] = "Hammadde Stoğu";
-    var fscTypeId  = ViewBag.FscTypeId  as int?;
-    var supplierId = ViewBag.SupplierId as int?;
-    var productIds = ViewBag.ProductIds as int[] ?? Array.Empty<int>();
+    var fscTypeIds  = ViewBag.FscTypeIds  as int[] ?? Array.Empty<int>();
+    var supplierIds = ViewBag.SupplierIds as int[] ?? Array.Empty<int>();
+    var productIds  = ViewBag.ProductIds  as int[] ?? Array.Empty<int>();
     bool showEmpty = ViewBag.ShowEmpty ?? false;
     decimal totalKg     = ViewBag.TotalKg     ?? 0m;
     int totalBobins     = ViewBag.TotalBobins ?? 0;
@@ -24,7 +24,7 @@
         <button class="topbar-btn" id="btnFilter">
             <i class="fas fa-filter"></i> Filtrele
         </button>
-        <a href="/Stock/ExportRawMaterial?fscTypeId=@fscTypeId&supplierId=@supplierId@foreach(var id in productIds){<text>&productIds=@id</text>}&showEmpty=@showEmpty"
+        <a href="/Stock/ExportRawMaterial?@foreach(var id in fscTypeIds){<text>fscTypeIds=@id&</text>}@foreach(var id in supplierIds){<text>supplierIds=@id&</text>}@foreach(var id in productIds){<text>productIds=@id&</text>}showEmpty=@showEmpty"
            class="topbar-btn btn-excel">
             <i class="fas fa-file-excel"></i> Excel
         </a>
@@ -45,25 +45,66 @@
         <div class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="filter-label">FSC Tipi</label>
-                <select name="fscTypeId" class="form-select form-select-sm">
-                    <option value="">— Tümü —</option>
-                    @foreach (var f in (ViewBag.FscTypes as List<FSCTakip.Core.Entities.FscType> ?? new()))
-                    {
-                        if (fscTypeId == f.Id) { <option value="@f.Id" selected="selected">@f.Name</option> }
-                        else { <option value="@f.Id">@f.Name</option> }
-                    }
-                </select>
+                <div class="mcd" id="mcd-raw-fsc" data-placeholder="— Tümü —" style="min-width:140px;">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-raw-fsc')">
+                        <span class="mcd-lbl">@(fscTypeIds.Length > 0 ? fscTypeIds.Length + " seçildi" : "— Tümü —")</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-raw-fsc-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <label class="mcd-row mcd-header">
+                            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-raw-fsc')">
+                            <span>Tümünü Seç / Temizle</span>
+                        </label>
+                        <div class="mcd-items">
+                            @foreach (var f in (ViewBag.FscTypes as List<FSCTakip.Core.Entities.FscType> ?? new()))
+                            {
+                                bool sel = fscTypeIds.Contains(f.Id);
+                                <label class="mcd-row">
+                                    <input type="checkbox" name="fscTypeIds" value="@f.Id" class="mcd-cb"
+                                           onchange="mcdUpdate('mcd-raw-fsc')"
+                                           checked="@(sel ? "checked" : null)">
+                                    <span class="mcd-name">@f.Name</span>
+                                </label>
+                            }
+                        </div>
+                        <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                    </div>
+                </div>
             </div>
             <div class="col-md-3">
                 <label class="filter-label">Tedarikçi</label>
-                <select name="supplierId" class="form-select form-select-sm">
-                    <option value="">— Tümü —</option>
-                    @foreach (var s in (ViewBag.Suppliers as List<FSCTakip.Core.Entities.Supplier> ?? new()))
-                    {
-                        if (supplierId == s.Id) { <option value="@s.Id" selected="selected">@s.Name</option> }
-                        else { <option value="@s.Id">@s.Name</option> }
-                    }
-                </select>
+                <div class="mcd" id="mcd-raw-sup" data-placeholder="— Tümü —" style="min-width:180px;">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-raw-sup')">
+                        <span class="mcd-lbl">@(supplierIds.Length > 0 ? supplierIds.Length + " seçildi" : "— Tümü —")</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-raw-sup-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <label class="mcd-row mcd-header">
+                            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-raw-sup')">
+                            <span>Tümünü Seç / Temizle</span>
+                        </label>
+                        <div class="mcd-items">
+                            @foreach (var s in (ViewBag.Suppliers as List<FSCTakip.Core.Entities.Supplier> ?? new()))
+                            {
+                                bool sel = supplierIds.Contains(s.Id);
+                                <label class="mcd-row">
+                                    <input type="checkbox" name="supplierIds" value="@s.Id" class="mcd-cb"
+                                           onchange="mcdUpdate('mcd-raw-sup')"
+                                           checked="@(sel ? "checked" : null)">
+                                    <span class="mcd-name">@s.Name</span>
+                                    @if (!string.IsNullOrEmpty(s.FscCode)) { <span class="mcd-sub">@s.FscCode</span> }
+                                </label>
+                            }
+                        </div>
+                        <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                    </div>
+                </div>
             </div>
             <div class="col-md-3">
                 <label class="filter-label">Stok / Ürün</label>
@@ -202,7 +243,7 @@
             <span>Hammadde Bobin Listesi</span>
             <span class="badge-blue badge">@Model.Count kayıt</span>
         </div>
-        @if (fscTypeId.HasValue || supplierId.HasValue || productIds.Length > 0)
+        @if (fscTypeIds.Length > 0 || supplierIds.Length > 0 || productIds.Length > 0)
         {
             <a href="/Stock/RawMaterial" class="topbar-btn">
                 <i class="fas fa-times"></i> Filtreyi Temizle
@@ -380,7 +421,7 @@ document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))d
     });
 
     // Aktif filtre varsa paneli açık tut
-    @if (fscTypeId.HasValue || supplierId.HasValue || productIds.Length > 0 || showEmpty)
+    @if (fscTypeIds.Length > 0 || supplierIds.Length > 0 || productIds.Length > 0 || showEmpty)
     {
         <text>
         document.addEventListener('DOMContentLoaded', function() {

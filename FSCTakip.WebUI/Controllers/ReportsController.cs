@@ -1055,8 +1055,8 @@ namespace FSCTakip.WebUI.Controllers
             DateTime? startDate = null,
             DateTime? endDate   = null,
             string? stockSearch = null,
-            int? supplierId = null,
-            int? fscTypeId = null)
+            int[]? supplierIds = null,
+            int[]? fscTypeIds = null)
         {
             var sd = startDate ?? new DateTime(DateTime.Today.Year, 1, 1);
             var ed = endDate   ?? DateTime.Today;
@@ -1084,9 +1084,9 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.SerialNo    = serialNo?.Trim();
             ViewBag.StartDate   = sd.ToString("yyyy-MM-dd");
             ViewBag.EndDate     = ed.ToString("yyyy-MM-dd");
-            ViewBag.StockSearch = stockSearch;
-            ViewBag.SupplierId  = supplierId;
-            ViewBag.FscTypeId   = fscTypeId;
+            ViewBag.StockSearch  = stockSearch;
+            ViewBag.SupplierIds  = supplierIds ?? Array.Empty<int>();
+            ViewBag.FscTypeIds   = fscTypeIds  ?? Array.Empty<int>();
             ViewBag.Suppliers   = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
             ViewBag.FscTypes    = await _context.FscTypes.OrderBy(f => f.Name).ToListAsync();
 
@@ -1183,17 +1183,15 @@ namespace FSCTakip.WebUI.Controllers
             if (!string.IsNullOrWhiteSpace(stockSearch))
                 rows = rows.Where(r => r.HammaddeAdi.Contains(stockSearch, StringComparison.OrdinalIgnoreCase)
                                     || r.HammaddeKodu.Contains(stockSearch, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (supplierId.HasValue)
+            if (supplierIds != null && supplierIds.Length > 0)
             {
-                var supName = await _context.Suppliers.Where(x => x.Id == supplierId).Select(x => x.Name).FirstOrDefaultAsync();
-                if (supName != null)
-                    rows = rows.Where(r => r.Tedarikci.Contains(supName, StringComparison.OrdinalIgnoreCase)).ToList();
+                var supNames = await _context.Suppliers.Where(x => supplierIds.Contains(x.Id)).Select(x => x.Name).ToListAsync();
+                rows = rows.Where(r => supNames.Any(n => r.Tedarikci != null && r.Tedarikci.Contains(n, StringComparison.OrdinalIgnoreCase))).ToList();
             }
-            if (fscTypeId.HasValue)
+            if (fscTypeIds != null && fscTypeIds.Length > 0)
             {
-                var fscName = await _context.FscTypes.Where(x => x.Id == fscTypeId).Select(x => x.Name).FirstOrDefaultAsync();
-                if (fscName != null)
-                    rows = rows.Where(r => r.FscTipi.Contains(fscName, StringComparison.OrdinalIgnoreCase)).ToList();
+                var fscNames = await _context.FscTypes.Where(x => fscTypeIds.Contains(x.Id)).Select(x => x.Name).ToListAsync();
+                rows = rows.Where(r => fscNames.Any(n => r.FscTipi != null && r.FscTipi.Contains(n, StringComparison.OrdinalIgnoreCase))).ToList();
             }
 
             var model = new MaterialTraceModel

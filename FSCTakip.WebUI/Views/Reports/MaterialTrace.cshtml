@@ -15,8 +15,8 @@
     string startDate = ViewBag.StartDate  as string ?? DateTime.Today.ToString("yyyy-01-01");
     string endDate   = ViewBag.EndDate    as string ?? DateTime.Today.ToString("yyyy-MM-dd");
     string? stockSearch = ViewBag.StockSearch as string;
-    int? filtSupplierId = ViewBag.SupplierId as int?;
-    int? filtFscTypeId  = ViewBag.FscTypeId  as int?;
+    var supplierIds = ViewBag.SupplierIds as int[] ?? Array.Empty<int>();
+    var fscTypeIds  = ViewBag.FscTypeIds  as int[] ?? Array.Empty<int>();
     bool hasRows    = Model?.Rows.Count > 0;
     bool hasHammaddeFilter = hammaddeIds.Length > 0;
 }
@@ -154,23 +154,65 @@
         </div>
         <div class="col-md-3">
             <label class="form-label small fw-semibold mb-1">Tedarikçi</label>
-            <select name="supplierId" class="form-select form-select-sm">
-                <option value="">— Tüm Tedarikçiler —</option>
-                @foreach (var s in suppliers)
-                {
-                    <option value="@s.Id" selected="@(filtSupplierId == s.Id ? "selected" : null)">@s.Name</option>
-                }
-            </select>
+            <div class="mcd" id="mcd-mt-sup" data-placeholder="— Tüm Tedarikçiler —">
+                <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-mt-sup')">
+                    <span class="mcd-lbl">@(supplierIds.Length > 0 ? supplierIds.Length + " seçildi" : "— Tüm Tedarikçiler —")</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-mt-sup-panel" style="display:none;">
+                    <div class="mcd-search-row">
+                        <input type="text" class="mcd-search" placeholder="Tedarikçi ara..." oninput="mcdSearch(this)">
+                    </div>
+                    <label class="mcd-row mcd-header">
+                        <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-mt-sup')">
+                        <span>Tümünü Seç / Temizle</span>
+                    </label>
+                    <div class="mcd-items">
+                        @foreach (var s in suppliers)
+                        {
+                            bool sel = supplierIds.Contains(s.Id);
+                            <label class="mcd-row">
+                                <input type="checkbox" name="supplierIds" value="@s.Id" class="mcd-cb"
+                                       onchange="mcdUpdate('mcd-mt-sup')"
+                                       @(sel ? "checked" : "")>
+                                <span class="mcd-name">@s.Name</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                </div>
+            </div>
         </div>
         <div class="col-md-3">
             <label class="form-label small fw-semibold mb-1">FSC Tipi</label>
-            <select name="fscTypeId" class="form-select form-select-sm">
-                <option value="">— Tüm FSC Tipleri —</option>
-                @foreach (var f in fscTypes)
-                {
-                    <option value="@f.Id" selected="@(filtFscTypeId == f.Id ? "selected" : null)">@f.Name</option>
-                }
-            </select>
+            <div class="mcd" id="mcd-mt-fsc" data-placeholder="— Tüm FSC Tipleri —">
+                <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-mt-fsc')">
+                    <span class="mcd-lbl">@(fscTypeIds.Length > 0 ? fscTypeIds.Length + " seçildi" : "— Tüm FSC Tipleri —")</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-mt-fsc-panel" style="display:none;">
+                    <div class="mcd-search-row">
+                        <input type="text" class="mcd-search" placeholder="FSC tipi ara..." oninput="mcdSearch(this)">
+                    </div>
+                    <label class="mcd-row mcd-header">
+                        <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-mt-fsc')">
+                        <span>Tümünü Seç / Temizle</span>
+                    </label>
+                    <div class="mcd-items">
+                        @foreach (var f in fscTypes)
+                        {
+                            bool sel = fscTypeIds.Contains(f.Id);
+                            <label class="mcd-row">
+                                <input type="checkbox" name="fscTypeIds" value="@f.Id" class="mcd-cb"
+                                       onchange="mcdUpdate('mcd-mt-fsc')"
+                                       @(sel ? "checked" : "")>
+                                <span class="mcd-name">@f.Name</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                </div>
+            </div>
         </div>
 
         <div class="col-auto d-flex gap-2">

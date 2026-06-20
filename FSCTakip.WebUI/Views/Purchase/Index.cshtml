@@ -1,8 +1,10 @@
 @model IEnumerable<FSCTakip.Core.Entities.FscLot>
 @{
     ViewData["Title"] = "Hammadde Girişleri";
-    var suppliers = ViewBag.Suppliers as List<FSCTakip.Core.Entities.Supplier> ?? new();
-    var fscTypes  = ViewBag.FscTypes  as List<FSCTakip.Core.Entities.FscType>  ?? new();
+    var suppliers    = ViewBag.Suppliers as List<FSCTakip.Core.Entities.Supplier> ?? new();
+    var fscTypes     = ViewBag.FscTypes  as List<FSCTakip.Core.Entities.FscType>  ?? new();
+    var supplierIds  = ViewBag.SupplierIds as int[] ?? Array.Empty<int>();
+    var fscTypeIds   = ViewBag.FscTypeIds  as int[] ?? Array.Empty<int>();
     var products  = ViewBag.Products  as List<FSCTakip.Core.Entities.Product>  ?? new();
 
     var totalLot   = Model.Count();
@@ -108,25 +110,66 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Tedarikçi</label>
-                <select name="supplierId" class="form-select form-select-sm">
-                    <option value="">— Tümü —</option>
-                    @foreach (var s in suppliers)
-                    {
-                        var selSup = ViewBag.SupplierId != null && (int)ViewBag.SupplierId == s.Id;
-                        <option value="@s.Id" selected="@(selSup ? "selected" : null)">@s.Name</option>
-                    }
-                </select>
+                <div class="mcd" id="mcd-pur-sup" data-placeholder="— Tümü —" style="min-width:180px;">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-pur-sup')">
+                        <span class="mcd-lbl">@(supplierIds.Length > 0 ? supplierIds.Length + " seçildi" : "— Tümü —")</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-pur-sup-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <label class="mcd-row mcd-header">
+                            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-pur-sup')">
+                            <span>Tümünü Seç / Temizle</span>
+                        </label>
+                        <div class="mcd-items">
+                            @foreach (var s in suppliers)
+                            {
+                                bool sel = supplierIds.Contains(s.Id);
+                                <label class="mcd-row">
+                                    <input type="checkbox" name="supplierIds" value="@s.Id" class="mcd-cb"
+                                           onchange="mcdUpdate('mcd-pur-sup')"
+                                           checked="@(sel ? "checked" : null)">
+                                    <span class="mcd-name">@s.Name</span>
+                                    @if (!string.IsNullOrEmpty(s.FscCode)) { <span class="mcd-sub">@s.FscCode</span> }
+                                </label>
+                            }
+                        </div>
+                        <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                    </div>
+                </div>
             </div>
             <div class="col-md-2">
                 <label class="form-label">FSC Tipi</label>
-                <select name="fscTypeId" class="form-select form-select-sm">
-                    <option value="">— Tümü —</option>
-                    @foreach (var f in fscTypes)
-                    {
-                        var selFsc = ViewBag.FscTypeId != null && (int)ViewBag.FscTypeId == f.Id;
-                        <option value="@f.Id" selected="@(selFsc ? "selected" : null)">@f.Name</option>
-                    }
-                </select>
+                <div class="mcd" id="mcd-pur-fsc" data-placeholder="— Tümü —" style="min-width:140px;">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-pur-fsc')">
+                        <span class="mcd-lbl">@(fscTypeIds.Length > 0 ? fscTypeIds.Length + " seçildi" : "— Tümü —")</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-pur-fsc-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <label class="mcd-row mcd-header">
+                            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-pur-fsc')">
+                            <span>Tümünü Seç / Temizle</span>
+                        </label>
+                        <div class="mcd-items">
+                            @foreach (var f in fscTypes)
+                            {
+                                bool sel = fscTypeIds.Contains(f.Id);
+                                <label class="mcd-row">
+                                    <input type="checkbox" name="fscTypeIds" value="@f.Id" class="mcd-cb"
+                                           onchange="mcdUpdate('mcd-pur-fsc')"
+                                           checked="@(sel ? "checked" : null)">
+                                    <span class="mcd-name">@f.Name</span>
+                                </label>
+                            }
+                        </div>
+                        <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                    </div>
+                </div>
             </div>
             <div class="col-md-2 d-flex gap-2 align-items-end">
                 <button type="submit" class="btn btn-primary btn-sm flex-fill">
@@ -410,7 +453,7 @@
                     <div class="col-12">
                         <label class="form-label fw-semibold">Hammadde Ürünü</label>
                         <input type="text" id="productSearch" class="form-control mb-2"
-                               placeholder="Ürün kodu / dış kod / ürün adı ile ara (örn: 30444)">
+                               placeholder="Stok kodu, dış kod veya ürün adı ile arayın (örn: 10191, URN-024)...">
                         <select id="productId" class="form-select" size="10" style="font-family:inherit;">
                             <option value="">— Ürün seçiniz (stok hareketine işlenir) —</option>
                             @{

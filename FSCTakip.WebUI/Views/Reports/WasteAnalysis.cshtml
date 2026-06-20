@@ -5,6 +5,8 @@
     var machines       = ViewBag.Machines       as List<FSCTakip.Core.Entities.Machine>       ?? new();
     var productGroups  = ViewBag.ProductGroups  as List<FSCTakip.Core.Entities.ProductGroup>  ?? new();
     var culture        = new System.Globalization.CultureInfo("tr-TR");
+    int? selMachineId = ViewBag.MachineId as int?;
+    var machineLabel = machines.FirstOrDefault(m => m.Id == selMachineId)?.Name ?? "Tüm Makineler";
 }
 
 @section TopbarActions {
@@ -14,16 +16,35 @@
         <span class="text-muted small">—</span>
         <input type="date" name="endDate" class="form-control form-control-sm"
                value="@Model.EndDate.ToString("yyyy-MM-dd")" style="width:140px;">
-        <select name="machineId" class="form-select form-select-sm" style="width:150px;">
-            <option value="">Tüm Makineler</option>
-            @foreach (var m in machines)
-            {
-                if (ViewBag.MachineId != null && (int)ViewBag.MachineId == m.Id)
-                { <option value="@m.Id" selected>@m.Name</option> }
-                else
-                { <option value="@m.Id">@m.Name</option> }
-            }
-        </select>
+        <div class="mcd" id="mcd-wa-mac" data-placeholder="Tüm Makineler" style="min-width:150px;">
+            <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-wa-mac')">
+                <span class="mcd-lbl">@machineLabel</span>
+                <i class="fas fa-angle-down mcd-arrow"></i>
+            </button>
+            <div class="mcd-panel" id="mcd-wa-mac-panel" style="display:none;">
+                <div class="mcd-search-row">
+                    <input type="text" class="mcd-search" placeholder="Makine ara..." oninput="mcdSearch(this)">
+                </div>
+                <div class="mcd-items">
+                    <label class="mcd-row">
+                        <input type="radio" name="machineId" value="" class="mcd-rb"
+                               onchange="mcdSingleSelect('mcd-wa-mac','','Tüm Makineler')"
+                               checked="@(selMachineId == null ? "checked" : null)">
+                        <span class="mcd-name">Tüm Makineler</span>
+                    </label>
+                    @foreach (var m in machines)
+                    {
+                        <label class="mcd-row">
+                            <input type="radio" name="machineId" value="@m.Id" class="mcd-rb"
+                                   onchange="mcdSingleSelect('mcd-wa-mac','@m.Id','@m.Name')"
+                                   checked="@(selMachineId == m.Id ? "checked" : null)">
+                            <span class="mcd-name">@m.Name</span>
+                        </label>
+                    }
+                </div>
+                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+            </div>
+        </div>
         <button type="submit" class="btn btn-primary btn-sm px-3">
             <i class="fas fa-filter me-1"></i> Filtrele
         </button>

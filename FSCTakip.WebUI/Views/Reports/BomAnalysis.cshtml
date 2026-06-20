@@ -5,6 +5,8 @@
 @{
     ViewData["Title"] = "BOM Bileşen Analizi";
     var allWorkOrders = ViewBag.AllWorkOrders as List<SelectListItem> ?? new List<SelectListItem>();
+    int? selWoId = ViewBag.WorkOrderId as int?;
+    var woLabel = allWorkOrders.FirstOrDefault(w => w.Value == selWoId?.ToString())?.Text ?? "— Tümü —";
 }
 
 @section TopbarActions {
@@ -30,16 +32,35 @@
         </div>
         <div class="col-md-4">
             <label class="form-label" style="font-size:12px;">İş Emri (Opsiyonel)</label>
-            <select name="workOrderId" class="form-select form-select-sm">
-                <option value="">— Tümü —</option>
-                @if (allWorkOrders != null)
-                {
-                    foreach (var wo in allWorkOrders)
-                    {
-                        <option value="@wo.Value">@wo.Text</option>
-                    }
-                }
-            </select>
+            <div class="mcd" id="mcd-bom-wo" data-placeholder="— Tümü —" style="min-width:220px;">
+                <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-bom-wo')">
+                    <span class="mcd-lbl">@woLabel</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-bom-wo-panel" style="display:none;">
+                    <div class="mcd-search-row">
+                        <input type="text" class="mcd-search" placeholder="İş emri ara..." oninput="mcdSearch(this)">
+                    </div>
+                    <div class="mcd-items">
+                        <label class="mcd-row">
+                            <input type="radio" name="workOrderId" value="" class="mcd-rb"
+                                   onchange="mcdSingleSelect('mcd-bom-wo','','— Tümü —')"
+                                   checked="@(selWoId == null ? "checked" : null)">
+                            <span class="mcd-name">— Tümü —</span>
+                        </label>
+                        @foreach (var wo in allWorkOrders)
+                        {
+                            <label class="mcd-row">
+                                <input type="radio" name="workOrderId" value="@wo.Value" class="mcd-rb"
+                                       onchange="mcdSingleSelect('mcd-bom-wo','@wo.Value','@Html.Raw(wo.Text.Replace("'", "\\'"))')"
+                                       checked="@(selWoId?.ToString() == wo.Value ? "checked" : null)">
+                                <span class="mcd-name">@wo.Text</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                </div>
+            </div>
         </div>
         <div class="col-md-2">
             <button type="submit" class="btn btn-primary w-100 btn-sm">

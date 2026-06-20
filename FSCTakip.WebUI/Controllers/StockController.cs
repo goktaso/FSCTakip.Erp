@@ -233,8 +233,8 @@ namespace FSCTakip.WebUI.Controllers
             int[]? productIds, MovementType? type,
             DateTime? startDate, DateTime? endDate,
             string? stockCode,
-            int? supplierId,
-            int? fscTypeId)
+            int[]? supplierIds,
+            int[]? fscTypeIds)
         {
             var query = _context.StockMovements
                 .Include(m => m.Product)
@@ -258,10 +258,10 @@ namespace FSCTakip.WebUI.Controllers
                     (m.Product.ExternalCode != null && m.Product.ExternalCode.Contains(sc)) ||
                     m.Product.ProductName.Contains(sc)));
             }
-            if (supplierId.HasValue)
-                query = query.Where(m => m.Product != null && m.Product.SupplierId == supplierId.Value);
-            if (fscTypeId.HasValue)
-                query = query.Where(m => m.Product != null && m.Product.FscTypeId == fscTypeId.Value);
+            if (supplierIds != null && supplierIds.Length > 0)
+                query = query.Where(m => m.Product != null && m.Product.SupplierId.HasValue && supplierIds.Contains(m.Product.SupplierId.Value));
+            if (fscTypeIds != null && fscTypeIds.Length > 0)
+                query = query.Where(m => m.Product != null && m.Product.FscTypeId.HasValue && fscTypeIds.Contains(m.Product.FscTypeId.Value));
 
             var movements = await query.OrderByDescending(m => m.DocumentDate).ThenByDescending(m => m.Id).ToListAsync();
 
@@ -300,8 +300,8 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.EndDate     = endDate?.ToString("yyyy-MM-dd");
             ViewBag.ProductIds  = productIds ?? Array.Empty<int>();
             ViewBag.StockCode   = stockCode;
-            ViewBag.SupplierId  = supplierId;
-            ViewBag.FscTypeId   = fscTypeId;
+            ViewBag.SupplierIds = supplierIds ?? Array.Empty<int>();
+            ViewBag.FscTypeIds  = fscTypeIds  ?? Array.Empty<int>();
 
             return View(movements);
         }
@@ -371,7 +371,7 @@ namespace FSCTakip.WebUI.Controllers
 
         // GET /Stock/RawMaterial — FscSerial bazlı hammadde stoğu
         public async Task<IActionResult> RawMaterial(
-            int? fscTypeId, int? supplierId, int[]? productIds,
+            int[]? fscTypeIds, int[]? supplierIds, int[]? productIds,
             bool? showEmpty = false)
         {
             var query = _context.FscSerials
@@ -383,10 +383,10 @@ namespace FSCTakip.WebUI.Controllers
             if (showEmpty != true)
                 query = query.Where(s => s.CurrentWeight > 0);
 
-            if (fscTypeId.HasValue)
-                query = query.Where(s => s.Lot.FscTypeId == fscTypeId.Value);
-            if (supplierId.HasValue)
-                query = query.Where(s => s.Lot.SupplierId == supplierId.Value);
+            if (fscTypeIds != null && fscTypeIds.Length > 0)
+                query = query.Where(s => fscTypeIds.Contains(s.Lot.FscTypeId));
+            if (supplierIds != null && supplierIds.Length > 0)
+                query = query.Where(s => s.Lot.SupplierId.HasValue && supplierIds.Contains(s.Lot.SupplierId.Value));
             if (productIds != null && productIds.Length > 0)
                 query = query.Where(s => s.Lot.ProductId.HasValue && productIds.Contains(s.Lot.ProductId.Value));
 
@@ -426,17 +426,17 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.FscTypes  = await _context.FscTypes.Where(f => f.IsActive).ToListAsync();
             ViewBag.Suppliers = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
             ViewBag.Products  = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
-            ViewBag.FscTypeId  = fscTypeId;
-            ViewBag.SupplierId = supplierId;
-            ViewBag.ProductIds = productIds ?? Array.Empty<int>();
-            ViewBag.ShowEmpty  = showEmpty ?? false;
+            ViewBag.FscTypeIds  = fscTypeIds  ?? Array.Empty<int>();
+            ViewBag.SupplierIds = supplierIds ?? Array.Empty<int>();
+            ViewBag.ProductIds  = productIds  ?? Array.Empty<int>();
+            ViewBag.ShowEmpty   = showEmpty ?? false;
 
             return View(serials);
         }
 
         // GET /Stock/ExportRawMaterial
         public async Task<IActionResult> ExportRawMaterial(
-            int? fscTypeId, int? supplierId, int[]? productIds, bool? showEmpty = false)
+            int[]? fscTypeIds, int[]? supplierIds, int[]? productIds, bool? showEmpty = false)
         {
             var query = _context.FscSerials
                 .Include(s => s.Lot).ThenInclude(l => l.Supplier)
@@ -446,10 +446,10 @@ namespace FSCTakip.WebUI.Controllers
 
             if (showEmpty != true)
                 query = query.Where(s => s.CurrentWeight > 0);
-            if (fscTypeId.HasValue)
-                query = query.Where(s => s.Lot.FscTypeId == fscTypeId.Value);
-            if (supplierId.HasValue)
-                query = query.Where(s => s.Lot.SupplierId == supplierId.Value);
+            if (fscTypeIds != null && fscTypeIds.Length > 0)
+                query = query.Where(s => fscTypeIds.Contains(s.Lot.FscTypeId));
+            if (supplierIds != null && supplierIds.Length > 0)
+                query = query.Where(s => s.Lot.SupplierId.HasValue && supplierIds.Contains(s.Lot.SupplierId.Value));
             if (productIds != null && productIds.Length > 0)
                 query = query.Where(s => s.Lot.ProductId.HasValue && productIds.Contains(s.Lot.ProductId.Value));
 

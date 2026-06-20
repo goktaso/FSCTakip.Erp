@@ -188,6 +188,108 @@ var x = @item.Weight;
 onclick="fn(@item.Weight.ToString("N2"))"  // N0/N2 binlik ayraç ekler!
 ```
 
+### ⚠️ MCD (Multi-Choice Dropdown) Komponenti — Coklu Seçim Filtresi
+
+Tekli dropdown yerine Excel Advanced Filter tarzı coklu seçim paneli:
+
+**Yapı:**
+```html
+<div class="mcd" id="mcd-[pageId]" data-placeholder="— Seçiniz —">
+    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-[pageId]')">
+        <span class="mcd-lbl">[seçili sayısı]</span>
+        <i class="fas fa-angle-down mcd-arrow"></i>
+    </button>
+    <div class="mcd-panel" id="mcd-[pageId]-panel" style="display:none;">
+        <div class="mcd-search-row">
+            <input type="text" class="mcd-search" placeholder="Kod/ad ara..." oninput="mcdSearch(this)">
+        </div>
+        <label class="mcd-row mcd-header">
+            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-[pageId]')">
+            <span>Tümünü Seç / Temizle</span>
+        </label>
+        <div class="mcd-items">
+            @foreach (var item in items) {
+                <label class="mcd-row">
+                    <input type="checkbox" name="itemIds" value="@item.Id" class="mcd-cb" onchange="mcdUpdate('mcd-[pageId]')">
+                    <span class="mcd-text">@item.Code</span>
+                    <span class="mcd-sub">@item.Name</span>
+                    <span class="mcd-ext" title="Dış kod">@item.ExternalCode</span>
+                </label>
+            }
+        </div>
+    </div>
+</div>
+```
+
+**JavaScript (view'de tek seferde tanımlanır, `window._mcdReady` guard ile):**
+```javascript
+if (!window._mcdReady) {
+    window._mcdReady = true;
+    window.mcdOpen = function(id) {
+        var panel = document.getElementById(id + '-panel');
+        var isOpen = panel && panel.style.display !== 'none';
+        document.querySelectorAll('.mcd-panel').forEach(p => p.style.display = 'none');
+        if (!isOpen && panel) {
+            panel.style.display = 'flex';
+            mcdUpdate(id);
+        }
+    };
+    window.mcdSearch = function(el) {
+        var term = el.value.toLowerCase();
+        el.closest('.mcd-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+        });
+    };
+    window.mcdToggleAll = function(cb, id) {
+        document.getElementById(id + '-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(row => {
+            if (row.style.display !== 'none') {
+                var c = row.querySelector('.mcd-cb');
+                if (c) c.checked = cb.checked;
+            }
+        });
+        mcdUpdate(id);
+    };
+    window.mcdUpdate = function(id) {
+        var panel = document.getElementById(id + '-panel');
+        var container = document.getElementById(id);
+        if (!panel || !container) return;
+        var count = panel.querySelectorAll('.mcd-cb:checked').length;
+        var label = container.querySelector('.mcd-lbl');
+        if (label) label.textContent = count === 0 ? (container.dataset.placeholder || '— Seçiniz —') : count + ' seçildi';
+        var allCb = panel.querySelector('.mcd-all-cb');
+        var visibleCbs = panel.querySelectorAll('.mcd-row:not(.mcd-header):not([style*="none"]) .mcd-cb').length;
+        if (allCb && visibleCbs > 0) allCb.checked = (count >= visibleCbs);
+    };
+    document.addEventListener('mousedown', e => {
+        if (!e.target.closest('.mcd')) {
+            document.querySelectorAll('.mcd-panel').forEach(p => p.style.display = 'none');
+        }
+    });
+}
+```
+
+**Controller parametresi:** `int? itemId` → `int[]? itemIds` → query `.Where(x => itemIds.Contains(x.ItemId))`
+
+**ViewBag tutulması:** `ViewBag.ItemIds = itemIds ?? Array.Empty<int>();` view'de checkbox state'i için.
+
+**Excel export:** Parametre URL'ye `itemIds=1&itemIds=2` şeklinde gönderilir (ASP.NET Core array binding).
+
+**Uyarı:** Her view'de MCD kullanılırsa, `window._mcdReady` guard ile coklu tanımlama önlenmelidir.
+
+### ⚠️ StockMovement.ProductId Non-Nullable Kural
+
+`StockMovement.ProductId` **asla NULL olmamalıdır** (her hareketi bir ürüne atanmalıdır):
+```csharp
+public int ProductId { get; set; }  // NOT NULL
+public virtual Product Product { get; set; }
+
+// Query'lerde `?. HasValue` diye bakmaya gerek yok; doğrudan ProductId kullan
+query = query.Where(sm => sm.ProductId == productId);  // ✓
+// query = query.Where(sm => sm.ProductId?.HasValue == true) YANLIŞ
+```
+
+**Neden:** StockMovement daima bir ürün ile ilişkili olmalıdır. Veri tabanında NOT NULL constraint sağlanmalıdır. Eski kayıtlarda NULL varsa migration ile backfill edilir.
+
 ## Dosya Yükleme Konvansiyonu
 
 PDF belgeler (irsaliye, fatura) şu dizine kaydedilmeli:

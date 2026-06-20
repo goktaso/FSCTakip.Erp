@@ -2801,6 +2801,87 @@ async function saveQuickAdd() {
 
 @await RenderSectionAsync("Scripts", required: false)
 
+<!-- ═══════════════════════════════════════════════════════════
+     MCD — Multi-Check Dropdown (Global Bileşen)
+     Tüm sayfalarda otomatik yüklenir. Sayfa @section Scripts
+     bloğunda tekrar tanımlamaya GEREK YOK.
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+.mcd{position:relative;display:inline-block;vertical-align:top}
+.mcd-btn{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--surface,#fff);border:1px solid var(--border,#d1d5db);color:var(--text,#111);padding:5px 10px;border-radius:6px;font-size:13px;white-space:nowrap}
+.mcd-btn:hover,.mcd-btn:focus{border-color:#1976d2;outline:none}
+.mcd-panel{position:absolute;top:calc(100% + 4px);left:0;min-width:300px;max-width:420px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:2000;display:flex;flex-direction:column;overflow:hidden}
+.mcd-search-row{padding:8px 10px;border-bottom:1px solid #f1f5f9;flex-shrink:0}
+.mcd-search{width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:5px 10px;font-size:12.5px;outline:none;color:#111}
+.mcd-search:focus{border-color:#1976d2;box-shadow:0 0 0 2px rgba(25,118,210,.12)}
+.mcd-header{background:#f8fafc;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12.5px;color:#374151;flex-shrink:0}
+.mcd-items{overflow-y:auto;max-height:260px}
+.mcd-row{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;font-size:12.5px;user-select:none}
+.mcd-row:hover{background:#eff6ff}
+.mcd-cb,.mcd-all-cb,.mcd-rb{cursor:pointer;accent-color:#1976d2;min-width:15px;height:15px;flex-shrink:0}
+.mcd-name{flex:1;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+.mcd-sub{font-size:10.5px;color:#374151;background:#f3f4f6;padding:1px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.mcd-ext{font-size:10.5px;color:#3730a3;background:#eef2ff;padding:1px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.mcd-arrow{color:#6b7280;font-size:11px;flex-shrink:0;margin-left:6px}
+.mcd-empty{padding:12px;text-align:center;color:#9ca3af;font-size:12.5px}
+</style>
+<script>
+// ── MCD Global Functions ─────────────────────────────────────
+window.mcdOpen=function(id){
+    var p=document.getElementById(id+'-panel');
+    var o=p&&p.style.display!=='none';
+    document.querySelectorAll('.mcd-panel').forEach(function(x){x.style.display='none'});
+    if(!o&&p){p.style.display='flex';mcdUpdate(id);
+        var s=p.querySelector('.mcd-search');if(s){s.value='';mcdSearch(s);}
+    }
+};
+window.mcdSearch=function(el){
+    var t=el.value.toLowerCase().trim();
+    var panel=el.closest('.mcd-panel');
+    var empty=panel.querySelector('.mcd-empty');
+    var vis=0;
+    panel.querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){
+        var show=!t||r.textContent.toLowerCase().includes(t);
+        r.style.display=show?'':'none';
+        if(show)vis++;
+    });
+    if(empty)empty.style.display=vis===0?'':'none';
+};
+window.mcdToggleAll=function(cb,id){
+    var panel=document.getElementById(id+'-panel');
+    if(!panel)return;
+    panel.querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){
+        if(r.style.display!=='none'){var c=r.querySelector('.mcd-cb');if(c)c.checked=cb.checked;}
+    });
+    mcdUpdate(id);
+};
+window.mcdUpdate=function(id){
+    var panel=document.getElementById(id+'-panel');
+    var cont=document.getElementById(id);
+    if(!panel||!cont)return;
+    var n=panel.querySelectorAll('.mcd-cb:checked').length;
+    var lbl=cont.querySelector('.mcd-lbl');
+    if(lbl)lbl.textContent=n===0?(cont.dataset.placeholder||'— Seçiniz —'):n+' seçildi';
+    var allCb=panel.querySelector('.mcd-all-cb');
+    if(allCb){
+        var vis=panel.querySelectorAll('.mcd-row:not(.mcd-header):not([style*="none"]) .mcd-cb').length;
+        allCb.checked=vis>0&&n>=vis;
+        allCb.indeterminate=n>0&&n<vis;
+    }
+};
+window.mcdSingleSelect=function(id,val,label){
+    var cont=document.getElementById(id);
+    var lbl=cont?cont.querySelector('.mcd-lbl'):null;
+    if(lbl)lbl.textContent=label||'— Seçildi —';
+    setTimeout(function(){document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'});},80);
+};
+// Panel dışı tıklayınca kapat
+document.addEventListener('mousedown',function(e){
+    if(!e.target.closest('.mcd'))
+        document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'});
+});
+</script>
+
 <script>
 // Global fetch wrapper: 401 (oturum sona erdi) yakalayıp login sayfasına yönlendirir
 async function fetchJson(url, options) {
