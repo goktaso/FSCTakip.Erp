@@ -63,7 +63,7 @@
                             <div class="mcd-items">
                                 @foreach (var s in suppliers)
                                 {
-                                    @{ bool sel = int.TryParse(s.Value, out var sid) && supplierIds.Contains(sid); }
+                                    bool sel = int.TryParse(s.Value, out var sid) && supplierIds.Contains(sid);
                                     <label class="mcd-row">
                                         <input type="checkbox" name="supplierIds" value="@s.Value" class="mcd-cb"
                                                onchange="mcdUpdate('mcd-prod-sup')"
@@ -94,7 +94,7 @@
                             <div class="mcd-items">
                                 @foreach (var g in productGroups)
                                 {
-                                    @{ bool sel = int.TryParse(g.Value, out var gid) && productGroupIds.Contains(gid); }
+                                    bool sel = int.TryParse(g.Value, out var gid) && productGroupIds.Contains(gid);
                                     <label class="mcd-row">
                                         <input type="checkbox" name="productGroupIds" value="@g.Value" class="mcd-cb"
                                                onchange="mcdUpdate('mcd-prod-grp')"
