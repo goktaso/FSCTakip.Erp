@@ -46,11 +46,22 @@ namespace FSCTakip.WebUI.Controllers
 
             if (!hasUserFilter)
             {
-                // Varsayılan: Hammadde + Yarı Mamül + Burgu Sap grupları
-                var defaultGroupIds = new[] { 1, 3, 4 };
+                // Varsayılan: Hammadde + Yarı Mamül + Burgu Sap grupları (ada göre dinamik lookup)
+                var defaultGroupIds = await _context.ProductGroups
+                    .Where(g => g.GroupName.ToUpper().Contains("HAMMADDE")
+                             || g.GroupName.ToUpper().Contains("YARI MAMÜL")
+                             || g.GroupName.ToUpper().Contains("YARI MAMUL")
+                             || g.GroupName.ToUpper().Contains("BURGU SAP"))
+                    .Select(g => g.Id)
+                    .ToListAsync();
+
                 query = query.Where(l => l.Product != null
                     && l.Product.ProductGroupId.HasValue
                     && defaultGroupIds.Contains(l.Product.ProductGroupId.Value));
+
+                // Sadece FSC tipi "FSC" ile başlayanlar (FSC_MIX, FSC_RECYCLED, FSC MIX 70% vb.)
+                query = query.Where(l => l.FscType != null
+                    && l.FscType.Name.ToUpper().StartsWith("FSC"));
             }
 
             if (supplierIds != null && supplierIds.Length > 0)
