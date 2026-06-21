@@ -9,11 +9,12 @@
 
     var toplamTuketim  = Model.ProductionDetails.Sum(d => d.ConsumedWeight);
     var toplamFire     = Model.ProductionDetails.Sum(d => d.WasteWeight);
-    // Üretim adedi toplanmaz: aynı gün/parti içindeki bileşen satırları aynı üretim adedini taşır.
-    // Her tarih için max alıp günleri topla (CompleteWorkOrder ile aynı mantık).
-    var toplamUretim   = Model.ProductionDetails
-                              .GroupBy(d => d.ProductionDate.Date)
-                              .Sum(g => g.Max(d => d.ProducedQuantity));
+    // Üretim adedi toplanmaz: her tüketim satırı iş emrinin TOPLAM üretimini taşır (kümülatif).
+    // Farklı hammadde partilerinden yapılan tüketimler aynı üretim adedini kaydeder.
+    // Bu yüzden tüm satırlar arasından MAX alınır — toplama yapılmaz.
+    var toplamUretim   = Model.ProductionDetails.Any()
+                             ? Model.ProductionDetails.Max(d => d.ProducedQuantity)
+                             : 0m;
     var fireOran       = toplamTuketim > 0 ? toplamFire / toplamTuketim * 100 : 0;
 
     var (statusClass, statusLabel) = Model.Status switch {
