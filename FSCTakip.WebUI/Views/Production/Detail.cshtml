@@ -795,14 +795,23 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
 <!-- FSC CoC İzleme (collapsible) -->
                     <div class="col-12">
                         <div style="border-top:1px dashed #e5e7eb;padding-top:10px;">
-                            <button type="button" class="btn btn-link p-0 text-decoration-none"
-                                    style="font-size:12px;color:#5b21b6;"
+                            <div style="background:rgba(109,40,217,.06);border:1px solid rgba(109,40,217,.2);border-radius:8px;padding:8px 12px;margin-top:8px;">
+                            <button type="button" class="btn btn-link p-0 text-decoration-none w-100 text-start"
+                                    style="color:#5b21b6;"
                                     data-bs-toggle="collapse" data-bs-target="#cocSection">
-                                <i class="fas fa-layer-group me-1" style="color:#5b21b6;"></i>
-                                <strong>Bileşen / Kullanım Yeri</strong>
-                                <span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:500;margin-left:4px;">Gövde · Sap · Etiket vb.</span>
-                                <i class="fas fa-chevron-down ms-1" style="font-size:10px;"></i>
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <i class="fas fa-layer-group me-2" style="color:#5b21b6;"></i>
+                                        <strong>Bileşen / Kullanım Yeri</strong>
+                                        <span class="badge ms-2" style="background:#ede9fe;color:#5b21b6;font-size:10px;">Gövde · Sap · Etiket vb.</span>
+                                    </div>
+                                    <i class="fas fa-chevron-down" style="font-size:11px;color:#7c3aed;"></i>
+                                </div>
+                                <div style="font-size:11px;color:#7c3aed;margin-top:2px;">
+                                    Tüketilen hammaddenin çantanın hangi bileşeninde kullanıldığını belirtin
+                                </div>
                             </button>
+                            </div>
                             <div class="collapse" id="cocSection">
                                 <div class="mt-2 p-2 rounded" style="background:#f8fafc;border:1px solid #e5e7eb;">
                                     <label class="form-label mb-2" style="font-size:12px;">Reçete Bileşeni — Tıklayarak seçin:</label>

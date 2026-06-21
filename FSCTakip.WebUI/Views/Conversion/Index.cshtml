@@ -206,6 +206,9 @@
             <div class="card-header bg-white border-0 pt-3 pb-2 d-flex align-items-center gap-2">
                 <h6 class="fw-semibold mb-0"><i class="fas fa-history text-primary me-2"></i>Son Dönüşümler</h6>
                 <span class="badge ms-1" style="background:#dbeafe;color:#1d4ed8;" id="recentCount">@recent.Count kayıt</span>
+                <span class="badge ms-1" id="recentFilterBadge" style="display:none;background:#fef3c7;color:#92400e;font-size:10px;">
+                    <i class="fas fa-filter me-1"></i>Filtre Aktif
+                </span>
                 <button class="btn btn-sm ms-auto" id="recentFilterToggle"
                         onclick="toggleRecentFilter()"
                         style="font-size:11px;padding:3px 10px;background:rgba(25,118,210,.08);color:#1976d2;border:1px solid rgba(25,118,210,.2);">
@@ -326,7 +329,21 @@
                         <tbody>
                         @if (!recent.Any())
                         {
-                            <tr><td colspan="8" class="text-center text-muted py-4">Henüz dönüşüm kaydı yok.</td></tr>
+                            <tr>
+                                <td colspan="9">
+                                    <div style="text-align:center;padding:36px 20px;">
+                                        <div style="width:56px;height:56px;border-radius:16px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+                                            <i class="fas fa-recycle" style="font-size:24px;color:#16a34a;"></i>
+                                        </div>
+                                        <div style="font-size:14px;font-weight:600;color:#374151;margin-bottom:4px;">Henüz dönüşüm kaydı yok</div>
+                                        <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;">Ham veya yarı mamül bobini seçerek ilk dönüşümü başlatın.</div>
+                                        <button type="button" class="btn btn-success btn-sm"
+                                                onclick="document.getElementById('sourceSerialId').closest('.card').scrollIntoView({behavior:'smooth'})">
+                                            <i class="fas fa-plus me-1"></i>İlk Dönüşümü Başlat
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
                         }
                         @foreach (var r in recent)
                         {
@@ -427,12 +444,17 @@ function applyRecentFilter() {
     if (cnt) cnt.textContent = visible + ' kayıt';
     var emptyMsg = document.getElementById('recentEmptyMsg');
     if (emptyMsg) emptyMsg.style.display = (visible === 0 && rows.length > 0) ? '' : 'none';
+    var filterBadge = document.getElementById('recentFilterBadge');
+    var hasFilter = selKaynak.length > 0 || selHedef.length > 0 || selFsc.length > 0 || tarih !== '';
+    if (filterBadge) filterBadge.style.display = hasFilter ? '' : 'none';
 }
 
 function clearRecentFilter() {
     document.querySelectorAll('.rf-kaynak-cb,.rf-hedef-cb,.rf-fsc-cb').forEach(function(cb){ cb.checked = false; });
     ['mcd-rf-kaynak','mcd-rf-hedef','mcd-rf-fsc'].forEach(function(id){ mcdUpdate(id); });
     document.getElementById('rfTarih').value = '';
+    var filterBadge = document.getElementById('recentFilterBadge');
+    if (filterBadge) filterBadge.style.display = 'none';
     applyRecentFilter();
 }
 

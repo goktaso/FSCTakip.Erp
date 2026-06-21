@@ -129,38 +129,51 @@
 </div>
 
 <!-- Denge Formülü Bilgi Çubuğu -->
-<div class="p-2 rounded mb-3 d-flex align-items-center gap-2 flex-wrap" style="background:#f0f9ff;border:1px solid #bae6fd;font-size:12px;">
-    <i class="fas fa-info-circle" style="color:#0369a1;"></i>
-    <span class="text-muted">Denge Formülü:</span>
-    <strong style="color:#7c3aed;">@toplamAcilis.ToString("N0") kg</strong>
-    <span class="text-muted">(Açılış)</span>
-    <span class="text-muted mx-1">+</span>
-    <strong style="color:#1d4ed8;">@toplamGiris.ToString("N0") kg</strong>
-    <span class="text-muted">(Giriş)</span>
-    <span class="text-muted mx-1">=</span>
-    <strong>@toplamTuketim.ToString("N0") kg</strong>
-    <span class="text-muted">(Tüketim)</span>
-    <span class="text-muted mx-1">+</span>
-    <strong class="text-danger">@toplamFire.ToString("N0") kg</strong>
-    <span class="text-muted">(Fire)</span>
-    <span class="text-muted mx-1">+</span>
-    <strong class="text-success">@toplamKapanis.ToString("N0") kg</strong>
-    <span class="text-muted">(Kapanış)</span>
-    @{
-        var sol = toplamAcilis + toplamGiris;
-        var sag = toplamTuketim + toplamFire + toplamKapanis;
-        var fark = sol - sag;
-    }
-    @if (Math.Abs(fark) < 1m)
-    {
-        <span class="badge badge-success ms-auto"><i class="fas fa-check me-1"></i>Denge Tamam</span>
-    }
-    else
-    {
-        <span class="badge ms-auto" style="background:#fee2e2;color:#991b1b;">
-            <i class="fas fa-exclamation-triangle me-1"></i>Fark: @fark.ToString("N2") kg
-        </span>
-    }
+@{
+    var sol = toplamAcilis + toplamGiris;
+    var sag = toplamTuketim + toplamFire + toplamKapanis;
+    var fark = sol - sag;
+    bool dengeTamam = Math.Abs(fark) < 1m;
+}
+<div class="p-3 rounded mb-3" style="@(dengeTamam
+    ? "background:#f0fdf4;border:2px solid #86efac;"
+    : "background:#fef2f2;border:2px solid #fca5a5;")">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <i class="fas @(dengeTamam ? "fa-check-circle" : "fa-exclamation-triangle")"
+           style="font-size:16px;color:@(dengeTamam ? "#16a34a" : "#dc2626");"></i>
+        <strong style="font-size:13px;color:@(dengeTamam ? "#166534" : "#991b1b");">
+            @(dengeTamam ? "Kütle Dengesi Sağlandı" : "Kütle Dengesi Uyumsuzluğu — Kontrol Gerekli")
+        </strong>
+        @if (!dengeTamam)
+        {
+            <span class="badge ms-auto" style="background:#dc2626;color:#fff;font-size:12px;padding:5px 10px;">
+                <i class="fas fa-exclamation-triangle me-1"></i>Fark: @fark.ToString("N2") kg
+            </span>
+        }
+        else
+        {
+            <span class="badge ms-auto" style="background:#16a34a;color:#fff;font-size:12px;padding:5px 10px;">
+                <i class="fas fa-check me-1"></i>Denge Tamam
+            </span>
+        }
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap" style="font-size:12px;">
+        <span class="text-muted">Formül:</span>
+        <strong style="color:#7c3aed;">@toplamAcilis.ToString("N0") kg</strong>
+        <span class="text-muted">(Açılış)</span>
+        <span class="text-muted mx-1">+</span>
+        <strong style="color:#1d4ed8;">@toplamGiris.ToString("N0") kg</strong>
+        <span class="text-muted">(Giriş)</span>
+        <span class="text-muted mx-1">=</span>
+        <strong>@toplamTuketim.ToString("N0") kg</strong>
+        <span class="text-muted">(Tüketim)</span>
+        <span class="text-muted mx-1">+</span>
+        <strong style="color:#dc2626;">@toplamFire.ToString("N0") kg</strong>
+        <span class="text-muted">(Fire)</span>
+        <span class="text-muted mx-1">+</span>
+        <strong style="color:#16a34a;">@toplamKapanis.ToString("N0") kg</strong>
+        <span class="text-muted">(Kapanış)</span>
+    </div>
 </div>
 
 <!-- FSC Denge Özeti — EN ÖNEMLİ BÖLÜM -->
