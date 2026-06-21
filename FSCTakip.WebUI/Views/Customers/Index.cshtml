@@ -28,7 +28,7 @@
         <div class="stat-card">
             <div class="stat-icon blue"><i class="fas fa-user-tie"></i></div>
             <div>
-                <div class="stat-value">@total</div>
+                <div class="stat-value" id="cardTotal">@total</div>
                 <div class="stat-label">Toplam Müşteri</div>
             </div>
         </div>
@@ -37,7 +37,7 @@
         <div class="stat-card">
             <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
             <div>
-                <div class="stat-value">@active</div>
+                <div class="stat-value" id="cardActive">@active</div>
                 <div class="stat-label">Aktif Müşteri</div>
             </div>
         </div>
@@ -46,7 +46,7 @@
         <div class="stat-card">
             <div class="stat-icon @(fscOk > 0 ? "green" : "red")"><i class="fas fa-certificate"></i></div>
             <div>
-                <div class="stat-value">@fscOk</div>
+                <div class="stat-value" id="cardFsc">@fscOk</div>
                 <div class="stat-label">FSC Aktif</div>
             </div>
         </div>
@@ -55,7 +55,7 @@
         <div class="stat-card">
             <div class="stat-icon @(expiring > 0 ? "amber" : "green")"><i class="fas fa-clock"></i></div>
             <div>
-                <div class="stat-value">@expiring</div>
+                <div class="stat-value" id="cardExpiring">@expiring</div>
                 <div class="stat-label">90 Günde Bitiyor</div>
                 @if (expiring > 0)
                 {
@@ -203,7 +203,7 @@
                     <i class="fas fa-user-tie" style="color:#93c5fd;font-size:15px;"></i>
                     <h5 class="modal-title fw-semibold mb-0 fs-6" id="customerModalTitle">Müşteri Formu</h5>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Customers" asp-action="Save" method="post" id="customerForm">
                 <div class="modal-body">

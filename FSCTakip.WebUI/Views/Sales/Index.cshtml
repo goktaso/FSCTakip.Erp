@@ -229,7 +229,7 @@
                     </div>
                     <h5 class="modal-title fw-semibold mb-0" id="salesModalTitle">Yeni Sipariş</h5>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="salesOrderId">
@@ -429,23 +429,13 @@ function saveOrder() {
         }).catch(() => { btn.disabled = false; btn.innerHTML = orig; });
 }
 
-function deleteOrder(id, no) {
-    Swal.fire({
-        title: 'Siparişi Sil',
-        text: `"${no}" siparişini silmek istiyor musunuz?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Evet, Sil',
-        cancelButtonText: 'Vazgeç',
-        confirmButtonColor: '#dc2626'
-    }).then(r => {
-        if (!r.isConfirmed) return;
-        fetch(`/Sales/DeleteOrder/${id}`, { method: 'POST' })
-            .then(r => r.json()).then(res => {
-                showToast(res.message, res.success ? 'success' : 'error');
-                if (res.success) setTimeout(() => location.reload(), 1000);
-            });
-    });
+async function deleteOrder(id, no) {
+    if (!await appConfirm(`"${no}" siparişini silmek istiyor musunuz?`, { danger: true, title: 'Siparişi Sil' })) return;
+    fetch(`/Sales/DeleteOrder/${id}`, { method: 'POST' })
+        .then(r => r.json()).then(res => {
+            showToast(res.message, res.success ? 'success' : 'error');
+            if (res.success) setTimeout(() => location.reload(), 1000);
+        });
 }
 </script>
 }
