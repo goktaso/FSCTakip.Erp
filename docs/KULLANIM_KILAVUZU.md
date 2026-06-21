@@ -944,21 +944,39 @@ Her mamul ürünün standart hammadde/bileşen tüketimini (BOM — Bill of Mate
 
 Sayfanın üstünde ürünün kodu, adı, grubu ve birim bilgisi gösterilir. Sağ üstte toplam bileşen sayısı ve kaç adedinin aktif olduğu görünür.
 
-### Bileşen Ekleme / Düzenleme
+### Bileşen Ekleme
+
+**Çoklu Bileşen Seçimi Modu (Yeni):**
+
+1. **"Bileşen Ekle" butonuna tıklayın** — Modal açılır
+2. **Arama kutusu** — Stok kodu / dış kod / ürün adı ile ara
+3. **Checkbox listesi** — Bir seferde birden fazla ürün seçin (alt+tıkla = toplu seçim)
+4. **"Tümünü Seç / Temizle"** — Listedeki tüm ürünleri hızlı seçim
+5. **Seçili her ürün için:** Standart Miktar, Birim, Kullanım Yeri (Gövde/Sap/Dip Kapak/Etiket/Diğer) girin
+6. **"Tümünü Kaydet" butonuna tıklayın** — Tüm seçimleri batch insert (hata varsa listelenip tekrar deneyin)
 
 | Alan | Açıklama | Örnek |
 |------|----------|-------|
-| Bileşen Ürün | Hammadde veya yarı mamul (açılır liste) | Kraft Kağıt 80gr Bobin |
+| Stok Kodu | Ürünün İç kodu (Kodlanmış etiket) | KRAFT-80-BOB |
+| Dış Kod | Ürünün tedarikçi/sistem kodu | EXT-12345 |
+| Ürün Adı | Ürünün tam adı | Kraft Kağıt 80gr Bobin |
 | Standart Miktar | 1 birim mamul için gereken miktar | 0.082 |
 | Birim | kg, Adet, m², m, lt | kg |
+| Kullanım Yeri | Mamülün hangi bölümünde kullanıldığı (opsiyonel) | Gövde |
 
-> **Not:** Aynı bileşen iki kez eklenemez — sistem uyarı verir.
+**Tek Bileşen Düzenleme:**
+
+Mevcut reçete satırına tıklandığında tekli edit modu açılır:
+- Ürün read-only gösterilir (değiştiremez)
+- Sadece Standart Miktar, Birim, Kullanım Yeri düzenlenebilir
+
+> **Not:** Aynı bileşen iki kez eklenemez — sistem uyarı verir. Batch işlem sırasında hata varsa sadece başarısız kayıt tekrar denenir.
 
 ### İşlemler
 
 | Buton | Açıklama |
 |-------|----------|
-| Düzenle (kalem) | Miktarı veya birimi günceller |
+| Düzenle (kalem) | Miktarı, birimi veya yeri günceller |
 | Pause/Play | Bileşeni pasife/aktife alır; pasif bileşenler otomatik yüklemeye dahil edilmez |
 | Çöp kutusu | Bileşeni reçeteden kalıcı kaldırır |
 
