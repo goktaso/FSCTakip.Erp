@@ -20,7 +20,8 @@ namespace FSCTakip.WebUI.Controllers
         public async Task<IActionResult> Index(
             int[]? supplierIds, int[]? fscTypeIds,
             string? stockCode, string? stockName,
-            int[]? productIds, bool showAll = false)
+            int[]? productIds, int[]? productGroupIds,
+            bool showAll = false)
         {
             var query = _context.FscLots
                 .Include(l => l.Supplier)
@@ -40,12 +41,12 @@ namespace FSCTakip.WebUI.Controllers
                 || (fscTypeIds?.Length > 0)
                 || !string.IsNullOrWhiteSpace(stockCode)
                 || !string.IsNullOrWhiteSpace(stockName)
-                || (productIds?.Length > 0);
+                || (productIds?.Length > 0)
+                || (productGroupIds?.Length > 0);
 
             if (!hasUserFilter)
             {
                 // Varsayılan: Hammadde + Yarı Mamül + Burgu Sap grupları
-                // StockController.Summary ile aynı defaultIds (1=Hammadde, 3=Yarı Mamül, 4=Burgu Sap)
                 var defaultGroupIds = new[] { 1, 3, 4 };
                 query = query.Where(l => l.Product != null
                     && l.Product.ProductGroupId.HasValue
@@ -66,9 +67,15 @@ namespace FSCTakip.WebUI.Controllers
                 query = query.Where(l => l.Product != null && l.Product.ProductName.Contains(stockName.Trim()));
             if (productIds != null && productIds.Length > 0)
                 query = query.Where(l => l.ProductId.HasValue && productIds.Contains(l.ProductId.Value));
+            if (productGroupIds != null && productGroupIds.Length > 0)
+                query = query.Where(l => l.Product != null
+                    && l.Product.ProductGroupId.HasValue
+                    && productGroupIds.Contains(l.Product.ProductGroupId.Value));
 
-            ViewBag.IsDefaultFilter = !hasUserFilter;
-            ViewBag.ShowAll         = showAll;
+            ViewBag.IsDefaultFilter  = !hasUserFilter;
+            ViewBag.ShowAll          = showAll;
+            ViewBag.ProductGroupIds  = productGroupIds ?? Array.Empty<int>();
+            ViewBag.ProductGroups    = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
 
             ViewBag.Suppliers   = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
             ViewBag.FscTypes    = await _context.FscTypes.Where(f => f.IsActive).ToListAsync();

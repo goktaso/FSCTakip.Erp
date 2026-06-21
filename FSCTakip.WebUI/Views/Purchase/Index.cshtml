@@ -8,6 +8,8 @@
     var products     = ViewBag.Products    as List<FSCTakip.Core.Entities.Product> ?? new();
     var productIds   = ViewBag.ProductIds  as int[] ?? Array.Empty<int>();
 
+    var productGroupIds = ViewBag.ProductGroupIds as int[] ?? Array.Empty<int>();
+    var productGroups   = ViewBag.ProductGroups   as List<FSCTakip.Core.Entities.ProductGroup> ?? new();
     var totalLot   = Model.Count();
     var totalKg    = Model.Sum(l => l.Serials.Sum(s => s.InitialWeight));
     var kalanKg    = Model.Sum(l => l.Serials.Sum(s => s.CurrentWeight));
@@ -137,6 +139,37 @@ else if ((bool)(ViewBag.ShowAll ?? false))
             <div style="min-width:160px;">
                 <label class="form-label small fw-semibold mb-1">Stok Adı</label>
                 <input type="text" name="stockName" value="@ViewBag.StockName" class="form-control form-control-sm" placeholder="ör. KMK RBMF">
+            </div>
+            <div style="display:flex;flex-direction:column;min-width:160px;">
+                <label class="form-label small fw-semibold mb-1">Ürün Grubu</label>
+                <div class="mcd" id="mcd-pur-grp" data-placeholder="— Tümü —">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-pur-grp')">
+                        <span class="mcd-lbl">@(productGroupIds.Length > 0 ? productGroupIds.Length + " seçildi" : "— Tümü —")</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-pur-grp-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Grup ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <label class="mcd-row mcd-header">
+                            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-pur-grp')">
+                            <span>Tümünü Seç / Temizle</span>
+                        </label>
+                        <div class="mcd-items">
+                            @foreach (var g in productGroups)
+                            {
+                                bool sel = productGroupIds.Contains(g.Id);
+                                <label class="mcd-row">
+                                    <input type="checkbox" name="productGroupIds" value="@g.Id" class="mcd-cb"
+                                           onchange="mcdUpdate('mcd-pur-grp')"
+                                           checked="@(sel ? "checked" : null)">
+                                    <span class="mcd-name">@g.GroupName</span>
+                                </label>
+                            }
+                        </div>
+                        <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                    </div>
+                </div>
             </div>
             <div style="display:flex;flex-direction:column;min-width:160px;">
                 <label class="form-label small fw-semibold mb-1">Tedarikçi</label>
