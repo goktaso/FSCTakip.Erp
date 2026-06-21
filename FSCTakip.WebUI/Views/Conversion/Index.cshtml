@@ -287,7 +287,8 @@ var _srcSel = { kod: null, ad: null, parti: null, seri: null };
 
 function _srcFiltered() {
     return SRC_ALL.filter(function(s) {
-        if (_srcSel.kod   && s.kod   !== _srcSel.kod)   return false;
+        // Stok kodu: iç KOD veya dış kod eşleşmesi
+        if (_srcSel.kod && s.kod !== _srcSel.kod && s.disKod !== _srcSel.kod) return false;
         if (_srcSel.ad    && s.ad    !== _srcSel.ad)    return false;
         if (_srcSel.parti && s.parti !== _srcSel.parti) return false;
         if (_srcSel.seri  && s.seri  !== _srcSel.seri)  return false;
@@ -345,7 +346,15 @@ function _srcUpdate(changedField) {
     for (var i = idx+1; i < order.length; i++) _srcSel[order[i]] = null;
 
     var f = _srcFiltered();
-    _buildItems('mcd-f-kod-items',   _unique(f,'kod'),   'kod',   _srcSel.kod,   null);
+    _buildItems('mcd-f-kod-items', _unique(f,'kod'), 'kod', _srcSel.kod, function(kod) {
+        // Hem iç hem dış kodu göster: "URN-024 · 10191"
+        var item = SRC_ALL.find(function(x){ return x.kod === kod; });
+        if (!item) return kod;
+        var parts = [];
+        if (kod)          parts.push(kod);
+        if (item.disKod && item.disKod !== kod) parts.push(item.disKod);
+        return parts.join(' · ');
+    });
     _buildItems('mcd-f-ad-items',    _unique(f,'ad'),    'ad',    _srcSel.ad,    null);
     _buildItems('mcd-f-parti-items', _unique(f,'parti'), 'parti', _srcSel.parti, null);
     _buildItems('mcd-f-seri-items',  _unique(f,'seri'),  'seri',  _srcSel.seri,
