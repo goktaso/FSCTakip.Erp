@@ -605,8 +605,10 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                     var totalKg = pg.Sum(s => s.CurrentWeight);
                                     // 2. seviye: lot bazlı alt gruplama
                                     var byLot = pg.GroupBy(s => new {
-                                        PartiNo  = s.Lot?.PartiNo ?? "—",
-                                        Supplier = s.Lot?.Supplier?.Name ?? "Bilinmiyor"
+                                        PartiNo    = s.Lot?.PartiNo ?? "—",
+                                        Supplier   = s.Lot?.Supplier?.Name ?? "",
+                                        LotDate    = s.Lot?.ArrivalDate.ToString("dd.MM.yyyy") ?? "",
+                                        IsYariMamul = s.Lot?.Supplier == null
                                     });
                                     @* Ürün satırı — tıklayınca bobinleri aç/kapat *@
                                     <div class="serial-product-header"
@@ -639,8 +641,24 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                         @foreach (var lg in byLot)
                                         {
                                             @* Lot alt başlığı *@
-                                            <div style="padding:4px 16px;background:#f1f5f9;border-bottom:1px solid #e5e7eb;">
-                                                <span style="font-size:10.5px;color:#475569;">Lot: <strong>@lg.Key.PartiNo</strong> &nbsp;·&nbsp; @lg.Key.Supplier</span>
+                                            <div style="padding:5px 16px;background:#f1f5f9;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                                <span style="font-size:10.5px;color:#475569;">
+                                                    Lot: <strong>@lg.Key.PartiNo</strong>
+                                                </span>
+                                                @if (!string.IsNullOrEmpty(lg.Key.LotDate))
+                                                {
+                                                    <span style="font-size:10px;color:#6b7280;">📅 @lg.Key.LotDate</span>
+                                                }
+                                                @if (lg.Key.IsYariMamul)
+                                                {
+                                                    <span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">
+                                                        ♻️ Dahili Dönüşüm
+                                                    </span>
+                                                }
+                                                else if (!string.IsNullOrEmpty(lg.Key.Supplier))
+                                                {
+                                                    <span style="font-size:10px;color:#475569;">· @lg.Key.Supplier</span>
+                                                }
                                             </div>
                                             @foreach (var s in lg)
                                             {

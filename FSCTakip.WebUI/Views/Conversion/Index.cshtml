@@ -213,33 +213,99 @@
                 </button>
             </div>
 
-            <!-- Filtre Bandı (gizli başlar) -->
+            <!-- Filtre Bandı — MCD Checkbox Paneller -->
             <div id="recentFilterPanel" style="display:none;padding:10px 14px 8px;background:#f8fafc;border-bottom:1px solid #e5e7eb;">
                 <div class="d-flex flex-wrap gap-2 align-items-end">
-                    <div style="display:flex;flex-direction:column;min-width:120px;">
-                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">KAYNAK KOD</label>
-                        <input type="text" id="rfKaynak" class="form-control form-control-sm"
-                               placeholder="Dış kod, stok adı..." oninput="applyRecentFilter()">
+
+                    <!-- Kaynak Ürün MCD -->
+                    <div style="display:flex;flex-direction:column;min-width:160px;">
+                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">KAYNAK ÜRÜN</label>
+                        <div class="mcd" id="mcd-rf-kaynak" data-placeholder="— Tümü —">
+                            <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-rf-kaynak')">
+                                <span class="mcd-lbl">— Tümü —</span>
+                                <i class="fas fa-angle-down mcd-arrow"></i>
+                            </button>
+                            <div class="mcd-panel" id="mcd-rf-kaynak-panel" style="display:none;">
+                                <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)"></div>
+                                <label class="mcd-row mcd-header">
+                                    <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-rf-kaynak');applyRecentFilter()">
+                                    <span>Tümünü Seç</span>
+                                </label>
+                                <div class="mcd-items" style="max-height:220px;">
+                                    @foreach (var k in recent.Select(r => new { r.KaynakAd, r.KaynakKod }).DistinctBy(x => x.KaynakAd).OrderBy(x => x.KaynakAd))
+                                    {
+                                        <label class="mcd-row">
+                                            <input type="checkbox" class="mcd-cb rf-kaynak-cb" value="@k.KaynakAd.ToLower()"
+                                                   onchange="mcdUpdate('mcd-rf-kaynak');applyRecentFilter()">
+                                            @if (!string.IsNullOrEmpty(k.KaynakKod)) { <span class="mcd-ext">@k.KaynakKod</span> }
+                                            <span class="mcd-name" title="@k.KaynakAd">@k.KaynakAd</span>
+                                        </label>
+                                    }
+                                </div>
+                                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                            </div>
+                        </div>
                     </div>
-                    <div style="display:flex;flex-direction:column;min-width:120px;">
+
+                    <!-- Hedef YM MCD -->
+                    <div style="display:flex;flex-direction:column;min-width:160px;">
                         <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">HEDEF YM</label>
-                        <input type="text" id="rfHedef" class="form-control form-control-sm"
-                               placeholder="Hedef ürün..." oninput="applyRecentFilter()">
+                        <div class="mcd" id="mcd-rf-hedef" data-placeholder="— Tümü —">
+                            <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-rf-hedef')">
+                                <span class="mcd-lbl">— Tümü —</span>
+                                <i class="fas fa-angle-down mcd-arrow"></i>
+                            </button>
+                            <div class="mcd-panel" id="mcd-rf-hedef-panel" style="display:none;">
+                                <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)"></div>
+                                <label class="mcd-row mcd-header">
+                                    <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-rf-hedef');applyRecentFilter()">
+                                    <span>Tümünü Seç</span>
+                                </label>
+                                <div class="mcd-items" style="max-height:220px;">
+                                    @foreach (var h in recent.Select(r => r.Hedef).Distinct().OrderBy(x => x))
+                                    {
+                                        <label class="mcd-row">
+                                            <input type="checkbox" class="mcd-cb rf-hedef-cb" value="@h.ToLower()"
+                                                   onchange="mcdUpdate('mcd-rf-hedef');applyRecentFilter()">
+                                            <span class="mcd-name" title="@h">@h</span>
+                                        </label>
+                                    }
+                                </div>
+                                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                            </div>
+                        </div>
                     </div>
-                    <div style="display:flex;flex-direction:column;min-width:90px;">
-                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">PARTİ NO</label>
-                        <input type="text" id="rfParti" class="form-control form-control-sm"
-                               placeholder="YM26-..." oninput="applyRecentFilter()">
-                    </div>
-                    <div style="display:flex;flex-direction:column;min-width:90px;">
+
+                    <!-- FSC Tipi MCD -->
+                    <div style="display:flex;flex-direction:column;min-width:130px;">
                         <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">FSC TİPİ</label>
-                        <input type="text" id="rfFsc" class="form-control form-control-sm"
-                               placeholder="MIX, RECYCLED..." oninput="applyRecentFilter()">
+                        <div class="mcd" id="mcd-rf-fsc" data-placeholder="— Tümü —">
+                            <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-rf-fsc')">
+                                <span class="mcd-lbl">— Tümü —</span>
+                                <i class="fas fa-angle-down mcd-arrow"></i>
+                            </button>
+                            <div class="mcd-panel" id="mcd-rf-fsc-panel" style="display:none;">
+                                <div class="mcd-items" style="max-height:160px;">
+                                    @foreach (var f in recent.Select(r => r.FscType).Distinct().OrderBy(x => x))
+                                    {
+                                        <label class="mcd-row">
+                                            <input type="checkbox" class="mcd-cb rf-fsc-cb" value="@f.ToLower()"
+                                                   onchange="mcdUpdate('mcd-rf-fsc');applyRecentFilter()">
+                                            <span class="mcd-name">@f</span>
+                                        </label>
+                                    }
+                                </div>
+                                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                            </div>
+                        </div>
                     </div>
-                    <div style="display:flex;flex-direction:column;min-width:90px;">
+
+                    <!-- Tarih -->
+                    <div style="display:flex;flex-direction:column;min-width:110px;">
                         <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">TARİH</label>
                         <input type="date" id="rfTarih" class="form-control form-control-sm" oninput="applyRecentFilter()">
                     </div>
+
                     <button type="button" class="btn btn-outline-secondary btn-sm align-self-end"
                             onclick="clearRecentFilter()" style="font-size:11px;">
                         <i class="fas fa-times me-1"></i>Temizle
@@ -322,22 +388,24 @@ function toggleRecentFilter() {
         p.style.display !== 'none' ? 'rgba(25,118,210,.18)' : 'rgba(25,118,210,.08)';
 }
 
+function getChecked(cls) {
+    return [...document.querySelectorAll('.' + cls + ':checked')].map(cb => cb.value);
+}
+
 function applyRecentFilter() {
-    var kaynak = (document.getElementById('rfKaynak').value || '').toLowerCase().trim();
-    var hedef  = (document.getElementById('rfHedef').value  || '').toLowerCase().trim();
-    var parti  = (document.getElementById('rfParti').value  || '').toLowerCase().trim();
-    var fsc    = (document.getElementById('rfFsc').value    || '').toLowerCase().trim();
-    var tarih  = (document.getElementById('rfTarih').value  || '').trim();
+    var selKaynak = getChecked('rf-kaynak-cb');
+    var selHedef  = getChecked('rf-hedef-cb');
+    var selFsc    = getChecked('rf-fsc-cb');
+    var tarih     = (document.getElementById('rfTarih').value || '').trim();
 
     var rows = document.querySelectorAll('#recentTable tbody tr.recent-row');
     var visible = 0;
     rows.forEach(function(tr) {
         var ok = true;
-        if (kaynak && !tr.getAttribute('data-kaynak').includes(kaynak)) ok = false;
-        if (hedef  && !tr.getAttribute('data-hedef').includes(hedef))   ok = false;
-        if (parti  && !tr.getAttribute('data-parti').includes(parti))   ok = false;
-        if (fsc    && !tr.getAttribute('data-fsc').includes(fsc))       ok = false;
-        if (tarih  && tr.getAttribute('data-tarih') !== tarih)          ok = false;
+        if (selKaynak.length && !selKaynak.some(function(v){ return tr.getAttribute('data-kaynak').includes(v); })) ok = false;
+        if (selHedef.length  && !selHedef.some(function(v){  return tr.getAttribute('data-hedef').includes(v);  })) ok = false;
+        if (selFsc.length    && !selFsc.some(function(v){    return tr.getAttribute('data-fsc').includes(v);    })) ok = false;
+        if (tarih && tr.getAttribute('data-tarih') !== tarih) ok = false;
         tr.style.display = ok ? '' : 'none';
         if (ok) visible++;
     });
@@ -349,9 +417,9 @@ function applyRecentFilter() {
 }
 
 function clearRecentFilter() {
-    ['rfKaynak','rfHedef','rfParti','rfFsc','rfTarih'].forEach(function(id) {
-        document.getElementById(id).value = '';
-    });
+    document.querySelectorAll('.rf-kaynak-cb,.rf-hedef-cb,.rf-fsc-cb').forEach(function(cb){ cb.checked = false; });
+    ['mcd-rf-kaynak','mcd-rf-hedef','mcd-rf-fsc'].forEach(function(id){ mcdUpdate(id); });
+    document.getElementById('rfTarih').value = '';
     applyRecentFilter();
 }
 
