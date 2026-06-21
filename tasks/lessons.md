@@ -421,6 +421,25 @@ Iki yeni view eklendi:
 
 **Not:** `int.TryParse` güvenli olmak için kullanıldı; item Value her zaman int gibi görünmez (dropdown'da string olabilir).
 
+## Bağımlı field otomatik doldurma — çoklu filtre dialog pattern (2026-06-21)
+
+**Amaç:** Conversion gibi çoklu filtre dialog'larda, bir field (örn. stok kodu) seçilince bağımlı field'lar otomatik set edilebilmeli.
+
+**Örnek — Conversion/Index stok kodu → stok adı:**
+```javascript
+if (field === 'kod') {
+    var ads = _unique(_srcFiltered(), 'ad');  // Kod filtresi sonrası unik stok adları
+    if (ads.length === 1) {  // Tek bir seçenek varsa
+        _srcSel.ad = ads[0];  // Stok adını otomatik seç
+        _srcUpdate('ad');  // UI'ı güncelle
+    }
+}
+```
+
+**Deseni:** Her `_srcSel[field]` set'inde, bağımlı field'ların seçenek sayısını kontrol et. Tek seçenek varsa (`length === 1`) otomatik seç; yoksa kullanıcı seçsin. Bu UX fluidliğini artırır — "3 filtreyi seçersen 4. otomatik gelir".
+
+**Uygulandığı:** `FSCTakip.WebUI/Views/Conversion/Index.cshtml` satır 326-332 (stok kodu seçilince stok adı).
+
 ## Varsayılan filtre + "Tüm Kayıtları Göster" toggle (2026-06-21)
 
 **Amaç:** Kullanıcı filtre seçmediğinde sensible varsayılan yapı göster (örn. Purchase'da Hammadde+YM+BS), ama "Tüm Kayıtları Göster" seçeneğiyle full liste erişimini sağla.
@@ -445,3 +464,386 @@ Iki yeni view eklendi:
 **Not:** Bu pattern diğer sayfalar (Stock/Index, Production/Index) için de uygulanabilir; her sayfa kendi varsayılan GroupIds'ini tanımlayabilir.
 
 **CSS:** Bilgi bandı inline style (rgba mavi/beyaz arka plan, 12.5px font), hover efekti veya geçiş animasyonu YOK (statik banner). Linkler `btn btn-sm` sınıfı taşır, hover renk değişimi minimal.
+
+## ProductRecipe BilesenYeri alanı — mamulde bileşen konumu (2026-06-21)
+
+**Amaç:** Reçete'de her bileşenin mamülün hangi bölümünde kullanıldığını (Gövde, Sap, Dip Kapak, Etiket, Diğer) belirtebilme.
+
+**Yapı:**
+- `ProductRecipe.BilesenYeri`: nullable string — tüketim girerken ve BOM analizinde bileşen ayrımı için
+- Migration: `20260621182117_AddBilesenYeriToProductRecipe` — ProductRecipes tablosuna `BilesenYeri` sütunu (nvarchar(max), nullable)
+
+**Uygulandığı yerler:**
+- `Products/Recipe.cshtml`: Reçete modal'ında Bileşen Yeri dropdown (veya text input)
+- Production/Detail.cshtml: Tüketim girerken bileşen yeri gösterilip seçimi mümkün olacak
+- BOM Raporu: Bileşen yeri bazında gruplandırılıp alt toplam gösterebilecek
+
+**Not:** Alan eklenmiş ama Conversion akışında doğrudan kullanılmıyor — henüz UI'ı entegre edilmemiş.
+
+## Products/Recipe.cshtml — Coklu bileşen seçimi + dinamik miktar girişi (2026-06-21)
+
+**Amaç:** Reçete düzenlemesinde bir seferde birden fazla bileşen seçip, her biri için ayrı miktar/birim/yeri satırını dinamik açabilme.
+
+**Yapı:**
+- **"Bileşen Ekle" butonu:** `addModal` açıyor (coklu seçim modu)
+- **addModal:** arama kutusu + checkbox ürün listesi, tümünü seç/temizle, panel açık/kapalı durumu
+- **Seçim sonrası:** Her seçili ürün için dinamik satır ekleniyor (Ürün Kodu, Ad, Birim, Miktar, Bileşen Yeri)
+- **"Tümünü Kaydet" butonu:** Tüm seçimleri sırayla kaydediyor; hata varsa toast bildirim
+- **Düzenleme (id>0):** openModal sadece tekli mode'de, gizli select dropdown ile (sayfayı tekli UI olarak gösterir)
+- **editProductName input:** Seçili ürün adını otomatik gösterip, ürün değiştirimi engeller (düzenleme sırasında karışıklık önleme)
+
+**Teknik detaylar:**
+- `editModal` ID'li item seçilince `editProductId`/`editProductName`/`editStdQuantity`/`editUnit`/`editBilesenYeri` alacakları doldurulur
+- Yeni kayıt: `<div id="editRow-[seq]">` dinamik olarak ekle/kaldırabilir (sequence tekil indexleme)
+- Form submit: POST → `ProductsController.SaveRecipe` (batch işlem, loop → SaveChangesAsync)
+
+**Uyarıları:**
+- Coklu kayıt sırasında birisi başarısız olursa (validasyon hatası), sıradaki kayıtlar yine işlenebilir (transaction'a alınmadı — rollback yok)
+- Aynı ürün tekrar seçilirse duplicate satırlar açılabiliyor; UI'da bu kontrol edilmemiş
+
+**Uygulandığı:** `FSCTakip.WebUI/Views/Products/Recipe.cshtml` (commit 31dc698).
+
+## Production/Detail tüketim modal — BilesenYeri integrasyon (2026-06-21)
+
+**Yapı:**
+- Tüketim girerken, Bileşen Yeri dropdown'u görüntüleniyor (veya text input)
+- ProductRecipe'de BilesenYeri varsa seçili olarak gelir; kullanıcı değiştirebilir
+
+**Henüz yapılmayan:** Production/Detail.cshtml'de modal UI eksik — henüz eklenmiş değil; ProductionDetail entity'sinde BilesenYeri alanı bulunmuyor. Sadece ProductRecipe'de tanımlandı.
+
+## Conversion modal'ında stok kodu seçilince stok adı otomatik doldurma (2026-06-21)
+
+**Amaç:** Filtreleme dialog'larında (örn. Conversion/Index sourceSerial seçimi) bağımlı alan otomatik set edilebilmeli.
+
+**Yöntem:**
+```javascript
+// Seçilen bileşenin filtrelenmiş listesi (_srcFiltered()' ten unik değerleri al
+var ads = _unique(_srcFiltered(), 'ad');
+if (ads.length === 1) {  // Tek seçenek varsa
+    _srcSel.ad = ads[0];  // Otomatik seç
+    _srcUpdate('ad');      // UI yenile
+}
+```
+
+**Zaman:** Kullanıcı bir field (örn. kod) seçtikten hemen sonra; sistem diğer field'ları kontrol ediyor. Seçenek sayı 1 ise otomatik set et; >1 ise kullanıcı seçsin.
+
+**Uygulandığı:** `Conversion/Index.cshtml` satır 326-332 (stok kodu seçilince stok adı).
+
+**UX faydası:** "Kod seçersen ad otomatik gelir; 3 filtreyi ayarlarsam 4. otomatik oluşur" gibi progressive disclosure sağlıyor — form doldurmayı akıcılaştırır.
+
+## Çoklu ürün modal pattern — "addModal" → "formModal" ayrımı (2026-06-21)
+
+**Amaç:** Reçete düzenlemesinde iki işlem modu:
+1. **Çoklu Bileşen Ekleme** (`addModal`) — bir seferde birden fazla ürün seçip her biri için miktar girişi
+2. **Tekli Düzenleme** (`formModal`) — mevcut reçete satırını düzenleme
+
+**Yapı:**
+- **addModal** (`id="addModal"`, modal-lg): Arama kutusu → checkbox ürün listesi → seçilen her ürün için dinamik satır (miktar/birim/yeri)
+- **formModal** (`id="formModal"`, modal-dialog-centered): Tekli düzenleme — ürün readonly gösterilir, sadece miktar/birim/yeri editlenebilir
+- Buton çağrıları: 
+  - "Bileşen Ekle" butonu → `openAddModal()` (yeni çoklu ekle)
+  - Tablo satır düzenleme → `openModal(id)` (id>0 ise tekli edit; id==0 ise `openAddModal()` redirect)
+
+**JavaScript mekanizması:**
+- `openAddModal()`: Tüm checkbox'ları sıfırla, arama kutusu temizle, seçim satırları sil, paneli göster/gizle
+- `filterAddList()`: Arama kutusuna yazdıkça ürün listesini `data-filter` attribute'ına göre filtrele (kod+dış kod+ad)
+- `onAddCbChange(cb)`: Checkbox seçilince dinamik satır div'ini (`addRow_[pid]`) oluştur, seçilmezse sil
+- `saveAllLines()`: Seçili ürünleri loop'la kaydedi; her birine POST (`/Products/SaveRecipeLine`) → batch insert → toast + reload
+
+**HTML özellikler:**
+- Checkbox row: `.add-prod-row` flex label, `data-filter` ve `data-name/code/ext` attribute'leri
+- Seçim paneli: `addSelections` id'li div, başlangıçta hidden (seçim yapılınca gösterilir)
+- Dinamik satır: `addRow_[pid]` id'li, 3 input (qty/unit/yer), buton bar'ında hızlı seçim (Gövde/Sap/Dip Kapak/Etiket/Diğer)
+
+**Farklılık eski tasarımdan:**
+- Eski: `<select>` dropdown tek ürün seçimi + form submit
+- Yeni: Checkbox liste + çoklu seçim + her biri için inline miktar girişi + async batch save
+
+**Tuzak:** `saveAllLines()` loop'ta hata varsa o ürünü skip ediyor (transaction yok). Kısmi başarı →  "X bileşen eklendi" toast + hata listesi. Kullanıcı hataları düzeltip tekrar eklemelidir.
+
+**Uygulandığı:** `FSCTakip.WebUI/Views/Products/Recipe.cshtml` (commit c44af09).
+
+## Arama kutusu selector değişimi — data-filter vs data-search (2026-06-21)
+
+**Sorun:** Recipe sayfasında arama kutusu (`childProductSearch`) çalışmıyor → "Bileşen Ekle"deki tüm ürünler görünüyor, filtresi yok.
+
+**Kök neden:** Eski modal'da `<select id="childProductId">` alanının `data-search` attribute'üne JavaScript filter uygulanıyordu (`childProductSearch.oninput` → option'ları gizle). Yeni addModal'da `<label class="add-prod-row" data-filter="...">` yapısı kullanıldı; ama arama box'ın ID'si hâlâ `addSearch` (değiştirildi). JS fonksiyonları güncellendi.
+
+**Çözüm:** 
+- Arama box: `<input id="addSearch" ... oninput="filterAddList()">`
+- Filter fonksiyonu: Ürün row'larının `data-filter` attribute'ini sorgula (kod+dış kod+ad kombinasyonu, lowercase)
+- Teknisyen kolaylığı: `data-filter` vs `data-search` iki farklı pattern'dir; aynı sayfada tuple attribute adı consistent olmalı
+
+**Not:** Diğer sayfalar (Purchase, Stock) `data-filter` kullanıyor. Recipe sayfası artık aynı pattern'i takip ediyor.
+
+## Tekli modal'da ürün read-only gösterimi (2026-06-21)
+
+**Yapı:** Mevcut reçete satırı düzenlemesinde (formModal):
+- `editProductName` input: readonly, background `#f8fafc`, metin koyu — sadece gösterim amaçlı
+- `childProductId` input: hidden, gerçek ürün ID'si tutuyor
+- Düzenleme açıldığında `GetRecipeLine` API'si ürün ID döndürür → `.add-prod-row .add-cb` listesinde aranıp name bulunur → `editProductName`'e yazılır
+
+**Amaç:** Kullanıcı mevcut ürünü yanlışlıkla değiştiremez (ürün değişirse reçete mantığı kırılabilir). Sadece miktar/birim/yeri editlenebilir.
+
+**Teknisyen notu:** EditProductName'i text readonly yerine label olarak göstermek daha zarif (input değil static metin). Ama input alanı doldurma işlemi çok hızlı; label ile inline text de yapılabilir.
+
+**Uygulandığı:** `FSCTakip.WebUI/Views/Products/Recipe.cshtml` düzenleme flow'u.
+
+## Production/Detail — Bileşen seçimi dropdown yerine hızlı tiklama butonları (2026-06-21)
+
+**Amaç:** Tüketim girerken bileşen seçimi dropdown'dan kurtulup, sık kullanılan bileşenleri hızlı butonlarla seçebilme.
+
+**Yapı:**
+- Reçete modal'da bileşen listesi (ProductRecipe) checkbox + buton bar olarak gösterilir
+- **Hızlı seçim butonları:** "Gövde", "Sap", "Dip Kapak", "Etiket", "Diğer" — bileşen yeri (BilesenYeri) filterler
+- Kullanıcı buton tıklar → seçili bileşenleri filtrele → liste güncellenir
+- Seçili bileşen `editSelected`/`editBilesenYeri` input'larına otomatik yüklenir
+
+**Teknik detaylar:**
+- Bileşen satırları `.recipe-row` label'ler; checkbox + metin + buton bar
+- Buton click: `onQuickSelect(yeri)` → bileşenleri filtrele, seçili olanları göster
+- Bootstrap grid grid'de buton layout düzeltme: `gap-1` ve `flex-wrap` ile responsive tasarım
+
+**Tuzak:** Çok sayıda bileşen varsa buton bar'ının yüksekliği tablo hizalanmasını bozabilir (sticky positioning). Min-height veya grid row-span ile dengelenmesi gerekebilir.
+
+**Uygulandığı:** `FSCTakip.WebUI/Views/Production/Detail.cshtml` (commit b616e23).
+
+## Production/Detail — Sticky işlem butonu + min-width sutun genislikleri (2026-06-21)
+
+**Sorun:** Tüketim tablosunda işlem butonları (Düzenle/Sil) satır scroll'lanırken kayboluyor (sticky position broken).
+
+**Kök neden:** Tablo `<table>` element'inde `position: relative` yok; sticky column'lar parent bağlamını kaybediyor. İlaveten, `.col-auto` ve `flex-grow` sutunlar masaya sığmadığında min-width tanısı yok.
+
+**Çözüm:**
+- `<table>` wrapper `position: relative` ve `overflow-x: auto` (horizontal scroll)
+- Işlem butonlarını `<th>` ve `<td>` içine koy: `position: sticky; right: 0; z-index: 10;`
+- Tüm sutunlara min-width ver (örn. 100px); flex-grow ile büyümesine izin ver
+- Tüketim, Fire, Üretim sayısal sutunları `text-end` align
+- Last column (işlem) `width: 120px; min-width: 120px;` ile sabit genişlik
+
+**CSS pattern:**
+```css
+.sticky-col {
+    position: sticky;
+    right: 0;
+    z-index: 10;
+    background: white;  /* scroll'da arka plan tutulmalı */
+}
+td.sticky-col {
+    box-shadow: -2px 0 4px rgba(0,0,0,.1);  /* kenar gölgesi */
+}
+```
+
+**Uygulandığı:** `FSCTakip.WebUI/Views/Production/Detail.cshtml` (commit c319c16).
+
+## Production/Detail — CoC (Chain of Custody) modal otomatik açılış (2026-06-21)
+
+**Amaç:** Bileşen düzenlemesinde, kullanıcının CoC kontrol etmesi için modal otomatik açılsın.
+
+**Yapı:**
+- Edit modunda (`openModal(id)` → id > 0) form doldurulduktan sonra `showCoC` flag'i true olur
+- Modal render'ında `@if (ViewBag.ShowCoC) ... ready` durumu check edilir
+- Bootstrap modal'ın `.show` sınıfı + `backdrop: 'static'` ile modal açılır ve dışarı tıklama kapanmaz
+- Kullanıcı CoC'yi kontrol edip "Tamam" veya "İptal" tıklar
+
+**İş akışı:**
+1. Bileşen edit → form doldurulur → `openModal(id)` çağrılır
+2. Controller `Edit` action'ında `ViewBag.ShowCoC = true` set edilir
+3. View render → CoC modal otomatik açılır
+4. Kullanıcı kontrol edip modal kapat → tüketim form ready
+
+**Tuzak:** Modal content (CoC tablosu) ağırsam bootstrap modal animation delay'ı fark olabilir (biraz yavaş görünür). Performans için CoC verilerini pre-load etmek önerilir.
+
+**Uygulandığı:** `FSCTakip.WebUI/Views/Production/Detail.cshtml` (commit c838990).
+
+## Production/Detail — Tüketim tablosuna Bilesen + Kullanim yeri sutunu (2026-06-21)
+
+**Amaç:** Tüketim listesinde hangi bileşenin kullanıldığını ve hangi bölümde (Gövde/Sap/vb.) açıkça gösterme.
+
+**Yapı:**
+- Tüketim tablosu `<tr>`'lerine yeni sutunlar: `Bileşen (ürün adı)` + `Kullanım Yeri`
+- Bileşen adı: `ProductionDetail → ProductRecipe → Product.ProductName` (navigation via FK)
+- Kullanım yeri: `ProductionDetail.BilesenYeri` (nullable string) — ProductRecipe'den inherit edilir
+- Bootstrap sutun genişliği: `col-md-3` (bileşen), `col-md-2` (yer) — responsive
+
+**Veri akışı:**
+- SaveDetail'de ProductRecipeId alınır → reçete kaydına erişilir
+- BilesenYeri, ProductRecipe'den çekilir ve ProductionDetail'e yazılır
+- Edit/Delete operasyonlarında sutun güncellenir
+
+**CSS:** 
+- Bileşen adı `font-weight: 500` (vurgu)
+- Kullanım yeri `text-muted` (gri, ikincil)
+- Responsive breakpoint'lerde satır kaydırması düşük ekranlar için
+
+**Uygulandığı:** `FSCTakip.WebUI/Views/Production/Detail.cshtml` (commit 81a77d3).
+
+## FscLot.SourceSerial navigation property — anonim FK'den typed property'e (2026-06-22)
+
+**Sorun:** Dönüşüm izlenebilirliğinde (YM → kaynak ham bobin) `FscLot.SourceSerialId` FK var ama navigation property yok → Controller'da her seferde `_context.FscSerials.Find(lot.SourceSerialId.Value)` çağrı gerekiyordu.
+
+**Çözüm:**
+- `FscLot.cs`'ye navigation property eklendi: `public virtual FscSerial? SourceSerial { get; set; }`
+- `AppDbContext.cs` fluent config: `.HasOne<FscSerial>().WithMany()` → `.HasOne(l => l.SourceSerial).WithMany()` (anonim yerine typed)
+- Include zinciri artık çalışıyor: `.Include(l => l.SourceSerial).ThenInclude(src => src!.Lot)...`
+
+**Kod örneği:**
+```csharp
+// Eski (FK kaynaşma)
+var srcBobin = lot.SourceSerialId.HasValue
+    ? _context.FscSerials.Find(lot.SourceSerialId.Value)
+    : null;
+
+// Yeni (navigation)
+var srcBobin = lot.SourceSerial;  // veya Include ile pre-loaded
+```
+
+**Not:** Dönüşüm Düzenle/Silme (`Conversion/UpdateConversion`, `DeleteConversion`) action'larında Include zincir eklendi.
+
+**Uygulandığı:** `FscLot.cs`, `AppDbContext.cs`, `ConversionController.cs`, `ProductionController.cs` (commit dfc96ab, 539ed15).
+
+## Conversion/Index — Son Dönüşümler filtresi + Düzenle/Sil butonları (2026-06-22)
+
+**Amaç:** Dönüşüm geçmişi sayfasında (Last Conversions tablosu) kaynak ürün/hedef YM/FSC tipi/tarih filtreleri + satır başına Edit/Delete butonları.
+
+**Filtre komponentleri (MCD + tarih):**
+- **Kaynak Ürün MCD:** Kaynak ham/YM ürün adına/koduna göre filtre
+- **Hedef YM MCD:** Hedef yarı mamül ürün adına göre filtre
+- **FSC Tipi MCD:** FSC-100 / FSC-MIX vb. kategorisine göre filtre
+- **Tarih Input:** Belirli tarihte yapılan dönüşümleri göster
+
+**Filtreleme JS mekanizması:**
+```javascript
+function applyRecentFilter() {
+    var selKaynak = getChecked('rf-kaynak-cb');  // seçili kaynak ürünler
+    var selHedef  = getChecked('rf-hedef-cb');
+    var selFsc    = getChecked('rf-fsc-cb');
+    var tarih     = document.getElementById('rfTarih').value;
+    
+    // Her `<tr class="recent-row">` veri attribute'leri kontrol et (data-kaynak, data-hedef, data-fsc, data-tarih)
+    // Filtreler boşsa veya eşleşirse satırı göster
+}
+```
+
+**Satır işlem butonları:**
+- **Düzenle (✏️):** Modal açar → tarih + fire(kg) düzenle → POST `/Conversion/UpdateConversion`
+- **Sil (🗑️):** Onay iste → POST `/Conversion/DeleteConversion` → kaynak bobin miktarı geri yüklenir
+
+**Controller yeni action'ları:**
+- `GetConversion(serialId)` — mevcut veri JSON dönüş (edit modal doldurma için)
+- `UpdateConversion(serialId, tarih, fire)` — tarih/fire update
+- `DeleteConversion(serialId)` — lot+seri sil, StockMovement çıkış kaydını sil, kaynak bobini restore
+
+**HTML `<tr>` data attribute'leri:**
+```razor
+<tr class="recent-row"
+    data-filter="@filterText"  // Tüm alanlar → arama
+    data-kaynak="@(...KaynakKod KaynakAd)"  // Kaynak ürün filtresi
+    data-hedef="@r.Hedef.ToLower()"
+    data-fsc="@r.FscType.ToLower()"
+    data-tarih="@r.Tarih:yyyy-MM-dd">
+```
+
+**Tuzaklar:**
+- MCD checkbox'larının `value` attribute'ü lowercase olmalı (filtre metni de lowercase)
+- `data-tarih` format `yyyy-MM-dd` (form input value eşleşmesi için)
+- Edit modal açılırken Fire decimal'i InvariantCulture ile geçilmeli
+
+**Uygulandığı:** `ConversionController.cs` (Recent list expand, GetConversion, UpdateConversion, DeleteConversion), `Conversion/Index.cshtml` (filtre panel + butonlar, modal) (commit c09abba, c221a87).
+
+## Production/Detail — GroupBy key ve SourceSerial izlenebilirliği (2026-06-22)
+
+**Sorun:** Tüketim/Bobin seçim panelinde, YM kaynaklı ürünlerin kaynak ham bilgisi gösterilmiyordu. Ayrıca, `filterSerials()` JS'de panel ID'si güvenli alınamıyordu.
+
+**Çözüm 1 — GroupBy Key Optimizasyonu:**
+```csharp
+// Eski: GroupBy keyi çok alan taşıyordu (bloat)
+var byLot = pg.GroupBy(s => new {
+    PartiNo  = s.Lot?.PartiNo,
+    Supplier = s.Lot?.Supplier?.Name
+    // ... + başka alanlar
+});
+
+// Yeni: Minimal key; SourceSerial'i ayrı oku
+var byLot = pg.GroupBy(s => new {
+    PartiNo     = s.Lot?.PartiNo,
+    Supplier    = s.Lot?.Supplier?.Name,
+    LotDate     = s.Lot?.ArrivalDate.ToString("dd.MM.yyyy"),
+    IsYariMamul = s.Lot?.Supplier == null && s.Lot?.SourceSerialId != null
+});
+
+// Razor'da: lg.First().Lot?.SourceSerial ile kaynak bilgisini al
+var srcSerial = lg.First().Lot?.SourceSerial;
+var kaynakPartiNo = srcSerial?.Lot?.PartiNo;
+```
+
+**Çözüm 2 — Seçim Panel ID'si Güvenli Alma:**
+```razor
+<!-- HTML'de data attribute ekle -->
+<div class="serial-product-header"
+     data-panelid="@prodGroupId"
+     onclick="toggleProdGroup('@prodGroupId')">
+
+<!-- JS'de: onclick'ten regex parse etme yerine data attribute oku -->
+const panelId = hdr.dataset.panelid || hdr.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+```
+
+**Çözüm 3 — onmousedown + preventDefault():**
+```razor
+<!-- Olay sırasını kontrol et: grup başlığı tıklaması dropdown kapatmasın -->
+<div onclick="toggleProdGroup('@prodGroupId')"
+     onmousedown="event.preventDefault()">
+```
+Bu, `selectSerial()` öncesinde `hideSerialDropdown()` call'ının grup header'ı toggle etmesini engeller.
+
+**Kaynak Hammadde Görünümü (yeni UI):**
+```html
+<!-- YM dönüşüm kaynaklı kayıtlar için -->
+<div style="background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:4px;">
+    ♻️ Dönüşüm
+</div>
+
+<!-- Kaynak ham bobin izlenebilirliği banner -->
+<div style="background:#eff6ff;border-left:3px solid #3b82f6;">
+    🔗 HAM. KAYNAK: <strong>@kaynakPartiNo</strong> @kaynakSeriNo @kaynakExtKod · @kaynakTedarikci
+</div>
+```
+
+**Uygulandığı:** `ProductionController.cs` (Include zincir SourceSerial + nested navigations), `Production/Detail.cshtml` (GroupBy key minimal, srcSerial öncü okuma, UI banner, JS data-panelid) (commit 38eeee7, 6964415, 4c1872b).
+
+## JavaScript event yönetimi — onclick vs onmousedown preventDefault (2026-06-22)
+
+**Durum:** Dropdown panel'i kapalı tutmak için `onmousedown="event.preventDefault()"` kullanıldı (group başlığında).
+
+**Mekanizma:**
+- `onmousedown` → `selectSerial()` → `hideSerialDropdown()` sırasında
+- `onmousedown` return false yapması grup toggle'ı engeller
+- Ama `mouseup` / `click` yine de tetiklenebiliyor (dropdown kapalı kalsa da)
+
+**Tuzak:** Bazen Seri satırı (`<tr onclick="selectSerial(...)"`) tıklandığında grup başlığı toggle ediliyordu. Nedeni: event propagation + timing.
+
+**Çözüm:** Her iki handler'da:
+```razor
+<div onmousedown="event.preventDefault()" onclick="toggleProdGroup('@prodGroupId')">
+     <!-- Grup başlığı -->
+</div>
+
+<tr onclick="selectSerial(...)">  <!-- Seri satırı — onClick doğrudan çağrılır -->
+```
+
+**hideSerialDropdown() optimizasyonu:**
+```javascript
+function hideSerialDropdown() {
+    setTimeout(() => {
+        const dropdown = document.getElementById('serialDropdown');
+        if (!dropdown) return;
+        // Aktif eleman dropdown içindeyse kapat
+        if (dropdown.contains(document.activeElement)) return;
+        dropdown.style.display = 'none';
+    }, 400);  // 200ms → 400ms (grup genişletme + seri tıklama için yeterli)
+}
+```
+
+**Not:** Pure CSS `:hover` veya `pointer-events: none` alternative'leri varsa daha temiz; ama bu event order mekanizması dokümante etmek faydalı (future refactor için).
+
+**Uygulandığı:** `Production/Detail.cshtml` (commit 6964415, 4c1872b).

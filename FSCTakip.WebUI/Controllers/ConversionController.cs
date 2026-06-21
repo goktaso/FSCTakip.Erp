@@ -286,17 +286,19 @@ namespace FSCTakip.WebUI.Controllers
                 // Kaynak bobini geri yükle (dönüşüm öncesi ağırlık)
                 if (lot.SourceSerialId.HasValue)
                 {
-                    var src = await _context.FscSerials.FindAsync(lot.SourceSerialId.Value);
+                    var src = await _context.FscSerials
+                        .Include(x => x.Lot)
+                        .FirstOrDefaultAsync(x => x.Id == lot.SourceSerialId.Value);
                     if (src != null)
                     {
                         // Tüketilen miktarı geri ekle: src.CurrentWeight += s.InitialWeight + (fire)
                         var consumed = s.InitialWeight + (lot.ConversionFireKg ?? 0m);
                         src.CurrentWeight += consumed;
 
-                        // İlgili StockMovement çıkış kaydını sil
+                        // İlgili StockMovement çıkış kaydını sil (ErpReferenceId veya DocumentNo ile eşleştir)
                         var sm = await _context.StockMovements
                             .FirstOrDefaultAsync(m => m.Type == MovementType.ProductionConsumption
-                                && m.FscSerialId == src.Id
+                                && m.ProductId == src.Lot.ProductId
                                 && m.DocumentNo != null && m.DocumentNo.Contains(lot.PartiNo));
                         if (sm != null) _context.StockMovements.Remove(sm);
                     }

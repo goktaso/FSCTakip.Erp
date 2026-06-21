@@ -56,6 +56,7 @@ ProductionEntry  = 1  // Üretimden depoya giriş
 WarehouseTransfer = 2 // Depo transferi
 SalesDispatch    = 3  // Müşteriye satış çıkışı
 PurchaseEntry    = 4  // Tedarikçiden hammadde girişi
+ProductionConsumption = 5 // Üretim tüketimi (çıkış)
 ```
 
 ## Mevcut Controller'lar (FSCTakip.WebUI/Controllers/)
@@ -556,6 +557,89 @@ FSCTakip.WebUI/
 
 ---
 
+## ⚠️ EF Core Navigation Property Kuralı
+
+FK alanı (örn. `FscLot.SourceSerialId`) tanımlandığında **navigation property de ekle** ve Include zincir ile eager-load et:
+
+```csharp
+// Entity'de
+public int? SourceSerialId { get; set; }
+public virtual FscSerial? SourceSerial { get; set; }  // ← navigation property
+
+// AppDbContext'te fluent config
+modelBuilder.Entity<FscLot>()
+    .HasOne(l => l.SourceSerial).WithMany()
+    .HasForeignKey(l => l.SourceSerialId);
+
+// Controller'da Include zincir
+var lots = _context.FscLots
+    .Include(l => l.SourceSerial).ThenInclude(s => s!.Lot)
+    .Include(l => l.Product)
+    .ToListAsync();
+
+// Anonim FK okuma yerine typed property kullan
+var kaynak = lot.SourceSerial;  // lot.SourceSerialId.HasValue ? Find() yerine
+```
+
+**Neden:** Property olmadan Include çalışmaz; soft-error (null reference) riski. Typed property IntelliSense yardım sağlar, kod okunabilirliğini artırır.
+
+## ⚠️ LINQ GroupBy Key Minimal Tutma
+
+GroupBy key'i çok alanla tanımlanırsa (10+ alan) sorgu bloat olur, bellek tüketimi artar. Minimal key tutun, ek veriler Include ile eriş:
+
+```csharp
+// Eski: Key çok alan
+var byLot = serials.GroupBy(s => new {
+    PartiNo = s.Lot?.PartiNo,
+    Supplier = s.Lot?.Supplier?.Name,
+    FscType = s.Lot?.FscType.Name,
+    SourceInfo = s.Lot?.SourceSerial?.Lot?.PartiNo,
+}).ToList();
+
+// Yeni: Key minimal, ek veriler lg.First() ile al
+var byLot = serials
+    .Include(s => s.Lot!.SourceSerial!.Lot)
+    .GroupBy(s => new { s.Lot!.PartiNo, Supplier = s.Lot.Supplier!.Name })
+    .Select(lg => new {
+        FirstLot = lg.First().Lot,
+        SourceSerial = lg.First().Lot?.SourceSerial,
+        Items = lg.ToList()
+    }).ToList();
+```
+
+## ⚠️ Sticky Column Layout — Wrapper position:relative Kuralı
+
+Table sağ taraf buton kolonu scroll'lanırken kayboluyor mu? Wrapper'a `position:relative` ekle, child column'a `position:sticky; right:0; z-index:10; background:white` ve gölge (`box-shadow`):
+
+```html
+<div class="table-wrapper" style="position: relative; overflow-x: auto;">
+    <table>
+        <td class="sticky-col" 
+            style="position: sticky; right: 0; z-index: 10; background: white; box-shadow: -2px 0 4px rgba(0,0,0,.1);">
+            <button>Düzenle</button><button>Sil</button>
+        </td>
+    </table>
+</div>
+```
+
+Wrapper `position:relative` olmadan sticky konumu bağlamını kaybeder. Arka plan rengi (white) koyunmali; scroll'da arkasındaki metin gizlensin.
+
+## ⚠️ JavaScript Event Ordering — onclick vs onmousedown preventDefault
+
+Dropdown panel kapatma/açma + seçim işlemi birbiriyle çakışıyorsa: grup başlığında `onmousedown="event.preventDefault()"` ekle, seçim işlemi (selectSerial) `onclick`'e taş:
+
+```razor
+<div onmousedown="event.preventDefault()" onclick="toggleProdGroup('@id')">
+    Grup Başlığı
+</div>
+
+<tr onclick="selectSerial(...); hideSerialDropdown();">
+    Seri Satırı
+</tr>
+```
+
+`preventDefault()`, mousedown'ın panel toggle'ını engeller; click event'i sırasında seçim işlemi tamamlanır, sonra panel kapatılır. `setTimeout` ile panel kapanma gecikmesi sağla (400ms).
+
 ## Önemli Notlar
 
 - `AppDbContext.SaveChangesAsync()` içindeki string uppercase kodu tüm entity stringleri otomatik büyük harfe çevirir (tr-TR). Email alanlarında bu sorun çıkarır, o alanları SaveChanges içinde exclude etmek gerekir.
@@ -563,3 +647,4 @@ FSCTakip.WebUI/
 - `Machine` entity'si de `BaseEntity`'den türemiyor — ayrı audit alanları.
 - FSC sertifikası takibi için `Supplier.FscExpiryDate` ve `Customer.FscExpiryDate` dashboard'da uyarı gösterilmeli.
 - `ProductRecipe` çoka-çok ilişkisi `DeleteBehavior.Restrict` ile konfigüre edilmiş.
+- **ProductionConsumption enum değeri** MovementType'a eklendi (5 = Üretim tüketimi). Tüm switch/if blokları, badge'ler, filtre dropdown'ları kontrol et.
