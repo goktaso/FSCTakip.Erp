@@ -203,12 +203,53 @@
     <!-- Son dönüşümler -->
     <div class="col-lg-7">
         <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header bg-white border-0 pt-3 pb-2">
+            <div class="card-header bg-white border-0 pt-3 pb-2 d-flex align-items-center gap-2">
                 <h6 class="fw-semibold mb-0"><i class="fas fa-history text-primary me-2"></i>Son Dönüşümler</h6>
+                <span class="badge ms-1" style="background:#dbeafe;color:#1d4ed8;" id="recentCount">@recent.Count kayıt</span>
+                <button class="btn btn-sm ms-auto" id="recentFilterToggle"
+                        onclick="toggleRecentFilter()"
+                        style="font-size:11px;padding:3px 10px;background:rgba(25,118,210,.08);color:#1976d2;border:1px solid rgba(25,118,210,.2);">
+                    <i class="fas fa-filter me-1"></i>Filtrele
+                </button>
             </div>
+
+            <!-- Filtre Bandı (gizli başlar) -->
+            <div id="recentFilterPanel" style="display:none;padding:10px 14px 8px;background:#f8fafc;border-bottom:1px solid #e5e7eb;">
+                <div class="d-flex flex-wrap gap-2 align-items-end">
+                    <div style="display:flex;flex-direction:column;min-width:120px;">
+                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">KAYNAK KOD</label>
+                        <input type="text" id="rfKaynak" class="form-control form-control-sm"
+                               placeholder="Dış kod, stok adı..." oninput="applyRecentFilter()">
+                    </div>
+                    <div style="display:flex;flex-direction:column;min-width:120px;">
+                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">HEDEF YM</label>
+                        <input type="text" id="rfHedef" class="form-control form-control-sm"
+                               placeholder="Hedef ürün..." oninput="applyRecentFilter()">
+                    </div>
+                    <div style="display:flex;flex-direction:column;min-width:90px;">
+                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">PARTİ NO</label>
+                        <input type="text" id="rfParti" class="form-control form-control-sm"
+                               placeholder="YM26-..." oninput="applyRecentFilter()">
+                    </div>
+                    <div style="display:flex;flex-direction:column;min-width:90px;">
+                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">FSC TİPİ</label>
+                        <input type="text" id="rfFsc" class="form-control form-control-sm"
+                               placeholder="MIX, RECYCLED..." oninput="applyRecentFilter()">
+                    </div>
+                    <div style="display:flex;flex-direction:column;min-width:90px;">
+                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">TARİH</label>
+                        <input type="date" id="rfTarih" class="form-control form-control-sm" oninput="applyRecentFilter()">
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm align-self-end"
+                            onclick="clearRecentFilter()" style="font-size:11px;">
+                        <i class="fas fa-times me-1"></i>Temizle
+                    </button>
+                </div>
+            </div>
+
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0" style="font-size:12.5px;">
+                    <table class="table table-sm table-hover mb-0" id="recentTable" style="font-size:12.5px;">
                         <thead style="background:#f8fafc;">
                             <tr>
                                 <th class="ps-3">Tarih</th><th>Parti</th><th>Kaynak (Ham/YM)</th><th>Hedef YM</th>
@@ -222,7 +263,14 @@
                         }
                         @foreach (var r in recent)
                         {
-                            <tr>
+                            var filterText = $"{r.KaynakKod} {r.KaynakAd} {r.KaynakSerial} {r.Hedef} {r.Parti} {r.FscType} {r.Tarih:dd.MM.yyyy}".ToLower();
+                            <tr class="recent-row"
+                                data-filter="@filterText"
+                                data-kaynak="@($"{r.KaynakKod} {r.KaynakAd} {r.KaynakSerial}".ToLower())"
+                                data-hedef="@r.Hedef.ToLower()"
+                                data-parti="@r.Parti.ToLower()"
+                                data-fsc="@r.FscType.ToLower()"
+                                data-tarih="@r.Tarih.ToString("yyyy-MM-dd")">
                                 <td class="ps-3">@r.Tarih.ToString("dd.MM.yyyy")</td>
                                 <td><span class="badge bg-light text-dark">@r.Parti</span></td>
                                 <td>
@@ -243,6 +291,9 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="recentEmptyMsg" style="display:none;text-align:center;padding:20px;color:#9ca3af;font-size:13px;">
+                    <i class="fas fa-search me-1"></i> Filtreye uyan dönüşüm bulunamadı.
+                </div>
             </div>
         </div>
     </div>
@@ -262,6 +313,48 @@ document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))d
 </style>
 <script>
 document.getElementById('convDate').value = new Date().toISOString().slice(0,10);
+
+// ── Son Dönüşümler Filtresi ───────────────────────────────────────
+function toggleRecentFilter() {
+    var p = document.getElementById('recentFilterPanel');
+    p.style.display = p.style.display === 'none' ? '' : 'none';
+    document.getElementById('recentFilterToggle').style.background =
+        p.style.display !== 'none' ? 'rgba(25,118,210,.18)' : 'rgba(25,118,210,.08)';
+}
+
+function applyRecentFilter() {
+    var kaynak = (document.getElementById('rfKaynak').value || '').toLowerCase().trim();
+    var hedef  = (document.getElementById('rfHedef').value  || '').toLowerCase().trim();
+    var parti  = (document.getElementById('rfParti').value  || '').toLowerCase().trim();
+    var fsc    = (document.getElementById('rfFsc').value    || '').toLowerCase().trim();
+    var tarih  = (document.getElementById('rfTarih').value  || '').trim();
+
+    var rows = document.querySelectorAll('#recentTable tbody tr.recent-row');
+    var visible = 0;
+    rows.forEach(function(tr) {
+        var ok = true;
+        if (kaynak && !tr.getAttribute('data-kaynak').includes(kaynak)) ok = false;
+        if (hedef  && !tr.getAttribute('data-hedef').includes(hedef))   ok = false;
+        if (parti  && !tr.getAttribute('data-parti').includes(parti))   ok = false;
+        if (fsc    && !tr.getAttribute('data-fsc').includes(fsc))       ok = false;
+        if (tarih  && tr.getAttribute('data-tarih') !== tarih)          ok = false;
+        tr.style.display = ok ? '' : 'none';
+        if (ok) visible++;
+    });
+
+    var cnt = document.getElementById('recentCount');
+    if (cnt) cnt.textContent = visible + ' kayıt';
+    var emptyMsg = document.getElementById('recentEmptyMsg');
+    if (emptyMsg) emptyMsg.style.display = (visible === 0 && rows.length > 0) ? '' : 'none';
+}
+
+function clearRecentFilter() {
+    ['rfKaynak','rfHedef','rfParti','rfFsc','rfTarih'].forEach(function(id) {
+        document.getElementById(id).value = '';
+    });
+    applyRecentFilter();
+}
+
 // Sayfa yüklenince filtre listelerini doldur
 document.addEventListener('DOMContentLoaded', function() { _srcUpdate('kod'); });
 
