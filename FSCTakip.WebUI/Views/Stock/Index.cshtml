@@ -18,10 +18,6 @@
     </button>
 }
 
-<div class="page-header">
-    <h4 class="page-title"><i class="fas fa-warehouse me-2 text-primary"></i>Stok Durumu</h4>
-</div>
-
 <!-- Stat Cards -->
 <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);">
     <div class="stat-card">
@@ -48,15 +44,20 @@
 
 <!-- Filter -->
 <div class="filter-card">
-    <form method="get" action="/Stock/Index" class="filter-form">
-        <select name="productGroupId" class="form-control form-control-sm">
-            <option value="">— Ürün Grubu —</option>
-            @foreach (var g in groups)
-            {
-                <option value="@g.Id" selected="@(selGroup == g.Id ? "selected" : null)">@g.GroupName</option>
-            }
-        </select>
-        <div class="mcd" id="mcd-idx-prod" data-placeholder="— Ürün —">
+    <form method="get" action="/Stock/Index" class="filter-form" style="align-items:flex-end;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;flex-direction:column;min-width:160px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">ÜRÜN GRUBU</label>
+            <select name="productGroupId" class="form-control form-control-sm">
+                <option value="">— Ürün Grubu —</option>
+                @foreach (var g in groups)
+                {
+                    <option value="@g.Id" selected="@(selGroup == g.Id ? "selected" : null)">@g.GroupName</option>
+                }
+            </select>
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:220px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">ÜRÜN</label>
+            <div class="mcd" id="mcd-idx-prod" data-placeholder="— Ürün —">
             <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-idx-prod')">
                 <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " seçildi" : "— Ürün —")</span>
                 <i class="fas fa-angle-down mcd-arrow"></i>
@@ -85,8 +86,15 @@
                 </div>
             </div>
         </div>
-        <input type="text" name="stockCode" class="form-control form-control-sm" placeholder="Stok Kodu" value="@stockCode" style="max-width:140px;" />
-        <input type="text" name="erpCode"   class="form-control form-control-sm" placeholder="ERP Stok Kodu" value="@erpCode" style="max-width:140px;" />
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:130px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">STOK KODU</label>
+            <input type="text" name="stockCode" class="form-control form-control-sm" placeholder="Stok Kodu" value="@stockCode" />
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:130px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">ERP KODU</label>
+            <input type="text" name="erpCode" class="form-control form-control-sm" placeholder="ERP Stok Kodu" value="@erpCode" />
+        </div>
         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Filtrele</button>
         <a href="/Stock/Index" class="btn btn-outline-secondary btn-sm">Temizle</a>
         <div class="ms-auto">

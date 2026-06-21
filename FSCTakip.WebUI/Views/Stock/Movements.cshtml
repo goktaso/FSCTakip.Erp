@@ -15,17 +15,32 @@
     var productIds     = ViewBag.ProductIds as int[] ?? Array.Empty<int>();
 }
 
-<div class="page-header">
-    <h4 class="page-title"><i class="fas fa-exchange-alt me-2 text-primary"></i>Stok Hareketleri</h4>
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fw-semibold" style="color:var(--text);font-size:14px;">
+            <i class="fas fa-exchange-alt me-2 text-primary"></i>Stok Hareketleri
+        </span>
+    </div>
+    <div class="d-flex gap-2 ms-auto">
+        <span class="topbar-user">
+            <i class="fas fa-user-circle"></i>
+            @(User.Identity?.Name ?? "Kullanıcı")
+        </span>
+    </div>
 </div>
 
 <!-- Filter -->
 <div class="filter-card">
-    <form method="get" action="/Stock/Movements" class="filter-form">
-        <input type="text" name="stockCode" class="form-control form-control-sm"
-               value="@stockCode" placeholder="Stok kodu / adı..." style="max-width:180px;"
-               title="Stok kodu (ERP/dahili) veya stok adı ile ara" />
-        <div class="mcd" id="mcd-products" data-placeholder="— Ürün —" style="min-width:220px;">
+    <form method="get" action="/Stock/Movements" class="filter-form" style="align-items:flex-end;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;flex-direction:column;min-width:130px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">STOK</label>
+            <input type="text" name="stockCode" class="form-control form-control-sm"
+                   value="@stockCode" placeholder="Stok kodu / adı..." style="max-width:180px;"
+                   title="Stok kodu (ERP/dahili) veya stok adı ile ara" />
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:220px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">ÜRÜN</label>
+            <div class="mcd" id="mcd-products" data-placeholder="— Ürün —" style="min-width:220px;">
             <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-products')">
                 <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " ürün seçildi" : "— Ürün —")</span>
                 <i class="fas fa-angle-down mcd-arrow"></i>
@@ -56,15 +71,21 @@
                 </div>
             </div>
         </div>
-        <select name="type" class="form-control form-control-sm">
-            <option value="">— Hareket Tipi —</option>
-            <option value="4">Satın Alma Girişi</option>
-            <option value="1">Üretim Girişi</option>
-            <option value="3">Satış Çıkışı</option>
-            <option value="5">Üretim Tüketimi (Çıkış)</option>
-            <option value="2">Depo Transferi</option>
-        </select>
-        <div class="mcd" id="mcd-mov-sup" data-placeholder="— Tedarikçi —" style="min-width:160px;">
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:130px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">HAR. TİPİ</label>
+            <select name="type" class="form-control form-control-sm">
+                <option value="">— Hareket Tipi —</option>
+                <option value="4">Satın Alma Girişi</option>
+                <option value="1">Üretim Girişi</option>
+                <option value="3">Satış Çıkışı</option>
+                <option value="5">Üretim Tüketimi (Çıkış)</option>
+                <option value="2">Depo Transferi</option>
+            </select>
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:160px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">TEDARİKÇİ</label>
+            <div class="mcd" id="mcd-mov-sup" data-placeholder="— Tedarikçi —" style="min-width:160px;">
             <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-mov-sup')">
                 <span class="mcd-lbl">@(filtSupplierIds.Length > 0 ? filtSupplierIds.Length + " seçildi" : "— Tedarikçi —")</span>
                 <i class="fas fa-angle-down mcd-arrow"></i>
@@ -92,7 +113,10 @@
                 <div class="mcd-empty" style="display:none;">Sonuç yok</div>
             </div>
         </div>
-        <div class="mcd" id="mcd-mov-fsc" data-placeholder="— FSC Tipi —" style="min-width:130px;">
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:130px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">FSC TİPİ</label>
+            <div class="mcd" id="mcd-mov-fsc" data-placeholder="— FSC Tipi —" style="min-width:130px;">
             <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-mov-fsc')">
                 <span class="mcd-lbl">@(filtFscTypeIds.Length > 0 ? filtFscTypeIds.Length + " seçildi" : "— FSC Tipi —")</span>
                 <i class="fas fa-angle-down mcd-arrow"></i>
@@ -120,8 +144,15 @@
                 <div class="mcd-empty" style="display:none;">Sonuç yok</div>
             </div>
         </div>
-        <input type="date" name="startDate" class="form-control form-control-sm" value="@start" title="Başlangıç" />
-        <input type="date" name="endDate"   class="form-control form-control-sm" value="@end"   title="Bitiş" />
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:120px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">BAŞLANGIÇ</label>
+            <input type="date" name="startDate" class="form-control form-control-sm" value="@start" />
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:120px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">BİTİŞ</label>
+            <input type="date" name="endDate" class="form-control form-control-sm" value="@end" />
+        </div>
         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Filtrele</button>
         <a href="/Stock/Movements" class="btn btn-outline-secondary btn-sm">Temizle</a>
         <div class="ms-auto">
