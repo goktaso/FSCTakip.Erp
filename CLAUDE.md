@@ -276,6 +276,70 @@ if (!window._mcdReady) {
 
 **Uyarı:** Her view'de MCD kullanılırsa, `window._mcdReady` guard ile coklu tanımlama önlenmelidir.
 
+### ⚠️ Varsayılan Filtre Deseni — "Tüm Kayıtları Göster" Toggle
+
+Kullanıcı filtre seçmediğinde, sayfalar **sensible varsayılan** grup/kategori ile içerik sınırlamalı; ama "Tüm Kayıtları Göster" seçeneğiyle tam liste erişimi mümkün olmalı:
+
+```csharp
+// Controller
+public async Task<IActionResult> Index(
+    int[]? supplierIds, int[]? fscTypeIds,
+    string? stockCode, string? stockName,
+    int[]? productIds, bool showAll = false)
+{
+    // Kullanıcı herhangi bir filtre uyguladı mı?
+    bool hasUserFilter = showAll
+        || (supplierIds?.Length > 0)
+        || (fscTypeIds?.Length > 0)
+        || !string.IsNullOrWhiteSpace(stockCode)
+        || !string.IsNullOrWhiteSpace(stockName)
+        || (productIds?.Length > 0);
+
+    if (!hasUserFilter)
+    {
+        // Varsayılan: Hammadde + Yarı Mamül + Burgu Sap (GroupIds: 1, 3, 4)
+        var defaultGroupIds = new[] { 1, 3, 4 };
+        query = query.Where(l => l.Product != null
+            && l.Product.ProductGroupId.HasValue
+            && defaultGroupIds.Contains(l.Product.ProductGroupId.Value));
+    }
+    
+    ViewBag.IsDefaultFilter = !hasUserFilter;
+    ViewBag.ShowAll         = showAll;
+    // ... rest of filters
+}
+```
+
+**View HTML:**
+```html
+<!-- Varsayılan filtre aktif →  bilgi bandı + toggle -->
+@if (isDefaultFilter)
+{
+    <div class="d-flex align-items-center gap-2 mb-2 px-1 py-2 rounded"
+         style="background:rgba(25,118,210,.08);border:1px solid rgba(25,118,210,.2);">
+        <i class="fas fa-filter text-primary"></i>
+        <span>Varsayılan görünüm: <strong>Hammadde · Yarı Mamül · Burgu Sap</strong></span>
+        <a href="/Purchase/Index?showAll=true" class="ms-auto btn btn-sm">
+            <i class="fas fa-eye me-1"></i>Tüm Kayıtları Göster
+        </a>
+    </div>
+}
+else if ((bool)(ViewBag.ShowAll ?? false))
+{
+    <div class="d-flex align-items-center gap-2 mb-2 ...">
+        <i class="fas fa-list text-muted"></i>
+        <span>Tüm kayıtlar gösteriliyor.</span>
+        <a href="/Purchase/Index" class="ms-auto btn btn-sm">
+            <i class="fas fa-undo me-1"></i>Varsayılana Dön
+        </a>
+    </div>
+}
+```
+
+**URL deseni:** `?` (varsayılan) vs `?showAll=true` (tümü) vs `?productIds=5&productIds=6` (seçili filtre).
+
+**Uygulanan yerler:** Purchase/Index (varsayılan: Hammadde+YM+BS).
+
 ### ⚠️ StockMovement.ProductId Non-Nullable Kural
 
 `StockMovement.ProductId` **asla NULL olmamalıdır** (her hareketi bir ürüne atanmalıdır):
@@ -305,6 +369,27 @@ query = query.Where(sm => sm.ProductId == productId);  // ✓
 <!-- Section Scripts bolumu tanimlanir -->
 // veya
 @* @section Scripts bloğu açıklaması *@
+```
+
+### ⚠️ Razor @foreach Bloğunda İlk Satırda @{ } Kullanilamaz
+
+**Sorun:** `@foreach (var item in list) { @{ var x = ...; } ... }` → Razor compile hatası ("Unexpected end of file" vb.).
+
+**Kök neden:** `@foreach` blok içinin ilk statement'i `@{ }` (code block) olamaz. Razor parser blok başında HTML veya doğrudan C# statement beklediğinde, `@{ }` sözdizimi geçersizdir.
+
+**Çözüm:** Foreach içinde değişken bildirimi yapılacaksa `@{ }` kaldır, doğrudan statement yazın:
+```razor
+// YANLIŞ
+@foreach (var s in suppliers) {
+    @{ bool sel = condition; }
+    <input checked="@(sel ? "checked" : null)">
+}
+
+// DOĞRU
+@foreach (var s in suppliers) {
+    bool sel = condition;  // @{ } kaldırıldı
+    <input checked="@(sel ? "checked" : null)">
+}
 ```
 
 ### ⚠️ MCD Filtresi — CSS display:block + flex-column Wrapper Layout Kuralı

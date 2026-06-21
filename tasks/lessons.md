@@ -361,3 +361,87 @@ Iki yeni view eklendi:
 - ViewBag: seçili ID'leri tutup view'de checkbox durumunu korur
 
 **Excel export:** Form action'ı veya href URL'de `productIds=1&productIds=2` şeklinde çoklu value geçişi — ASP.NET Core otomatik array binding yapar.
+
+## Razor @foreach { } içinde ilk satırda @{ } kullanilamaz (2026-06-21)
+
+**Belirti:** Razor hatası — `"Unexpected end of file after parsing a block"` veya compile hatasında `@{ }` açıklama bloğu `@foreach` altında.
+
+**Kök neden:** `@foreach (var item in list) { @{ var x = ...; } ... }` → Razor parser blok başında başka bir statement beklediğinde, `@{ }` bloğu (code block) ilk satır olarak geçersizdir. Statement'ler ile karıştırılıyor.
+
+**Çözüm:** Foreach bloğunun ilk satırında değişken bildirimi yapılacaksa `@{ }` kaldır, doğrudan kod yaz:
+```razor
+// YANLIŞ
+@foreach (var s in suppliers) {
+    @{ bool sel = condition; }
+    <label>
+        <input type="checkbox" checked="@(sel ? "checked" : null)">
+    </label>
+}
+
+// DOĞRU
+@foreach (var s in suppliers) {
+    bool sel = condition;  // @{ } kaldırıldı
+    <label>
+        <input type="checkbox" checked="@(sel ? "checked" : null)">
+    </label>
+}
+```
+
+**Not:** `@foreach` içinde direktif olmayan kod blokları `{ statement }` şeklinde yazılır; `@{ }` Razor'un kod-HTML karma bölümleri için tasarlanmıştır.
+
+**Uygulandığı:** `FSCTakip.WebUI/Views/Products/Index.cshtml` satır 66 ve 97 (tedarikçi ve ürün grubu MCD checkbox'ları için `bool sel` değişkeni).
+
+## 6 sayfa MCD + layout düzeltmeleri tamamlandı (2026-06-21)
+
+**Sayfalar:** Production/Index, Production/WasteReport, Conversion/Index ve 3 report sayfası (ChainOfCustody, BomAnalysis, MaterialTrace).
+
+**Layout düzeltmeleri:**
+- MCD `.mcd { display: block; }` (inline-block değil)
+- MCD grubu wrapper `<div style="display:flex;flex-direction:column;min-width:...px;">` ile etiket-input dikey hizalama
+- Filtre paneli `d-flex align-items-end gap-2 flex-wrap` (Bootstrap grid değil, elle hizalama)
+
+**Referans:** CLAUDE.md §"MCD Filtresi — CSS display:block + flex-column Wrapper Layout Kuralı" bölümüne bakınız.
+
+## Products/Index tedarikçi ve ürün grubu MCD filtreleri (2026-06-21)
+
+**Yapılan:** Products/Index sayfası tedarikçi (supplierIds) ve ürün grubu (productGroupIds) MCD filtrelerine geçirildi.
+
+**Veri akışı:**
+- Controller: `ProductsController.Index` → `int[]? supplierIds`, `int[]? productGroupIds` parametreleri
+- Query filtresi: `query.Where(p => supplierIds.Contains(p.SupplierId))` → `IN` sözdizimi
+- ViewBag: `SupplierIds`, `ProductGroupIds` array'leri checkout state tutmak için
+- View: MCD panelinde `checked="@(supplierIds.Contains(sid))"` ile durumlar korunur
+
+**Checkbox state tutulması (MCD + form):** ViewBag'deki array'i `checked` attribute'üne bind etmek için:
+```razor
+@{ var supplierIds = ViewBag.SupplierIds as int[] ?? Array.Empty<int>(); }
+<input type="checkbox" name="supplierIds" value="@s.Value" 
+       checked="@(supplierIds.Contains(int.Parse(s.Value)) ? "checked" : null)">
+```
+
+**Not:** `int.TryParse` güvenli olmak için kullanıldı; item Value her zaman int gibi görünmez (dropdown'da string olabilir).
+
+## Varsayılan filtre + "Tüm Kayıtları Göster" toggle (2026-06-21)
+
+**Amaç:** Kullanıcı filtre seçmediğinde sensible varsayılan yapı göster (örn. Purchase'da Hammadde+YM+BS), ama "Tüm Kayıtları Göster" seçeneğiyle full liste erişimini sağla.
+
+**Yapı:**
+- Controller: `bool showAll = false` parametresi + `hasUserFilter` bayrağı (filtre seçildi mi = supplierIds/productIds/stockCode/etc. boş değil)
+- `hasUserFilter == false && showAll == false` → varsayılan GroupIds (1,3,4 = Hammadde, YM, BS) filtresiyle query çalışır
+- `showAll == true` → filtreler yok, tüm kayıtlar
+- ViewBag: `IsDefaultFilter` ve `ShowAll` boolean'ları view'de render kontrolü için
+
+**View HTML:** İki info bander:
+1. Varsayılan filtre aktif: "Varsayılan görünüm: Hammadde · Yarı Mamül · Burgu Sap grupları. [Tüm Kayıtları Göster]"
+2. ShowAll aktif: "Tüm kayıtlar gösteriliyor. [Varsayılana Dön]"
+
+**URL deseni:**
+- `?` veya parametresiz → varsayılan filtre + bilgi bandı
+- `?showAll=true` → tüm kayıtlar + ikinci bilgi bandı
+- `?productIds=5&productIds=6` veya diğer filtreler → varsayılan geçersiz, seçilen filtreler uygulanır
+
+**Kullanılan yerler (2026-06-21):** `Purchase/Index` (Hammadde+YM+BS).
+
+**Not:** Bu pattern diğer sayfalar (Stock/Index, Production/Index) için de uygulanabilir; her sayfa kendi varsayılan GroupIds'ini tanımlayabilir.
+
+**CSS:** Bilgi bandı inline style (rgba mavi/beyaz arka plan, 12.5px font), hover efekti veya geçiş animasyonu YOK (statik banner). Linkler `btn btn-sm` sınıfı taşır, hover renk değişimi minimal.
