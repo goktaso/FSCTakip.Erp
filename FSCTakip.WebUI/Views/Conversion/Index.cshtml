@@ -26,35 +26,96 @@
             <div class="card-body">
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Kaynak Bobin (Ham / YM) <span class="text-danger">*</span></label>
-                    <!-- MCD panel -->
-                    <div class="mcd" id="mcd-src-bobin" data-placeholder="— Stoktaki bobin seçin —" style="width:100%;">
-                        <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-src-bobin')">
-                            <span class="mcd-lbl">— Stoktaki bobin seçin —</span>
-                            <i class="fas fa-angle-down mcd-arrow"></i>
-                        </button>
-                        <div class="mcd-panel" id="mcd-src-bobin-panel" style="display:none;width:100%;min-width:400px;max-width:100%;">
-                            <div class="mcd-search-row">
-                                <input type="text" class="mcd-search" placeholder="Dış kod, stok adı veya seri no ile filtrele..." oninput="mcdSearch(this)">
+
+                    <!-- 4 Kademeli Filtre — Excel Advanced Filter tarzı -->
+                    <div class="d-flex gap-2 flex-wrap mb-2" id="srcFilters">
+
+                        <!-- 1. Stok Kodu -->
+                        <div style="display:flex;flex-direction:column;flex:1;min-width:130px;">
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">STOK KODU</label>
+                            <div class="mcd" id="mcd-f-kod" data-placeholder="— Tümü —">
+                                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-f-kod')">
+                                    <span class="mcd-lbl">— Tümü —</span>
+                                    <i class="fas fa-angle-down mcd-arrow"></i>
+                                </button>
+                                <div class="mcd-panel" id="mcd-f-kod-panel" style="display:none;min-width:220px;">
+                                    <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Kod ara..." oninput="mcdSearch(this)"></div>
+                                    <div class="mcd-items" id="mcd-f-kod-items" style="max-height:220px;"></div>
+                                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                                </div>
                             </div>
-                            <div class="mcd-items" style="max-height:260px;">
-                                @foreach (var s in sources)
-                                {
-                                    <label class="mcd-row" onclick="srcBobinSelect(@s.Id); return false;" style="white-space:normal;">
-                                        <input type="radio" name="_srcRb" value="@s.Id" class="mcd-rb" style="flex-shrink:0;">
-                                        @if (!string.IsNullOrEmpty(s.UrunIcKod)) { <span class="mcd-sub" style="flex-shrink:0;">@s.UrunIcKod</span> }
-                                        @if (!string.IsNullOrEmpty(s.UrunKod))   { <span class="mcd-ext" style="flex-shrink:0;">@s.UrunKod</span> }
-                                        <span class="mcd-name" style="white-space:normal;overflow:visible;text-overflow:unset;max-width:none;">
-                                            @s.UrunAd · @s.SerialNo · kalan @s.CurrentWeight.ToString("N2") kg
-                                        </span>
-                                    </label>
-                                }
+                        </div>
+
+                        <!-- 2. Stok Adı -->
+                        <div style="display:flex;flex-direction:column;flex:2;min-width:180px;">
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">STOK ADI</label>
+                            <div class="mcd" id="mcd-f-ad" data-placeholder="— Tümü —">
+                                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-f-ad')">
+                                    <span class="mcd-lbl">— Tümü —</span>
+                                    <i class="fas fa-angle-down mcd-arrow"></i>
+                                </button>
+                                <div class="mcd-panel" id="mcd-f-ad-panel" style="display:none;min-width:280px;">
+                                    <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Ad ara..." oninput="mcdSearch(this)"></div>
+                                    <div class="mcd-items" id="mcd-f-ad-items" style="max-height:220px;"></div>
+                                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                                </div>
                             </div>
-                            <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                        </div>
+
+                        <!-- 3. Parti / Lot No -->
+                        <div style="display:flex;flex-direction:column;flex:1;min-width:130px;">
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">PARTİ / LOT NO</label>
+                            <div class="mcd" id="mcd-f-parti" data-placeholder="— Tümü —">
+                                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-f-parti')">
+                                    <span class="mcd-lbl">— Tümü —</span>
+                                    <i class="fas fa-angle-down mcd-arrow"></i>
+                                </button>
+                                <div class="mcd-panel" id="mcd-f-parti-panel" style="display:none;min-width:200px;">
+                                    <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Parti no ara..." oninput="mcdSearch(this)"></div>
+                                    <div class="mcd-items" id="mcd-f-parti-items" style="max-height:220px;"></div>
+                                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Seri No (Bobin) -->
+                        <div style="display:flex;flex-direction:column;flex:1;min-width:130px;">
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">SERİ NO (BOBİN)</label>
+                            <div class="mcd" id="mcd-f-seri" data-placeholder="— Tümü —">
+                                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-f-seri')">
+                                    <span class="mcd-lbl">— Tümü —</span>
+                                    <i class="fas fa-angle-down mcd-arrow"></i>
+                                </button>
+                                <div class="mcd-panel" id="mcd-f-seri-panel" style="display:none;min-width:200px;">
+                                    <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Seri no ara..." oninput="mcdSearch(this)"></div>
+                                    <div class="mcd-items" id="mcd-f-seri-items" style="max-height:220px;"></div>
+                                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Temizle -->
+                        <div style="display:flex;flex-direction:column;justify-content:flex-end;">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="srcFilterClear()" style="font-size:11px;margin-bottom:1px;">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
                     </div>
-                    <!-- Gizli select — onSourceChange() için -->
+
+                    <!-- Seçilen bobin göstergesi -->
+                    <div id="srcSelected" class="d-flex align-items-center gap-2 px-3 py-2 rounded mb-2"
+                         style="display:none!important;background:rgba(25,118,210,.08);border:1px solid rgba(25,118,210,.25);font-size:12.5px;">
+                        <i class="fas fa-check-circle text-primary"></i>
+                        <span id="srcSelectedLabel" class="fw-semibold text-primary">—</span>
+                        <span id="srcSelectedKalan" class="text-muted ms-1"></span>
+                        <button type="button" class="ms-auto btn btn-sm" onclick="srcFilterClear()" style="font-size:11px;padding:2px 8px;">
+                            <i class="fas fa-times me-1"></i>Değiştir
+                        </button>
+                    </div>
+
+                    <!-- Gizli select — onSourceChange() için (JS uyumluluğu) -->
                     <select id="sourceSerialId" style="display:none;" onchange="onSourceChange()">
-                        <option value="">— Stoktaki bobin seçin —</option>
+                        <option value="">—</option>
                         @foreach (var s in sources)
                         {
                             <option value="@s.Id"
@@ -201,23 +262,141 @@ document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))d
 </style>
 <script>
 document.getElementById('convDate').value = new Date().toISOString().slice(0,10);
+// Sayfa yüklenince filtre listelerini doldur
+document.addEventListener('DOMContentLoaded', function() { _srcUpdate('kod'); });
 
-function srcBobinSelect(id) {
-    var sel = document.getElementById('sourceSerialId');
-    if (!sel) return;
-    sel.value = id;
-    var evt = new Event('change');
-    sel.dispatchEvent(evt);
-    var opt = sel.querySelector('option[value="'+id+'"]');
-    var lbl = document.querySelector('#mcd-src-bobin .mcd-lbl');
-    if (lbl && opt) {
-        var txt = opt.textContent.trim();
-        lbl.textContent = txt.length > 60 ? txt.substring(0, 60) + '…' : txt;
+// ── Kaynak Bobin: 4 Kademeli Filtre (Excel Advanced Filter) ──────────────
+var SRC_ALL = [
+    @foreach (var s in sources)
+    {
+        @Html.Raw("{")
+        @Html.Raw("id:" + s.Id + ",")
+        @Html.Raw("kod:" + System.Text.Json.JsonSerializer.Serialize(s.UrunIcKod ?? s.UrunKod ?? "") + ",")
+        @Html.Raw("ad:"  + System.Text.Json.JsonSerializer.Serialize(s.UrunAd) + ",")
+        @Html.Raw("parti:" + System.Text.Json.JsonSerializer.Serialize(s.PartiNo ?? "") + ",")
+        @Html.Raw("seri:" + System.Text.Json.JsonSerializer.Serialize(s.SerialNo) + ",")
+        @Html.Raw("kalan:" + s.CurrentWeight.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",")
+        @Html.Raw("fsc:"  + System.Text.Json.JsonSerializer.Serialize(s.FscType) + ",")
+        @Html.Raw("disKod:" + System.Text.Json.JsonSerializer.Serialize(s.UrunKod ?? ""))
+        @Html.Raw("},")
     }
-    // Radio button'ı güncelle
-    var rb = document.querySelector('input[name="_srcRb"][value="'+id+'"]');
-    if (rb) rb.checked = true;
+];
+
+// Aktif seçimler: null = hepsi
+var _srcSel = { kod: null, ad: null, parti: null, seri: null };
+
+function _srcFiltered() {
+    return SRC_ALL.filter(function(s) {
+        if (_srcSel.kod   && s.kod   !== _srcSel.kod)   return false;
+        if (_srcSel.ad    && s.ad    !== _srcSel.ad)    return false;
+        if (_srcSel.parti && s.parti !== _srcSel.parti) return false;
+        if (_srcSel.seri  && s.seri  !== _srcSel.seri)  return false;
+        return true;
+    });
+}
+
+function _unique(arr, key) {
+    var seen = {};
+    return arr.filter(function(x) {
+        if (seen[x[key]]) return false;
+        seen[x[key]] = true;
+        return x[key] !== '';
+    }).map(function(x) { return x[key]; }).sort();
+}
+
+function _buildItems(containerId, values, field, currentVal, displayFn) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = '';
+    values.forEach(function(v) {
+        var lbl = document.createElement('label');
+        lbl.className = 'mcd-row';
+        lbl.style.whiteSpace = 'normal';
+        var rb = document.createElement('input');
+        rb.type = 'radio';
+        rb.name = '_srcF_' + field;
+        rb.value = v;
+        rb.className = 'mcd-rb';
+        rb.style.flexShrink = '0';
+        if (v === currentVal) rb.checked = true;
+        rb.addEventListener('change', function() {
+            _srcSel[field] = v;
+            _srcUpdate(field);
+            // Tek sonuç kaldıysa otomatik seç
+            var f = _srcFiltered();
+            if (f.length === 1) srcFilterConfirm(f[0]);
+        });
+        lbl.appendChild(rb);
+        var sp = document.createElement('span');
+        sp.className = 'mcd-name';
+        sp.style.whiteSpace = 'normal';
+        sp.textContent = displayFn ? displayFn(v) : v;
+        lbl.appendChild(sp);
+        el.appendChild(lbl);
+    });
+    var empty = el.closest('.mcd-panel')?.querySelector('.mcd-empty');
+    if (empty) empty.style.display = values.length === 0 ? '' : 'none';
+}
+
+function _srcUpdate(changedField) {
+    // Aşağıdaki alanları sıfırla (kaskad etkisi)
+    var order = ['kod','ad','parti','seri'];
+    var idx = order.indexOf(changedField);
+    for (var i = idx+1; i < order.length; i++) _srcSel[order[i]] = null;
+
+    var f = _srcFiltered();
+    _buildItems('mcd-f-kod-items',   _unique(f,'kod'),   'kod',   _srcSel.kod,   null);
+    _buildItems('mcd-f-ad-items',    _unique(f,'ad'),    'ad',    _srcSel.ad,    null);
+    _buildItems('mcd-f-parti-items', _unique(f,'parti'), 'parti', _srcSel.parti, null);
+    _buildItems('mcd-f-seri-items',  _unique(f,'seri'),  'seri',  _srcSel.seri,
+        function(seri) {
+            var item = f.find(function(x){ return x.seri === seri; });
+            return item ? seri + ' — ' + item.kalan.toLocaleString('tr-TR',{minimumFractionDigits:2}) + ' kg' : seri;
+        });
+    _updateMcdLabel('mcd-f-kod',   _srcSel.kod,   '— Tümü —');
+    _updateMcdLabel('mcd-f-ad',    _srcSel.ad,    '— Tümü —');
+    _updateMcdLabel('mcd-f-parti', _srcSel.parti, '— Tümü —');
+    _updateMcdLabel('mcd-f-seri',  _srcSel.seri,  '— Tümü —');
+}
+
+function _updateMcdLabel(mcdId, val, placeholder) {
+    var lbl = document.querySelector('#'+mcdId+' .mcd-lbl');
+    if (lbl) lbl.textContent = val || placeholder;
+}
+
+function srcFilterConfirm(item) {
+    // Gizli select'i güncelle → onSourceChange tetiklenir
+    var sel = document.getElementById('sourceSerialId');
+    if (sel) { sel.value = item.id; sel.dispatchEvent(new Event('change')); }
+    // Seçilen bobin göstergesini güncelle
+    var selDiv = document.getElementById('srcSelected');
+    if (selDiv) selDiv.style.display = '';
+    var selLbl = document.getElementById('srcSelectedLabel');
+    if (selLbl) selLbl.textContent = item.ad + ' · ' + item.seri;
+    var selKalan = document.getElementById('srcSelectedKalan');
+    if (selKalan) selKalan.textContent = '(kalan: ' + item.kalan.toLocaleString('tr-TR',{minimumFractionDigits:2}) + ' kg)';
+    // Filtre alanını gizle
+    var filters = document.getElementById('srcFilters');
+    if (filters) filters.style.display = 'none';
     document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
+}
+
+function srcFilterClear() {
+    _srcSel = { kod: null, ad: null, parti: null, seri: null };
+    _srcUpdate('kod');
+    var sel = document.getElementById('sourceSerialId');
+    if (sel) { sel.value = ''; sel.dispatchEvent(new Event('change')); }
+    var selDiv = document.getElementById('srcSelected');
+    if (selDiv) selDiv.style.display = 'none';
+    var filters = document.getElementById('srcFilters');
+    if (filters) filters.style.display = '';
+    document.getElementById('srcInfo').style.display = 'none';
+}
+
+// Eski srcBobinSelect uyumluluğu (gizli select tetiklemek için)
+function srcBobinSelect(id) {
+    var item = SRC_ALL.find(function(s){ return s.id === id; });
+    if (item) srcFilterConfirm(item);
 }
 
 function tgtProdSelect(id, name, kod) {

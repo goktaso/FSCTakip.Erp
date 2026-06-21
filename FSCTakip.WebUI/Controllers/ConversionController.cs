@@ -30,7 +30,8 @@ namespace FSCTakip.WebUI.Controllers
                     FscType       = s.Lot.FscType.Name,
                     UrunKod       = s.Lot.Product != null ? s.Lot.Product.ExternalCode : null,
                     UrunAd        = s.Lot.Product != null ? s.Lot.Product.ProductName : "—",
-                    UrunIcKod     = s.Lot.Product != null ? s.Lot.Product.ProductCode : null
+                    UrunIcKod     = s.Lot.Product != null ? s.Lot.Product.ProductCode : null,
+                    PartiNo       = s.Lot.PartiNo
                 })
                 .ToListAsync();
 
@@ -232,6 +233,7 @@ namespace FSCTakip.WebUI.Controllers
         public string? UrunKod { get; set; }      // ExternalCode (dış kod)
         public string UrunAd { get; set; } = "";
         public string? UrunIcKod { get; set; }    // ProductCode (iç stok kodu)
+        public string? PartiNo { get; set; }      // Lot.PartiNo
     }
 
     public class ConvTargetVM
