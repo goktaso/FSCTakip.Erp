@@ -73,22 +73,30 @@
 
 <!-- Filtre Paneli -->
 <div id="filterPanel" class="filter-panel mb-3" style="display:none;">
-    <div class="row g-2 align-items-end">
-        <div class="col-md-5">
-            <label class="form-label">Tedarikçi Ara</label>
+    <div class="d-flex align-items-end gap-2 flex-wrap">
+        <div style="display:flex;flex-direction:column;min-width:260px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">TEDARİKÇİ ARA</label>
             <input type="text" id="supplierSearch" class="form-control form-control-sm"
                    placeholder="İsim, kod veya FSC no ile arayın..." oninput="filterSuppliers()">
         </div>
-        <div class="col-md-3">
-            <label class="form-label">FSC Durumu</label>
-            <select id="fscFilter" class="form-select form-select-sm" onchange="filterSuppliers()">
-                <option value="">— Tümü —</option>
-                <option value="active">FSC Aktif</option>
-                <option value="expiring">Yakında Bitiyor</option>
-            </select>
+        <div style="display:flex;flex-direction:column;min-width:160px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">FSC DURUMU</label>
+            <div class="mcd" id="mcd-supp-fsc" data-placeholder="— Tümü —">
+                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-supp-fsc')">
+                    <span class="mcd-lbl" id="mcd-supp-fsc-lbl">— Tümü —</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-supp-fsc-panel" style="display:none;">
+                    <div class="mcd-items">
+                        <label class="mcd-row"><input type="radio" name="_suppFscFilter" value="" class="mcd-rb" onchange="setSuppFscFilter('')" checked><span class="mcd-name">— Tümü —</span></label>
+                        <label class="mcd-row"><input type="radio" name="_suppFscFilter" value="active" class="mcd-rb" onchange="setSuppFscFilter('active')"><span class="mcd-name">FSC Aktif</span></label>
+                        <label class="mcd-row"><input type="radio" name="_suppFscFilter" value="expiring" class="mcd-rb" onchange="setSuppFscFilter('expiring')"><span class="mcd-name">Yakında Bitiyor</span></label>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-2 d-flex align-items-end">
-            <button class="btn btn-outline-secondary btn-sm w-100" onclick="clearFilter()">
+        <div style="align-self:flex-end;">
+            <button class="btn btn-outline-secondary btn-sm" onclick="clearFilter()">
                 <i class="fas fa-times me-1"></i> Temizle
             </button>
         </div>
@@ -360,6 +368,18 @@
 
 @section Scripts {
 <script>
+    var _suppFscVal = '';
+
+    function setSuppFscFilter(val) {
+        _suppFscVal = val;
+        var labels = { '': '— Tümü —', 'active': 'FSC Aktif', 'expiring': 'Yakında Bitiyor' };
+        var lbl = document.getElementById('mcd-supp-fsc-lbl');
+        if (lbl) lbl.textContent = labels[val] || '— Tümü —';
+        document.querySelectorAll('#mcd-supp-fsc-panel .mcd-rb').forEach(function(rb) { rb.checked = rb.value === val; });
+        document.querySelectorAll('.mcd-panel').forEach(function(p) { p.style.display = 'none'; });
+        filterSuppliers();
+    }
+
     function toggleSuppFscFields(checked) {
         document.getElementById('suppFscFields').style.display = checked ? '' : 'none';
         if (!checked) {
@@ -370,7 +390,7 @@
 
     function filterSuppliers() {
         var search = (document.getElementById('supplierSearch').value || '').toLowerCase();
-        var fscVal = document.getElementById('fscFilter').value;
+        var fscVal = _suppFscVal;
         var total=0, active=0, fscOk=0, expiring=0;
         document.querySelectorAll('#suppliersTable tbody tr').forEach(function(tr) {
             var text    = tr.textContent.toLowerCase();
@@ -411,8 +431,7 @@
 
     function clearFilter() {
         document.getElementById('supplierSearch').value = '';
-        document.getElementById('fscFilter').value = '';
-        filterSuppliers();
+        setSuppFscFilter('');
     }
 
     async function saveSupplier() {

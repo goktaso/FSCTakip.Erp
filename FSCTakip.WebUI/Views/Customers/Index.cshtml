@@ -68,22 +68,30 @@
 
 <!-- Filtre Paneli -->
 <div id="filterPanel" class="filter-panel mb-3" style="display:none;">
-    <div class="row g-2 align-items-end">
-        <div class="col-md-5">
-            <label class="form-label">Müşteri Ara</label>
+    <div class="d-flex align-items-end gap-2 flex-wrap">
+        <div style="display:flex;flex-direction:column;min-width:260px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">MÜŞTERİ ARA</label>
             <input type="text" id="customerSearch" class="form-control form-control-sm"
                    placeholder="İsim, kod veya FSC no ile arayın..." oninput="filterCustomers()">
         </div>
-        <div class="col-md-3">
-            <label class="form-label">FSC Durumu</label>
-            <select id="fscFilter" class="form-select form-select-sm" onchange="filterCustomers()">
-                <option value="">— Tümü —</option>
-                <option value="active">FSC Aktif</option>
-                <option value="inactive">FSC Pasif</option>
-            </select>
+        <div style="display:flex;flex-direction:column;min-width:160px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">FSC DURUMU</label>
+            <div class="mcd" id="mcd-cust-fsc" data-placeholder="— Tümü —">
+                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-cust-fsc')">
+                    <span class="mcd-lbl" id="mcd-cust-fsc-lbl">— Tümü —</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-cust-fsc-panel" style="display:none;">
+                    <div class="mcd-items">
+                        <label class="mcd-row"><input type="radio" name="_custFscFilter" value="" class="mcd-rb" onchange="setCustFscFilter('')" checked><span class="mcd-name">— Tümü —</span></label>
+                        <label class="mcd-row"><input type="radio" name="_custFscFilter" value="active" class="mcd-rb" onchange="setCustFscFilter('active')"><span class="mcd-name">FSC Aktif</span></label>
+                        <label class="mcd-row"><input type="radio" name="_custFscFilter" value="inactive" class="mcd-rb" onchange="setCustFscFilter('inactive')"><span class="mcd-name">FSC Pasif</span></label>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-2 d-flex align-items-end">
-            <button class="btn btn-outline-secondary btn-sm w-100" onclick="clearFilter()">
+        <div style="align-self:flex-end;">
+            <button class="btn btn-outline-secondary btn-sm" onclick="clearFilter()">
                 <i class="fas fa-times me-1"></i> Temizle
             </button>
         </div>
@@ -294,14 +302,25 @@
 
 @section Scripts {
 <script>
+    var _custFscVal = '';
+
+    function setCustFscFilter(val) {
+        _custFscVal = val;
+        var labels = { '': '— Tümü —', 'active': 'FSC Aktif', 'inactive': 'FSC Pasif' };
+        var lbl = document.getElementById('mcd-cust-fsc-lbl');
+        if (lbl) lbl.textContent = labels[val] || '— Tümü —';
+        document.querySelectorAll('#mcd-cust-fsc-panel .mcd-rb').forEach(function(rb) { rb.checked = rb.value === val; });
+        document.querySelectorAll('.mcd-panel').forEach(function(p) { p.style.display = 'none'; });
+        filterCustomers();
+    }
+
     function filterCustomers() {
         var search = (document.getElementById('customerSearch').value || '').toLowerCase();
-        var fscVal = document.getElementById('fscFilter').value;
         document.querySelectorAll('#customersTable tbody tr').forEach(function(tr) {
             var text  = tr.textContent.toLowerCase();
             var badge = tr.querySelector('.fsc-badge');
-            var fscOk = fscVal === '' ? true
-                      : fscVal === 'active'   ? (badge && badge.classList.contains('active'))
+            var fscOk = _custFscVal === '' ? true
+                      : _custFscVal === 'active'   ? (badge && badge.classList.contains('active'))
                       : (badge && !badge.classList.contains('active'));
             tr.style.display = (text.includes(search) && fscOk) ? '' : 'none';
         });
@@ -309,8 +328,7 @@
 
     function clearFilter() {
         document.getElementById('customerSearch').value = '';
-        document.getElementById('fscFilter').value = '';
-        filterCustomers();
+        setCustFscFilter('');
     }
 
     function toggleCustFscFields(checked) {
