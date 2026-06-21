@@ -32,6 +32,7 @@ namespace FSCTakip.Core.Entities
 
         // Yarı mamül dönüşümünden oluşan lotlar için: kaynak ham/YM bobini ve dönüşüm firesi (CoC izi)
         public int? SourceSerialId { get; set; }
+        public virtual FscSerial? SourceSerial { get; set; }   // navigation property — izlenebilirlik
         public decimal? ConversionFireKg { get; set; }
 
         public virtual ICollection<FscSerial> Serials { get; set; } = new List<FscSerial>();
