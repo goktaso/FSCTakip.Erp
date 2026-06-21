@@ -4,12 +4,12 @@
     DateTime today = ViewBag.Today;
 }
 
-<div class="page-header">
-    <h4 class="page-title"><i class="fas fa-certificate me-2 text-warning"></i>Müşteri FSC Lisans Durumu</h4>
-</div>
+@section TopbarPrimary {
+    <span class="topbar-title"><i class="fas fa-certificate me-2 text-warning"></i>Müşteri FSC Lisans Durumu</span>
+}
 
 <!-- Stat Cards -->
-<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
     <div class="stat-card">
         <div class="stat-icon green"><i class="fas fa-shield-alt"></i></div>
         <div class="stat-info"><div class="stat-value">@ViewBag.Valid</div><div class="stat-label">Geçerli Lisans</div></div>
@@ -96,4 +96,7 @@
     </div>
 </div>
 
-> **Uyarı:** FSC lisansı sona eren müşterilere FSC etiketli ürün satışı yapılması CoC zincirini tehlikeye atar. Denetimde bu tablonun tüm satırları **Geçerli** olmalıdır.
+<div class="alert alert-warning mt-3" style="font-size:13px;">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Uyarı:</strong> FSC lisansı sona eren müşterilere FSC etiketli ürün satışı yapılması CoC zincirini tehlikeye atar. Denetimde bu tablonun tüm satırları <strong>Geçerli</strong> olmalıdır.
+</div>

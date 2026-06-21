@@ -114,11 +114,11 @@
 <div class="modal fade" id="formModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header dark">
                 <h5 class="modal-title fw-semibold mb-0" id="modalTitle">
                     <i class="fas fa-trash-alt me-2 text-warning"></i>İmha Kaydı
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="itemId">
@@ -239,8 +239,8 @@ function openModal(id) {
 function saveItem() {
     const desc = document.getElementById('description').value.trim();
     const qty  = parseFloat(document.getElementById('quantity').value);
-    if (!desc)     { alert('Açıklama zorunludur.');      return; }
-    if (isNaN(qty) || qty <= 0) { alert('Miktar giriniz.'); return; }
+    if (!desc)     { showToast('Açıklama zorunludur.', 'warning');      return; }
+    if (isNaN(qty) || qty <= 0) { showToast('Miktar giriniz.', 'warning'); return; }
 
     const fd = new FormData();
     fd.append('Id',             document.getElementById('itemId').value);
@@ -258,7 +258,7 @@ function saveItem() {
         .then(r => r.json())
         .then(res => {
             if (res.success) { _modal.hide(); location.reload(); }
-            else alert(res.message);
+            else showToast(res.message, 'error');
         });
 }
 
@@ -266,7 +266,7 @@ async function deleteItem(id) {
     if (!await appConfirm('Bu imha kaydını silmek istiyor musunuz?')) return;
     fetch(`/Production/DeleteWaste?id=${id}`, { method: 'POST' })
         .then(r => r.json())
-        .then(res => { if (res.success) location.reload(); else alert(res.message); });
+        .then(res => { if (res.success) location.reload(); else showToast(res.message, 'error'); });
 }
 </script>
 }

@@ -10,13 +10,21 @@
 }
 
 @section TopbarActions {
-    <form method="get" class="d-flex gap-2 align-items-center">
-        <input type="date" name="startDate" class="form-control form-control-sm"
-               value="@Model.StartDate.ToString("yyyy-MM-dd")" style="width:140px;">
-        <span class="text-muted small">—</span>
-        <input type="date" name="endDate" class="form-control form-control-sm"
-               value="@Model.EndDate.ToString("yyyy-MM-dd")" style="width:140px;">
-        <div class="mcd" id="mcd-wa-mac" data-placeholder="Tüm Makineler" style="min-width:150px;">
+    <form method="get" class="d-flex gap-2 align-items-end">
+        <div style="display:flex;flex-direction:column;">
+            <label class="form-label small fw-semibold mb-1">Başlangıç</label>
+            <input type="date" name="startDate" class="form-control form-control-sm"
+                   value="@Model.StartDate.ToString("yyyy-MM-dd")" style="width:140px;">
+        </div>
+        <span class="text-muted small mb-1">—</span>
+        <div style="display:flex;flex-direction:column;">
+            <label class="form-label small fw-semibold mb-1">Bitiş</label>
+            <input type="date" name="endDate" class="form-control form-control-sm"
+                   value="@Model.EndDate.ToString("yyyy-MM-dd")" style="width:140px;">
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:150px;">
+            <label class="form-label small fw-semibold mb-1">Makine</label>
+            <div class="mcd" id="mcd-wa-mac" data-placeholder="Tüm Makineler">
             <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-wa-mac')">
                 <span class="mcd-lbl">@machineLabel</span>
                 <i class="fas fa-angle-down mcd-arrow"></i>
@@ -45,7 +53,8 @@
                 <div class="mcd-empty" style="display:none;">Sonuç yok</div>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary btn-sm px-3">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm px-3" style="align-self:flex-end;">
             <i class="fas fa-filter me-1"></i> Filtrele
         </button>
     </form>
