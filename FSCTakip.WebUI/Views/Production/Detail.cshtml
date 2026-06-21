@@ -309,17 +309,17 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Tarih</th>
-                        <th>Bobin (Seri No)</th>
-                        <th>Lot / Tedarikçi</th>
-                        <th>Bileşen / Kullanım</th>
-                        <th class="text-end">Tüketim (kg)</th>
-                        <th class="text-end">Fire (kg)</th>
-                        <th class="text-end">Üretim (adet)</th>
-                        <th>Notlar</th>
+                        <th style="min-width:80px;">Tarih</th>
+                        <th style="min-width:110px;">Bobin (Seri No)</th>
+                        <th style="min-width:120px;">Lot / Tedarikçi</th>
+                        <th style="min-width:130px;">Bileşen / Kullanım</th>
+                        <th class="text-end" style="min-width:100px;">Tüketim (kg)</th>
+                        <th class="text-end" style="min-width:80px;">Fire (kg)</th>
+                        <th class="text-end" style="min-width:90px;">Üretim (adet)</th>
+                        <th style="min-width:60px;">Notlar</th>
                         @if (Model.Status != WorkOrderStatus.Tamamlandi)
                         {
-                            <th class="text-center">İşlem</th>
+                            <th class="text-center" style="min-width:80px;position:sticky;right:0;background:var(--surface,#1a2035);z-index:2;">İşlem</th>
                         }
                     </tr>
                 </thead>
@@ -390,7 +390,7 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                             <td class="text-muted" style="font-size:12px;">@(d.Notes ?? "—")</td>
                             @if (Model.Status != WorkOrderStatus.Tamamlandi)
                             {
-                                <td class="text-center">
+                                <td class="text-center" style="position:sticky;right:0;background:var(--surface,#1a2035);z-index:1;">
                                     <div class="d-flex gap-1 justify-content-center">
                                         <button onclick="editDetail(@d.Id)"
                                                 class="btn btn-sm" style="padding:3px 8px;border-radius:5px;background:#f9fafb;color:#374151;border:1px solid #e5e7eb;">
