@@ -253,6 +253,11 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(s => s.Lot).ThenInclude(l => l.Supplier)
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
                 .Include(s => s.Lot).ThenInclude(l => l.Product)
+                // Dönüşümden gelen YM'ler için kaynak hammadde izlenebilirliği
+                .Include(s => s.Lot).ThenInclude(l => l.SourceSerial)
+                    .ThenInclude(src => src!.Lot).ThenInclude(sl => sl.Product)
+                .Include(s => s.Lot).ThenInclude(l => l.SourceSerial)
+                    .ThenInclude(src => src!.Lot).ThenInclude(sl => sl.Supplier)
                 .Where(s => s.CurrentWeight > 0)
                 .OrderBy(s => s.Lot.PartiNo).ThenBy(s => s.SerialNo)
                 .AsSplitQuery()

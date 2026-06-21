@@ -605,10 +605,16 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                     var totalKg = pg.Sum(s => s.CurrentWeight);
                                     // 2. seviye: lot bazlı alt gruplama
                                     var byLot = pg.GroupBy(s => new {
-                                        PartiNo    = s.Lot?.PartiNo ?? "—",
-                                        Supplier   = s.Lot?.Supplier?.Name ?? "",
-                                        LotDate    = s.Lot?.ArrivalDate.ToString("dd.MM.yyyy") ?? "",
-                                        IsYariMamul = s.Lot?.Supplier == null
+                                        PartiNo       = s.Lot?.PartiNo ?? "—",
+                                        Supplier      = s.Lot?.Supplier?.Name ?? "",
+                                        LotDate       = s.Lot?.ArrivalDate.ToString("dd.MM.yyyy") ?? "",
+                                        IsYariMamul   = s.Lot?.Supplier == null && s.Lot?.SourceSerialId != null,
+                                        // Kaynak hammadde izlenebilirliği
+                                        KaynakPartiNo = s.Lot?.SourceSerial?.Lot?.PartiNo,
+                                        KaynakSeriNo  = s.Lot?.SourceSerial?.SerialNo,
+                                        KaynakUrun    = s.Lot?.SourceSerial?.Lot?.Product?.ProductName,
+                                        KaynakExtKod  = s.Lot?.SourceSerial?.Lot?.Product?.ExternalCode,
+                                        KaynakTedarikci = s.Lot?.SourceSerial?.Lot?.Supplier?.Name
                                     });
                                     @* Ürün satırı — tıklayınca bobinleri aç/kapat *@
                                     <div class="serial-product-header"
@@ -641,23 +647,43 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                         @foreach (var lg in byLot)
                                         {
                                             @* Lot alt başlığı *@
-                                            <div style="padding:5px 16px;background:#f1f5f9;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                                                <span style="font-size:10.5px;color:#475569;">
-                                                    Lot: <strong>@lg.Key.PartiNo</strong>
-                                                </span>
-                                                @if (!string.IsNullOrEmpty(lg.Key.LotDate))
-                                                {
-                                                    <span style="font-size:10px;color:#6b7280;">📅 @lg.Key.LotDate</span>
-                                                }
-                                                @if (lg.Key.IsYariMamul)
-                                                {
-                                                    <span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">
-                                                        ♻️ Dahili Dönüşüm
+                                            <div style="padding:5px 16px;background:#f1f5f9;border-bottom:1px solid #e5e7eb;">
+                                                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                                    <span style="font-size:10.5px;color:#475569;">
+                                                        YM Lot: <strong>@lg.Key.PartiNo</strong>
                                                     </span>
-                                                }
-                                                else if (!string.IsNullOrEmpty(lg.Key.Supplier))
+                                                    @if (!string.IsNullOrEmpty(lg.Key.LotDate))
+                                                    {
+                                                        <span style="font-size:10px;color:#6b7280;">📅 @lg.Key.LotDate</span>
+                                                    }
+                                                    @if (lg.Key.IsYariMamul)
+                                                    {
+                                                        <span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">♻️ Dönüşüm</span>
+                                                    }
+                                                    else if (!string.IsNullOrEmpty(lg.Key.Supplier))
+                                                    {
+                                                        <span style="font-size:10px;color:#475569;">· @lg.Key.Supplier</span>
+                                                    }
+                                                </div>
+                                                @* Kaynak hammadde izlenebilirlik satırı *@
+                                                @if (!string.IsNullOrEmpty(lg.Key.KaynakPartiNo))
                                                 {
-                                                    <span style="font-size:10px;color:#475569;">· @lg.Key.Supplier</span>
+                                                    <div style="margin-top:3px;padding:3px 8px;background:#eff6ff;border-radius:4px;border-left:3px solid #3b82f6;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                                        <span style="font-size:9.5px;font-weight:700;color:#1d4ed8;">🔗 HAM. KAYNAK:</span>
+                                                        <span style="font-size:10px;font-weight:600;color:#1e40af;">@lg.Key.KaynakPartiNo</span>
+                                                        @if (!string.IsNullOrEmpty(lg.Key.KaynakSeriNo))
+                                                        {
+                                                            <span style="font-size:10px;color:#3730a3;background:#e0e7ff;padding:0 5px;border-radius:3px;">@lg.Key.KaynakSeriNo</span>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(lg.Key.KaynakExtKod))
+                                                        {
+                                                            <span style="font-size:10px;color:#6366f1;">@lg.Key.KaynakExtKod</span>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(lg.Key.KaynakTedarikci))
+                                                        {
+                                                            <span style="font-size:10px;color:#6b7280;">· @lg.Key.KaynakTedarikci</span>
+                                                        }
+                                                    </div>
                                                 }
                                             </div>
                                             @foreach (var s in lg)
