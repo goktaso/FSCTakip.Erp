@@ -472,8 +472,9 @@ namespace FSCTakip.DataAccess.Data
                 .Property(s => s.OriginalQuantity).HasColumnType("decimal(18,4)");
 
             // M11 -- FscLot.SourceSerialId FK + index: donusum izi icin CoC FK tanimi
+            // Navigation property (SourceSerial) ile eslestirildi — anonim HasOne<> yerine
             modelBuilder.Entity<FscLot>()
-                .HasOne<FscSerial>().WithMany()
+                .HasOne(l => l.SourceSerial).WithMany()
                 .HasForeignKey(l => l.SourceSerialId).OnDelete(DeleteBehavior.ClientSetNull);
             modelBuilder.Entity<FscLot>()
                 .HasIndex(l => l.SourceSerialId)
