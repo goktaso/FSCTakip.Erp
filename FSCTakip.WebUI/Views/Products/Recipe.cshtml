@@ -166,9 +166,9 @@ else
                         var ec = (p.ExternalCode ?? "").Trim();
                         var pn = (p.ProductName  ?? "").Trim();
                         var st = $"{pc} {ec} {pn}".ToLower();
-                        <label class="d-flex align-items-center gap-2 px-3 py-2 add-prod-row"
-                               data-search="@st"
-                               style="cursor:pointer;border-bottom:1px solid #f3f4f6;user-select:none;">
+                        <label class="add-prod-row"
+                               data-filter="@st"
+                               style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;user-select:none;">
                             <input type="checkbox" class="add-cb" value="@p.Id"
                                    data-name="@pn" data-code="@pc" data-ext="@ec"
                                    onchange="onAddCbChange(this)"
@@ -281,7 +281,8 @@ function openAddModal() {
 function filterAddList() {
     const term = document.getElementById('addSearch').value.toLowerCase().trim();
     document.querySelectorAll('.add-prod-row').forEach(row => {
-        row.style.display = (!term || row.dataset.search.includes(term)) ? '' : 'none';
+        const txt = row.getAttribute('data-filter') || '';
+        row.style.display = (!term || txt.includes(term)) ? 'flex' : 'none';
     });
 }
 
