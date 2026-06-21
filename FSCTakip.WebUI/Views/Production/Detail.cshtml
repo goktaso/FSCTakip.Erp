@@ -749,10 +749,11 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                     <div class="col-12">
                         <div style="border-top:1px dashed #e5e7eb;padding-top:10px;">
                             <button type="button" class="btn btn-link p-0 text-decoration-none"
-                                    style="font-size:12px;color:#6b7280;"
+                                    style="font-size:12px;color:#5b21b6;"
                                     data-bs-toggle="collapse" data-bs-target="#cocSection">
-                                <i class="fas fa-sitemap me-1 text-success"></i>
-                                FSC CoC İzleme <span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;font-weight:500;margin-left:4px;">Opsiyonel</span>
+                                <i class="fas fa-layer-group me-1" style="color:#5b21b6;"></i>
+                                <strong>Bileşen / Kullanım Yeri</strong>
+                                <span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:500;margin-left:4px;">Gövde · Sap · Etiket vb.</span>
                                 <i class="fas fa-chevron-down ms-1" style="font-size:10px;"></i>
                             </button>
                             <div class="collapse" id="cocSection">
@@ -1274,10 +1275,8 @@ function editDetail(id) {
             _resetFireMode();
             document.getElementById('fireKgDirect').value   = d.wasteWeight;
             document.getElementById('detailWaste').value    = d.wasteWeight;
-            // expand CoC if recipe is selected
-            if (d.workOrderRecipeId) {
-                bootstrap.Collapse.getOrCreateInstance(document.getElementById('cocSection'), {toggle:false}).show();
-            }
+            // Düzenlemede CoC bölümünü her zaman aç (bileşen değiştirilebilsin)
+            bootstrap.Collapse.getOrCreateInstance(document.getElementById('cocSection'), {toggle:false}).show();
             bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal')).show();
         });
 }
