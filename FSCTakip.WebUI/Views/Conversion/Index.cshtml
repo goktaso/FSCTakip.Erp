@@ -323,6 +323,14 @@ function _buildItems(containerId, values, field, currentVal, displayFn) {
         rb.addEventListener('change', function() {
             _srcSel[field] = v;
             _srcUpdate(field);
+            // Stok kodu seçilince → stok adı tekse otomatik doldur
+            if (field === 'kod') {
+                var ads = _unique(_srcFiltered(), 'ad');
+                if (ads.length === 1) {
+                    _srcSel.ad = ads[0];
+                    _srcUpdate('ad');
+                }
+            }
             // Tek sonuç kaldıysa otomatik seç
             var f = _srcFiltered();
             if (f.length === 1) srcFilterConfirm(f[0]);
