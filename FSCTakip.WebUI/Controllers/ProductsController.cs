@@ -311,6 +311,7 @@ namespace FSCTakip.WebUI.Controllers
                         return Json(new { success = false, message = "Bu bileşen zaten reçetede mevcut." });
 
                     model.IsActive = true;
+                    model.BilesenYeri = string.IsNullOrWhiteSpace(model.BilesenYeri) ? null : model.BilesenYeri.Trim();
                     model.CreatedDate = DateTime.Now;
                     model.CreatedBy = User.Identity?.Name ?? "System";
                     _context.ProductRecipes.Add(model);
@@ -323,6 +324,7 @@ namespace FSCTakip.WebUI.Controllers
                     existing.ChildProductId = model.ChildProductId;
                     existing.StandardQuantity = parsedQty;
                     existing.Unit = model.Unit;
+                    existing.BilesenYeri = string.IsNullOrWhiteSpace(model.BilesenYeri) ? null : model.BilesenYeri.Trim();
                     existing.UpdatedDate = DateTime.Now;
                     existing.UpdatedBy = User.Identity?.Name ?? "System";
                 }
@@ -344,7 +346,8 @@ namespace FSCTakip.WebUI.Controllers
             if (item == null) return Json(new { success = false });
             return Json(new { success = true, data = new {
                 item.Id, item.ParentProductId, item.ChildProductId,
-                item.StandardQuantity, item.Unit, item.IsActive
+                item.StandardQuantity, item.Unit, item.IsActive,
+                item.BilesenYeri
             }});
         }
 
