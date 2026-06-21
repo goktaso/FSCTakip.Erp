@@ -9,24 +9,27 @@
                        ?? new Dictionary<string, EffectivePermission>();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <a href="/Users" class="btn btn-sm btn-outline-secondary me-2">
-            <i class="fas fa-arrow-left me-1"></i>Kullanıcılar
-        </a>
-        <span class="fw-bold fs-5">
+@section TopbarActions {
+    <a href="/Users" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Kullanıcılar
+    </a>
+}
+
+<div class="topbar-area mb-3">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fw-semibold" style="color:var(--text);font-size:14px;">
             <i class="fas fa-user-shield me-2 text-primary"></i>@Model.FullName
         </span>
         @if (Model.IsAdmin)
         {
-            <span class="badge bg-danger ms-2"><i class="fas fa-crown me-1"></i>Admin</span>
+            <span class="badge bg-danger"><i class="fas fa-crown me-1"></i>Admin</span>
         }
         @if (!Model.IsActive)
         {
-            <span class="badge bg-warning text-dark ms-2">Pasif</span>
+            <span class="badge bg-warning text-dark">Pasif</span>
         }
+        <small class="text-muted ms-2">@@@Model.Username</small>
     </div>
-    <small class="text-muted">@@</small><small class="text-muted">@Model.Username</small>
 </div>
 
 @if (Model.IsAdmin)
@@ -43,12 +46,13 @@
 <div class="row g-3">
     <!-- Sol: Yetki Matrisi -->
     <div class="col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-header bg-dark text-white py-2">
-                <i class="fas fa-table me-1"></i> Etkin Yetki Matrisi
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fas fa-table text-primary"></i>
+                <strong style="font-size:14px;">Etkin Yetki Matrisi</strong>
                 <small class="text-muted ms-2">Grup yetkisi + bireysel override</small>
             </div>
-            <div class="card-body p-0">
+            <div class="">
                 <table class="table table-sm table-bordered mb-0">
                     <thead class="table-secondary">
                         <tr>
@@ -153,11 +157,12 @@
 
     <!-- Sağ: Grup üyeliği + bilgi -->
     <div class="col-lg-4">
-        <div class="card shadow-sm">
-            <div class="card-header bg-info text-white py-2">
-                <i class="fas fa-layer-group me-1"></i> Grup Üyelikleri
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:var(--brand);border-radius:12px 12px 0 0;">
+                <i class="fas fa-layer-group" style="color:#fff;"></i>
+                <strong style="font-size:14px;color:#fff;">Grup Üyelikleri</strong>
             </div>
-            <div class="card-body p-0">
+            <div class="">
                 @if (Model.UserGroups.Any())
                 {
                     <ul class="list-group list-group-flush">
@@ -180,16 +185,17 @@
                     </div>
                 }
             </div>
-            <div class="card-footer small">
+            <div class="p-2 border-top small text-muted">
                 Grup değiştirmek için <a href="/Users">Kullanıcı listesinden</a> düzenleyin.
             </div>
         </div>
 
-        <div class="card shadow-sm mt-3">
-            <div class="card-header bg-light py-2">
-                <i class="fas fa-info-circle me-1 text-primary"></i> Override Nasıl Çalışır?
+        <div class="table-card mt-3">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fas fa-info-circle text-primary"></i>
+                <strong style="font-size:13px;">Override Nasıl Çalışır?</strong>
             </div>
-            <div class="card-body small">
+            <div class="p-3 small">
                 <table class="table table-sm mb-0">
                     <tr><td><strong>—</strong></td><td>Gruptan devralır</td></tr>
                     <tr><td class="text-success fw-bold">✓</td><td>Grup ne derse desin <strong>VER</strong></td></tr>
@@ -237,7 +243,7 @@ function saveOverride(moduleId, btn) {
                 row.classList.remove('table-warning');
                 showToast(d.message, 'success');
             } else {
-                alert(d.message);
+                showToast(d.message, 'error');
             }
         });
 }

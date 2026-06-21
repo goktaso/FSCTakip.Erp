@@ -84,11 +84,11 @@
 <div class="modal fade" id="formModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header dark">
                 <h5 class="modal-title fw-semibold mb-0" id="modalTitle">
-                    <i class="fas fa-plug me-2 text-primary"></i>Bağlantı
+                    <i class="fas fa-plug me-2"></i>Bağlantı
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="itemId">
@@ -175,18 +175,18 @@ function saveItem() {
     fd.append('Description', document.getElementById('itemDesc').value.trim());
     fd.append('Settings',    document.getElementById('itemSettings').value.trim());
 
-    if (!fd.get('Name')) { alert('Bağlantı adı zorunludur.'); return; }
+    if (!fd.get('Name')) { showToast('Bağlantı adı zorunludur.', 'warning'); return; }
 
     fetch('/Etl/SaveConnection', { method: 'POST', body: fd })
         .then(r => r.json())
-        .then(res => { if (res.success) location.reload(); else alert(res.message); });
+        .then(res => { if (res.success) location.reload(); else showToast(res.message, 'error'); });
 }
 
 function toggleStatus(id) {
     fetch(`/Etl/ToggleConnection?id=${id}`, { method: 'POST' })
         .then(r => r.json())
         .then(res => {
-            if (!res.success) { alert(res.message); return; }
+            if (!res.success) { showToast(res.message, 'error'); return; }
             const badge = document.getElementById(`badge_${id}`);
             const btn   = document.getElementById(`toggleBtn_${id}`);
             if (res.isActive) {
@@ -201,11 +201,11 @@ function toggleStatus(id) {
         });
 }
 
-function deleteItem(id, name) {
-    if (!confirm(`"${name}" bağlantısını silmek istiyor musunuz?`)) return;
+async function deleteItem(id, name) {
+    if (!await appConfirm(`"${name}" bağlantısını silmek istiyor musunuz?`, { danger: true, title: 'Bağlantıyı Sil' })) return;
     fetch(`/Etl/DeleteConnection?id=${id}`, { method: 'POST' })
         .then(r => r.json())
-        .then(res => { if (res.success) location.reload(); else alert(res.message); });
+        .then(res => { if (res.success) location.reload(); else showToast(res.message, 'error'); });
 }
 </script>
 }

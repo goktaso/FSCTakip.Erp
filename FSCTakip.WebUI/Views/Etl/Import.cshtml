@@ -202,7 +202,7 @@ function previewFile() {
         .then(r => r.json())
         .then(res => {
             document.getElementById('panelLoading').style.display  = 'none';
-            if (!res.success) { alert(res.message); document.getElementById('panelStart').style.display = ''; return; }
+            if (!res.success) { showToast(res.message, 'error'); document.getElementById('panelStart').style.display = ''; return; }
 
             const thead = document.getElementById('previewHead');
             const tbody = document.getElementById('previewBody');
@@ -219,7 +219,7 @@ async function executeImport() {
     const file = document.getElementById('excelFile').files[0];
     const type = document.getElementById('jobType').value;
     const connId = document.getElementById('connectionId').value;
-    if (!file || !type) { alert('Aktarım türü ve dosya seçilmelidir.'); return; }
+    if (!file || !type) { showToast('Aktarım türü ve dosya seçilmelidir.', 'warning'); return; }
     if (!await appConfirm(`"${typeInfo[type]?.label ?? type}" aktarımını başlatmak istiyor musunuz?`)) return;
 
     const fd = new FormData();
@@ -268,7 +268,7 @@ async function executeImport() {
             document.getElementById('panelStart').style.display   = '';
             document.getElementById('btnPreview').disabled  = false;
             document.getElementById('btnExecute').disabled  = false;
-            alert('Aktarım sırasında bir hata oluştu.');
+            showToast('Aktarım sırasında bir hata oluştu.', 'error');
         });
 }
 
