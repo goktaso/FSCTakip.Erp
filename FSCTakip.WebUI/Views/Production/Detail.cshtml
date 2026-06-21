@@ -615,7 +615,8 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                          data-prodcode="@pg.Key.ProdCode"
                                          data-extcode="@pg.Key.ExtCode"
                                          data-prodname="@pg.Key.ProdName"
-                                         onclick="toggleProdGroup('@prodGroupId')"
+                                         tabindex="0"
+                                         onmousedown="event.preventDefault(); toggleProdGroup('@prodGroupId')"
                                          style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer;border-bottom:1px solid #e5e7eb;background:#f8fafc;user-select:none;">
                                         <div style="flex:1;min-width:0;">
                                             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -699,7 +700,7 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                                      data-extcode="@pg.Key.ExtCode"
                                                      data-prodname="@pg.Key.ProdName"
                                                      style="padding-left:20px;"
-                                                     onclick="selectSerial(@s.Id, '@s.SerialNo', @s.CurrentWeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture), '@lg.Key.PartiNo', '@lg.Key.Supplier', '@pg.Key.ProdCode', '@pg.Key.ExtCode', '@pg.Key.ProdName')">
+                                                     onmousedown="event.preventDefault(); selectSerial(@s.Id, '@s.SerialNo', @s.CurrentWeight.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture), '@lg.Key.PartiNo', '@lg.Key.Supplier', '@pg.Key.ProdCode', '@pg.Key.ExtCode', '@pg.Key.ProdName')">
                                                     <div class="d-flex justify-content-between align-items-center" style="padding:1px 0;">
                                                         <span style="font-weight:600;font-size:12.5px;">@s.SerialNo</span>
                                                         <span style="font-size:12px;font-weight:600;color:#1d4ed8;white-space:nowrap;margin-left:8px;">@s.CurrentWeight.ToString("N2") kg</span>
@@ -1057,10 +1058,14 @@ function selectSerial(id, serialNo, kalan, lotNo, supplier, prodCode, extCode, p
 }
 
 function hideSerialDropdown() {
+    // Kullanıcı dropdown içinde bir şeye (ör. ürün grubunu genişletmek için) tıklıyorsa kapatma
     setTimeout(() => {
         const dropdown = document.getElementById('serialDropdown');
-        if (dropdown) dropdown.style.display = 'none';
-    }, 200);
+        if (!dropdown) return;
+        // Aktif eleman dropdown içindeyse (grup başlığı, seri satırı vb.) kapat
+        if (dropdown.contains(document.activeElement)) return;
+        dropdown.style.display = 'none';
+    }, 400); // 200ms'den 400ms'e çıkarıldı — grup genişletme + seri tıklama için yeterli süre
 }
 
 function showLotDocs(serialId) {
