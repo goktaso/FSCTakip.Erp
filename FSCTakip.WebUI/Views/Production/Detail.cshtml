@@ -615,8 +615,9 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                          data-prodcode="@pg.Key.ProdCode"
                                          data-extcode="@pg.Key.ExtCode"
                                          data-prodname="@pg.Key.ProdName"
-                                         tabindex="0"
-                                         onmousedown="event.preventDefault(); toggleProdGroup('@prodGroupId')"
+                                         data-panelid="@prodGroupId"
+                                         onmousedown="event.preventDefault()"
+                                         onclick="toggleProdGroup('@prodGroupId')"
                                          style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer;border-bottom:1px solid #e5e7eb;background:#f8fafc;user-select:none;">
                                         <div style="flex:1;min-width:0;">
                                             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -981,7 +982,7 @@ function filterSerials() {
         // Arama yok: ürün başlıklarını göster, bobin panellerini kapat
         productHeaders.forEach(hdr => {
             hdr.style.display = '';
-            const panelId = hdr.getAttribute('onclick').match(/'([^']+)'/)?.[1];
+            const panelId = hdr.dataset.panelid || hdr.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
             if (panelId) {
                 const panel = document.getElementById(panelId);
                 if (panel) panel.style.display = 'none';
@@ -996,7 +997,7 @@ function filterSerials() {
             const prodCode = (hdr.dataset.prodcode || '').toLowerCase();
             const extCode  = (hdr.dataset.extcode  || '').toLowerCase();
             const prodName = (hdr.dataset.prodname || '').toLowerCase();
-            const panelId  = hdr.getAttribute('onclick').match(/'([^']+)'/)?.[1];
+            const panelId  = hdr.dataset.panelid || hdr.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
             const panel    = panelId ? document.getElementById(panelId) : null;
             if (!panel) { hdr.style.display = 'none'; return; }
 
