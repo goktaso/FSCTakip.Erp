@@ -1,23 +1,26 @@
-﻿@model IEnumerable<FSCTakip.Core.Entities.PaperWeight>
+@model IEnumerable<FSCTakip.Core.Entities.PaperWeight>
 @{
     ViewData["Title"] = "Kağıt Gramaj Tanımları";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-weight-hanging mr-2"></i>Gramaj Listesi</h5>
-    <div>
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn-topbar-add" onclick="openAddModal()">
+            <span class="btn-add-icon"><i class="fas fa-plus"></i></span>
+            Yeni Gramaj Ekle
+        </button>
+    </div>
+    <div class="d-flex gap-2 ms-auto align-items-center">
         <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
             <i class="fas fa-filter"></i> Filtrele
         </button>
         <button class="btn btn-sm btn-outline-success" onclick="location.href='@Url.Action("ExportWeights", "Paper")'">
             <i class="fas fa-file-excel"></i> Excel
         </button>
-        <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
-            <i class="fas fa-print"></i> Yazdır
-        </button>
-        <button class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
-            <i class="fas fa-plus"></i> Yeni Gramaj Ekle
-        </button>
+        <span class="topbar-user">
+            <i class="fas fa-user-circle"></i>
+            @(User.Identity?.Name ?? "Kullanıcı")
+        </span>
     </div>
 </div>
 
@@ -38,53 +41,71 @@
     </div>
 </div>
 
-<div class="card shadow-sm border-0">
+@* --- TABLO ALANI --- *@
+<div class="card shadow-sm border-0 table-card">
+    <div class="table-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-weight-hanging text-primary"></i>
+            <span>Gramaj Listesi</span>
+            <span class="badge badge-blue">@Model.Count() kayıt</span>
+        </div>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="weightsTable">
+            <table class="table table-hover align-middle mb-0 data-table" id="weightsTable">
                 <thead class="bg-light text-dark text-uppercase small font-weight-bold">
                     <tr>
                         <th style="width: 80px;">ID</th>
                         <th>Gramaj (Değer)</th>
                         <th>Birim</th>
-                        @* [YENİ]: Durum başlığı eklendi *@
                         <th class="text-center">Durum</th>
                         <th class="text-right" style="width: 150px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in Model)
+                    @if (Model != null && Model.Any())
                     {
-                        <tr>
-                            <td><code>#@item.Id</code></td>
-                            <td><strong class="text-primary">@item.Value</strong></td>
-                            <td><span class="badge badge-light border">@item.Unit</span></td>
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><code>#@item.Id</code></td>
+                                <td><strong class="text-primary">@item.Value</strong></td>
+                                <td><span class="badge badge-light border">@item.Unit</span></td>
 
-                            @* --- [BAŞLANGIÇ: YENİ EKLENEN DURUM SWITCH ALANI] --- *@
-                            <td class="text-center">
-                                <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="status_@item.Id"
-                                           @(item.IsActive ? "checked" : "")
-                                           onchange="toggleWeightStatus(@item.Id)">
-                                    <label class="custom-control-label cursor-pointer" for="status_@item.Id">
-                                        <span id="badge_@item.Id" class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
-                                            @(item.IsActive ? "Aktif" : "Pasif")
-                                        </span>
-                                    </label>
-                                </div>
-                            </td>
-                            @* --- [BİTİŞ: YENİ EKLENEN DURUM SWITCH ALANI] --- *@
+                                <td class="text-center">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="status_@item.Id"
+                                               @(item.IsActive ? "checked" : "")
+                                               onchange="toggleWeightStatus(@item.Id)">
+                                        <label class="custom-control-label cursor-pointer" for="status_@item.Id">
+                                            <span id="badge_@item.Id" class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
+                                                @(item.IsActive ? "Aktif" : "Pasif")
+                                            </span>
+                                        </label>
+                                    </div>
+                                </td>
 
-                            <td class="text-right">
-                                <button class="btn btn-sm btn-outline-primary mr-1"
-                                        onclick="editWeight(@item.Id, '@item.Value', '@item.Unit', @item.IsActive.ToString().ToLower())">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteWeight(@item.Id)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
+                                <td class="text-right">
+                                    <button class="btn btn-sm btn-outline-primary mr-1"
+                                            onclick="editWeight(@item.Id, '@item.Value', '@item.Unit', @item.IsActive.ToString().ToLower())">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteWeight(@item.Id)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="5">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-weight-hanging"></i></div>
+                                <h6>Henüz gramaj kaydı yok</h6>
+                                <p>+ Yeni Gramaj Ekle butonunu kullanın.</p>
+                            </div>
+                        </td></tr>
                     }
                 </tbody>
             </table>
@@ -96,8 +117,8 @@
 <div class="modal fade" id="weightModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-secondary text-white">
-                <h6 class="modal-title font-weight-bold">Yeni Gramaj Tanımla</h6>
+            <div class="modal-header dark">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-weight-hanging mr-2"></i>Gramaj Formu</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Paper" asp-action="SaveWeight" method="post">
@@ -134,7 +155,6 @@
             });
         }
 
-        // --- [YENİ EKLENEN: GRAMAJ DURUM GÜNCELLEME (AJAX)] ---
         function toggleWeightStatus(id) {
             $.post('/Paper/ToggleWeightStatus', { id: id }, function (res) {
                 if (res.success) {
@@ -155,7 +175,7 @@
             $('#weightId').val(0);
             $('#weightValue').val('');
             $('#isActiveSwitch').prop('checked', true);
-            $('.modal-title').text('Yeni Gramaj Tanımla');
+            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Gramaj Tanımla');
             bootstrap.Modal.getOrCreateInstance(document.getElementById('weightModal')).show();
         }
 
@@ -164,7 +184,7 @@
             $('#weightValue').val(value.replace(',', '.'));
             $('#weightUnit').val(unit);
             $('#isActiveSwitch').prop('checked', isActive);
-            $('.modal-title').text('Gramaj Düzenle');
+            $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Gramaj Düzenle');
             bootstrap.Modal.getOrCreateInstance(document.getElementById('weightModal')).show();
         }
 

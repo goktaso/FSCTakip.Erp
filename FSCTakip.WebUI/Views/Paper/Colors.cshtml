@@ -1,24 +1,26 @@
-﻿@model IEnumerable<FSCTakip.Core.Entities.PaperColor>
+@model IEnumerable<FSCTakip.Core.Entities.PaperColor>
 @{
     ViewData["Title"] = "Kağıt Renk Tanımları";
 }
 
-@* --- ÜST PANEL: Standart Buton Grubu --- *@
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-palette mr-2"></i>Kağıt Renk Listesi</h5>
-    <div>
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn-topbar-add" onclick="openAddModal()">
+            <span class="btn-add-icon"><i class="fas fa-plus"></i></span>
+            Yeni Renk Ekle
+        </button>
+    </div>
+    <div class="d-flex gap-2 ms-auto align-items-center">
         <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
             <i class="fas fa-filter"></i> Filtrele
         </button>
         <button class="btn btn-sm btn-outline-success" onclick="location.href='@Url.Action("ExportColors", "Paper")'">
             <i class="fas fa-file-excel"></i> Excel
         </button>
-        <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
-            <i class="fas fa-print"></i> Yazdır
-        </button>
-        <button class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
-            <i class="fas fa-plus"></i> Yeni Renk Ekle
-        </button>
+        <span class="topbar-user">
+            <i class="fas fa-user-circle"></i>
+            @(User.Identity?.Name ?? "Kullanıcı")
+        </span>
     </div>
 </div>
 
@@ -40,21 +42,27 @@
 </div>
 
 @* --- TABLO ALANI --- *@
-<div class="card shadow-sm border-0">
+<div class="card shadow-sm border-0 table-card">
+    <div class="table-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-palette text-primary"></i>
+            <span>Kağıt Renk Listesi</span>
+            <span class="badge badge-blue">@Model.Count() kayıt</span>
+        </div>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="colorsTable">
+            <table class="table table-hover align-middle mb-0 data-table" id="colorsTable">
                 <thead class="bg-light text-dark text-uppercase small font-weight-bold">
                     <tr>
                         <th style="width: 80px;">ID</th>
                         <th>Renk Adı</th>
-                        @* [YENİ]: Anlık değişim için Durum Switch sütunu *@
                         <th class="text-center">Durum</th>
                         <th class="text-right" style="width: 150px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model != null)
+                    @if (Model != null && Model.Any())
                     {
                         foreach (var item in Model)
                         {
@@ -62,7 +70,6 @@
                                 <td><code>#@item.Id</code></td>
                                 <td><strong class="text-primary">@item.Name</strong></td>
 
-                                @* --- [YENİ: DURUM SWITCH] --- *@
                                 <td class="text-center">
                                     <div class="custom-control custom-switch">
                                         <input type="checkbox" class="custom-control-input" id="status_@item.Id"
@@ -88,6 +95,16 @@
                             </tr>
                         }
                     }
+                    else
+                    {
+                        <tr><td colspan="4">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-palette"></i></div>
+                                <h6>Henüz renk kaydı yok</h6>
+                                <p>+ Yeni Renk Ekle butonunu kullanın.</p>
+                            </div>
+                        </td></tr>
+                    }
                 </tbody>
             </table>
         </div>
@@ -97,10 +114,9 @@
 @* --- MODAL: EKLE/DÜZENLE --- *@
 <div class="modal fade" id="addColorModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
-        @* Modal boyutu sm yapıldı *@
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-secondary text-white">
-                <h6 class="modal-title font-weight-bold">Renk Formu</h6>
+            <div class="modal-header dark">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-palette mr-2"></i>Renk Formu</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Paper" asp-action="SaveColor" method="post">
@@ -110,7 +126,6 @@
                         <label class="small font-weight-bold">Renk Adı <span class="text-danger">*</span></label>
                         <input type="text" name="Name" id="colorName" class="form-control" required placeholder="Örn: Beyaz">
                     </div>
-                    @* [YENİ]: Modal içine de Aktiflik switch'i eklendi *@
                     <div class="custom-control custom-switch mt-3">
                         <input type="checkbox" class="custom-control-input" id="isActiveSwitch" name="IsActive" checked>
                         <label class="custom-control-label small font-weight-bold" for="isActiveSwitch">Aktif</label>
@@ -127,7 +142,6 @@
 
 @section Scripts {
     <script>
-        // Filtreleme fonksiyonu
         function filterColors() {
             var value = $("#colorSearch").val().toLowerCase();
             $("#colorsTable tbody tr").filter(function() {
@@ -135,7 +149,6 @@
             });
         }
 
-        // --- [YENİ: ANLIK DURUM GÜNCELLEME] ---
         function toggleColorStatus(id) {
             $.post('/Paper/ToggleColorStatus', { id: id }, function (res) {
                 if (res.success) {
@@ -155,16 +168,16 @@
         function openAddModal() {
             $('#colorId').val(0);
             $('#colorName').val('');
-            $('#isActiveSwitch').prop('checked', true); // Yeni kayıtta varsayılan aktif
-            $('.modal-title').text('Yeni Renk Tanımla');
+            $('#isActiveSwitch').prop('checked', true);
+            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Renk Tanımla');
             bootstrap.Modal.getOrCreateInstance(document.getElementById('addColorModal')).show();
         }
 
         function editColor(id, name, isActive) {
             $('#colorId').val(id);
             $('#colorName').val(name);
-            $('#isActiveSwitch').prop('checked', isActive); // Mevcut durumu yükle
-            $('.modal-title').text('Renk Düzenle');
+            $('#isActiveSwitch').prop('checked', isActive);
+            $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Renk Düzenle');
             bootstrap.Modal.getOrCreateInstance(document.getElementById('addColorModal')).show();
         }
 
