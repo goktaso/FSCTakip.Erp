@@ -244,15 +244,15 @@ function saveConv() {
     var groupId   = document.getElementById('convGroup').value || null;
     var productId = document.getElementById('convProduct').value || null;
 
-    if (!from) { alert('Kaynak birim zorunludur.'); return; }
-    if (!(factor > 0)) { alert('Çarpan sıfırdan büyük olmalıdır.'); return; }
+    if (!from) { showToast('Kaynak birim zorunludur.', 'warning'); return; }
+    if (!(factor > 0)) { showToast('Çarpan sıfırdan büyük olmalıdır.', 'warning'); return; }
 
     $.post('/UnitConversion/Save', {
         Id: id || 0, FromUnit: from, ToUnit: 'KG', Factor: factor,
         Description: desc, ProductGroupId: groupId, ProductId: productId
     }, function(res) {
         if (res.success) { location.reload(); }
-        else { alert(res.message); }
+        else { showToast(res.message, 'error'); }
     });
 }
 

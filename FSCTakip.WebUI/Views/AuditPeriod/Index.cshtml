@@ -260,79 +260,40 @@
         });
     }
 
-    function deletePeriod(id) {
-        Swal.fire({
-            title: 'Emin misiniz?',
-            text: 'Bu denetim dönemi kalıcı olarak silinecek.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Evet, Sil',
-            cancelButtonText: 'Vazgeç'
-        }).then(r => {
-            if (r.isConfirmed) {
-                $.post('/AuditPeriod/Delete', { id: id }, function(res) {
-                    if (res.success) {
-                        showToast('success', res.message);
-                        setTimeout(() => location.reload(), 600);
-                    } else {
-                        showToast('error', res.message);
-                    }
-                });
+    async function deletePeriod(id) {
+        if (!await appConfirm('Bu denetim dönemi kalıcı olarak silinecek.', { danger: true, title: 'Emin misiniz?' })) return;
+        $.post('/AuditPeriod/Delete', { id: id }, function(res) {
+            if (res.success) {
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 600);
+            } else {
+                showToast(res.message, 'error');
             }
         });
     }
 
-    function lockPeriod(id, year) {
-        Swal.fire({
-            title: year + ' Dönemini Kilitle',
-            html: '<p>Bu dönemi kilitlediğinizde <strong>yalnızca admin kullanıcılar</strong> bu tarihe ait kayıtları değiştirebilir.</p>' +
-                  '<p class="text-danger fw-semibold">Bu işlem diğer kullanıcıların bu döneme ait verilerini düzenlemesini engeller.</p>',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: '<i class="fas fa-lock me-1"></i> Evet, Kilitle',
-            cancelButtonText: 'Vazgeç'
-        }).then(r => {
-            if (!r.isConfirmed) return;
-            $.post('/AuditPeriod/LockPeriod', { id: id }, function(res) {
-                if (res.success) {
-                    showToast('success', res.message);
-                    setTimeout(() => location.reload(), 800);
-                } else {
-                    showToast('error', res.message);
-                }
-            });
+    async function lockPeriod(id, year) {
+        if (!await appConfirm(year + ' dönemini kilitlediğinizde yalnızca admin kullanıcılar bu tarihe ait kayıtları değiştirebilir.', { danger: true, title: year + ' Dönemini Kilitle' })) return;
+        $.post('/AuditPeriod/LockPeriod', { id: id }, function(res) {
+            if (res.success) {
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(res.message, 'error');
+            }
         });
     }
 
-    function unlockPeriod(id, year) {
-        Swal.fire({
-            title: year + ' Dönem Kilidini Kaldır',
-            text: 'Kilidi kaldırdığınızda tüm yetkili kullanıcılar bu döneme ait verileri düzenleyebilir.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#d97706',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: '<i class="fas fa-lock-open me-1"></i> Kilidi Kaldır',
-            cancelButtonText: 'Vazgeç'
-        }).then(r => {
-            if (!r.isConfirmed) return;
-            $.post('/AuditPeriod/UnlockPeriod', { id: id }, function(res) {
-                if (res.success) {
-                    showToast('success', res.message);
-                    setTimeout(() => location.reload(), 800);
-                } else {
-                    showToast('error', res.message);
-                }
-            });
+    async function unlockPeriod(id, year) {
+        if (!await appConfirm('Kilidi kaldırdığınızda tüm yetkili kullanıcılar bu döneme ait verileri düzenleyebilir.', { title: year + ' Dönem Kilidini Kaldır' })) return;
+        $.post('/AuditPeriod/UnlockPeriod', { id: id }, function(res) {
+            if (res.success) {
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(res.message, 'error');
+            }
         });
-    }
-
-    function showToast(type, msg) {
-        Swal.fire({ icon: type, title: msg, timer: 2000, showConfirmButton: false });
     }
 </script>
 }

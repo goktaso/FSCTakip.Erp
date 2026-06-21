@@ -9,16 +9,23 @@
     var users      = ViewBag.Users      as List<string> ?? new();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="mb-0"><i class="fas fa-history me-2 text-primary"></i>Değişiklik Günlüğü</h5>
-    <span class="badge bg-secondary fs-6">Toplam: @total.ToString("N0") kayıt</span>
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fw-semibold" style="color:var(--text);font-size:14px;">
+            <i class="fas fa-history me-2 text-primary"></i>Değişiklik Günlüğü
+        </span>
+        <span class="badge bg-secondary ms-1">@total.ToString("N0") kayıt</span>
+    </div>
+    <div class="d-flex gap-2 ms-auto">
+        <span class="topbar-user"><i class="fas fa-user-circle"></i> @(User.Identity?.Name ?? "Kullanıcı")</span>
+    </div>
 </div>
 
 <!-- Filtre Paneli -->
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">
-        <form method="get" action="/AuditLog" class="row g-2 align-items-end">
-            <div class="col-md-2">
+        <form method="get" action="/AuditLog" class="d-flex align-items-end gap-2 flex-wrap">
+            <div style="display:flex;flex-direction:column;min-width:140px;">
                 <label class="form-label small fw-semibold mb-1">Tablo</label>
                 <select name="table" class="form-select form-select-sm">
                     <option value="">— Tümü —</option>
@@ -29,7 +36,7 @@
                     }
                 </select>
             </div>
-            <div class="col-md-2">
+            <div style="display:flex;flex-direction:column;min-width:130px;">
                 <label class="form-label small fw-semibold mb-1">İşlem</label>
                 <select name="action" class="form-select form-select-sm">
                     <option value="">— Tümü —</option>
@@ -40,7 +47,7 @@
                     }
                 </select>
             </div>
-            <div class="col-md-2">
+            <div style="display:flex;flex-direction:column;min-width:130px;">
                 <label class="form-label small fw-semibold mb-1">Kullanıcı</label>
                 <select name="user" class="form-select form-select-sm">
                     <option value="">— Tümü —</option>
@@ -51,18 +58,18 @@
                     }
                 </select>
             </div>
-            <div class="col-md-2">
+            <div style="display:flex;flex-direction:column;min-width:140px;">
                 <label class="form-label small fw-semibold mb-1">Tarih Başlangıç</label>
                 <input type="date" name="dateFrom" class="form-control form-control-sm"
                        value="@ViewBag.FilterDateFrom" />
             </div>
-            <div class="col-md-2">
+            <div style="display:flex;flex-direction:column;min-width:140px;">
                 <label class="form-label small fw-semibold mb-1">Tarih Bitiş</label>
                 <input type="date" name="dateTo" class="form-control form-control-sm"
                        value="@ViewBag.FilterDateTo" />
             </div>
-            <div class="col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-primary btn-sm flex-fill">
+            <div class="d-flex gap-2" style="padding-bottom:1px;">
+                <button type="submit" class="btn btn-primary btn-sm">
                     <i class="fas fa-filter me-1"></i>Filtrele
                 </button>
                 <a href="/AuditLog" class="btn btn-outline-secondary btn-sm" title="Temizle">
