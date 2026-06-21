@@ -758,8 +758,35 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                             </button>
                             <div class="collapse" id="cocSection">
                                 <div class="mt-2 p-2 rounded" style="background:#f8fafc;border:1px solid #e5e7eb;">
-                                    <label class="form-label" style="font-size:12px;">Reçete Bileşeni</label>
-                                    <select id="detailRecipeId" class="form-select form-select-sm" onchange="updateRecipeNeedInfo()">
+                                    <label class="form-label mb-2" style="font-size:12px;">Reçete Bileşeni — Tıklayarak seçin:</label>
+                                    <!-- Hızlı seçim butonları -->
+                                    <div class="d-flex flex-wrap gap-2 mb-2" id="recipeQuickBtns">
+                                        <button type="button" class="recipe-quick-btn btn btn-sm"
+                                                data-value=""
+                                                onclick="selectRecipeQuick(this)"
+                                                style="font-size:11px;padding:4px 10px;background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;">
+                                            Serbest
+                                        </button>
+                                        @foreach (var wr in workOrderRecipes)
+                                        {
+                                            var wrLabel = !string.IsNullOrWhiteSpace(wr.Description) ? wr.Description : (wr.Product?.ProductName ?? "Bileşen");
+                                            var wrToplamTuketim2 = wr.ActualConsumedQuantity + wr.WasteQuantity;
+                                            var kalan2 = wr.PlannedQuantity - wrToplamTuketim2;
+                                            <button type="button" class="recipe-quick-btn btn btn-sm"
+                                                    data-value="@wr.Id"
+                                                    data-plan="@wr.PlannedQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                                    data-actual="@wr.ActualConsumedQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                                    data-waste="@wr.WasteQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                                    data-kalan="@kalan2.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                                    onclick="selectRecipeQuick(this)"
+                                                    style="font-size:11px;padding:4px 12px;background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd;border-radius:6px;">
+                                                <i class="fas fa-layer-group me-1" style="font-size:9px;"></i>@wrLabel
+                                                <span style="font-size:10px;color:#7c3aed;margin-left:4px;">Kalan: @kalan2.ToString("N0") kg</span>
+                                            </button>
+                                        }
+                                    </div>
+                                    <!-- Gizli select — kaydetme için gerekli -->
+                                    <select id="detailRecipeId" class="form-select form-select-sm" onchange="updateRecipeNeedInfo()" style="display:none;">
                                         <option value="">— Serbest Tüketim (Reçete Dışı) —</option>
 @foreach (var wr in workOrderRecipes)
                                         {
@@ -1128,6 +1155,42 @@ function calcConsumedFromQty() {
     }
 }
 
+// ── Reçete Hızlı Seçim Butonları ─────────────────────────────────────────
+function selectRecipeQuick(btn) {
+    const val = btn.dataset.value || '';
+    // Gizli select'i güncelle
+    const sel = document.getElementById('detailRecipeId');
+    if (sel) { sel.value = val; updateRecipeNeedInfo(); }
+    // Buton stillerini güncelle — seçili olanı vurgula
+    document.querySelectorAll('.recipe-quick-btn').forEach(b => {
+        const isSelected = b.dataset.value === val;
+        if (b.dataset.value === '') {
+            // "Serbest" butonu
+            b.style.background = isSelected ? '#374151' : '#f3f4f6';
+            b.style.color      = isSelected ? '#fff'    : '#6b7280';
+            b.style.border     = isSelected ? '2px solid #374151' : '1px solid #d1d5db';
+        } else {
+            b.style.background = isSelected ? '#5b21b6' : '#ede9fe';
+            b.style.color      = isSelected ? '#fff'    : '#5b21b6';
+            b.style.border     = isSelected ? '2px solid #5b21b6' : '1px solid #c4b5fd';
+        }
+    });
+}
+
+// edit açılırken doğru butonu seç
+function highlightRecipeBtn(val) {
+    const v = val ? val.toString() : '';
+    document.querySelectorAll('.recipe-quick-btn').forEach(b => {
+        selectRecipeQuick.call(null, {dataset:{value: b.dataset.value}});
+    });
+    const target = document.querySelector(`.recipe-quick-btn[data-value="${v}"]`);
+    if (target) selectRecipeQuick(target);
+    else {
+        const serbest = document.querySelector('.recipe-quick-btn[data-value=""]');
+        if (serbest) selectRecipeQuick(serbest);
+    }
+}
+
 // ── BOM Bileşen İhtiyaç Bilgisi (Tüketim modalında) ─────────────────────
 function updateRecipeNeedInfo() {
     const select = document.getElementById('detailRecipeId');
@@ -1196,6 +1259,7 @@ window.openAddDetailFn = function() {
     input.style.background = '';
     input.style.borderColor = '';
     document.getElementById('detailRecipeId').value = '';
+    highlightRecipeBtn('');
     document.getElementById('detailDate').value    = new Date().toISOString().split('T')[0];
     document.getElementById('detailConsumed').value = '';
     const qtyFld = document.getElementById('detailQty');
@@ -1263,6 +1327,7 @@ function editDetail(id) {
             }
             document.getElementById('detailMachineId').value = d.machineId;
             document.getElementById('detailRecipeId').value  = d.workOrderRecipeId || '';
+            highlightRecipeBtn(d.workOrderRecipeId || '');
             document.getElementById('detailDate').value      = d.productionDate;
             document.getElementById('detailConsumed').value  = d.consumedWeight;
             const qtyFldE = document.getElementById('detailQty');
