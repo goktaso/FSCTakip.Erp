@@ -48,8 +48,9 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
                 .Where(s => s.Lot.PartiNo.StartsWith("YM"))
                 .OrderByDescending(s => s.Id)
-                .Take(20)
+                .Take(50)
                 .Select(s => new {
+                    s.Id, LotId = s.LotId,
                     s.Lot.ArrivalDate, s.Lot.PartiNo,
                     Hedef   = s.Lot.Product != null ? s.Lot.Product.ProductName : "—",
                     FscType = s.Lot.FscType.Name,
@@ -70,6 +71,8 @@ namespace FSCTakip.WebUI.Controllers
                 .ToDictionaryAsync(x => x.Id, x => x);
 
             ViewBag.Recent = recentYm.Select(x => new ConvRecentVM {
+                SerialId     = x.Id,
+                LotId        = x.LotId,
                 Tarih        = x.ArrivalDate,
                 Parti        = x.PartiNo,
                 Hedef        = x.Hedef,
@@ -77,6 +80,7 @@ namespace FSCTakip.WebUI.Controllers
                 Kg           = x.InitialWeight,
                 Kalan        = x.CurrentWeight,
                 Fire         = x.ConversionFireKg ?? 0m,
+                KaynakSerialId = x.SourceSerialId,
                 KaynakSerial = x.SourceSerialId != null && srcMap.ContainsKey(x.SourceSerialId.Value) ? srcMap[x.SourceSerialId.Value].SerialNo : "—",
                 KaynakKod    = x.SourceSerialId != null && srcMap.ContainsKey(x.SourceSerialId.Value) ? srcMap[x.SourceSerialId.Value].Kod : null,
                 KaynakAd     = x.SourceSerialId != null && srcMap.ContainsKey(x.SourceSerialId.Value) ? srcMap[x.SourceSerialId.Value].Ad : "—"
@@ -221,6 +225,92 @@ namespace FSCTakip.WebUI.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
+        // GET /Conversion/GetConversion/{serialId} — düzenleme için mevcut veri
+        [HttpGet]
+        public async Task<IActionResult> GetConversion(int serialId)
+        {
+            var s = await _context.FscSerials
+                .Include(x => x.Lot).ThenInclude(l => l.Product)
+                .Include(x => x.Lot).ThenInclude(l => l.FscType)
+                .FirstOrDefaultAsync(x => x.Id == serialId);
+            if (s == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+            return Json(new { success = true, data = new {
+                serialId  = s.Id,
+                lotId     = s.LotId,
+                tarih     = s.Lot.ArrivalDate.ToString("yyyy-MM-dd"),
+                parti     = s.Lot.PartiNo,
+                hedef     = s.Lot.Product?.ProductName,
+                kg        = s.InitialWeight,
+                fire      = s.Lot.ConversionFireKg ?? 0m,
+                sourceSerialId = s.Lot.SourceSerialId
+            }});
+        }
+
+        // POST /Conversion/UpdateConversion — tarih ve fire güncelle
+        [HttpPost]
+        public async Task<IActionResult> UpdateConversion(int serialId, DateTime tarih, decimal fire, string? notes)
+        {
+            try
+            {
+                var s = await _context.FscSerials
+                    .Include(x => x.Lot)
+                    .FirstOrDefaultAsync(x => x.Id == serialId);
+                if (s == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+                var lot = s.Lot;
+                lot.ArrivalDate       = tarih;
+                lot.ConversionFireKg  = fire >= 0 ? fire : lot.ConversionFireKg;
+                if (!string.IsNullOrWhiteSpace(notes)) lot.Notes = notes.Trim();
+
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Dönüşüm kaydı güncellendi." });
+            }
+            catch (Exception ex) { return Json(new { success = false, message = ex.Message }); }
+        }
+
+        // POST /Conversion/DeleteConversion — dönüşümü geri al ve sil
+        [HttpPost]
+        public async Task<IActionResult> DeleteConversion(int serialId)
+        {
+            try
+            {
+                var s = await _context.FscSerials
+                    .Include(x => x.Lot).ThenInclude(l => l.Serials)
+                    .FirstOrDefaultAsync(x => x.Id == serialId);
+                if (s == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+                var lot = s.Lot;
+
+                // Kaynak bobini geri yükle (dönüşüm öncesi ağırlık)
+                if (lot.SourceSerialId.HasValue)
+                {
+                    var src = await _context.FscSerials.FindAsync(lot.SourceSerialId.Value);
+                    if (src != null)
+                    {
+                        // Tüketilen miktarı geri ekle: src.CurrentWeight += s.InitialWeight + (fire)
+                        var consumed = s.InitialWeight + (lot.ConversionFireKg ?? 0m);
+                        src.CurrentWeight += consumed;
+
+                        // İlgili StockMovement çıkış kaydını sil
+                        var sm = await _context.StockMovements
+                            .FirstOrDefaultAsync(m => m.Type == MovementType.ProductionConsumption
+                                && m.FscSerialId == src.Id
+                                && m.DocumentNo != null && m.DocumentNo.Contains(lot.PartiNo));
+                        if (sm != null) _context.StockMovements.Remove(sm);
+                    }
+                }
+
+                // YM lot'unu ve seri(ler)ini sil
+                _context.FscSerials.RemoveRange(lot.Serials);
+                _context.FscLots.Remove(lot);
+
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = $"Dönüşüm {lot.PartiNo} silindi ve kaynak bobin geri yüklendi." });
+            }
+            catch (Exception ex) { return Json(new { success = false, message = ex.Message }); }
+        }
     }
 
     // ── View modelleri (dynamic ViewBag yerine public tipler) ──────────────
@@ -246,6 +336,8 @@ namespace FSCTakip.WebUI.Controllers
 
     public class ConvRecentVM
     {
+        public int SerialId { get; set; }     // FscSerial.Id — düzenleme/silme için
+        public int LotId    { get; set; }     // FscLot.Id
         public DateTime Tarih { get; set; }
         public string Parti { get; set; } = "";
         public string Hedef { get; set; } = "";
@@ -256,5 +348,6 @@ namespace FSCTakip.WebUI.Controllers
         public string KaynakSerial { get; set; } = "—";
         public string? KaynakKod { get; set; }
         public string? KaynakAd { get; set; }
+        public int? KaynakSerialId { get; set; }  // geri-alma için kaynak serial id
     }
 }
