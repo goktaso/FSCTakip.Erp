@@ -987,9 +987,12 @@
 
     // Hangi sidebar bölümü aktif?
     var activeSection = ctrl switch {
-        "Purchase" or "Production" or "Sales" or "Stock" or "Planning" => "fsc",
-        "Customers" or "Suppliers" or "Products"          => "ticari",
-        "Reports" or "AuditPeriod"                        => "rapor",
+        "Purchase" or "Stock"                             => "hammadde",
+        "Planning" or "Production"                        => "uretim",
+        "Sales" or "Customers"                            => "satis",
+        "Suppliers" or "Products"                         => "tedarik",
+        "Reports" or "AuditPeriod"                        => "fsc-izleme",
+        "Conversion"                                      => "hammadde",
         "DocumentArchive"                                 => "belge",
         "Product" or "Paper" or "Machine" or "Warehouse"
             or "Etl" or "Guide" or "UnitConversion"       => "tanim",
@@ -1046,19 +1049,58 @@
             </div>
         </div>
 
-        <!-- ── FSC İŞLEMLERİ ──────────────────────────────────── -->
+        <!-- ── HAMMADDE & STOK ───────────────────────────────── -->
         <button class="nav-section-toggle" data-bs-toggle="collapse"
-                data-bs-target="#sec-fsc" aria-expanded="@Exp("fsc")">
-            <span>FSC İşlemleri</span>
+                data-bs-target="#sec-hammadde" aria-expanded="@Exp("hammadde")">
+            <span><i class="fas fa-warehouse me-1"></i>Hammadde &amp; Stok</span>
             <i class="fas fa-chevron-right nav-section-arrow"></i>
         </button>
-        <div class="collapse nav-section-collapse @Sec("fsc")" id="sec-fsc">
+        <div class="collapse nav-section-collapse @Sec("hammadde")" id="sec-hammadde">
             <div class="nav-item">
                 <a class="nav-link-item @(ctrl=="Purchase"?"active":"")" href="/Purchase/Index">
                     <span class="nav-icon"><i class="fas fa-truck-loading"></i></span>
                     <span class="nav-label">Hammadde Girişi</span>
                 </a>
             </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="RawMaterial"?"active":"")" href="/Stock/RawMaterial">
+                    <span class="nav-icon"><i class="fas fa-boxes"></i></span>
+                    <span class="nav-label">Hammadde Stoğu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Conversion"?"active":"")" href="/Conversion">
+                    <span class="nav-icon"><i class="fas fa-recycle"></i></span>
+                    <span class="nav-label">YM Dönüşüm</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="Summary"?"active":"")" href="/Stock/Summary">
+                    <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+                    <span class="nav-label">Stok Özeti</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="Movements"?"active":"")" href="/Stock/Movements">
+                    <span class="nav-icon"><i class="fas fa-exchange-alt"></i></span>
+                    <span class="nav-label">Stok Hareketleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="AdminStock"?"active":"")" href="/Stock/AdminStock">
+                    <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
+                    <span class="nav-label">Tüm Stok (Admin)</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ── ÜRETİM ─────────────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-uretim" aria-expanded="@Exp("uretim")">
+            <span><i class="fas fa-industry me-1"></i>Üretim</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("uretim")" id="sec-uretim">
             <div class="nav-item">
                 <a class="nav-link-item @(ctrl=="Planning"?"active":"")" href="/Planning">
                     <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
@@ -1069,12 +1111,6 @@
                 <a class="nav-link-item @(ctrl=="Production"&&action=="Index"?"active":"")" href="/Production/Index">
                     <span class="nav-icon"><i class="fas fa-industry"></i></span>
                     <span class="nav-label">İş Emirleri</span>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Conversion"?"active":"")" href="/Conversion">
-                    <span class="nav-icon"><i class="fas fa-recycle"></i></span>
-                    <span class="nav-label">Yarı Mamül Dönüşüm</span>
                 </a>
             </div>
             <div class="nav-item">
@@ -1089,6 +1125,15 @@
                     <span class="nav-label">İmha Kayıtları</span>
                 </a>
             </div>
+        </div>
+
+        <!-- ── SATIŞ & MÜŞTERİ ───────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-satis" aria-expanded="@Exp("satis")">
+            <span><i class="fas fa-shipping-fast me-1"></i>Satış &amp; Müşteri</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("satis")" id="sec-satis">
             <div class="nav-item">
                 <a class="nav-link-item @(ctrl=="Sales"?"active":"")" href="/Sales/Index">
                     <span class="nav-icon"><i class="fas fa-shipping-fast"></i></span>
@@ -1096,48 +1141,36 @@
                 </a>
             </div>
             <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Stock"&&action=="Summary"?"active":"")" href="/Stock/Summary">
-                    <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
-                    <span class="nav-label">Stok Özeti</span>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Stock"&&action=="AdminStock"?"active":"")" href="/Stock/AdminStock">
-                    <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
-                    <span class="nav-label">Tüm Stok (Admin)</span>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Stock"&&action=="RawMaterial"?"active":"")" href="/Stock/RawMaterial">
-                    <span class="nav-icon"><i class="fas fa-scroll"></i></span>
-                    <span class="nav-label">Hammadde Stoğu</span>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Stock"&&action=="Movements"?"active":"")" href="/Stock/Movements">
-                    <span class="nav-icon"><i class="fas fa-exchange-alt"></i></span>
-                    <span class="nav-label">Stok Hareketleri</span>
-                </a>
-            </div>
-        </div>
-
-        <!-- ── TİCARİ ──────────────────────────────────────────── -->
-        <button class="nav-section-toggle" data-bs-toggle="collapse"
-                data-bs-target="#sec-ticari" aria-expanded="@Exp("ticari")">
-            <span>Ticari</span>
-            <i class="fas fa-chevron-right nav-section-arrow"></i>
-        </button>
-        <div class="collapse nav-section-collapse @Sec("ticari")" id="sec-ticari">
-            <div class="nav-item">
                 <a class="nav-link-item @(ctrl=="Customers"?"active":"")" href="/Customers/Index">
                     <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
                     <span class="nav-label">Müşteriler</span>
                 </a>
             </div>
             <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="CustomerFsc"?"active":"")" href="/Reports/CustomerFsc">
+                    <span class="nav-icon"><i class="fas fa-id-card"></i></span>
+                    <span class="nav-label">Müşteri FSC</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ── TEDARİK & ÜRÜN ─────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-tedarik" aria-expanded="@Exp("tedarik")">
+            <span><i class="fas fa-truck me-1"></i>Tedarik &amp; Ürün</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("tedarik")" id="sec-tedarik">
+            <div class="nav-item">
                 <a class="nav-link-item @(ctrl=="Suppliers"?"active":"")" href="/Suppliers/Index">
                     <span class="nav-icon"><i class="fas fa-truck"></i></span>
                     <span class="nav-label">Tedarikçiler</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="SupplierFsc"?"active":"")" href="/Reports/SupplierFsc">
+                    <span class="nav-icon"><i class="fas fa-certificate"></i></span>
+                    <span class="nav-label">Tedarikçi FSC</span>
                 </a>
             </div>
             <div class="nav-item">
@@ -1148,29 +1181,17 @@
             </div>
         </div>
 
-        <!-- ── FSC RAPORLAR ───────────────────────────────────── -->
+        <!-- ── FSC İZLENEBİLİRLİK ────────────────────────────── -->
         <button class="nav-section-toggle" data-bs-toggle="collapse"
-                data-bs-target="#sec-rapor" aria-expanded="@Exp("rapor")">
-            <span>FSC Raporlar</span>
+                data-bs-target="#sec-fsc-izleme" aria-expanded="@Exp("fsc-izleme")">
+            <span><i class="fas fa-link me-1"></i>FSC İzlenebilirlik</span>
             <i class="fas fa-chevron-right nav-section-arrow"></i>
         </button>
-        <div class="collapse nav-section-collapse @Sec("rapor")" id="sec-rapor">
+        <div class="collapse nav-section-collapse @Sec("fsc-izleme")" id="sec-fsc-izleme">
             <div class="nav-item">
                 <a class="nav-link-item @(ctrl=="Reports"&&action=="ChainOfCustody"?"active":"")" href="/Reports/ChainOfCustody">
                     <span class="nav-icon"><i class="fas fa-link"></i></span>
                     <span class="nav-label">Chain of Custody</span>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Reports"&&action=="FscConsumption"?"active":"")" href="/Reports/FscConsumption">
-                    <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
-                    <span class="nav-label">FSC Tüketim Raporu</span>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Reports"&&action=="MaterialTrace"?"active":"")" href="/Reports/MaterialTrace">
-                    <span class="nav-icon"><i class="fas fa-microscope"></i></span>
-                    <span class="nav-label">Hammadde İzleme</span>
                 </a>
             </div>
             <div class="nav-item">
@@ -1180,39 +1201,39 @@
                 </a>
             </div>
             <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Reports"&&action=="SupplierFsc"?"active":"")" href="/Reports/SupplierFsc">
-                    <span class="nav-icon"><i class="fas fa-certificate"></i></span>
-                    <span class="nav-label">Tedarikçi FSC</span>
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="MaterialTrace"?"active":"")" href="/Reports/MaterialTrace">
+                    <span class="nav-icon"><i class="fas fa-microscope"></i></span>
+                    <span class="nav-label">Hammadde İzleme</span>
                 </a>
             </div>
             <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Reports"&&action=="CustomerFsc"?"active":"")" href="/Reports/CustomerFsc">
-                    <span class="nav-icon"><i class="fas fa-id-card"></i></span>
-                    <span class="nav-label">Müşteri FSC</span>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Reports"&&action=="WasteAnalysis"?"active":"")" href="/Reports/WasteAnalysis">
-                    <span class="nav-icon"><i class="fas fa-trash-alt"></i></span>
-                    <span class="nav-label">Fire Analizi</span>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Reports"&&action=="AuditReport"?"active":"")" href="/Reports/AuditReport">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="FscConsumption"?"active":"")" href="/Reports/FscConsumption">
                     <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
-                    <span class="nav-label">Denetim Özeti</span>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="AuditPeriod"?"active":"")" href="/AuditPeriod">
-                    <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
-                    <span class="nav-label">Denetim Dönemleri</span>
+                    <span class="nav-label">FSC Tüketim</span>
                 </a>
             </div>
             <div class="nav-item">
                 <a class="nav-link-item @(ctrl=="Reports"&&action=="BomAnalysis"?"active":"")" href="/Reports/BomAnalysis">
                     <span class="nav-icon"><i class="fas fa-sitemap"></i></span>
                     <span class="nav-label">BOM Analizi</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="WasteAnalysis"?"active":"")" href="/Reports/WasteAnalysis">
+                    <span class="nav-icon"><i class="fas fa-burn"></i></span>
+                    <span class="nav-label">Fire Analizi</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="AuditReport"?"active":"")" href="/Reports/AuditReport">
+                    <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
+                    <span class="nav-label">Denetim Özeti</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="AuditPeriod"?"active":"")" href="/AuditPeriod">
+                    <span class="nav-icon"><i class="fas fa-calendar-check"></i></span>
+                    <span class="nav-label">Denetim Dönemleri</span>
                 </a>
             </div>
             <div class="nav-item">
