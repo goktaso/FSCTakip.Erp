@@ -17,7 +17,10 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // GET /Purchase/Index
-        public async Task<IActionResult> Index(int[]? supplierIds, int[]? fscTypeIds, string? stockCode, string? stockName, int[]? productIds)
+        public async Task<IActionResult> Index(
+            int[]? supplierIds, int[]? fscTypeIds,
+            string? stockCode, string? stockName,
+            int[]? productIds, bool showAll = false)
         {
             var query = _context.FscLots
                 .Include(l => l.Supplier)
@@ -30,6 +33,24 @@ namespace FSCTakip.WebUI.Controllers
                 // Yalnizca dogrudan satin alma girisleri -- donusum ciktilari (SourceSerialId dolu) haric
                 .Where(l => l.SourceSerialId == null)
                 .AsQueryable();
+
+            // Kullanıcı herhangi bir filtre uyguladı mı?
+            bool hasUserFilter = showAll
+                || (supplierIds?.Length > 0)
+                || (fscTypeIds?.Length > 0)
+                || !string.IsNullOrWhiteSpace(stockCode)
+                || !string.IsNullOrWhiteSpace(stockName)
+                || (productIds?.Length > 0);
+
+            if (!hasUserFilter)
+            {
+                // Varsayılan: Hammadde + Yarı Mamül + Burgu Sap grupları
+                // StockController.Summary ile aynı defaultIds (1=Hammadde, 3=Yarı Mamül, 4=Burgu Sap)
+                var defaultGroupIds = new[] { 1, 3, 4 };
+                query = query.Where(l => l.Product != null
+                    && l.Product.ProductGroupId.HasValue
+                    && defaultGroupIds.Contains(l.Product.ProductGroupId.Value));
+            }
 
             if (supplierIds != null && supplierIds.Length > 0)
                 query = query.Where(l => l.SupplierId.HasValue && supplierIds.Contains(l.SupplierId.Value));
@@ -45,6 +66,9 @@ namespace FSCTakip.WebUI.Controllers
                 query = query.Where(l => l.Product != null && l.Product.ProductName.Contains(stockName.Trim()));
             if (productIds != null && productIds.Length > 0)
                 query = query.Where(l => l.ProductId.HasValue && productIds.Contains(l.ProductId.Value));
+
+            ViewBag.IsDefaultFilter = !hasUserFilter;
+            ViewBag.ShowAll         = showAll;
 
             ViewBag.Suppliers   = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
             ViewBag.FscTypes    = await _context.FscTypes.Where(f => f.IsActive).ToListAsync();

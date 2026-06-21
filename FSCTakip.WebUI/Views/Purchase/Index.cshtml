@@ -13,6 +13,7 @@
     var kalanKg    = Model.Sum(l => l.Serials.Sum(s => s.CurrentWeight));
     var totalBobin = Model.Sum(l => l.Serials.Count);
     var fscUyari   = suppliers.Count(s => s.IsFscActive && s.FscExpiryDate.HasValue && s.FscExpiryDate.Value <= DateTime.Today.AddDays(90));
+    bool isDefaultFilter = (bool)(ViewBag.IsDefaultFilter ?? false);
 
     // Stok türü: önce ProductGroup, yoksa kod deseni (1=Hammadde, 2=Yarı Mamül, 3=Mamul, 4=Sarf)
     (string Ad, string Renk) Tur(FSCTakip.Core.Entities.FscLot l)
@@ -42,6 +43,34 @@
     <a href="/Purchase/ExportIndex" class="topbar-btn btn-excel">
         <i class="fas fa-file-excel"></i> Excel
     </a>
+}
+
+<!-- Varsayılan filtre bilgi bandı -->
+@if (isDefaultFilter)
+{
+    <div class="d-flex align-items-center gap-2 mb-2 px-1 py-2 rounded"
+         style="background:rgba(25,118,210,.08);border:1px solid rgba(25,118,210,.2);font-size:12.5px;">
+        <i class="fas fa-filter text-primary"></i>
+        <span style="color:var(--text-muted);">
+            Varsayılan görünüm: <strong style="color:var(--text);">Hammadde · Yarı Mamül · Burgu Sap</strong> grupları gösteriliyor.
+        </span>
+        <a href="/Purchase/Index?showAll=true" class="ms-auto btn btn-sm"
+           style="font-size:11px;padding:2px 10px;background:rgba(255,255,255,.07);color:var(--text-muted);border:1px solid var(--border);">
+            <i class="fas fa-eye me-1"></i>Tüm Kayıtları Göster
+        </a>
+    </div>
+}
+else if ((bool)(ViewBag.ShowAll ?? false))
+{
+    <div class="d-flex align-items-center gap-2 mb-2 px-1 py-2 rounded"
+         style="background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:12.5px;">
+        <i class="fas fa-list text-muted"></i>
+        <span style="color:var(--text-muted);">Tüm kayıtlar gösteriliyor.</span>
+        <a href="/Purchase/Index" class="ms-auto btn btn-sm"
+           style="font-size:11px;padding:2px 10px;background:rgba(25,118,210,.12);color:#90caf9;border:1px solid rgba(25,118,210,.3);">
+            <i class="fas fa-undo me-1"></i>Varsayılana Dön
+        </a>
+    </div>
 }
 
 <!-- Stat Kartları -->
@@ -80,7 +109,7 @@
             </div>
             <div>
                 <div class="stat-value" id="cardKalan">@kalanKg.ToString("N0")</div>
-                <div class="stat-label">Kalan Hammadde (kg)</div>
+                <div class="stat-label">@(isDefaultFilter ? "Kalan (Ham+YM+BS)" : "Kalan (kg)")</div>
             </div>
         </div>
     </div>
