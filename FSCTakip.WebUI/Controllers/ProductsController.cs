@@ -17,7 +17,7 @@ namespace FSCTakip.WebUI.Controllers
         // Hata veren satırı bununla değiştir:
         public ProductsController(FSCTakip.DataAccess.Data.AppDbContext context) : base(context) { }
 
-        public async Task<IActionResult> Index(int? supplierId, int? productGroupId, string? search)
+        public async Task<IActionResult> Index(int[]? supplierIds, int[]? productGroupIds, string? search)
         {
             await PopulateDropdowns(ViewData);
 
@@ -31,10 +31,10 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(p => p.PaperWidth)
                 .AsQueryable();
 
-            if (supplierId.HasValue)
-                query = query.Where(p => p.SupplierId == supplierId.Value);
-            if (productGroupId.HasValue)
-                query = query.Where(p => p.ProductGroupId == productGroupId.Value);
+            if (supplierIds != null && supplierIds.Length > 0)
+                query = query.Where(p => p.SupplierId.HasValue && supplierIds.Contains(p.SupplierId.Value));
+            if (productGroupIds != null && productGroupIds.Length > 0)
+                query = query.Where(p => p.ProductGroupId.HasValue && productGroupIds.Contains(p.ProductGroupId.Value));
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.Trim();
@@ -44,9 +44,9 @@ namespace FSCTakip.WebUI.Controllers
                     (p.ExternalCode != null && p.ExternalCode.Contains(s)));
             }
 
-            ViewBag.SupplierId     = supplierId;
-            ViewBag.ProductGroupId = productGroupId;
-            ViewBag.Search         = search;
+            ViewBag.SupplierIds     = supplierIds     ?? Array.Empty<int>();
+            ViewBag.ProductGroupIds = productGroupIds ?? Array.Empty<int>();
+            ViewBag.Search          = search;
 
             var products = await query.OrderBy(p => p.ProductCode).ToListAsync();
             return View(products);
@@ -188,7 +188,7 @@ namespace FSCTakip.WebUI.Controllers
             viewData["PaperWidths"] = new SelectList(widths.Select(x => new { Id = x.Id, Text = $"{x.Value} {x.Unit}" }), "Id", "Text");
         }
 
-        public async Task<IActionResult> ExportIndex(int? supplierId, int? productGroupId, string? search)
+        public async Task<IActionResult> ExportIndex(int[]? supplierIds, int[]? productGroupIds, string? search)
         {
             var query = _context.Products
                 .Include(p => p.ProductGroup)
@@ -198,10 +198,10 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(p => p.PaperWidth)
                 .AsQueryable();
 
-            if (supplierId.HasValue)
-                query = query.Where(p => p.SupplierId == supplierId.Value);
-            if (productGroupId.HasValue)
-                query = query.Where(p => p.ProductGroupId == productGroupId.Value);
+            if (supplierIds != null && supplierIds.Length > 0)
+                query = query.Where(p => p.SupplierId.HasValue && supplierIds.Contains(p.SupplierId.Value));
+            if (productGroupIds != null && productGroupIds.Length > 0)
+                query = query.Where(p => p.ProductGroupId.HasValue && productGroupIds.Contains(p.ProductGroupId.Value));
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.Trim();

@@ -250,6 +250,158 @@
             </a>
         }
     </div>
+    <!-- Tablo Üstü Client-Side Filtre Barı -->
+    <div class="d-flex flex-wrap gap-2 align-items-end px-3 py-2 border-bottom"
+         style="background:#f8fafc;">
+
+        <!-- FSC Tipi (client-side) -->
+        <div style="display:flex;flex-direction:column;min-width:130px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">FSC TİPİ</label>
+            <div class="mcd" id="mcd-tbl-fsc" data-placeholder="— Tümü —">
+                <button type="button" class="mcd-btn" style="font-size:12px;padding:3px 8px;"
+                        onclick="mcdOpen('mcd-tbl-fsc')">
+                    <span class="mcd-lbl">— Tümü —</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-tbl-fsc-panel" style="display:none;">
+                    <div class="mcd-search-row">
+                        <input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)">
+                    </div>
+                    <label class="mcd-row mcd-header">
+                        <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-tbl-fsc');applyTableFilters()">
+                        <span>Tümünü Seç / Temizle</span>
+                    </label>
+                    <div class="mcd-items">
+                        @foreach (var f in (ViewBag.FscTypes as List<FSCTakip.Core.Entities.FscType> ?? new()))
+                        {
+                            <label class="mcd-row">
+                                <input type="checkbox" value="@f.Name" class="mcd-cb tbl-filter-cb"
+                                       onchange="mcdUpdate('mcd-tbl-fsc');applyTableFilters()">
+                                <span class="mcd-name">@f.Name</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tedarikçi (client-side) -->
+        <div style="display:flex;flex-direction:column;min-width:160px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">TEDARİKÇİ</label>
+            <div class="mcd" id="mcd-tbl-sup" data-placeholder="— Tümü —">
+                <button type="button" class="mcd-btn" style="font-size:12px;padding:3px 8px;"
+                        onclick="mcdOpen('mcd-tbl-sup')">
+                    <span class="mcd-lbl">— Tümü —</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-tbl-sup-panel" style="display:none;">
+                    <div class="mcd-search-row">
+                        <input type="text" class="mcd-search" placeholder="Tedarikçi ara..." oninput="mcdSearch(this)">
+                    </div>
+                    <label class="mcd-row mcd-header">
+                        <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-tbl-sup');applyTableFilters()">
+                        <span>Tümünü Seç / Temizle</span>
+                    </label>
+                    <div class="mcd-items">
+                        @{
+                            var distinctSuppliers = Model
+                                .Where(s => !string.IsNullOrEmpty(s.Lot?.Supplier?.Name))
+                                .Select(s => s.Lot!.Supplier!.Name!)
+                                .Distinct().OrderBy(n => n).ToList();
+                        }
+                        @foreach (var sup in distinctSuppliers)
+                        {
+                            <label class="mcd-row">
+                                <input type="checkbox" value="@sup" class="mcd-cb tbl-filter-cb"
+                                       onchange="mcdUpdate('mcd-tbl-sup');applyTableFilters()">
+                                <span class="mcd-name">@sup</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ürün / Stok (client-side) -->
+        <div style="display:flex;flex-direction:column;min-width:180px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">ÜRÜN / STOK</label>
+            <div class="mcd" id="mcd-tbl-prod" data-placeholder="— Tümü —">
+                <button type="button" class="mcd-btn" style="font-size:12px;padding:3px 8px;"
+                        onclick="mcdOpen('mcd-tbl-prod')">
+                    <span class="mcd-lbl">— Tümü —</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-tbl-prod-panel" style="display:none;">
+                    <div class="mcd-search-row">
+                        <input type="text" class="mcd-search" placeholder="Ürün ara..." oninput="mcdSearch(this)">
+                    </div>
+                    <label class="mcd-row mcd-header">
+                        <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-tbl-prod');applyTableFilters()">
+                        <span>Tümünü Seç / Temizle</span>
+                    </label>
+                    <div class="mcd-items">
+                        @{
+                            var distinctProds = Model
+                                .Where(s => !string.IsNullOrEmpty(s.Lot?.Product?.ProductName))
+                                .Select(s => new { Id = s.Lot!.ProductId.ToString() ?? "0", Name = s.Lot!.Product!.ProductName, Ext = s.Lot!.Product!.ExternalCode, Code = s.Lot!.Product!.ProductCode })
+                                .DistinctBy(x => x.Id).OrderBy(x => x.Name).ToList();
+                        }
+                        @foreach (var prod in distinctProds)
+                        {
+                            <label class="mcd-row">
+                                <input type="checkbox" value="@prod.Id" class="mcd-cb tbl-filter-cb"
+                                       onchange="mcdUpdate('mcd-tbl-prod');applyTableFilters()">
+                                <span class="mcd-name" title="@prod.Name">@prod.Name</span>
+                                @if (!string.IsNullOrEmpty(prod.Code)) { <span class="mcd-sub">@prod.Code</span> }
+                                @if (!string.IsNullOrEmpty(prod.Ext))  { <span class="mcd-ext">@prod.Ext</span> }
+                            </label>
+                        }
+                    </div>
+                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- A/D Durumu (client-side) -->
+        <div style="display:flex;flex-direction:column;min-width:120px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">DURUM</label>
+            <div class="mcd" id="mcd-tbl-stat" data-placeholder="— Tümü —">
+                <button type="button" class="mcd-btn" style="font-size:12px;padding:3px 8px;"
+                        onclick="mcdOpen('mcd-tbl-stat')">
+                    <span class="mcd-lbl">— Tümü —</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-tbl-stat-panel" style="display:none;">
+                    <div class="mcd-items" style="max-height:160px;">
+                        <label class="mcd-row">
+                            <input type="checkbox" value="mevcut"   class="mcd-cb tbl-filter-cb" onchange="mcdUpdate('mcd-tbl-stat');applyTableFilters()">
+                            <span class="mcd-name">Mevcut</span>
+                        </label>
+                        <label class="mcd-row">
+                            <input type="checkbox" value="az-kaldi" class="mcd-cb tbl-filter-cb" onchange="mcdUpdate('mcd-tbl-stat');applyTableFilters()">
+                            <span class="mcd-name">Az Kaldı</span>
+                        </label>
+                        <label class="mcd-row">
+                            <input type="checkbox" value="tukendi"  class="mcd-cb tbl-filter-cb" onchange="mcdUpdate('mcd-tbl-stat');applyTableFilters()">
+                            <span class="mcd-name">Tükendi</span>
+                        </label>
+                    </div>
+                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Temizle butonu -->
+        <div class="align-self-end ms-auto">
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    onclick="clearTableFilters()">
+                <i class="fas fa-times me-1"></i>Temizle
+            </button>
+        </div>
+    </div>
+
     @if (Model.Any())
     {
         <div id="topTotalRow" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px 6px 0 0;padding:8px 14px;font-weight:600;font-size:12px;display:flex;align-items:center;gap:16px;">
@@ -303,7 +455,11 @@
                         data-giris="@s.InitialWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                         data-tuketim="@tuketim.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                         data-fire="@fire.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                        data-kalan="@s.CurrentWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                        data-kalan="@s.CurrentWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                        data-fsc="@(s.Lot?.FscType?.Name ?? "")"
+                        data-supplier="@(s.Lot?.Supplier?.Name ?? "")"
+                        data-productid="@(s.Lot?.ProductId?.ToString() ?? "0")"
+                        data-status="@(s.CurrentWeight <= 0 ? "tukendi" : s.CurrentWeight < s.InitialWeight * 0.1m ? "az-kaldi" : "mevcut")">
                         <td>
                             <a href="/Purchase/Detail/@s.LotId" class="fw-semibold text-decoration-none">
                                 @s.SerialNo
@@ -447,6 +603,77 @@ document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))d
             if (e.key === 'Escape') { this.value = ''; dt.search('').draw(); e.preventDefault(); e.stopPropagation(); }
         }, true);
     });
+
+    // ── Tablo Üstü Client-Side Filtreler ──────────────────────────
+    function getCheckedValues(panelId) {
+        return [...document.querySelectorAll('#' + panelId + ' input.mcd-cb:checked')]
+            .map(cb => cb.value.toLowerCase().trim());
+    }
+
+    function applyTableFilters() {
+        var fscSel  = getCheckedValues('mcd-tbl-fsc-panel');
+        var supSel  = getCheckedValues('mcd-tbl-sup-panel');
+        var prodSel = getCheckedValues('mcd-tbl-prod-panel');
+        var statSel = getCheckedValues('mcd-tbl-stat-panel');
+
+        var allRows = document.querySelectorAll('tbody tr.data-row');
+        allRows.forEach(function(tr) {
+            var rowFsc    = (tr.dataset.fsc      || '').toLowerCase().trim();
+            var rowSup    = (tr.dataset.supplier || '').toLowerCase().trim();
+            var rowProd   = (tr.dataset.productid|| '').toLowerCase().trim();
+            var rowStat   = (tr.dataset.status   || '').toLowerCase().trim();
+
+            var show = true;
+            if (fscSel.length  && !fscSel.includes(rowFsc))   show = false;
+            if (supSel.length  && !supSel.includes(rowSup))   show = false;
+            if (prodSel.length && !prodSel.includes(rowProd)) show = false;
+            if (statSel.length && !statSel.includes(rowStat)) show = false;
+
+            tr.style.display = show ? '' : 'none';
+        });
+
+        recalcAfterFilter();
+    }
+
+    function recalcAfterFilter() {
+        var giris=0, tuketim=0, fire=0, kalan=0, count=0;
+        document.querySelectorAll('tbody tr.data-row').forEach(function(tr) {
+            if (tr.style.display === 'none') return;
+            giris   += parseFloat(tr.dataset.giris)   || 0;
+            tuketim += parseFloat(tr.dataset.tuketim) || 0;
+            fire    += parseFloat(tr.dataset.fire)    || 0;
+            kalan   += parseFloat(tr.dataset.kalan)   || 0;
+            count++;
+        });
+        var fmt1 = function(n) { return n.toLocaleString('tr-TR',{minimumFractionDigits:1,maximumFractionDigits:1})+' kg'; };
+        var g = function(id) { return document.getElementById(id); };
+        if (g('ftGiris'))   g('ftGiris').textContent   = fmt1(giris);
+        if (g('ftTuketim')) g('ftTuketim').textContent = fmt1(tuketim);
+        if (g('ftFire'))    g('ftFire').textContent    = fmt1(fire);
+        if (g('ftKalan'))   g('ftKalan').textContent   = fmt1(kalan);
+        if (g('topGiris'))   g('topGiris').textContent   = fmt1(giris);
+        if (g('topTuketim')) g('topTuketim').textContent = fmt1(tuketim);
+        if (g('topFire'))    g('topFire').textContent    = fmt1(fire);
+        if (g('topKalan'))   g('topKalan').textContent   = fmt1(kalan);
+        if (g('cardTotalKg')) g('cardTotalKg').textContent = Math.round(kalan).toLocaleString('tr-TR') + ' kg';
+        if (g('cardBobins'))  g('cardBobins').textContent  = count;
+        var total = document.querySelectorAll('tbody tr.data-row').length;
+        var note  = g('ftFilterNote');
+        if (note) note.textContent = count < total ? '(' + count + '/' + total + ' kayıt)' : '';
+    }
+
+    function clearTableFilters() {
+        document.querySelectorAll('.tbl-filter-cb').forEach(function(cb) { cb.checked = false; });
+        ['mcd-tbl-fsc','mcd-tbl-sup','mcd-tbl-prod','mcd-tbl-stat'].forEach(function(id) {
+            mcdUpdate(id);
+            var allCb = document.querySelector('#'+id+'-panel .mcd-all-cb');
+            if (allCb) { allCb.checked = false; allCb.indeterminate = false; }
+        });
+        document.querySelectorAll('tbody tr.data-row').forEach(function(tr) {
+            tr.style.display = '';
+        });
+        recalcAfterFilter();
+    }
 
     // draw.dt — her filtre/sayfa değişiminde tfoot + top-total + stat kartları güncelle
     $(document).on('draw.dt', 'table.data-table', function() {

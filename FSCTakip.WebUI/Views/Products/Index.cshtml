@@ -9,9 +9,9 @@
     var paperWidths   = ViewData["PaperWidths"]   as SelectList ?? new SelectList(new List<SelectListItem>());
     var suppliers     = ViewData["Suppliers"]     as SelectList ?? new SelectList(new List<SelectListItem>());
 
-    int?   filterSupplier = ViewBag.SupplierId     as int?;
-    int?   filterGroup    = ViewBag.ProductGroupId as int?;
-    string filterSearch   = ViewBag.Search         as string ?? "";
+    var    supplierIds     = ViewBag.SupplierIds     as int[] ?? Array.Empty<int>();
+    var    productGroupIds = ViewBag.ProductGroupIds as int[] ?? Array.Empty<int>();
+    string filterSearch    = ViewBag.Search          as string ?? "";
 }
 
 @* Üst Aksiyon Çubuğu *@
@@ -23,7 +23,7 @@
     </div>
     <div class="col-md-6 text-right">
         <button class="btn btn-outline-secondary btn-sm" onclick="$('#filterPanel').slideToggle()">
-            <i class="fas fa-filter mr-1"></i> Filtrele @(filterSupplier.HasValue || filterGroup.HasValue || !string.IsNullOrEmpty(filterSearch) ? "●" : "")
+            <i class="fas fa-filter mr-1"></i> Filtrele @(supplierIds.Length > 0 || productGroupIds.Length > 0 || !string.IsNullOrEmpty(filterSearch) ? "●" : "")
         </button>
         <button class="btn btn-outline-success btn-sm ml-1" onclick="exportToExcel()">
             <i class="fas fa-file-excel mr-1"></i> Excel
@@ -36,7 +36,7 @@
 
 @* Filtre Paneli — server-side *@
 <div id="filterPanel" class="card mb-3 shadow-sm border-left-primary"
-     style="@(filterSupplier.HasValue || filterGroup.HasValue || !string.IsNullOrEmpty(filterSearch) ? "" : "display:none;")">
+     style="@(supplierIds.Length > 0 || productGroupIds.Length > 0 || !string.IsNullOrEmpty(filterSearch) ? "" : "display:none;")">
     <div class="card-body py-3">
         <form method="get" action="/Products">
             <div class="d-flex align-items-end gap-2 flex-wrap">
@@ -45,35 +45,29 @@
                     <input type="text" name="search" class="form-control form-control-sm"
                            value="@filterSearch" placeholder="Kod veya ürün adı..." style="min-width:180px;" />
                 </div>
-                <div style="display:flex;flex-direction:column;">
+                <div style="display:flex;flex-direction:column;min-width:200px;">
                     <label class="small fw-bold text-uppercase">Tedarikçi</label>
-                    <div class="mcd" id="mcd-prod-sup" data-placeholder="— Tümü —" style="min-width:200px;">
+                    <div class="mcd" id="mcd-prod-sup" data-placeholder="— Tümü —">
                         <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-prod-sup')">
-                            <span class="mcd-lbl">
-                                @{
-                                    var selSupText = (suppliers.FirstOrDefault(s => s.Value == filterSupplier?.ToString()))?.Text;
-                                }
-                                @(selSupText ?? "— Tümü —")
-                            </span>
+                            <span class="mcd-lbl">@(supplierIds.Length > 0 ? supplierIds.Length + " seçildi" : "— Tümü —")</span>
                             <i class="fas fa-angle-down mcd-arrow"></i>
                         </button>
                         <div class="mcd-panel" id="mcd-prod-sup-panel" style="display:none;">
                             <div class="mcd-search-row">
                                 <input type="text" class="mcd-search" placeholder="Tedarikçi ara..." oninput="mcdSearch(this)">
                             </div>
+                            <label class="mcd-row mcd-header">
+                                <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-prod-sup')">
+                                <span>Tümünü Seç / Temizle</span>
+                            </label>
                             <div class="mcd-items">
-                                <label class="mcd-row">
-                                    <input type="radio" name="supplierId" value="" class="mcd-rb"
-                                           onchange="mcdSingleSelect('mcd-prod-sup','','— Tümü —')"
-                                           checked="@(filterSupplier == null ? "checked" : null)">
-                                    <span class="mcd-name">— Tümü —</span>
-                                </label>
                                 @foreach (var s in suppliers)
                                 {
+                                    @{ bool sel = int.TryParse(s.Value, out var sid) && supplierIds.Contains(sid); }
                                     <label class="mcd-row">
-                                        <input type="radio" name="supplierId" value="@s.Value" class="mcd-rb"
-                                               onchange="mcdSingleSelect('mcd-prod-sup','@s.Value','@s.Text.Replace("'","\\'")')"
-                                               checked="@(filterSupplier?.ToString() == s.Value ? "checked" : null)">
+                                        <input type="checkbox" name="supplierIds" value="@s.Value" class="mcd-cb"
+                                               onchange="mcdUpdate('mcd-prod-sup')"
+                                               checked="@(sel ? "checked" : null)">
                                         <span class="mcd-name">@s.Text</span>
                                     </label>
                                 }
@@ -82,35 +76,29 @@
                         </div>
                     </div>
                 </div>
-                <div style="display:flex;flex-direction:column;">
+                <div style="display:flex;flex-direction:column;min-width:160px;">
                     <label class="small fw-bold text-uppercase">Ürün Grubu</label>
-                    <div class="mcd" id="mcd-prod-grp" data-placeholder="— Tümü —" style="min-width:160px;">
+                    <div class="mcd" id="mcd-prod-grp" data-placeholder="— Tümü —">
                         <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-prod-grp')">
-                            <span class="mcd-lbl">
-                                @{
-                                    var selGrpText = (productGroups.FirstOrDefault(g => g.Value == filterGroup?.ToString()))?.Text;
-                                }
-                                @(selGrpText ?? "— Tümü —")
-                            </span>
+                            <span class="mcd-lbl">@(productGroupIds.Length > 0 ? productGroupIds.Length + " seçildi" : "— Tümü —")</span>
                             <i class="fas fa-angle-down mcd-arrow"></i>
                         </button>
                         <div class="mcd-panel" id="mcd-prod-grp-panel" style="display:none;">
                             <div class="mcd-search-row">
                                 <input type="text" class="mcd-search" placeholder="Grup ara..." oninput="mcdSearch(this)">
                             </div>
+                            <label class="mcd-row mcd-header">
+                                <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-prod-grp')">
+                                <span>Tümünü Seç / Temizle</span>
+                            </label>
                             <div class="mcd-items">
-                                <label class="mcd-row">
-                                    <input type="radio" name="productGroupId" value="" class="mcd-rb"
-                                           onchange="mcdSingleSelect('mcd-prod-grp','','— Tümü —')"
-                                           checked="@(filterGroup == null ? "checked" : null)">
-                                    <span class="mcd-name">— Tümü —</span>
-                                </label>
                                 @foreach (var g in productGroups)
                                 {
+                                    @{ bool sel = int.TryParse(g.Value, out var gid) && productGroupIds.Contains(gid); }
                                     <label class="mcd-row">
-                                        <input type="radio" name="productGroupId" value="@g.Value" class="mcd-rb"
-                                               onchange="mcdSingleSelect('mcd-prod-grp','@g.Value','@g.Text.Replace("'","\\'")')"
-                                               checked="@(filterGroup?.ToString() == g.Value ? "checked" : null)">
+                                        <input type="checkbox" name="productGroupIds" value="@g.Value" class="mcd-cb"
+                                               onchange="mcdUpdate('mcd-prod-grp')"
+                                               checked="@(sel ? "checked" : null)">
                                         <span class="mcd-name">@g.Text</span>
                                     </label>
                                 }
