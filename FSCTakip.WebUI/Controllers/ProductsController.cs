@@ -396,7 +396,8 @@ namespace FSCTakip.WebUI.Controllers
                     childProductName = r.ChildProduct.ProductName,
                     childProductCode = r.ChildProduct.ProductCode,
                     r.StandardQuantity,
-                    r.Unit
+                    r.Unit,
+                    r.BilesenYeri    // ← Mamülde kullanım yeri (Gövde, Sap vb.)
                 })
                 .ToListAsync();
 

@@ -216,6 +216,12 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                             <span class="badge" style="background:#eef2ff;color:#3730a3;font-weight:500;margin-left:4px;" title="Dış stok kodu">@component!.ExternalCode</span>
                                         }
                                     </div>
+                                    @if (!string.IsNullOrWhiteSpace(wr.Description))
+                                    {
+                                        <span class="badge me-1" style="background:#ede9fe;color:#5b21b6;font-size:10px;">
+                                            <i class="fas fa-layer-group me-1" style="font-size:8px;"></i>@wr.Description
+                                        </span>
+                                    }
                                     @if (component?.FscType != null)
                                     {
                                         <span class="badge badge-green" style="font-size:10px;">@component.FscType.Name</span>
@@ -740,7 +746,7 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
 var wrToplamTuketim = wr.ActualConsumedQuantity + wr.WasteQuantity;
                                             var kalan = wr.PlannedQuantity - wrToplamTuketim;
                                             <option value="@wr.Id" data-plan="@wr.PlannedQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-actual="@wr.ActualConsumedQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-waste="@wr.WasteQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-kalan="@kalan.ToString(System.Globalization.CultureInfo.InvariantCulture)">
-@(string.IsNullOrEmpty(wr.Product?.ExternalCode) ? "" : wr.Product!.ExternalCode + " · ")@(wr.Product?.ProductName ?? "?") — Plan: @wr.PlannedQuantity.ToString("N0") kg · Tüketim: @wr.ActualConsumedQuantity.ToString("N0") kg · Fire: @wr.WasteQuantity.ToString("N0") kg (Toplam: @wrToplamTuketim.ToString("N0")) · Kalan: @kalan.ToString("N0") kg
+@if (!string.IsNullOrWhiteSpace(wr.Description)) { <text>[@wr.Description] </text> }@(string.IsNullOrEmpty(wr.Product?.ExternalCode) ? "" : wr.Product!.ExternalCode + " · ")@(wr.Product?.ProductName ?? "?") — Plan: @wr.PlannedQuantity.ToString("N0") kg · Kalan: @kalan.ToString("N0") kg
                                             </option>
                                         }
                                         @if (!workOrderRecipes.Any() && recipeComponents.Any())
@@ -1346,7 +1352,8 @@ async function loadFromRecipe() {
     let msg = `Plan adedi: ${WORKORDER_PLANNED_QTY.toLocaleString('tr-TR')} adet\n\nBOM'a eklenecek bileşenler:\n`;
     res.lines.forEach(l => {
         const planned = l.standardQuantity * WORKORDER_PLANNED_QTY;
-        msg += `• ${l.childProductName}: ${planned.toLocaleString('tr-TR', { maximumFractionDigits: 3 })} kg\n`;
+        const yerStr = l.bilesenYeri ? ` [${l.bilesenYeri}]` : '';
+        msg += `• ${l.childProductName}${yerStr}: ${planned.toLocaleString('tr-TR', { maximumFractionDigits: 3 })} kg\n`;
     });
     if (!await appConfirm(msg, { title: 'Reçeteden BOM Yükle', icon: 'flask', confirmText: 'BOM\'a Ekle' })) return;
 
@@ -1357,6 +1364,7 @@ async function loadFromRecipe() {
         fd.append('workOrderId', @Model.Id);
         fd.append('productId', l.childProductId);
         fd.append('plannedQuantity', planned);   // JS sayısı → nokta ondalık (server invariant bekliyor)
+        if (l.bilesenYeri) fd.append('description', l.bilesenYeri); // BilesenYeri → WorkOrderRecipe.Description
         const r = await fetch('/Production/SaveWorkOrderRecipe', { method: 'POST', body: fd })
                         .then(x => x.json()).catch(() => ({ success: false }));
         if (r.success) added++; else skipped++;

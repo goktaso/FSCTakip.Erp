@@ -563,7 +563,7 @@ namespace FSCTakip.WebUI.Controllers
 
         // POST /Production/SaveWorkOrderRecipe â€” Ä°ÅŸ emrine reÃ§ete satÄ±rÄ± ekle/gÃ¼ncelle
         [HttpPost]
-        public async Task<IActionResult> SaveWorkOrderRecipe(int workOrderId, int productId, decimal plannedQuantity, int? existingId)
+        public async Task<IActionResult> SaveWorkOrderRecipe(int workOrderId, int productId, decimal plannedQuantity, int? existingId, string? description = null)
         {
             try
             {
@@ -585,6 +585,7 @@ namespace FSCTakip.WebUI.Controllers
                         WorkOrderId       = workOrderId,
                         ProductId         = productId,
                         PlannedQuantity   = plannedQuantity,
+                        Description       = string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
                         CreatedDate       = DateTime.Now,
                         CreatedBy         = User.Identity?.Name ?? "System"
                     });
