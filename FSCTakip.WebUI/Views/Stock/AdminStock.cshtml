@@ -4,6 +4,7 @@
     ViewData["Title"] = "Tüm Stok (Admin)";
     var allGroups     = ViewBag.ProductGroups as List<ProductGroup> ?? new();
     int? selGroup     = ViewBag.ProductGroupId;
+    var groupIds      = ViewBag.GroupIds  as int[] ?? (selGroup.HasValue ? new[] { selGroup.Value } : Array.Empty<int>());
     string search     = ViewBag.Search ?? "";
     int totalProducts = ViewBag.TotalProducts ?? 0;
     decimal grandKg   = ViewBag.GrandTotalKg ?? 0m;
@@ -74,13 +75,34 @@
 <form method="get" action="/Stock/AdminStock">
     <div class="filter-card">
         <div class="filter-form" style="flex-wrap:wrap;gap:8px;align-items:flex-end;">
-            <select name="productGroupId" class="form-control form-control-sm" style="max-width:200px;">
-                <option value="">— Tüm Gruplar —</option>
-                @foreach (var g in allGroups)
-                {
-                    <option value="@g.Id" selected="@(selGroup == g.Id ? "selected" : null)">@g.GroupName</option>
-                }
-            </select>
+            <!-- Grup MCD -->
+            <div style="display:flex;flex-direction:column;min-width:200px;">
+                <div class="mcd" id="mcd-admin-grp" data-placeholder="— Tüm Gruplar —">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-admin-grp')">
+                        <span class="mcd-lbl">@(groupIds.Length > 0 ? groupIds.Length + " grup seçildi" : "— Tüm Gruplar —")</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-admin-grp-panel" style="display:none;">
+                        <label class="mcd-row mcd-header">
+                            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-admin-grp')">
+                            <span>Tümünü Seç / Temizle</span>
+                        </label>
+                        <div class="mcd-items">
+                            @foreach (var g in allGroups)
+                            {
+                                bool sel = groupIds.Contains(g.Id);
+                                <label class="mcd-row">
+                                    <input type="checkbox" name="groupIds" value="@g.Id" class="mcd-cb"
+                                           onchange="mcdUpdate('mcd-admin-grp')"
+                                           checked="@(sel ? "checked" : null)">
+                                    <span class="mcd-name">@g.GroupName</span>
+                                </label>
+                            }
+                        </div>
+                        <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                    </div>
+                </div>
+            </div>
             <input type="text" name="search" class="form-control form-control-sm"
                    placeholder="Ürün adı, kodu ara..." value="@search" style="max-width:220px;" />
             <!-- Ürün MCD -->
