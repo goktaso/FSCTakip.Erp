@@ -389,7 +389,7 @@ namespace FSCTakip.WebUI.Controllers
         public async Task<IActionResult> RawMaterial(
             int[]? fscTypeIds, int[]? supplierIds, int[]? productIds,
             int[]? productGroupIds,
-            bool? showEmpty = false)
+            bool? showEmpty = false, bool showAll = false)
         {
             var query = _context.FscSerials
                 .Include(s => s.Lot).ThenInclude(l => l.Supplier)
@@ -400,15 +400,36 @@ namespace FSCTakip.WebUI.Controllers
             if (showEmpty != true)
                 query = query.Where(s => s.CurrentWeight > 0);
 
-            if (fscTypeIds != null && fscTypeIds.Length > 0)
-                query = query.Where(s => fscTypeIds.Contains(s.Lot.FscTypeId));
-            if (supplierIds != null && supplierIds.Length > 0)
-                query = query.Where(s => s.Lot.SupplierId.HasValue && supplierIds.Contains(s.Lot.SupplierId.Value));
-            if (productIds != null && productIds.Length > 0)
-                query = query.Where(s => s.Lot.ProductId.HasValue && productIds.Contains(s.Lot.ProductId.Value));
-            if (productGroupIds != null && productGroupIds.Length > 0)
-                query = query.Where(s => s.Lot.Product != null && s.Lot.Product.ProductGroupId.HasValue
-                    && productGroupIds.Contains(s.Lot.Product.ProductGroupId.Value));
+            // Kullanıcı herhangi bir filtre uyguladı mı?
+            bool hasUserFilter = showAll
+                              || (fscTypeIds?.Length > 0)
+                              || (supplierIds?.Length > 0)
+                              || (productIds?.Length > 0)
+                              || (productGroupIds?.Length > 0)
+                              || showEmpty == true;
+
+            if (!hasUserFilter)
+            {
+                // Varsayılan: Ham+YM+BS grupları (ada göre dinamik — Stok Özeti ile tutarlı)
+                var defaultGroupNames = new[] { "HAMMADDE", "YARI MAMUL", "BURGU SAP" };
+                query = query.Where(s => s.Lot.Product != null
+                    && s.Lot.Product.ProductGroup != null
+                    && defaultGroupNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()));
+            }
+            else
+            {
+                if (fscTypeIds != null && fscTypeIds.Length > 0)
+                    query = query.Where(s => fscTypeIds.Contains(s.Lot.FscTypeId));
+                if (supplierIds != null && supplierIds.Length > 0)
+                    query = query.Where(s => s.Lot.SupplierId.HasValue && supplierIds.Contains(s.Lot.SupplierId.Value));
+                if (productIds != null && productIds.Length > 0)
+                    query = query.Where(s => s.Lot.ProductId.HasValue && productIds.Contains(s.Lot.ProductId.Value));
+                if (productGroupIds != null && productGroupIds.Length > 0)
+                    query = query.Where(s => s.Lot.Product != null && s.Lot.Product.ProductGroupId.HasValue
+                        && productGroupIds.Contains(s.Lot.Product.ProductGroupId.Value));
+            }
+
+            ViewBag.IsDefaultFilter = !hasUserFilter;
 
             var serials = await query
                 .OrderBy(s => s.Lot.FscType.Name)
