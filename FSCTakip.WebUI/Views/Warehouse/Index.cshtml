@@ -62,6 +62,13 @@
 
 <!-- Tablo -->
 <div class="table-card">
+    <div class="table-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-warehouse text-primary"></i>
+            <span>Depo Listesi</span>
+            <span class="badge badge-blue">@Model.Count kayıt</span>
+        </div>
+    </div>
     <div class="table-responsive">
         <table class="data-table" id="mainTable">
             <thead>
@@ -75,7 +82,13 @@
             <tbody>
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="4" class="text-center text-muted py-4">Henüz depo kaydı yok.</td></tr>
+                    <tr><td colspan="4">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-warehouse"></i></div>
+                            <h6>Henüz depo kaydı yok</h6>
+                            <p>+ Yeni Depo Ekle butonunu kullanın.</p>
+                        </div>
+                    </td></tr>
                 }
                 @foreach (var item in Model)
                 {
