@@ -526,6 +526,14 @@
                 <span class="toc-num">37.</span> Dönem Kilidi
                 <span class="toc-badge done">✓</span>
             </a>
+            <a class="toc-item" href="#yari-mamul-donusum" onclick="scrollTo('yari-mamul-donusum')">
+                <span class="toc-num">38.</span> Yarı Mamül Dönüşüm
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#denetim-rehberi" onclick="scrollTo('denetim-rehberi')">
+                <span class="toc-num">39.</span> FSC Denetim Rehberi
+                <span class="toc-badge done">✓</span>
+            </a>
         </div>
     </div>
 
@@ -539,11 +547,11 @@
         <div class="guide-status-bar">
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
-                <span>37 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis → Denetim → İzlenebilirlik → BOM → Hammadde Stoğu → ETL Import → RBAC → Müşteri FSC → Üretim Planı → Fire Analizi → Dönem Kilidi)</span>
+                <span>39 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis → Denetim → İzlenebilirlik → BOM → Hammadde Stoğu → ETL Import → RBAC → Müşteri FSC → Üretim Planı → Fire Analizi → Dönem Kilidi → Yarı Mamül Dönüşüm → FSC Denetim Rehberi)</span>
             </div>
             <div class="guide-status-item">
                 <span class="toc-badge done" style="float:none;">✓</span>
-                <span>v3.0 — RBAC, Üretim Planı, Fire Analizi, Müşteri FSC, Dönem Kilidi, güvenlik iyileştirmeleri</span>
+                <span>v3.1 — Yarı Mamül Dönüşüm, FSC Denetim Rehberi eklendi</span>
             </div>
             <div class="ms-auto text-muted" style="font-size:11px;">
                 <i class="fas fa-sync-alt me-1"></i> Her modül tamamlandıktan sonra güncellenir
@@ -608,7 +616,9 @@
             'Müşteri FSC Lisans Durumu': 'musteri-fsc',
             'Üretim Planı Takvimi': 'uretim-plani',
             'Fire / Atık Analizi': 'fire-analizi',
-            'Dönem Kilidi': 'donem-kilidi'
+            'Dönem Kilidi': 'donem-kilidi',
+            'Yarı Mamül Dönüşüm': 'yari-mamul-donusum',
+            'FSC Denetim Rehberi': 'denetim-rehberi'
         };
         for (const [key, id] of Object.entries(map)) {
             if (text.includes(key.substring(0, 15))) {
