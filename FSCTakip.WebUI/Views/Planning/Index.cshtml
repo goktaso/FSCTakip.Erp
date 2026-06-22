@@ -175,9 +175,9 @@
                 var newDate = info.event.startStr;
                 $.post('/Planning/UpdatePlannedDate', { id: info.event.id, plannedDate: newDate }, function(res) {
                     if (res.success) {
-                        showToast('success', res.message);
+                        showToast(res.message, 'success');
                     } else {
-                        showToast('error', res.message);
+                        showToast(res.message, 'error');
                         info.revert();
                     }
                 });
@@ -215,10 +215,6 @@
         });
     }
 
-    function showToast(type, msg) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({ icon: type, title: msg, timer: 2000, showConfirmButton: false });
-        }
-    }
+    // showToast global olarak _Layout.cshtml'de tanımlı — yerel tanım kaldırıldı
 </script>
 }

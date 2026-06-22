@@ -47,7 +47,13 @@
             <tbody>
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="7" class="text-center text-muted py-4">Henüz denetim dönemi tanımlanmamış.</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted py-4">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-calendar-times"></i></div>
+                            <h6>Henüz denetim dönemi tanımlanmamış</h6>
+                            <p>Yukarıdaki <strong>+ Yeni Dönem Ekle</strong> butonu ile ilk dönemi oluşturun.</p>
+                        </div>
+                    </td></tr>
                 }
                 @foreach (var item in Model)
                 {
@@ -236,15 +242,15 @@
             Description: document.getElementById('periodDescription').value
         };
         if (!data.StartDate || !data.EndDate) {
-            showToast('error', 'Başlangıç ve bitiş tarihi zorunludur.');
+            showToast('Başlangıç ve bitiş tarihi zorunludur.', 'error');
             return;
         }
         $.post('/AuditPeriod/Save', data, function(res) {
             if (res.success) {
-                showToast('success', res.message);
+                showToast(res.message, 'success');
                 setTimeout(() => location.reload(), 800);
             } else {
-                showToast('error', res.message);
+                showToast(res.message, 'error');
             }
         });
     }

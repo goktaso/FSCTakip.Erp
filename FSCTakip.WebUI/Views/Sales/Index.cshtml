@@ -70,35 +70,90 @@
 <!-- Filtre Paneli -->
 <div id="filterPanel" class="filter-panel mb-3" style="display:none;">
     <form method="get" action="/Sales/Index">
-        <div class="row g-2 align-items-end">
-            <div class="col-md-2">
-                <label class="form-label">Başlangıç</label>
+        <div class="d-flex align-items-end gap-2 flex-wrap">
+            <!-- Başlangıç -->
+            <div style="display:flex;flex-direction:column;min-width:130px;">
+                <label class="form-label small fw-semibold mb-1">Başlangıç</label>
                 <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control form-control-sm">
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Bitiş</label>
+            <!-- Bitiş -->
+            <div style="display:flex;flex-direction:column;min-width:130px;">
+                <label class="form-label small fw-semibold mb-1">Bitiş</label>
                 <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control form-control-sm">
             </div>
-            <div class="col-md-3">
-                <label class="form-label">Müşteri</label>
-                <select name="customerId" class="form-select form-select-sm">
-                    <option value="">— Tümü —</option>
-                    @foreach (var c in customers)
-                    {
-                        <option value="@c.Id">@c.Name</option>
-                    }
-                </select>
+            <!-- Müşteri MCD (single/radio) -->
+            <div style="display:flex;flex-direction:column;min-width:200px;">
+                <label class="form-label small fw-semibold mb-1">Müşteri</label>
+                <div class="mcd" id="mcd-sales-cust" data-placeholder="— Tümü —">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-sales-cust')">
+                        <span class="mcd-lbl">— Tümü —</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-sales-cust-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Müşteri ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <div class="mcd-items">
+                            <label class="mcd-row">
+                                <input type="radio" name="customerId" value="" class="mcd-cb"
+                                       onchange="mcdUpdateSingle('mcd-sales-cust','— Tümü —')"
+                                       @(string.IsNullOrEmpty(ViewBag.CustomerId?.ToString()) ? "checked" : "")>
+                                <span class="mcd-text">— Tümü —</span>
+                            </label>
+                            @foreach (var c in customers)
+                            {
+                                bool sel = ViewBag.CustomerId?.ToString() == c.Id.ToString();
+                                <label class="mcd-row">
+                                    <input type="radio" name="customerId" value="@c.Id" class="mcd-cb"
+                                           onchange="mcdUpdateSingle('mcd-sales-cust',@Html.Raw("'" + c.Name.Replace("'","\'") + "'"))"
+                                           @(sel ? "checked" : "")>
+                                    <span class="mcd-text">@c.Name</span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Durum</label>
-                <select name="status" class="form-select form-select-sm">
-                    <option value="">— Tümü —</option>
-                    <option value="1">Taslak</option>
-                    <option value="2">Teslim Edildi</option>
-                    <option value="3">İptal</option>
-                </select>
+            <!-- Durum MCD (single/radio) -->
+            <div style="display:flex;flex-direction:column;min-width:160px;">
+                <label class="form-label small fw-semibold mb-1">Durum</label>
+                <div class="mcd" id="mcd-sales-status" data-placeholder="— Tümü —">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-sales-status')">
+                        <span class="mcd-lbl">— Tümü —</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-sales-status-panel" style="display:none;">
+                        <div class="mcd-items">
+                            <label class="mcd-row">
+                                <input type="radio" name="status" value="" class="mcd-cb"
+                                       onchange="mcdUpdateSingle('mcd-sales-status','— Tümü —')"
+                                       @(string.IsNullOrEmpty(ViewBag.Status?.ToString()) ? "checked" : "")>
+                                <span class="mcd-text">— Tümü —</span>
+                            </label>
+                            <label class="mcd-row">
+                                <input type="radio" name="status" value="1" class="mcd-cb"
+                                       onchange="mcdUpdateSingle('mcd-sales-status','Taslak')"
+                                       @(ViewBag.Status?.ToString() == "1" ? "checked" : "")>
+                                <span class="mcd-text">Taslak</span>
+                            </label>
+                            <label class="mcd-row">
+                                <input type="radio" name="status" value="2" class="mcd-cb"
+                                       onchange="mcdUpdateSingle('mcd-sales-status','Teslim Edildi')"
+                                       @(ViewBag.Status?.ToString() == "2" ? "checked" : "")>
+                                <span class="mcd-text">Teslim Edildi</span>
+                            </label>
+                            <label class="mcd-row">
+                                <input type="radio" name="status" value="3" class="mcd-cb"
+                                       onchange="mcdUpdateSingle('mcd-sales-status','İptal')"
+                                       @(ViewBag.Status?.ToString() == "3" ? "checked" : "")>
+                                <span class="mcd-text">İptal</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-3 d-flex gap-2 align-items-end">
+            <!-- Butonlar -->
+            <div class="d-flex gap-2 align-items-end" style="padding-bottom:1px;">
                 <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search me-1"></i>Sorgula</button>
                 <a href="/Sales/Index" class="btn btn-outline-secondary btn-sm">Temizle</a>
             </div>
@@ -320,6 +375,53 @@
 
 @section Scripts {
 <script>
+// MCD single (radio) helper
+function mcdUpdateSingle(id, label) {
+    var container = document.getElementById(id);
+    if (!container) return;
+    var lbl = container.querySelector('.mcd-lbl');
+    if (lbl) lbl.textContent = label || (container.dataset.placeholder || '— Seçiniz —');
+    document.querySelectorAll('#' + id + '-panel .mcd-panel').forEach(function(p){ p.style.display='none'; });
+    document.getElementById(id + '-panel').style.display = 'none';
+}
+
+// MCD init için _mcdReady guard
+if (!window._mcdReady) {
+    window._mcdReady = true;
+    window.mcdOpen = function(id) {
+        var panel = document.getElementById(id + '-panel');
+        var isOpen = panel && panel.style.display !== 'none';
+        document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
+        if (!isOpen && panel) { panel.style.display = 'flex'; }
+    };
+    window.mcdSearch = function(el) {
+        var term = el.value.toLowerCase();
+        el.closest('.mcd-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(row){
+            row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+        });
+    };
+    document.addEventListener('mousedown', function(e){
+        if (!e.target.closest('.mcd')) document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
+    });
+}
+
+// Sayfa yüklenince seçili radio'ların label'larını güncelle
+(function(){
+    ['mcd-sales-cust','mcd-sales-status'].forEach(function(id){
+        var panel = document.getElementById(id + '-panel');
+        if (!panel) return;
+        var checked = panel.querySelector('.mcd-cb:checked');
+        if (checked) {
+            var row = checked.closest('.mcd-row');
+            var txt = row ? row.querySelector('.mcd-text') : null;
+            if (txt) {
+                var lbl = document.querySelector('#' + id + ' .mcd-lbl');
+                if (lbl) lbl.textContent = txt.textContent;
+            }
+        }
+    });
+})();
+
 function showPdfFromBtn(btn) {
     showPdf(btn.dataset.pdfPath, btn.dataset.pdfTitle);
 }
