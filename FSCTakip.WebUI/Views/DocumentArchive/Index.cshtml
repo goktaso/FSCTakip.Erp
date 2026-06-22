@@ -49,10 +49,13 @@
     string FmtSize(long b) => b < 1048576 ? $"{b/1024.0:F0} KB" : $"{b/1048576.0:F1} MB";
 }
 
-@section TopbarActions {
+@section TopbarPrimary {
     <button class="topbar-btn btn-primary-custom" onclick="openUpload()">
         <i class="fas fa-upload me-1"></i> Belge Yükle
     </button>
+}
+
+@section TopbarActions {
     <a href="/DocumentArchive" class="topbar-btn @(selCat == null && selYear == null && string.IsNullOrEmpty(search) ? "active" : "")">
         <i class="fas fa-folder-open me-1"></i> Tüm Belgeler
     </a>
@@ -108,18 +111,16 @@
     <div class="col-lg-9">
 
         <!-- Arama -->
-        <div class="card mb-3">
-            <div class="card-body py-2 px-3">
-                <form method="get" action="/DocumentArchive" class="d-flex gap-2">
-                    @if (selCat.HasValue) { <input type="hidden" name="category" value="@((int)selCat)"> }
-                    @if (selYear.HasValue) { <input type="hidden" name="year" value="@selYear"> }
-                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Belge adı veya etiket ara..." value="@search">
-                    <button type="submit" class="btn btn-sm btn-outline-primary px-3"><i class="fas fa-search"></i></button>
-                    @if (!string.IsNullOrEmpty(search)) {
-                        <a href="/DocumentArchive@(selCat.HasValue ? "?category="+(int)selCat : "")" class="btn btn-sm btn-outline-secondary">Temizle</a>
-                    }
-                </form>
-            </div>
+        <div class="filter-card mb-3">
+            <form method="get" action="/DocumentArchive" class="d-flex gap-2 align-items-center flex-wrap">
+                @if (selCat.HasValue) { <input type="hidden" name="category" value="@((int)selCat)"> }
+                @if (selYear.HasValue) { <input type="hidden" name="year" value="@selYear"> }
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Belge adı veya etiket ara..." style="max-width:280px;" value="@search">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search me-1"></i>Ara</button>
+                @if (!string.IsNullOrEmpty(search)) {
+                    <a href="/DocumentArchive@(selCat.HasValue ? "?category="+(int)selCat : "")" class="btn btn-outline-secondary btn-sm">Temizle</a>
+                }
+            </form>
         </div>
 
         <!-- Başlık -->

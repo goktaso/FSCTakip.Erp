@@ -38,6 +38,42 @@
     </div>
 </div>
 
+@{
+    var kritikSay = (int)(ViewBag.CriticalCount ?? 0);
+    var uyariSay  = (int)(ViewBag.WarningCount  ?? 0);
+}
+@if (kritikSay > 0)
+{
+    <div class="alert d-flex align-items-center gap-3 mb-3"
+         style="background:#fef2f2;border:2px solid #fca5a5;border-radius:10px;padding:14px 18px;">
+        <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+        <div>
+            <div class="fw-bold text-danger">@kritikSay Kritik Uyarı</div>
+            <div class="small text-muted">Sertifika zincirini etkileyen sorunlar var. Hemen kontrol edin.</div>
+        </div>
+        <a href="/Reports/SupplierFsc" class="btn btn-danger btn-sm ms-auto">Tedarikçi FSC →</a>
+    </div>
+}
+else if (uyariSay > 0)
+{
+    <div class="alert d-flex align-items-center gap-3 mb-3"
+         style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:14px 18px;">
+        <i class="fas fa-exclamation-circle fa-xl text-warning"></i>
+        <div>
+            <div class="fw-bold text-warning">@uyariSay Uyarı</div>
+            <div class="small text-muted">Yaklaşan sertifika bitiş tarihleri var.</div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert d-flex align-items-center gap-3 mb-3"
+         style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 18px;">
+        <i class="fas fa-check-circle fa-xl text-success"></i>
+        <div class="fw-bold text-success">Tüm Sistemler Normal — FSC Zinciri Sağlıklı</div>
+    </div>
+}
+
 <!-- Özet Sayaç Kartları -->
 <div class="stats-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:1.5rem;">
     <div class="stat-card">
