@@ -847,3 +847,26 @@ function hideSerialDropdown() {
 **Not:** Pure CSS `:hover` veya `pointer-events: none` alternative'leri varsa daha temiz; ama bu event order mekanizması dokümante etmek faydalı (future refactor için).
 
 **Uygulandığı:** `Production/Detail.cshtml` (commit 6964415, 4c1872b).
+
+## Production/Detail — selectSerial input value gösterimi (2026-06-22)
+
+**Iyileştirme:** Bobin seçildiğinde arama kutusu (`serialSearch`) hâlâ boş kalmıyordu (placeholder'da sadece ✓ işareti + seri no). Artık seçili seri no açıkça input.value'de görünüyor.
+
+**Eski davranış:**
+```javascript
+input.value = '';
+input.placeholder = serialNo + ' ✓';  // Placeholder'da gizli
+input.style.background = '#dcfce7';   // Sadece renk ile anlaşılıyor
+```
+
+**Yeni davranış:**
+```javascript
+input.value = serialNo;  // Seçilen seri no açıkça input alanında
+input.placeholder = serialNo;
+input.style.background = '#dcfce7';  // Yeşil arka plan
+input.style.fontWeight = '600';      // Vurgulu yazı tipi
+```
+
+**UX avantajı:** Kullanıcı seçili bobin numarasını input'ta açıkça görür; placeholder'a bakmaya gerek kalmaz. Daha net ve profesyonel görünüm.
+
+**Uygulandığı:** `FSCTakip.WebUI/Views/Production/Detail.cshtml` satır 1040-1047 (commit afde463).
