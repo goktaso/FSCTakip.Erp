@@ -38,11 +38,12 @@
 <div class="row g-3">
     <!-- Meta bilgiler -->
     <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-dark text-white py-2">
-                <i class="fas fa-info-circle me-1"></i> İşlem Bilgisi
+        <div class="table-card h-100">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:#1e293b;border-radius:12px 12px 0 0;">
+                <i class="fas fa-info-circle" style="color:#fff;"></i>
+                <strong style="color:#fff;">İşlem Bilgisi</strong>
             </div>
-            <div class="card-body">
+            <div class="p-3">
                 <dl class="row mb-0 small">
                     <dt class="col-5 text-muted">Günlük ID</dt>
                     <dd class="col-7 fw-semibold">#@Model.Id</dd>
@@ -80,11 +81,12 @@
     <div class="col-md-8">
         @if (Model.Action == "UPDATE" && allKeys.Any())
         {
-            <div class="card shadow-sm">
-                <div class="card-header bg-warning text-dark py-2">
-                    <i class="fas fa-exchange-alt me-1"></i> Değişen Alanlar
+            <div class="table-card">
+                <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:#fef9c3;">
+                    <i class="fas fa-exchange-alt" style="color:#b45309;"></i>
+                    <strong style="color:#78350f;">Değişen Alanlar</strong>
                 </div>
-                <div class="card-body p-0">
+                <div class="">
                     <table class="table table-sm table-bordered mb-0">
                         <thead class="table-secondary">
                             <tr>
@@ -112,11 +114,12 @@
         }
         else if (Model.Action == "INSERT" && newDict != null)
         {
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white py-2">
-                    <i class="fas fa-plus-circle me-1"></i> Eklenen Kayıt
+            <div class="table-card">
+                <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:#dcfce7;">
+                    <i class="fas fa-plus-circle" style="color:#15803d;"></i>
+                    <strong style="color:#14532d;">Eklenen Kayıt</strong>
                 </div>
-                <div class="card-body p-0">
+                <div class="">
                     <table class="table table-sm table-bordered mb-0">
                         <thead class="table-secondary">
                             <tr><th style="width:35%">Alan</th><th>Değer</th></tr>
@@ -136,11 +139,12 @@
         }
         else if (Model.Action == "DELETE" && oldDict != null)
         {
-            <div class="card shadow-sm">
-                <div class="card-header bg-danger text-white py-2">
-                    <i class="fas fa-trash me-1"></i> Silinen Kayıt
+            <div class="table-card">
+                <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:#fee2e2;">
+                    <i class="fas fa-trash" style="color:#dc2626;"></i>
+                    <strong style="color:#7f1d1d;">Silinen Kayıt</strong>
                 </div>
-                <div class="card-body p-0">
+                <div class="">
                     <table class="table table-sm table-bordered mb-0">
                         <thead class="table-secondary">
                             <tr><th style="width:35%">Alan</th><th>Değer</th></tr>
@@ -160,10 +164,9 @@
         }
         else
         {
-            <!-- Ham JSON -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-light py-2">Ham Veri</div>
-                <div class="card-body">
+            <div class="table-card">
+                <div class="p-3 border-bottom"><strong>Ham Veri</strong></div>
+                <div class="p-3">
                     @if (Model.OldValues != null)
                     {
                         <p class="text-danger fw-semibold mb-1">Eski:</p>

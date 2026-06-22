@@ -7,11 +7,13 @@
     int pendingCount  = ViewBag.PendingCount ?? 0;
 }
 
-@section TopbarActions {
-    <button class="btn btn-primary btn-sm" onclick="openAdd()">
+@section TopbarPrimary {
+    <button class="btn btn-primary btn-sm px-3" onclick="openAdd()">
         <i class="fas fa-plus me-1"></i> Yeni Parametre
     </button>
-    <a href="/UnitConversion/Preview" class="btn btn-outline-secondary btn-sm ms-2">
+}
+@section TopbarActions {
+    <a href="/UnitConversion/Preview" class="btn btn-outline-secondary btn-sm">
         <i class="fas fa-search me-1"></i> Ön İzleme
     </a>
 }
@@ -32,14 +34,11 @@
 }
 
 <div class="table-card">
-    <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
-        <strong style="font-size:14px;">
-            <i class="fas fa-ruler-combined me-2 text-muted"></i>
-            Dönüşüm Parametreleri
-        </strong>
-        <span class="text-muted small">
-            Her zaman hedef birim <strong>KG</strong>'dir · KG = Girilen Miktar × Çarpan
-        </span>
+    <div class="table-header">
+        <i class="fas fa-ruler-combined text-primary"></i>
+        <span class="fw-semibold">Dönüşüm Parametreleri</span>
+        <span class="badge bg-secondary ms-1">@Model.Count parametre</span>
+        <span class="text-muted small ms-auto">Her zaman hedef birim <strong>KG</strong>'dir · KG = Girilen Miktar × Çarpan</span>
     </div>
     <div class="table-responsive">
         <table class="data-table">
@@ -260,7 +259,7 @@ async function deleteItem(id) {
     if (!await appConfirm('Bu parametre silinsin mi?')) return;
     $.post('/UnitConversion/Delete', { id: id }, function(res) {
         if (res.success) location.reload();
-        else alert(res.message);
+        else showToast(res.message, 'error');
     });
 }
 
@@ -274,10 +273,10 @@ async function applyAll() {
     if (!await appConfirm('Tüm uygun seriler KG\'ye dönüştürülsün mü?\n\nBu işlem geri alınamaz.')) return;
     $.post('/UnitConversion/ApplyAll', {}, function(res) {
         if (res.success) {
-            Swal.fire({ icon: 'success', title: res.message, timer: 3000, showConfirmButton: false })
-                .then(() => location.reload());
+            showToast(res.message, 'success');
+            setTimeout(() => location.reload(), 1500);
         } else {
-            alert(res.message);
+            showToast(res.message, 'error');
         }
     });
 }

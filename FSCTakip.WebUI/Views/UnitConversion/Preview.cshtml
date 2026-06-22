@@ -148,10 +148,10 @@ async function applyAll() {
     if (!await appConfirm('Parametresi olan @withFactor.Count seri KG\'ye dönüştürülsün mü?\nBu işlem geri alınamaz.')) return;
     $.post('/UnitConversion/ApplyAll', {}, function(res) {
         if (res.success) {
-            Swal.fire({ icon: 'success', title: res.message, timer: 3000, showConfirmButton: false })
-                .then(() => window.location = '/UnitConversion');
+            showToast(res.message, 'success');
+            setTimeout(() => window.location = '/UnitConversion', 1500);
         } else {
-            alert(res.message);
+            showToast(res.message, 'error');
         }
     });
 }

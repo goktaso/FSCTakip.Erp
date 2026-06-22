@@ -14,7 +14,6 @@
         <span class="fw-semibold" style="color:var(--text);font-size:14px;">
             <i class="fas fa-history me-2 text-primary"></i>Değişiklik Günlüğü
         </span>
-        <span class="badge bg-secondary ms-1">@total.ToString("N0") kayıt</span>
     </div>
     <div class="d-flex gap-2 ms-auto">
         <span class="topbar-user"><i class="fas fa-user-circle"></i> @(User.Identity?.Name ?? "Kullanıcı")</span>
@@ -22,8 +21,8 @@
 </div>
 
 <!-- Filtre Paneli -->
-<div class="card shadow-sm mb-3">
-    <div class="card-body py-2">
+<div class="table-card mb-3">
+    <div class="p-3">
         <form method="get" action="/AuditLog" class="d-flex align-items-end gap-2 flex-wrap">
             <div style="display:flex;flex-direction:column;min-width:140px;">
                 <label class="form-label small fw-semibold mb-1">Tablo</label>
@@ -81,10 +80,15 @@
 </div>
 
 <!-- Tablo -->
-<div class="card shadow-sm">
-    <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0">
-            <thead class="table-dark">
+<div class="table-card">
+    <div class="table-header">
+        <i class="fas fa-history text-primary"></i>
+        <span class="fw-semibold">Değişiklik Günlüğü</span>
+        <span class="badge bg-secondary ms-1">@total.ToString("N0") kayıt</span>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
                 <tr>
                     <th style="width:140px">Tarih / Saat</th>
                     <th style="width:130px">Tablo</th>
@@ -196,7 +200,7 @@
     </div>
     @if (totalPages > 1)
     {
-        <div class="card-footer d-flex justify-content-between align-items-center py-2">
+        <div class="p-2 border-top d-flex justify-content-between align-items-center">
             <small class="text-muted">
                 Sayfa @(curPage) / @totalPages &nbsp;·&nbsp;
                 @(((curPage-1)*pageSize)+1)–@(Math.Min(curPage*pageSize, total)) / @total kayıt
