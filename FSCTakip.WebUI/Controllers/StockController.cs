@@ -388,12 +388,13 @@ namespace FSCTakip.WebUI.Controllers
         // GET /Stock/RawMaterial — FscSerial bazlı hammadde stoğu
         public async Task<IActionResult> RawMaterial(
             int[]? fscTypeIds, int[]? supplierIds, int[]? productIds,
+            int[]? productGroupIds,
             bool? showEmpty = false)
         {
             var query = _context.FscSerials
                 .Include(s => s.Lot).ThenInclude(l => l.Supplier)
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(s => s.Lot).ThenInclude(l => l.Product)
+                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
                 .AsQueryable();
 
             if (showEmpty != true)
@@ -405,6 +406,9 @@ namespace FSCTakip.WebUI.Controllers
                 query = query.Where(s => s.Lot.SupplierId.HasValue && supplierIds.Contains(s.Lot.SupplierId.Value));
             if (productIds != null && productIds.Length > 0)
                 query = query.Where(s => s.Lot.ProductId.HasValue && productIds.Contains(s.Lot.ProductId.Value));
+            if (productGroupIds != null && productGroupIds.Length > 0)
+                query = query.Where(s => s.Lot.Product != null && s.Lot.Product.ProductGroupId.HasValue
+                    && productGroupIds.Contains(s.Lot.Product.ProductGroupId.Value));
 
             var serials = await query
                 .OrderBy(s => s.Lot.FscType.Name)
@@ -439,31 +443,37 @@ namespace FSCTakip.WebUI.Controllers
                 .OrderByDescending(x => x.TotalKg)
                 .ToList();
 
-            ViewBag.FscTypes  = await _context.FscTypes.Where(f => f.IsActive).ToListAsync();
-            ViewBag.Suppliers = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
-            ViewBag.Products  = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
-            ViewBag.FscTypeIds  = fscTypeIds  ?? Array.Empty<int>();
-            ViewBag.SupplierIds = supplierIds ?? Array.Empty<int>();
-            ViewBag.ProductIds  = productIds  ?? Array.Empty<int>();
-            ViewBag.ShowEmpty   = showEmpty ?? false;
+            ViewBag.FscTypes      = await _context.FscTypes.Where(f => f.IsActive).ToListAsync();
+            ViewBag.Suppliers     = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
+            ViewBag.Products      = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
+            ViewBag.ProductGroups = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
+            ViewBag.FscTypeIds       = fscTypeIds      ?? Array.Empty<int>();
+            ViewBag.SupplierIds      = supplierIds     ?? Array.Empty<int>();
+            ViewBag.ProductIds       = productIds      ?? Array.Empty<int>();
+            ViewBag.ProductGroupIds  = productGroupIds ?? Array.Empty<int>();
+            ViewBag.ShowEmpty        = showEmpty ?? false;
 
             return View(serials);
         }
 
         // GET /Stock/ExportRawMaterial
         public async Task<IActionResult> ExportRawMaterial(
-            int[]? fscTypeIds, int[]? supplierIds, int[]? productIds, bool? showEmpty = false)
+            int[]? fscTypeIds, int[]? supplierIds, int[]? productIds,
+            int[]? productGroupIds, bool? showEmpty = false)
         {
             var query = _context.FscSerials
                 .Include(s => s.Lot).ThenInclude(l => l.Supplier)
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(s => s.Lot).ThenInclude(l => l.Product)
+                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
                 .AsQueryable();
 
             if (showEmpty != true)
                 query = query.Where(s => s.CurrentWeight > 0);
             if (fscTypeIds != null && fscTypeIds.Length > 0)
                 query = query.Where(s => fscTypeIds.Contains(s.Lot.FscTypeId));
+            if (productGroupIds != null && productGroupIds.Length > 0)
+                query = query.Where(s => s.Lot.Product != null && s.Lot.Product.ProductGroupId.HasValue
+                    && productGroupIds.Contains(s.Lot.Product.ProductGroupId.Value));
             if (supplierIds != null && supplierIds.Length > 0)
                 query = query.Where(s => s.Lot.SupplierId.HasValue && supplierIds.Contains(s.Lot.SupplierId.Value));
             if (productIds != null && productIds.Length > 0)

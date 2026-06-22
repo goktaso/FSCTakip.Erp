@@ -1,9 +1,11 @@
 @model List<FSCTakip.Core.Entities.FscSerial>
 @{
     ViewData["Title"] = "Hammadde Stoğu";
-    var fscTypeIds  = ViewBag.FscTypeIds  as int[] ?? Array.Empty<int>();
-    var supplierIds = ViewBag.SupplierIds as int[] ?? Array.Empty<int>();
-    var productIds  = ViewBag.ProductIds  as int[] ?? Array.Empty<int>();
+    var fscTypeIds      = ViewBag.FscTypeIds      as int[] ?? Array.Empty<int>();
+    var supplierIds     = ViewBag.SupplierIds     as int[] ?? Array.Empty<int>();
+    var productIds      = ViewBag.ProductIds      as int[] ?? Array.Empty<int>();
+    var productGroupIds = ViewBag.ProductGroupIds as int[] ?? Array.Empty<int>();
+    var productGroups   = ViewBag.ProductGroups   as List<FSCTakip.Core.Entities.ProductGroup> ?? new();
     bool showEmpty = ViewBag.ShowEmpty ?? false;
     decimal totalKg     = ViewBag.TotalKg     ?? 0m;
     int totalBobins     = ViewBag.TotalBobins ?? 0;
@@ -24,7 +26,7 @@
         <button class="topbar-btn" id="btnFilter">
             <i class="fas fa-filter"></i> Filtrele
         </button>
-        <a href="/Stock/ExportRawMaterial?@foreach(var id in fscTypeIds){<text>fscTypeIds=@id&</text>}@foreach(var id in supplierIds){<text>supplierIds=@id&</text>}@foreach(var id in productIds){<text>productIds=@id&</text>}showEmpty=@showEmpty"
+        <a href="/Stock/ExportRawMaterial?@foreach(var id in productGroupIds){<text>productGroupIds=@id&</text>}@foreach(var id in fscTypeIds){<text>fscTypeIds=@id&</text>}@foreach(var id in supplierIds){<text>supplierIds=@id&</text>}@foreach(var id in productIds){<text>productIds=@id&</text>}showEmpty=@showEmpty"
            class="topbar-btn btn-excel">
             <i class="fas fa-file-excel"></i> Excel
         </a>
@@ -43,6 +45,38 @@
 <div class="filter-panel" id="filterPanel" style="display:none;">
     <form method="get" action="/Stock/RawMaterial">
         <div class="d-flex flex-wrap gap-2 align-items-end">
+            <!-- Ürün Grubu MCD -->
+            <div style="display:flex;flex-direction:column;">
+                <label class="form-label small fw-semibold mb-1">Ürün Grubu</label>
+                <div class="mcd" id="mcd-raw-grp" data-placeholder="— Tümü —" style="min-width:160px;">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-raw-grp')">
+                        <span class="mcd-lbl">@(productGroupIds.Length > 0 ? productGroupIds.Length + " grup seçildi" : "— Tümü —")</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-raw-grp-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Grup ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <label class="mcd-row mcd-header">
+                            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-raw-grp')">
+                            <span>Tümünü Seç / Temizle</span>
+                        </label>
+                        <div class="mcd-items">
+                            @foreach (var g in productGroups)
+                            {
+                                bool sel = productGroupIds.Contains(g.Id);
+                                <label class="mcd-row">
+                                    <input type="checkbox" name="productGroupIds" value="@g.Id" class="mcd-cb"
+                                           onchange="mcdUpdate('mcd-raw-grp')"
+                                           checked="@(sel ? "checked" : null)">
+                                    <span class="mcd-name">@g.GroupName</span>
+                                </label>
+                            }
+                        </div>
+                        <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                    </div>
+                </div>
+            </div>
             <div style="display:flex;flex-direction:column;">
                 <label class="form-label small fw-semibold mb-1">FSC Tipi</label>
                 <div class="mcd" id="mcd-raw-fsc" data-placeholder="— Tümü —" style="min-width:140px;">
