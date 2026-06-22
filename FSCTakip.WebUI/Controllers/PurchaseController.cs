@@ -85,6 +85,16 @@ namespace FSCTakip.WebUI.Controllers
 
             ViewBag.IsDefaultFilter  = !hasUserFilter;
             ViewBag.ShowAll          = showAll;
+
+            // Toplam fiziksel stok (satın alma + dönüşüm dahil) — diğer sayfalarla tutarlı
+            var defaultGrpNames = new[] { "HAMMADDE", "YARI MAMUL", "YARI MAMÜL", "BURGU SAP" };
+            ViewBag.ToplamFizikselStok = await _context.FscSerials
+                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
+                .Where(s => s.CurrentWeight > 0
+                    && s.Lot.Product != null
+                    && s.Lot.Product.ProductGroup != null
+                    && defaultGrpNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
+                .SumAsync(s => s.CurrentWeight);
             ViewBag.ProductGroupIds  = productGroupIds ?? Array.Empty<int>();
             ViewBag.ProductGroups    = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
 
