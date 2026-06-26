@@ -86,15 +86,7 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.IsDefaultFilter  = !hasUserFilter;
             ViewBag.ShowAll          = showAll;
 
-            // Toplam fiziksel stok (satın alma + dönüşüm dahil) — diğer sayfalarla tutarlı
             var defaultGrpNames = new[] { "HAMMADDE", "YARI MAMUL", "YARI MAMÜL", "BURGU SAP" };
-            ViewBag.ToplamFizikselStok = await _context.FscSerials
-                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
-                .Where(s => s.CurrentWeight > 0
-                    && s.Lot.Product != null
-                    && s.Lot.Product.ProductGroup != null
-                    && defaultGrpNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .SumAsync(s => s.CurrentWeight);
             ViewBag.ProductGroupIds  = productGroupIds ?? Array.Empty<int>();
             ViewBag.ProductGroups    = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
 
@@ -124,29 +116,40 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.ProductUnits   = productUnits;
             ViewBag.ProductFactors = productFactors;
 
-            // FSC Kılıkım Kartları — Ham+YM+BS gruplarındaki FSC'li / FSC'siz stok özeti
-            var fscOzetPurchase = await _context.FscSerials
+            // FSC Kütle Dengesi — Giriş: yalnızca satın alınan seriler (dönüşüm outputları hariç)
+            // Tüketim = Giriş - Kalan (türetilmiş; hammadde→YM dönüşüm Kalan'da kaldığı için sayılmaz)
+            var girisOzetP = await _context.FscSerials
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
                 .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
-                .Where(s => s.Lot.Product != null
-                    && s.Lot.Product.ProductGroup != null
-                    && defaultGrpNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
+                .Where(s => s.Lot.SourceSerialId == null   // sadece satın alınan lotlar
+                         && s.Lot.Product != null
+                         && s.Lot.Product.ProductGroup != null
+                         && defaultGrpNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
                 .GroupBy(s => s.Lot.FscType!.Name.ToUpper().Contains("SIZ") ? "FSCSIZ" : "FSCLI")
-                .Select(g => new {
-                    Tip = g.Key,
-                    Giris = g.Sum(s => s.InitialWeight),
-                    Tuketim = g.Sum(s => s.InitialWeight - s.CurrentWeight),
-                    Kalan = g.Sum(s => s.CurrentWeight)
-                })
+                .Select(g => new { Tip = g.Key, Giris = g.Sum(s => s.InitialWeight) })
                 .ToListAsync();
-            var fscliRowP  = fscOzetPurchase.FirstOrDefault(x => x.Tip == "FSCLI");
-            var fscsizRowP = fscOzetPurchase.FirstOrDefault(x => x.Tip == "FSCSIZ");
-            ViewData["FscliGiris"]    = fscliRowP?.Giris    ?? 0m;
-            ViewData["FscliTuketim"]  = fscliRowP?.Tuketim  ?? 0m;
-            ViewData["FscliKalan"]    = fscliRowP?.Kalan    ?? 0m;
-            ViewData["FscsizGiris"]   = fscsizRowP?.Giris   ?? 0m;
-            ViewData["FscsizTuketim"] = fscsizRowP?.Tuketim ?? 0m;
-            ViewData["FscsizKalan"]   = fscsizRowP?.Kalan   ?? 0m;
+            var kalanOzetP = await _context.FscSerials
+                .Include(s => s.Lot).ThenInclude(l => l.FscType)
+                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
+                .Where(s => s.CurrentWeight > 0
+                         && s.Lot.Product != null
+                         && s.Lot.Product.ProductGroup != null
+                         && defaultGrpNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
+                .GroupBy(s => s.Lot.FscType!.Name.ToUpper().Contains("SIZ") ? "FSCSIZ" : "FSCLI")
+                .Select(g => new { Tip = g.Key, Kalan = g.Sum(s => s.CurrentWeight) })
+                .ToListAsync();
+            var fscliGirisP    = girisOzetP.FirstOrDefault(x => x.Tip == "FSCLI")?.Giris  ?? 0m;
+            var fscsizGirisP   = girisOzetP.FirstOrDefault(x => x.Tip == "FSCSIZ")?.Giris ?? 0m;
+            var fscliKalanP    = kalanOzetP.FirstOrDefault(x => x.Tip == "FSCLI")?.Kalan  ?? 0m;
+            var fscsizKalanP   = kalanOzetP.FirstOrDefault(x => x.Tip == "FSCSIZ")?.Kalan ?? 0m;
+            ViewData["FscliGiris"]    = fscliGirisP;
+            ViewData["FscliTuketim"]  = fscliGirisP  - fscliKalanP;
+            ViewData["FscliKalan"]    = fscliKalanP;
+            ViewData["FscsizGiris"]   = fscsizGirisP;
+            ViewData["FscsizTuketim"] = fscsizGirisP - fscsizKalanP;
+            ViewData["FscsizKalan"]   = fscsizKalanP;
+            // ToplamFizikselStok: Kalan sorgusundan (ayrı query gereksiz, tutarlılık sağlanır)
+            ViewBag.ToplamFizikselStok = fscliKalanP + fscsizKalanP;
 
             return View(await query.OrderByDescending(l => l.Id).ToListAsync());
         }
