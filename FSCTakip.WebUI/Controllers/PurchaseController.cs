@@ -1,4 +1,4 @@
-using FSCTakip.Core.Entities;
+﻿using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using FSCTakip.WebUI.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -125,7 +125,7 @@ namespace FSCTakip.WebUI.Controllers
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToUpper().Contains("SIZ") ? "FSCSIZ" : "FSCLI")
+                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
                 .Select(g => new { Tip = g.Key, Giris = g.Sum(s => s.InitialWeight) })
                 .ToListAsync();
             var kalanOzetP = await _context.FscSerials
@@ -135,7 +135,7 @@ namespace FSCTakip.WebUI.Controllers
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToUpper().Contains("SIZ") ? "FSCSIZ" : "FSCLI")
+                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
                 .Select(g => new { Tip = g.Key, Kalan = g.Sum(s => s.CurrentWeight) })
                 .ToListAsync();
             var fscliGirisP    = girisOzetP.FirstOrDefault(x => x.Tip == "FSCLI")?.Giris  ?? 0m;

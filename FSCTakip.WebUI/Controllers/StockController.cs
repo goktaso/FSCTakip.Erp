@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -125,7 +125,7 @@ namespace FSCTakip.WebUI.Controllers
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNamesSummary.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToUpper().Contains("SIZ") ? "FSCSIZ" : "FSCLI")
+                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
                 .Select(g => new { Tip = g.Key, Giris = g.Sum(s => s.InitialWeight) })
                 .ToListAsync();
             var kalanOzetS = await _context.FscSerials
@@ -135,7 +135,7 @@ namespace FSCTakip.WebUI.Controllers
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNamesSummary.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToUpper().Contains("SIZ") ? "FSCSIZ" : "FSCLI")
+                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
                 .Select(g => new { Tip = g.Key, Kalan = g.Sum(s => s.CurrentWeight) })
                 .ToListAsync();
             var fscliGirisS    = girisOzetS.FirstOrDefault(x => x.Tip == "FSCLI")?.Giris  ?? 0m;
@@ -232,7 +232,7 @@ namespace FSCTakip.WebUI.Controllers
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNamesAdmin.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToUpper().Contains("SIZ") ? "FSCSIZ" : "FSCLI")
+                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
                 .Select(g => new { Tip = g.Key, Giris = g.Sum(s => s.InitialWeight) })
                 .ToListAsync();
             var kalanOzetA = await _context.FscSerials
@@ -242,7 +242,7 @@ namespace FSCTakip.WebUI.Controllers
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNamesAdmin.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToUpper().Contains("SIZ") ? "FSCSIZ" : "FSCLI")
+                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
                 .Select(g => new { Tip = g.Key, Kalan = g.Sum(s => s.CurrentWeight) })
                 .ToListAsync();
             var fscliGirisA    = girisOzetA.FirstOrDefault(x => x.Tip == "FSCLI")?.Giris  ?? 0m;
@@ -549,7 +549,7 @@ namespace FSCTakip.WebUI.Controllers
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNamesRaw.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToUpper().Contains("SIZ") ? "FSCSIZ" : "FSCLI")
+                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
                 .Select(g => new { Tip = g.Key, Giris = g.Sum(s => s.InitialWeight) })
                 .ToListAsync();
             var kalanOzetR = await _context.FscSerials
@@ -559,7 +559,7 @@ namespace FSCTakip.WebUI.Controllers
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNamesRaw.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToUpper().Contains("SIZ") ? "FSCSIZ" : "FSCLI")
+                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
                 .Select(g => new { Tip = g.Key, Kalan = g.Sum(s => s.CurrentWeight) })
                 .ToListAsync();
             var fscliGirisR    = girisOzetR.FirstOrDefault(x => x.Tip == "FSCLI")?.Giris  ?? 0m;

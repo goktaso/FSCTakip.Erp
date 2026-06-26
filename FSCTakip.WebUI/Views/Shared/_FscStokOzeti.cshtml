@@ -26,7 +26,9 @@
             <span class="fw-semibold text-white" style="font-size:13px;">FSC Kütle Dengesi</span>
             <span class="badge ms-auto" style="background:rgba(25,118,210,.3);color:#93c5fd;font-size:10px;">Ham · YM · Burgu Sap</span>
         </div>
-        <div class="row g-2 text-center" style="font-size:12px;">
+
+        <!-- Giriş / Tüketim / Kalan tablosu -->
+        <div class="row g-2 text-center mb-3" style="font-size:12px;">
             <!-- Başlıklar -->
             <div class="col-3" style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;"></div>
             <div class="col-3" style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">GİRİŞ (kg)</div>
@@ -63,6 +65,38 @@
             <div class="col-3 fw-bold text-white" style="font-size:13px;">@toplamGiris.ToString("N0")</div>
             <div class="col-3 fw-bold" style="color:#fca5a5;font-size:13px;">@toplamTuketim.ToString("N0")</div>
             <div class="col-3 fw-bold" style="color:#4ade80;font-size:13px;">@toplamKalan.ToString("N0")</div>
+        </div>
+
+        <!-- Bakiye Kartları -->
+        <hr style="border-color:rgba(255,255,255,.12);margin:4px 0 12px;">
+        <div class="row g-2">
+            <div class="col-4">
+                <div class="rounded-3 text-center py-2 px-3" style="background:rgba(22,163,74,.12);border:1px solid rgba(22,163,74,.25);">
+                    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:rgba(255,255,255,.5);margin-bottom:4px;">
+                        <i class="fas fa-certificate me-1" style="color:#86efac;font-size:9px;"></i>FSC'li Bakiye
+                    </div>
+                    <div class="fw-bold" style="font-size:18px;color:#86efac;">@fscliKalan.ToString("N0")</div>
+                    <div style="font-size:10px;color:rgba(255,255,255,.35);">kg</div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="rounded-3 text-center py-2 px-3" style="background:rgba(217,119,6,.12);border:1px solid rgba(217,119,6,.25);">
+                    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:rgba(255,255,255,.5);margin-bottom:4px;">
+                        <i class="fas fa-times-circle me-1" style="color:#fbbf24;font-size:9px;"></i>FSC'siz Bakiye
+                    </div>
+                    <div class="fw-bold" style="font-size:18px;color:#fbbf24;">@fscsizKalan.ToString("N0")</div>
+                    <div style="font-size:10px;color:rgba(255,255,255,.35);">kg</div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="rounded-3 text-center py-2 px-3" style="background:rgba(25,118,210,.15);border:1px solid rgba(25,118,210,.3);">
+                    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:rgba(255,255,255,.5);margin-bottom:4px;">
+                        <i class="fas fa-sigma me-1" style="color:#93c5fd;font-size:9px;"></i>Toplam Bakiye
+                    </div>
+                    <div class="fw-bold" style="font-size:18px;color:#93c5fd;">@toplamKalan.ToString("N0")</div>
+                    <div style="font-size:10px;color:rgba(255,255,255,.35);">kg</div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
