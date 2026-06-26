@@ -277,6 +277,49 @@ if (!window._mcdReady) {
 
 **Uyarı:** Her view'de MCD kullanılırsa, `window._mcdReady` guard ile coklu tanımlama önlenmelidir.
 
+### ⚠️ Shared Partial'lerde ViewData Aktarımı — `new ViewDataDictionary(ViewData)`
+
+Shared partial'lere (`Views/Shared/_PartialName.cshtml`) ViewBag değerleri geçiş işe yaramaz çünkü partial **farklı ViewContext**'te render edilir. ViewBag'e set edilen değerler partial'e görünmez.
+
+**Çözüm:** ViewData dictionary'yi explicit olarak çoğalt ve partial'e ver:
+```razor
+@await Html.PartialAsync("_PartialName", null, 
+    new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData))
+```
+
+Partial içinde ViewData["key"] ile erişim çalışır; `ViewBag.key` ve `Model` partial için bağlam dışı kalabilir.
+
+**Best practice:**
+- **Shared partial'ler:** ViewData kullan (`ViewData["FscliGiris"] = ...`)
+- **Page partial'ler** (aynı folder'da): ViewBag veya Model tercih edilebilir
+- **Reusable component'ler:** ViewData daha güvenli (context-independent)
+
+**Örnek — FSC Kütle Dengesi Kartı (_FscStokOzeti.cshtml):**
+```razor
+@* Partial başında ViewData'dan oku *@
+@{
+    var fscliGiris = (decimal)(ViewData["FscliGiris"] ?? 0m);
+    var fscsizGiris = (decimal)(ViewData["FscsizGiris"] ?? 0m);
+    // ...
+}
+
+@* HTML kartı render et *@
+<div class="card">...</div>
+```
+
+**Çağrı (4 sayfada ortak):**
+```razor
+@* Controller ViewData'yı doldur *@
+ViewData["FscliGiris"] = fscliGirisKg;
+ViewData["FscsizGiris"] = fscsizGirisKg;
+
+@* View'de partial'i çağır; ViewData'yı aktar *@
+@await Html.PartialAsync("_FscStokOzeti", null, 
+    new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData))
+```
+
+**Uygulandığı:** `_FscStokOzeti.cshtml` (Purchase, Stock/Summary, Stock/RawMaterial, Stock/AdminStock).
+
 ### ⚠️ Varsayılan Filtre Deseni — "Tüm Kayıtları Göster" Toggle
 
 Kullanıcı filtre seçmediğinde, sayfalar **sensible varsayılan** grup/kategori ile içerik sınırlamalı; ama "Tüm Kayıtları Göster" seçeneğiyle tam liste erişimi mümkün olmalı:
@@ -339,7 +382,11 @@ else if ((bool)(ViewBag.ShowAll ?? false))
 
 **URL deseni:** `?` (varsayılan) vs `?showAll=true` (tümü) vs `?productIds=5&productIds=6` (seçili filtre).
 
-**Uygulanan yerler:** Purchase/Index (varsayılan: Hammadde+YM+BS).
+**Uygulanan yerler:** 
+- `Purchase/Index` (varsayılan: Hammadde+YM+BS)
+- `Stock/RawMaterial` (varsayılan: Hammadde+YM+BS) — 2026-06-22 eklendi
+
+**⚠️ Grup adları dinamik (ID değil):** Yeni kodlarda hardcoded GroupId'ler yerine `ProductGroup.GroupName.ToUpper()` ile dinamik lookup yapılmalı. Böylece grup ID'leri değişse bile pattern çalışır.
 
 ### ⚠️ StockMovement.ProductId Non-Nullable Kural
 
@@ -648,3 +695,4 @@ Dropdown panel kapatma/açma + seçim işlemi birbiriyle çakışıyorsa: grup b
 - FSC sertifikası takibi için `Supplier.FscExpiryDate` ve `Customer.FscExpiryDate` dashboard'da uyarı gösterilmeli.
 - `ProductRecipe` çoka-çok ilişkisi `DeleteBehavior.Restrict` ile konfigüre edilmiş.
 - **ProductionConsumption enum değeri** MovementType'a eklendi (5 = Üretim tüketimi). Tüm switch/if blokları, badge'ler, filtre dropdown'ları kontrol et.
+- **Toplam Fiziksel Stok tutarlılığı** (2026-06-22): Purchase ve Stock/RawMaterial sayfalarında "Kalan (kg)" kartı tüm Ham+YM+BS serilerin CurrentWeight toplamını göstermeli. ViewBag'den gelen değer varsa kullan; yoksa modelden hesapla. Grup adları dinamik (HAMMADDE/YARI MAMUL/BURGU SAP uppercase match) — hardcoded GroupId'ler kullanma.

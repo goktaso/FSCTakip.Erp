@@ -1616,18 +1616,29 @@ FSC CoC (Chain of Custody) mass-balance hesabı için en kritik ekran. Her FscSe
 
 | Alan | Açıklama |
 |------|----------|
+| Ürün Grubu | Hammadde / Yarı Mamül / Burgu Sap seçimli filtresi (MCD) |
 | FSC Tipi | Belirli sertifika sınıfını göster |
 | Tedarikçi | Tedarikçiye göre filtrele |
 | Stok / Ürün | Belirli hammadde türüne göre filtrele |
 | Tükenenler dahil | İşaretlenirse CurrentWeight=0 bobinler de gösterilir |
 
+### Varsayılan Filtre (2026-06-22)
+
+**Sayfa ilk açılışında:** Filtre seçmediğiniz sürece, üç grup gösterilir:
+- Hammadde (Ham+YM+BS)
+- Yarı Mamül
+- Burgu Sap
+
+Tüm ürün gruplarını görmek için mavi bilgi bandındaki **"Tüm Grupları Göster"** linkine tıklayın.
+
 ### Kullanım
 
 1. Sol Menü → **Hammadde Stoğu** tıklayın
-2. Varsayılan görünümde yalnızca aktif (CurrentWeight > 0) bobinler listelenir
-3. **Filtrele** ile FSC tipine veya tedarikçiye göre daraltın — denetim anında hangi FSC sınıfından kaç kg kaldığını gösterir
-4. **Excel** ile tüm aktif stoğu dışa aktarın
+2. Varsayılan görünümde **Hammadde + Yarı Mamül + Burgu Sap** grupları listelenir; yalnızca aktif (CurrentWeight > 0) bobinler gösterilir
+3. **Filtrele** ile FSC tipine, tedarikçiye veya grup seçimine göre daraltın — denetim anında hangi FSC sınıfından kaç kg kaldığını gösterir
+4. **Excel** ile aktif stoğu dışa aktarın
 5. Seri No veya Lot No linkine tıklayarak Lot Detayı sayfasına geçin
+6. **Tüm Grupları Göster** ile diğer ürün gruplarını (varsa) görün
 
 ### Excel İndirme
 

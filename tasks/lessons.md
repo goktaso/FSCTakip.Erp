@@ -440,13 +440,13 @@ if (field === 'kod') {
 
 **Uygulandığı:** `FSCTakip.WebUI/Views/Conversion/Index.cshtml` satır 326-332 (stok kodu seçilince stok adı).
 
-## Varsayılan filtre + "Tüm Kayıtları Göster" toggle (2026-06-21)
+## Varsayılan filtre + "Tüm Kayıtları Göster" toggle (2026-06-21, genişletildi 2026-06-22)
 
-**Amaç:** Kullanıcı filtre seçmediğinde sensible varsayılan yapı göster (örn. Purchase'da Hammadde+YM+BS), ama "Tüm Kayıtları Göster" seçeneğiyle full liste erişimini sağla.
+**Amaç:** Kullanıcı filtre seçmediğinde sensible varsayılan yapı göster (örn. Hammadde+YM+BS), ama "Tüm Kayıtları Göster" seçeneğiyle full liste erişimini sağla.
 
 **Yapı:**
 - Controller: `bool showAll = false` parametresi + `hasUserFilter` bayrağı (filtre seçildi mi = supplierIds/productIds/stockCode/etc. boş değil)
-- `hasUserFilter == false && showAll == false` → varsayılan GroupIds (1,3,4 = Hammadde, YM, BS) filtresiyle query çalışır
+- `hasUserFilter == false && showAll == false` → varsayılan GroupIds (ada göre: "HAMMADDE", "YARI MAMUL", "BURGU SAP") filtresiyle query çalışır
 - `showAll == true` → filtreler yok, tüm kayıtlar
 - ViewBag: `IsDefaultFilter` ve `ShowAll` boolean'ları view'de render kontrolü için
 
@@ -459,9 +459,11 @@ if (field === 'kod') {
 - `?showAll=true` → tüm kayıtlar + ikinci bilgi bandı
 - `?productIds=5&productIds=6` veya diğer filtreler → varsayılan geçersiz, seçilen filtreler uygulanır
 
-**Kullanılan yerler (2026-06-21):** `Purchase/Index` (Hammadde+YM+BS).
+**Kullanılan yerler:**
+- `Purchase/Index` — varsayılan: HAMMADDE+YARI MAMUL+BURGU SAP (dinamik GroupName sorgusu)
+- `Stock/RawMaterial` — varsayılan: HAMMADDE+YARI MAMUL+BURGU SAP (dinamik GroupName sorgusu)
 
-**Not:** Bu pattern diğer sayfalar (Stock/Index, Production/Index) için de uygulanabilir; her sayfa kendi varsayılan GroupIds'ini tanımlayabilir.
+**Not:** Grup adları **grup ID'sine göre değil**, `ProductGroup.GroupName.ToUpper()` sorgusuyla dinamik alınıyor. Böylece grup ID'leri değişse bile pattern çalışmaya devam ediyor.
 
 **CSS:** Bilgi bandı inline style (rgba mavi/beyaz arka plan, 12.5px font), hover efekti veya geçiş animasyonu YOK (statik banner). Linkler `btn btn-sm` sınıfı taşır, hover renk değişimi minimal.
 
@@ -870,3 +872,138 @@ input.style.fontWeight = '600';      // Vurgulu yazı tipi
 **UX avantajı:** Kullanıcı seçili bobin numarasını input'ta açıkça görür; placeholder'a bakmaya gerek kalmaz. Daha net ve profesyonel görünüm.
 
 **Uygulandığı:** `FSCTakip.WebUI/Views/Production/Detail.cshtml` satır 1040-1047 (commit afde463).
+
+## Toplam Fiziksel Stok kartı — Purchase + Stock/RawMaterial (2026-06-22)
+
+**Amaç:** Purchase ve Stock/RawMaterial sayfalarında, "Kalan (kg)" kartı artık yalnızca satın alınan hamların kalanını değil, **dönüşümle oluşturulan YM lotlarını da dahil** eder (üretim tüketimine kadarki tüm Ham+YM+BS fiziksel stoğu).
+
+**Yapı:**
+- **Purchase/Index:**
+  - Controller: `ViewBag.ToplamFizikselStok` — `FscSerials` tablosundan HAMMADDE+YARI MAMUL+BURGU SAP GroupName'li ürünlerin `CurrentWeight` toplamı
+  - Query: `GroupName.ToUpper()` içinde "HAMMADDE", "YARI MAMUL", "BURGU SAP" var mı kontrolü
+  - View: Kart etiketi `isDefaultFilter` true'ysa "Toplam Fiziksel Stok", false'ysa "Kalan (kg)"
+  - Fallback: `toplamFizikselStok ?? kalanKg` — ViewBag'den gelmezse model toplamını kullan
+
+- **Stock/RawMaterial:**
+  - Controller: Zaten varsayılan filtresiyle HAMMADDE+YARI MAMUL+BURGU SAP gösteriliyor; bu sayfayı açmak = fiziksel stok görüntülemek
+
+**Veri akışı:**
+```csharp
+// PurchaseController.Index
+var defaultGrpNames = new[] { "HAMMADDE", "YARI MAMUL", "YARI MAMÜL", "BURGU SAP" };
+ViewBag.ToplamFizikselStok = await _context.FscSerials
+    .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
+    .Where(s => s.CurrentWeight > 0
+        && s.Lot.Product != null
+        && s.Lot.Product.ProductGroup != null
+        && defaultGrpNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
+    .SumAsync(s => s.CurrentWeight);
+```
+
+**Not:** Grup adlarında typo (YARI MAMÜL vs YARI MAMUL) toleransı için her iki form dahil edildi (`ToUpper()` ile).
+
+**Uygulandığı:** `PurchaseController.Index` (commit d94db7c), `StockController.RawMaterial` (commit c0c79bd).
+
+## FSC Kütle Dengesi Partial (_FscStokOzeti.cshtml) — 4 sayfada ortak kart (2026-06-26)
+
+**Amaç:** Purchase, Stock/Summary, Stock/RawMaterial, Stock/AdminStock sayfalarında ortak FSC stok kırılım kartını bir partial olarak merkezi yönetme.
+
+**Yapı:**
+- **Partial:** `Views/Shared/_FscStokOzeti.cshtml` — 6 ViewData değeri alır:
+  - `FscliGiris`, `FscsizGiris` (giriş KG, FSC'li/siz ayrımı)
+  - `FscliTuketim`, `FscsizTuketim` (tüketim KG)
+  - `FscliKalan`, `FscsizKalan` (kalan stok KG)
+
+**Rendering logic:**
+```csharp
+// Partial başında ViewData'dan çek, default 0
+var fscliGiris = (decimal)(ViewData["FscliGiris"] ?? 0m);
+var fscsizGiris = (decimal)(ViewData["FscsizGiris"] ?? 0m);
+// ...
+
+// Hesapla
+var toplamGiris = fscliGiris + fscsizGiris;
+var toplamTuketim = fscliTuketim + fscsizTuketim;
+var toplamKalan = fscliKalan + fscsizKalan;
+```
+
+**UI tasarımı:**
+- Kart: koyu gradient zemin (#0f172a → #1a2744), Bootstrap rounded-3
+- Başlık: "FSC Kütle Dengesi" + "Ham · YM · Burgu Sap" badge'i
+- 3 kolon × 3 satır (FSC'li, FSC'siz, Toplam) × 4 kolon (Kategori, Giriş, Tüketim, Kalan)
+- Renk kodlaması:
+  - FSC'li giriş: beyaz yazı, koyu arka plan
+  - FSC'li tüketim: kırmızı (#fca5a5)
+  - FSC'li kalan: yeşil (#86efac)
+  - FSC'siz benzer, ama altın/sarı ton (#fbbf24)
+
+**Çağrı pattern (4 sayfada ortak):**
+```razor
+@await Html.PartialAsync("_FscStokOzeti", null, 
+    new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData))
+```
+ViewData'yı partial'e doğrudan aktar; null model (sadece ViewData kullanılır).
+
+**Controller tarafında ViewData doldurma (örn. StockController.Summary):**
+```csharp
+public async Task<IActionResult> Summary(int[]? productGroupIds, bool showAll = false)
+{
+    // ... query ve filtreleme ...
+    
+    // FSC kırılım hesaplaması
+    var fscliGirisKg = serials
+        .Where(s => s.Lot.FscType != null && s.Lot.FscType.Name.Contains("FSC"))
+        .SelectMany(s => _context.StockMovements
+            .Where(sm => sm.DocumentNo == s.Lot.PartiNo && sm.MovementType == MovementType.PurchaseEntry))
+        .Sum(sm => sm.QuantityKg ?? sm.Quantity);
+    var fscsizGirisKg = serials
+        .Where(s => s.Lot.FscType == null || !s.Lot.FscType.Name.Contains("FSC"))
+        .SelectMany(s => _context.StockMovements
+            .Where(sm => sm.DocumentNo == s.Lot.PartiNo && sm.MovementType == MovementType.PurchaseEntry))
+        .Sum(sm => sm.QuantityKg ?? sm.Quantity);
+    
+    ViewData["FscliGiris"] = fscliGirisKg;
+    ViewData["FscsizGiris"] = fscsizGirisKg;
+    // ... benzer şekilde Tüketim ve Kalan ...
+    
+    return View(summary);
+}
+```
+
+**Tuzak — Null kontrolü:**
+- StockMovement.QuantityKg nullable olabilir (eski kayıtlar). Her zaman `sm.QuantityKg ?? sm.Quantity` fallback'i kullan.
+- FscType null olabilir. Null'u "FSC'siz" olarak kategorize et.
+
+**Uygulandığı:** `PurchaseController.Index`, `StockController.Summary`, `StockController.RawMaterial`, `StockController.AdminStock` (commit d32e8dc).
+
+## Stock/RawMaterial action'a varsayılan grup filtresi + ShowAll (2026-06-26)
+
+**Güncelleme:** RawMaterial action'ında varsayılan filtre eklendi (Purchase/Index'le tutarlı).
+
+**Yapı:**
+- Parametreler: `showAll = false` eklendi
+- `hasUserFilter` bayrağı: filtre/showEmpty/showAll boş değil mi kontrol et
+- Varsayılan filtre: "HAMMADDE", "YARI MAMUL", "BURGU SAP" grup adlarına göre (dynamik, ID değil)
+- ViewBag.IsDefaultFilter: bilgi bandısı render control'ü için
+
+**Kontrol istemeyen sayfalar (admin/debug):**
+- `Stock/AdminStock` — varsayılan filtre YOK; her zaman tüm kayıtlar
+- Bu sayfalar zaten partial kart ile FSC kırılımı gösteriyor
+
+**Uygulandığı:** `StockController.RawMaterial` (commit c0c79bd).
+
+## ViewData vs ViewBag farkı — Partial'lere ViewData aktarımı (2026-06-26)
+
+**Durum:** Partial'lere ViewBag değerleri geçiş işe yaramıyor çünkü partial farklı ViewContext'te render edilir.
+
+**Çözüm:** ViewData dictionary'yi `new ViewDataDictionary(ViewData)` ile explicit çoğaltıp partial'e ver:
+```razor
+@await Html.PartialAsync("_PartialName", null, 
+    new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData))
+```
+
+Partial içinde ViewData["key"] erişimi çalışır; `ViewBag.key` ve `Model` partial için bağlam dışı kalabilir.
+
+**Best practice:** Shared partial'lerde **ViewData** kullan; page partial'lerde **Model** veya **ViewBag** tercih edilebilir (ama küçük component'ler için ViewData daha güvenli).
+
+**Uygulandığı:** `_FscStokOzeti.cshtml` (commit d32e8dc).

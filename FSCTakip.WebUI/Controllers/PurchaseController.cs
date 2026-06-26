@@ -124,6 +124,30 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.ProductUnits   = productUnits;
             ViewBag.ProductFactors = productFactors;
 
+            // FSC Kılıkım Kartları — Ham+YM+BS gruplarındaki FSC'li / FSC'siz stok özeti
+            var fscOzetPurchase = await _context.FscSerials
+                .Include(s => s.Lot).ThenInclude(l => l.FscType)
+                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
+                .Where(s => s.Lot.Product != null
+                    && s.Lot.Product.ProductGroup != null
+                    && defaultGrpNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
+                .GroupBy(s => s.Lot.FscType!.Name.ToUpper().Contains("SIZ") ? "FSCSIZ" : "FSCLI")
+                .Select(g => new {
+                    Tip = g.Key,
+                    Giris = g.Sum(s => s.InitialWeight),
+                    Tuketim = g.Sum(s => s.InitialWeight - s.CurrentWeight),
+                    Kalan = g.Sum(s => s.CurrentWeight)
+                })
+                .ToListAsync();
+            var fscliRowP  = fscOzetPurchase.FirstOrDefault(x => x.Tip == "FSCLI");
+            var fscsizRowP = fscOzetPurchase.FirstOrDefault(x => x.Tip == "FSCSIZ");
+            ViewData["FscliGiris"]    = fscliRowP?.Giris    ?? 0m;
+            ViewData["FscliTuketim"]  = fscliRowP?.Tuketim  ?? 0m;
+            ViewData["FscliKalan"]    = fscliRowP?.Kalan    ?? 0m;
+            ViewData["FscsizGiris"]   = fscsizRowP?.Giris   ?? 0m;
+            ViewData["FscsizTuketim"] = fscsizRowP?.Tuketim ?? 0m;
+            ViewData["FscsizKalan"]   = fscsizRowP?.Kalan   ?? 0m;
+
             return View(await query.OrderByDescending(l => l.Id).ToListAsync());
         }
 
