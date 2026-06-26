@@ -1007,3 +1007,142 @@ Partial içinde ViewData["key"] erişimi çalışır; `ViewBag.key` ve `Model` p
 **Best practice:** Shared partial'lerde **ViewData** kullan; page partial'lerde **Model** veya **ViewBag** tercih edilebilir (ama küçük component'ler için ViewData daha güvenli).
 
 **Uygulandığı:** `_FscStokOzeti.cshtml` (commit d32e8dc).
+
+## FSC'siz Türkçe ToUpper() Hata Tespiti ve Düzeltme (2026-06-26) — KRİTİK
+
+**Sorun:** "FSC'siz" stringinin FSC kategorisini tespitinde `ToUpper().Contains("SIZ")` pattern'i yanlış sonuç veriyordu.
+
+**Kök neden:** Türkçe (tr-TR) kültüründe:
+- `"fsc'siz".ToUpper()` → `"FSC'SİZ"` (doğru `i` yerine Latin `İ` karakteri kullanılır)
+- `.Contains("SIZ")` → false (aranılan string `SIZ` ama bulunacak `SİZ` olduğu için)
+
+SQL Server LOWER() fonksiyonunun aksine, C# `ToUpper()` kültüre bağlı dönüşüm yapar.
+
+**Etkilenen sayfalar:** 
+- `PurchaseController.Index` — kalan kg (kalanKg) hesaplaması
+- `StockController.Summary` — tüm hesaplamalar
+- `StockController.AdminStock` — tüm hesaplamalar
+- `StockController.RawMaterial` — filtre ve hesaplamalar
+- Toplamda 8 lokasyon
+
+**Çözüm:** Türkçe kültürde güvenli olan `ToLower().Contains("siz")` pattern'ine değiştir:
+```csharp
+// YANLIŞ (Türkçe'de i → İ dönüşümü nedeniyle SIZ bulunamıyor)
+if (isFsc == null && fscType?.ToUpper().Contains("SIZ") == true)
+    kategorisi = "FSC'siz";
+
+// DOĞRU (Türkçe'de s → s, i → i, z → z; lowercase'de karşılaştırma tutarlı)
+if (isFsc == null && fscType?.ToLower().Contains("siz") == true)
+    kategorisi = "FSC'siz";
+```
+
+**NOT:** Her iki pattern'de yeterince test edilmemiş olasılığı var. Bu çözüm (lowercase) pragmatik ve işlev yapıyor; ama SQL Server vs C# string işlemesi arasındaki kültür farkı dikkat gerektirir.
+
+**Uygulandığı:** `PurchaseController.Index`, `StockController.cs` (4 action) (commit 992a37c).
+
+## FSC Kütle Dengesi Formülü — Giriş/Tüketim/Kalan Kategorisizasyonu (2026-06-26) — SEMANTİK
+
+**Eski (yanlış) mantık:**
+- **Giriş:** Tüm scope'daki `FscSerials` InitialWeight toplamı → **YANLIŞ** çünkü dönüşümle oluşturulan YM lotları da sayılıyordu (double-count)
+- **Tüketim:** `InitialWeight - CurrentWeight` → **YANLIŞ** çünkü hammadde→YM dönüşümü tüketim (üretim loss) gibi sayılıyordu (aslında stok dönüşümü)
+
+**Yeni (doğru) mantık:**
+- **Giriş:** `Lot.SourceSerialId IS NULL` olan serilerin `InitialWeight` toplamı (= sadece tedarikçiden satın alınan HAM + BURGU SAP)
+  - Dönüşümle oluşturulan YM lotları (`SourceSerialId != NULL`) Giriş'e dahil edilmiyor
+- **Kalan:** Tüm scope'daki (HAM + YM + BS) `CurrentWeight > 0` toplamı (üretim öncesi depolanan tüm stok)
+- **Tüketim:** Türetilmiş = `Giriş - Kalan` (hammadde→YM dönüşümü YM olarak Kalan'da kaldığı için Tüketim'e girmiyor)
+
+**Sonuç:** Hammadde girişi ve dönüşüm yoluyla oluşan YM'nin toplamı fiziksel stokta Kalan olarak kalır. Tüketim sadece gerçek üretim/satış çıkışıdır.
+
+**StockMovement.MovementType kategorileri:**
+- `PurchaseEntry (1)` = Tedarikçiden hammadde girişi → Giriş
+- `ProductionEntry (1)` = Dönüşümden YM girişi → Giriş (alternatif sayılan)
+- `ProductionConsumption (5)` = Üretimde tüketim (bobin ağırlık azalışı) → Tüketim
+- `SalesDispatch (3)` = Müşteriye çıkış → Tüketim
+
+**NOT:** "Tüketim" tanımı geniş: hem üretim sürtme/fire hem de satış sevkiyatı. Net stok = Giriş − Çıkış.
+
+**Uygulandığı:** `PurchaseController.Index`, `StockController.Summary/AdminStock/RawMaterial` (commit ba9c725).
+
+## ToplamFizikselStok ViewBag Fallback Hata (2026-06-26)
+
+**Sorun:** Purchase/Index sayfasında "Toplam Fiziksel Stok" kartı yanlış değer gösteriyordu.
+
+**Sebep:** ViewBag.ToplamFizikselStok set edilmişti ama view'de fallback'e düşüyordu:
+```razor
+<!-- YANLIŞ: fallback toplamı sadece Model (default filtre) lotlarını sayıyor -->
+@{
+    var toplamFizikselStok = ViewBag.ToplamFizikselStok ?? kalanKg;
+}
+```
+ViewBag null gelince `kalanKg` (Model'den hesaplanan, varsayılan grup filtresi) kullanılıyordu. Ama ViewBag'den gelen controller value 218,872 kg iken, fallback 200,858 kg (eksik) gösteriyordu.
+
+**Çözüm:** ViewBag yerine ViewData kullanıp ve partial'e doğru aktarım:
+```razor
+@{
+    // Partial'den gelen ViewData toplam değerini kullan
+    var fscliKalan = (decimal)(ViewData["FscliKalan"] ?? 0m);
+    var fscsizKalan = (decimal)(ViewData["FscsizKalan"] ?? 0m);
+    var toplamFizikselStok = fscliKalan + fscsizKalan;
+}
+```
+
+**İlgili:** _FscStokOzeti.cshtml partial — FSC'li/siz stok kartlarını doldurur ve ViewData["FscliKalan"], ViewData["FscsizKalan"] set eder.
+
+**Uygulandığı:** `PurchaseController.Index` (ViewData set), `Purchase/Index.cshtml` (fallback logic) (commit aa31c24).
+
+## FSC Bakiye Kartları Partial — 3 büyük statü kartı (_FscStokOzeti.cshtml) (2026-06-26)
+
+**Amaç:** Purchase, Stock/Summary, Stock/RawMaterial, Stock/AdminStock sayfalarında ortak **FSC'li Bakiye / FSC'siz Bakiye / Toplam Bakiye** kartlarını merkezi yönetme.
+
+**Bileşenler:**
+1. **FSC'li Bakiye kartı** (yeşil arka plan, #10b981)
+   - Başlık: "FSC'li Bakiye"
+   - Büyük sayı: `FscliKalan` kg
+   - Alt metin: "FSC sertifikalı stok"
+
+2. **FSC'siz Bakiye kartı** (sarı/altın arka plan, #f59e0b)
+   - Başlık: "FSC'siz Bakiye"
+   - Büyük sayı: `FscsizKalan` kg
+   - Alt metin: "Sertifikat olmayan stok"
+
+3. **Toplam Bakiye kartı** (mavi arka plan, #3b82f6)
+   - Başlık: "Toplam Bakiye"
+   - Büyük sayı: `FscliKalan + FscsizKalan` kg
+   - Alt metin: "Tüm fiziksel stok"
+
+**Tasarım:**
+- Kart: Bootstrap rounded-3, gölge (box-shadow), padding 20px
+- Sayı: 36px font-weight-bold, beyaz yazı
+- Label: 14px semibold, rgba(255,255,255,.85)
+- İkon: 24px ikon (fa-check / fa-times / fa-boxes)
+
+**ViewData parametreleri (controller'dan set edilecek):**
+- `ViewData["FscliGiris"]`, `ViewData["FscsizGiris"]` — giriş KG (şu an kullanılmıyor kartlarda, ileride FSC kırılım raporu için)
+- `ViewData["FscliKalan"]`, `ViewData["FscsizKalan"]` — **ana değerler** (kartlarda gösterilen)
+- `ViewData["FscliTuketim"]`, `ViewData["FscsizTuketim"]` (şu an kullanılmıyor)
+
+**Çağrı (4 sayfada ortak):**
+```razor
+@await Html.PartialAsync("_FscStokOzeti", null, 
+    new ViewDataDictionary(ViewData))
+```
+
+**NOT:** Partial içinde Razor hesaplama yapılıyor; ViewData'dan gelen raw sayılar kullanılır.
+
+**Uygulandığı:** `Views/Shared/_FscStokOzeti.cshtml` (commit 992a37c, d32e8dc).
+
+## StockMovement.Type vs MovementType — Naming (2026-06-26)
+
+**Dikkat:** Bazı yerlerde `StockMovement.Type` (property), diğerlerinde `MovementType.ProductionEntry` (enum) kullanılıyor.
+
+**Doğru isim:** `StockMovement.MovementType` (property name — nullable değil değilse NOT NULL entity'de)
+
+**Yanlış kullanım (legacy):** `sm.Type` → `sm.MovementType` olarak düzeltildi (commit ba9c725).
+
+**Enum tanımı (StockMovement.cs):**
+```csharp
+public int MovementType { get; set; }  // 1,2,3,4,5 değerleri
+```
+
+**Uygulandığı:** `StockController.cs` (commit ba9c725).

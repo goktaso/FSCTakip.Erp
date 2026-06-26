@@ -94,6 +94,11 @@ ProductionConsumption = 5 // Üretim tüketimi (çıkış)
 email.Replace("İ", "i").Replace("I", "ı").ToLowerInvariant()
 // Telefon temizleme:
 new string(phone.Where(char.IsDigit).ToArray())
+
+// ⚠️ ToUpper().Contains() Türkçe kültürde YANLIŞ! (2026-06-26 BUG)
+// Sorun: "fsc'siz".ToUpper() → "FSC'SİZ" (i→İ; S I Z aranırken S İ Z bulunur = false)
+// YANLIŞ:  if (fscType?.ToUpper().Contains("SIZ")) ...  // Türkçe'de i→İ
+// DOĞRU:   if (fscType?.ToLower().Contains("siz")) ...  // Türkçe'de s→s, i→i, z→z (safe)
 ```
 
 ### Controller Pattern
