@@ -13,8 +13,12 @@
     var totalLot   = Model.Count();
     var totalKg    = Model.Sum(l => l.Serials.Sum(s => s.InitialWeight));
     var kalanKg           = Model.Sum(l => l.Serials.Sum(s => s.CurrentWeight));
-    // Toplam fiziksel stok (satın alma + dönüşüm) — diğer sayfalarla tutarlı
-    var toplamFizikselStok = (decimal)(ViewBag.ToplamFizikselStok ?? kalanKg);
+    // Toplam fiziksel stok = FSC'li + FSC'siz kalan (dönüşüm YM dahil, ViewData'dan)
+    var fscliKalanView  = (decimal)(ViewData["FscliKalan"]  ?? 0m);
+    var fscsizKalanView = (decimal)(ViewData["FscsizKalan"] ?? 0m);
+    var toplamFizikselStok = (fscliKalanView + fscsizKalanView) > 0
+        ? (fscliKalanView + fscsizKalanView)
+        : kalanKg;
     var totalBobin = Model.Sum(l => l.Serials.Count);
     var fscUyari   = suppliers.Count(s => s.IsFscActive && s.FscExpiryDate.HasValue && s.FscExpiryDate.Value <= DateTime.Today.AddDays(90));
     bool isDefaultFilter = (bool)(ViewBag.IsDefaultFilter ?? false);
