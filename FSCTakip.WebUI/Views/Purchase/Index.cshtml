@@ -77,6 +77,8 @@ else if ((bool)(ViewBag.ShowAll ?? false))
     </div>
 }
 
+@await Html.PartialAsync("_FscStokOzeti", null, new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData))
+
 <!-- Stat Kartları -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">

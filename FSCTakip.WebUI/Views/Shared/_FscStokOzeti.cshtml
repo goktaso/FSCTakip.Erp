@@ -1,0 +1,68 @@
+@* Partial: FSC Stok Özet Kartları — 4 sayfada ortak kullanım
+   Parametreler (ViewData ile geçilir):
+   - FscliGiris    : decimal
+   - FscsizGiris   : decimal
+   - FscliTuketim  : decimal
+   - FscsizTuketim : decimal
+   - FscliKalan    : decimal
+   - FscsizKalan   : decimal
+*@
+@{
+    var fscliGiris    = (decimal)(ViewData["FscliGiris"]    ?? 0m);
+    var fscsizGiris   = (decimal)(ViewData["FscsizGiris"]   ?? 0m);
+    var fscliTuketim  = (decimal)(ViewData["FscliTuketim"]  ?? 0m);
+    var fscsizTuketim = (decimal)(ViewData["FscsizTuketim"] ?? 0m);
+    var fscliKalan    = (decimal)(ViewData["FscliKalan"]    ?? 0m);
+    var fscsizKalan   = (decimal)(ViewData["FscsizKalan"]   ?? 0m);
+    var toplamGiris   = fscliGiris    + fscsizGiris;
+    var toplamTuketim = fscliTuketim  + fscsizTuketim;
+    var toplamKalan   = fscliKalan    + fscsizKalan;
+}
+
+<div class="card border-0 shadow-sm rounded-3 mb-3" style="background:linear-gradient(135deg,#0f172a 0%,#1a2744 100%);">
+    <div class="card-body py-3 px-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="fas fa-leaf text-success" style="font-size:14px;"></i>
+            <span class="fw-semibold text-white" style="font-size:13px;">FSC Kütle Dengesi</span>
+            <span class="badge ms-auto" style="background:rgba(25,118,210,.3);color:#93c5fd;font-size:10px;">Ham · YM · Burgu Sap</span>
+        </div>
+        <div class="row g-2 text-center" style="font-size:12px;">
+            <!-- Başlıklar -->
+            <div class="col-3" style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;"></div>
+            <div class="col-3" style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">GİRİŞ (kg)</div>
+            <div class="col-3" style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">TÜKETİM (kg)</div>
+            <div class="col-3" style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">KALAN (kg)</div>
+
+            <!-- FSC'li satır -->
+            <div class="col-3 d-flex align-items-center gap-1">
+                <span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;padding:3px 7px;">
+                    <i class="fas fa-certificate me-1" style="font-size:8px;"></i>FSC'li
+                </span>
+            </div>
+            <div class="col-3 fw-bold text-white">@fscliGiris.ToString("N0")</div>
+            <div class="col-3 fw-bold" style="color:#fca5a5;">@fscliTuketim.ToString("N0")</div>
+            <div class="col-3 fw-bold" style="color:#86efac;">@fscliKalan.ToString("N0")</div>
+
+            <!-- FSC'siz satır -->
+            <div class="col-3 d-flex align-items-center gap-1">
+                <span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;padding:3px 7px;">
+                    <i class="fas fa-times-circle me-1" style="font-size:8px;"></i>FSC'siz
+                </span>
+            </div>
+            <div class="col-3 fw-bold text-white">@fscsizGiris.ToString("N0")</div>
+            <div class="col-3 fw-bold" style="color:#fca5a5;">@fscsizTuketim.ToString("N0")</div>
+            <div class="col-3 fw-bold" style="color:#fbbf24;">@fscsizKalan.ToString("N0")</div>
+
+            <!-- Toplam satır -->
+            <div class="col-12"><hr style="border-color:rgba(255,255,255,.1);margin:4px 0;"></div>
+            <div class="col-3 d-flex align-items-center gap-1">
+                <span class="badge" style="background:rgba(25,118,210,.3);color:#93c5fd;font-size:10px;padding:3px 7px;">
+                    <i class="fas fa-sigma me-1" style="font-size:8px;"></i>Toplam
+                </span>
+            </div>
+            <div class="col-3 fw-bold text-white" style="font-size:13px;">@toplamGiris.ToString("N0")</div>
+            <div class="col-3 fw-bold" style="color:#fca5a5;font-size:13px;">@toplamTuketim.ToString("N0")</div>
+            <div class="col-3 fw-bold" style="color:#4ade80;font-size:13px;">@toplamKalan.ToString("N0")</div>
+        </div>
+    </div>
+</div>
