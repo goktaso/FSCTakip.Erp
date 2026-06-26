@@ -343,7 +343,21 @@ namespace FSCTakip.WebUI.Controllers
             if (supplierIds != null && supplierIds.Length > 0)
                 query = query.Where(m => m.Product != null && m.Product.SupplierId.HasValue && supplierIds.Contains(m.Product.SupplierId.Value));
             if (fscTypeIds != null && fscTypeIds.Length > 0)
-                query = query.Where(m => m.Product != null && m.Product.FscTypeId.HasValue && fscTypeIds.Contains(m.Product.FscTypeId.Value));
+            {
+                // FSC tipi lot seviyesinde — belge numarası üzerinden eşleştir
+                var matchingLots = await _context.FscLots
+                    .Where(l => fscTypeIds.Contains(l.FscTypeId))
+                    .Select(l => new { l.DispatchNo, l.InvoiceNo, l.PartiNo })
+                    .ToListAsync();
+                var lotDocNos = matchingLots
+                    .SelectMany(l => new[] { l.DispatchNo, l.InvoiceNo, l.PartiNo })
+                    .Where(n => !string.IsNullOrEmpty(n))
+                    .Distinct()
+                    .ToList();
+                query = query.Where(m =>
+                    (m.Product != null && m.Product.FscTypeId.HasValue && fscTypeIds.Contains(m.Product.FscTypeId.Value))
+                    || (m.DocumentNo != null && lotDocNos.Contains(m.DocumentNo)));
+            }
 
             var movements = await query.OrderByDescending(m => m.DocumentDate).ThenByDescending(m => m.Id).ToListAsync();
 
@@ -476,11 +490,12 @@ namespace FSCTakip.WebUI.Controllers
 
             if (!hasUserFilter)
             {
-                // Varsayılan: Ham+YM+BS grupları (ada göre dinamik — Stok Özeti ile tutarlı)
-                var defaultGroupNames = new[] { "HAMMADDE", "YARI MAMUL", "BURGU SAP" };
+                // Varsayılan: Ham+YM+BS — ToUpper() Türkçe Ü/U varyantlarını kapsamak için StartsWith kullan
                 query = query.Where(s => s.Lot.Product != null
                     && s.Lot.Product.ProductGroup != null
-                    && defaultGroupNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()));
+                    && (s.Lot.Product.ProductGroup.GroupName.ToUpper() == "HAMMADDE"
+                     || s.Lot.Product.ProductGroup.GroupName.ToUpper().StartsWith("YARI MA")
+                     || s.Lot.Product.ProductGroup.GroupName.ToUpper() == "BURGU SAP"));
             }
             else
             {
