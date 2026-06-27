@@ -32,8 +32,9 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(l => l.Product).ThenInclude(p => p!.ProductGroup)
                 .Include(l => l.Serials)
                 // Sadece gerçek satın alma girişleri: fatura VEYA irsaliye VEYA devir (açılış stoku)
-                // Dönüşüm output lotları (SourceSerialId dolu) + faturasız/irsaliyesiz YM lotları hariç
+                // YM dönüşüm outputları (SourceSerialId dolu) + fatura/irsaliyesiz YM lotları + PartiNo="YM*" hariç
                 .Where(l => l.SourceSerialId == null
+                         && !l.PartiNo.StartsWith("YM")
                          && (l.DispatchNo != null
                           || l.InvoiceNo != null
                           || l.Serials.Any(s => s.IsOpeningStock)))
@@ -152,8 +153,6 @@ namespace FSCTakip.WebUI.Controllers
             ViewData["FscsizGiris"]   = fscsizGirisP;
             ViewData["FscsizTuketim"] = fscsizGirisP - fscsizKalanP;
             ViewData["FscsizKalan"]   = fscsizKalanP;
-            // ToplamFizikselStok: Kalan sorgusundan (ayrı query gereksiz, tutarlılık sağlanır)
-            ViewBag.ToplamFizikselStok = fscliKalanP + fscsizKalanP;
 
             return View(await query.OrderByDescending(l => l.Id).ToListAsync());
         }
@@ -561,6 +560,9 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(l => l.Product).ThenInclude(p => p!.PaperWidth)
                 .Include(l => l.Product).ThenInclude(p => p!.PaperColor)
                 .Include(l => l.Serials)
+                .Where(l => l.SourceSerialId == null
+                         && !l.PartiNo.StartsWith("YM")
+                         && (l.DispatchNo != null || l.InvoiceNo != null || l.Serials.Any(s => s.IsOpeningStock)))
                 .OrderByDescending(l => l.Id).ToListAsync();
 
             var rows = lots.Select(l => new {

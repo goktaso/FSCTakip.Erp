@@ -150,7 +150,15 @@ namespace FSCTakip.WebUI.Controllers
                 {
                     for (int i = 0; i < props.Count; i++)
                     {
-                        worksheet.Cell(currentRow, i + 1).Value = props[i].GetValue(item)?.ToString() ?? "";
+                        var cell = worksheet.Cell(currentRow, i + 1);
+                        var val  = props[i].GetValue(item);
+                        if      (val is decimal d)    cell.Value = (double)d;
+                        else if (val is int iv)        cell.Value = iv;
+                        else if (val is long lv)       cell.Value = (double)lv;
+                        else if (val is double dv)     cell.Value = dv;
+                        else if (val is float fv)      cell.Value = (double)fv;
+                        else if (val is DateTime dt)   cell.Value = dt;
+                        else                           cell.Value = val?.ToString() ?? "";
                     }
                     currentRow++;
                 }

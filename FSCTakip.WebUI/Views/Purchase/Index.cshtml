@@ -12,13 +12,7 @@
     var productGroups   = ViewBag.ProductGroups   as List<FSCTakip.Core.Entities.ProductGroup> ?? new();
     var totalLot   = Model.Count();
     var totalKg    = Model.Sum(l => l.Serials.Sum(s => s.InitialWeight));
-    var kalanKg           = Model.Sum(l => l.Serials.Sum(s => s.CurrentWeight));
-    // Toplam fiziksel stok = FSC'li + FSC'siz kalan (dönüşüm YM dahil, ViewData'dan)
-    var fscliKalanView  = (decimal)(ViewData["FscliKalan"]  ?? 0m);
-    var fscsizKalanView = (decimal)(ViewData["FscsizKalan"] ?? 0m);
-    var toplamFizikselStok = (fscliKalanView + fscsizKalanView) > 0
-        ? (fscliKalanView + fscsizKalanView)
-        : kalanKg;
+    var kalanKg    = Model.Sum(l => l.Serials.Sum(s => s.CurrentWeight));
     var totalBobin = Model.Sum(l => l.Serials.Count);
     var fscUyari   = suppliers.Count(s => s.IsFscActive && s.FscExpiryDate.HasValue && s.FscExpiryDate.Value <= DateTime.Today.AddDays(90));
     bool isDefaultFilter = (bool)(ViewBag.IsDefaultFilter ?? false);
@@ -118,8 +112,8 @@ else if ((bool)(ViewBag.ShowAll ?? false))
                 <i class="fas fa-battery-half"></i>
             </div>
             <div>
-                <div class="stat-value" id="cardKalan">@toplamFizikselStok.ToString("N0")</div>
-                <div class="stat-label">@(isDefaultFilter ? "Toplam Fiziksel Stok" : "Kalan (kg)")</div>
+                <div class="stat-value" id="cardKalan">@kalanKg.ToString("N0")</div>
+                <div class="stat-label">Kalan (kg)</div>
             </div>
         </div>
     </div>
