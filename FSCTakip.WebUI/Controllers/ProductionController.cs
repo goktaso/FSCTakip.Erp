@@ -828,7 +828,7 @@ namespace FSCTakip.WebUI.Controllers
         }
 
         // POST /Production/AssignDetailRecipe — sadece bileşen atamasını değiştirir, iş emri durumundan bağımsız
-        [HttpPost]
+        [HttpPost, IgnoreAntiforgeryToken]
         public async Task<IActionResult> AssignDetailRecipe(int detailId, int? workOrderRecipeId)
         {
             var detail = await _context.ProductionDetails.FindAsync(detailId);

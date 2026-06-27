@@ -1488,14 +1488,25 @@ function assignRecipe(detailId, recipeId, label) {
     const fd = new FormData();
     fd.append('detailId', detailId);
     fd.append('workOrderRecipeId', recipeId);
+    // antiforgery token — layout interceptor'ın bulduğu tokeni de ekle
+    const tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+    if (tokenEl) fd.append('__RequestVerificationToken', tokenEl.value);
     fetch('/Production/AssignDetailRecipe', { method: 'POST', body: fd })
-        .then(r => r.json()).then(res => {
+        .then(function(r) {
+            if (!r.ok) { showToast('Sunucu hatası: ' + r.status, 'error'); return null; }
+            return r.json();
+        })
+        .then(function(res) {
+            if (!res) return;
             if (res.success) {
-                showToast('Bileşen "' + label + '" olarak güncellendi.', 'success');
-                setTimeout(() => location.reload(), 800);
+                showToast('Bileşen "' + label + '" olarak atandı.', 'success');
+                setTimeout(function() { location.reload(); }, 800);
             } else {
                 showToast(res.message || 'Hata oluştu.', 'error');
             }
+        })
+        .catch(function(err) {
+            showToast('İstek gönderilemedi: ' + err, 'error');
         });
 }
 
