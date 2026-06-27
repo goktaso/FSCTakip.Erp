@@ -122,6 +122,8 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
                 .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
                 .Where(s => s.Lot.SourceSerialId == null
+                         && !s.Lot.PartiNo.StartsWith("YM")
+                         && (s.Lot.DispatchNo != null || s.Lot.InvoiceNo != null || s.Lot.Serials.Any(x => x.IsOpeningStock))
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNamesSummary.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
@@ -229,6 +231,8 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
                 .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
                 .Where(s => s.Lot.SourceSerialId == null
+                         && !s.Lot.PartiNo.StartsWith("YM")
+                         && (s.Lot.DispatchNo != null || s.Lot.InvoiceNo != null || s.Lot.Serials.Any(x => x.IsOpeningStock))
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNamesAdmin.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
@@ -561,6 +565,8 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
                 .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
                 .Where(s => s.Lot.SourceSerialId == null
+                         && !s.Lot.PartiNo.StartsWith("YM")
+                         && (s.Lot.DispatchNo != null || s.Lot.InvoiceNo != null || s.Lot.Serials.Any(x => x.IsOpeningStock))
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNamesRaw.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))

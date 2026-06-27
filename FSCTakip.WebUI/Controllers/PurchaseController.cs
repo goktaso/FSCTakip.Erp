@@ -126,7 +126,9 @@ namespace FSCTakip.WebUI.Controllers
             var girisOzetP = await _context.FscSerials
                 .Include(s => s.Lot).ThenInclude(l => l.FscType)
                 .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
-                .Where(s => s.Lot.SourceSerialId == null   // sadece satın alınan lotlar
+                .Where(s => s.Lot.SourceSerialId == null
+                         && !s.Lot.PartiNo.StartsWith("YM")
+                         && (s.Lot.DispatchNo != null || s.Lot.InvoiceNo != null || s.Lot.Serials.Any(x => x.IsOpeningStock))
                          && s.Lot.Product != null
                          && s.Lot.Product.ProductGroup != null
                          && defaultGrpNames.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
