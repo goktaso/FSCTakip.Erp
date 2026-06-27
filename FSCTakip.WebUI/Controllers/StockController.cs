@@ -1,6 +1,7 @@
 ﻿using ClosedXML.Excel;
 using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
+using FSCTakip.WebUI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -116,40 +117,8 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.TotalLots        = rows.Sum(r => r.LotCount);
             ViewBag.TotalSerials     = rows.Sum(r => r.SerialCount);
 
-            // FSC Kütle Dengesi — Giriş: yalnızca satın alınan seriler; Tüketim = Giriş - Kalan (türetilmiş)
-            var defaultGrpNamesSummary = new[] { "HAMMADDE", "YARI MAMUL", "YARI MAMÜL", "BURGU SAP" };
-            var girisOzetS = await _context.FscSerials
-                .Include(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
-                .Where(s => s.Lot.SourceSerialId == null
-                         && !s.Lot.PartiNo.StartsWith("YM")
-                         && (s.Lot.DispatchNo != null || s.Lot.InvoiceNo != null || s.Lot.Serials.Any(x => x.IsOpeningStock))
-                         && s.Lot.Product != null
-                         && s.Lot.Product.ProductGroup != null
-                         && defaultGrpNamesSummary.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
-                .Select(g => new { Tip = g.Key, Giris = g.Sum(s => s.InitialWeight) })
-                .ToListAsync();
-            var kalanOzetS = await _context.FscSerials
-                .Include(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
-                .Where(s => s.CurrentWeight > 0
-                         && s.Lot.Product != null
-                         && s.Lot.Product.ProductGroup != null
-                         && defaultGrpNamesSummary.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
-                .Select(g => new { Tip = g.Key, Kalan = g.Sum(s => s.CurrentWeight) })
-                .ToListAsync();
-            var fscliGirisS    = girisOzetS.FirstOrDefault(x => x.Tip == "FSCLI")?.Giris  ?? 0m;
-            var fscsizGirisS   = girisOzetS.FirstOrDefault(x => x.Tip == "FSCSIZ")?.Giris ?? 0m;
-            var fscliKalanS    = kalanOzetS.FirstOrDefault(x => x.Tip == "FSCLI")?.Kalan  ?? 0m;
-            var fscsizKalanS   = kalanOzetS.FirstOrDefault(x => x.Tip == "FSCSIZ")?.Kalan ?? 0m;
-            ViewData["FscliGiris"]    = fscliGirisS;
-            ViewData["FscliTuketim"]  = fscliGirisS  - fscliKalanS;
-            ViewData["FscliKalan"]    = fscliKalanS;
-            ViewData["FscsizGiris"]   = fscsizGirisS;
-            ViewData["FscsizTuketim"] = fscsizGirisS - fscsizKalanS;
-            ViewData["FscsizKalan"]   = fscsizKalanS;
+            // FSC Kütle Dengesi — merkezi servis
+            (await FscMassBalanceService.ComputeAsync(_context)).ApplyToViewData(ViewData);
 
             return View(rows);
         }
@@ -225,40 +194,8 @@ namespace FSCTakip.WebUI.Controllers
                 .OrderBy(p => p.ProductName)
                 .ToListAsync();
 
-            // FSC Kütle Dengesi — Giriş: yalnızca satın alınan seriler; Tüketim = Giriş - Kalan (türetilmiş)
-            var defaultGrpNamesAdmin = new[] { "HAMMADDE", "YARI MAMUL", "YARI MAMÜL", "BURGU SAP" };
-            var girisOzetA = await _context.FscSerials
-                .Include(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
-                .Where(s => s.Lot.SourceSerialId == null
-                         && !s.Lot.PartiNo.StartsWith("YM")
-                         && (s.Lot.DispatchNo != null || s.Lot.InvoiceNo != null || s.Lot.Serials.Any(x => x.IsOpeningStock))
-                         && s.Lot.Product != null
-                         && s.Lot.Product.ProductGroup != null
-                         && defaultGrpNamesAdmin.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
-                .Select(g => new { Tip = g.Key, Giris = g.Sum(s => s.InitialWeight) })
-                .ToListAsync();
-            var kalanOzetA = await _context.FscSerials
-                .Include(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
-                .Where(s => s.CurrentWeight > 0
-                         && s.Lot.Product != null
-                         && s.Lot.Product.ProductGroup != null
-                         && defaultGrpNamesAdmin.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
-                .Select(g => new { Tip = g.Key, Kalan = g.Sum(s => s.CurrentWeight) })
-                .ToListAsync();
-            var fscliGirisA    = girisOzetA.FirstOrDefault(x => x.Tip == "FSCLI")?.Giris  ?? 0m;
-            var fscsizGirisA   = girisOzetA.FirstOrDefault(x => x.Tip == "FSCSIZ")?.Giris ?? 0m;
-            var fscliKalanA    = kalanOzetA.FirstOrDefault(x => x.Tip == "FSCLI")?.Kalan  ?? 0m;
-            var fscsizKalanA   = kalanOzetA.FirstOrDefault(x => x.Tip == "FSCSIZ")?.Kalan ?? 0m;
-            ViewData["FscliGiris"]    = fscliGirisA;
-            ViewData["FscliTuketim"]  = fscliGirisA  - fscliKalanA;
-            ViewData["FscliKalan"]    = fscliKalanA;
-            ViewData["FscsizGiris"]   = fscsizGirisA;
-            ViewData["FscsizTuketim"] = fscsizGirisA - fscsizKalanA;
-            ViewData["FscsizKalan"]   = fscsizKalanA;
+            // FSC Kütle Dengesi — merkezi servis
+            (await FscMassBalanceService.ComputeAsync(_context)).ApplyToViewData(ViewData);
 
             return View(rows);
         }
@@ -559,40 +496,8 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.ProductGroupIds  = productGroupIds ?? Array.Empty<int>();
             ViewBag.ShowEmpty        = showEmpty ?? false;
 
-            // FSC Kütle Dengesi — Giriş: yalnızca satın alınan seriler; Tüketim = Giriş - Kalan (türetilmiş)
-            var defaultGrpNamesRaw = new[] { "HAMMADDE", "YARI MAMUL", "YARI MAMÜL", "BURGU SAP" };
-            var girisOzetR = await _context.FscSerials
-                .Include(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
-                .Where(s => s.Lot.SourceSerialId == null
-                         && !s.Lot.PartiNo.StartsWith("YM")
-                         && (s.Lot.DispatchNo != null || s.Lot.InvoiceNo != null || s.Lot.Serials.Any(x => x.IsOpeningStock))
-                         && s.Lot.Product != null
-                         && s.Lot.Product.ProductGroup != null
-                         && defaultGrpNamesRaw.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
-                .Select(g => new { Tip = g.Key, Giris = g.Sum(s => s.InitialWeight) })
-                .ToListAsync();
-            var kalanOzetR = await _context.FscSerials
-                .Include(s => s.Lot).ThenInclude(l => l.FscType)
-                .Include(s => s.Lot).ThenInclude(l => l.Product).ThenInclude(p => p!.ProductGroup)
-                .Where(s => s.CurrentWeight > 0
-                         && s.Lot.Product != null
-                         && s.Lot.Product.ProductGroup != null
-                         && defaultGrpNamesRaw.Contains(s.Lot.Product.ProductGroup.GroupName.ToUpper()))
-                .GroupBy(s => s.Lot.FscType!.Name.ToLower().Contains("siz") ? "FSCSIZ" : "FSCLI")
-                .Select(g => new { Tip = g.Key, Kalan = g.Sum(s => s.CurrentWeight) })
-                .ToListAsync();
-            var fscliGirisR    = girisOzetR.FirstOrDefault(x => x.Tip == "FSCLI")?.Giris  ?? 0m;
-            var fscsizGirisR   = girisOzetR.FirstOrDefault(x => x.Tip == "FSCSIZ")?.Giris ?? 0m;
-            var fscliKalanR    = kalanOzetR.FirstOrDefault(x => x.Tip == "FSCLI")?.Kalan  ?? 0m;
-            var fscsizKalanR   = kalanOzetR.FirstOrDefault(x => x.Tip == "FSCSIZ")?.Kalan ?? 0m;
-            ViewData["FscliGiris"]    = fscliGirisR;
-            ViewData["FscliTuketim"]  = fscliGirisR  - fscliKalanR;
-            ViewData["FscliKalan"]    = fscliKalanR;
-            ViewData["FscsizGiris"]   = fscsizGirisR;
-            ViewData["FscsizTuketim"] = fscsizGirisR - fscsizKalanR;
-            ViewData["FscsizKalan"]   = fscsizKalanR;
+            // FSC Kütle Dengesi — merkezi servis
+            (await FscMassBalanceService.ComputeAsync(_context)).ApplyToViewData(ViewData);
 
             return View(serials);
         }
