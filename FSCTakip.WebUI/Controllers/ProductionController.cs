@@ -827,11 +827,22 @@ namespace FSCTakip.WebUI.Controllers
             }
         }
 
+        // POST /Production/AssignDetailRecipe — sadece bileşen atamasını değiştirir, iş emri durumundan bağımsız
+        [HttpPost]
+        public async Task<IActionResult> AssignDetailRecipe(int detailId, int? workOrderRecipeId)
+        {
+            var detail = await _context.ProductionDetails.FindAsync(detailId);
+            if (detail == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            detail.WorkOrderRecipeId = workOrderRecipeId == 0 ? null : workOrderRecipeId;
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
+        }
+
         [HttpPost]
         public async Task<IActionResult> DeleteWaste(int id)
         {
             var item = await _context.WasteManagements.FindAsync(id);
-            if (item == null) return Json(new { success = false, message = "KayÄ±t bulunamadÄ±." });
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
             try
             {
                 _context.WasteManagements.Remove(item);

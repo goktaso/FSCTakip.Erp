@@ -371,17 +371,36 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                 }
                                 else
                                 {
-                                    <span class="text-muted" style="font-size:11px;">Serbest</span>
-                                    @if (Model.Status != WorkOrderStatus.Tamamlandi)
-                                    {
-                                        <br>
-                                        <button onclick="editDetail(@d.Id)"
-                                                class="btn btn-link p-0 mt-1"
-                                                style="font-size:10px;color:#f59e0b;text-decoration:none;"
-                                                title="Bileşen atanmamış — düzenleyip ETİKET/GÖVDE/SAP seç">
-                                            <i class="fas fa-exclamation-triangle me-1"></i>Bileşen ata
-                                        </button>
-                                    }
+                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                        <span class="text-muted" style="font-size:11px;">Serbest</span>
+                                        <div class="dropdown d-inline-block">
+                                            <button class="btn btn-link p-0"
+                                                    style="font-size:10px;color:#f59e0b;text-decoration:none;"
+                                                    data-bs-toggle="dropdown" aria-expanded="false"
+                                                    title="Bileşen ata">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Bileşen ata ▾
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow" style="font-size:12px;min-width:180px;">
+                                                @foreach (var wr in workOrderRecipes)
+                                                {
+                                                    var wrLbl = !string.IsNullOrWhiteSpace(wr.Description) ? wr.Description : (wr.Product?.ProductName ?? "Bileşen");
+                                                    <li>
+                                                        <button class="dropdown-item py-1"
+                                                                onclick="assignRecipe(@d.Id, @wr.Id, '@wrLbl')">
+                                                            <i class="fas fa-layer-group me-1 text-purple-600" style="color:#7c3aed;"></i>@wrLbl
+                                                        </button>
+                                                    </li>
+                                                }
+                                                <li><hr class="dropdown-divider my-1"></li>
+                                                <li>
+                                                    <button class="dropdown-item py-1 text-muted"
+                                                            onclick="assignRecipe(@d.Id, 0, 'Serbest')">
+                                                        Serbest bırak
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                 }
                             </td>
                             <td class="text-end fw-semibold">@d.ConsumedWeight.ToString("N2")</td>
@@ -1463,6 +1482,21 @@ fetch('/Production/SaveDetail', { method: 'POST', body: fd })
                 showToast(res.message, 'error');
             }
         }).catch(() => { btn.disabled = false; btn.innerHTML = orig; });
+}
+
+function assignRecipe(detailId, recipeId, label) {
+    const fd = new FormData();
+    fd.append('detailId', detailId);
+    fd.append('workOrderRecipeId', recipeId);
+    fetch('/Production/AssignDetailRecipe', { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                showToast('Bileşen "' + label + '" olarak güncellendi.', 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(res.message || 'Hata oluştu.', 'error');
+            }
+        });
 }
 
 function deleteDetail(id) {
