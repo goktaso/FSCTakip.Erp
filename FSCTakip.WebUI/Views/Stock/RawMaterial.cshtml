@@ -13,6 +13,9 @@
     var byFscType       = ViewBag.ByFscType   as List<FSCTakip.WebUI.Controllers.FscTypeStockSummary>;
     var serialFire      = ViewBag.SerialFire  as Dictionary<int, decimal> ?? new Dictionary<int, decimal>();
     bool isDefaultFilter = (bool)(ViewBag.IsDefaultFilter ?? false);
+    // Seri → türeyen YM lotları
+    var ymLotsBySerial = ViewBag.YmLotsBySerial as Dictionary<int, List<FSCTakip.WebUI.Controllers.YmLotInfo>>
+                         ?? new Dictionary<int, List<FSCTakip.WebUI.Controllers.YmLotInfo>>();
 }
 
 <!-- Topbar -->
@@ -525,6 +528,20 @@
                             @if (s.IsOpeningStock)
                             {
                                 <span class="badge badge-secondary-soft ms-1" style="font-size:9px;">Devir</span>
+                            }
+                            @if (ymLotsBySerial.TryGetValue(s.Id, out var ymLots) && ymLots.Count > 0)
+                            {
+                                <div class="mt-1 d-flex flex-wrap gap-1">
+                                @foreach (var ym in ymLots)
+                                {
+                                    <a href="/Purchase/Detail/@ym.Id"
+                                       class="badge text-decoration-none"
+                                       style="background:#ede9fe;color:#5b21b6;font-size:9px;font-weight:600;"
+                                       title="@ym.ProductName@(ym.ConversionFireKg.HasValue ? $" · Fire: {ym.ConversionFireKg:N1} kg" : "")">
+                                        <i class="fas fa-arrow-right me-1" style="font-size:7px;"></i>YM: @ym.PartiNo
+                                    </a>
+                                }
+                                </div>
                             }
                         </td>
                         <td class="small text-muted">@(s.LotNo ?? "—")</td>

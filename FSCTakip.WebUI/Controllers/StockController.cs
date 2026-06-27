@@ -476,6 +476,22 @@ namespace FSCTakip.WebUI.Controllers
                 fireDict[kv.Key] = (fireDict.TryGetValue(kv.Key, out var pf) ? pf : 0m) + kv.Value;
             ViewBag.SerialFire = fireDict;
 
+            // Bu serilerden türeyen YM lotları (SourceSerialId → serial.Id)
+            var ymRaw = await _context.FscLots
+                .Include(l => l.Product)
+                .Where(l => l.SourceSerialId != null && serialIds.Contains(l.SourceSerialId.Value))
+                .ToListAsync();
+            ViewBag.YmLotsBySerial = ymRaw
+                .GroupBy(l => l.SourceSerialId!.Value)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(l => new YmLotInfo {
+                        Id = l.Id, PartiNo = l.PartiNo,
+                        ProductName = l.Product?.ProductName ?? "",
+                        ConversionFireKg = l.ConversionFireKg
+                    }).ToList()
+                );
+
             // Özet kartlar
             ViewBag.TotalKg      = serials.Sum(s => s.CurrentWeight);
             ViewBag.TotalBobins  = serials.Count;
@@ -587,6 +603,14 @@ namespace FSCTakip.WebUI.Controllers
         public string FscType { get; set; } = "";
         public decimal TotalKg { get; set; }
         public int Count { get; set; }
+    }
+
+    public class YmLotInfo
+    {
+        public int Id { get; set; }
+        public string PartiNo { get; set; } = "";
+        public string ProductName { get; set; } = "";
+        public decimal? ConversionFireKg { get; set; }
     }
 
     public class StockSummaryItem
