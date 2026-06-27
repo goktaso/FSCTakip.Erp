@@ -1146,3 +1146,26 @@ public int MovementType { get; set; }  // 1,2,3,4,5 değerleri
 ```
 
 **Uygulandığı:** `StockController.cs` (commit ba9c725).
+
+## FSC Kütle Dengesi — Merkezi Servis (FscMassBalanceService) (2026-06-27)
+
+**Sorun:** Her controller kendi girisOzet/kalanOzet sorgusunu yazıyordu. Filtre kaymaları (eksik `!PartiNo.StartsWith("YM")`, eksik `DispatchNo/InvoiceNo` kontrolü) farklı sayfalarda farklı rakam vermesine yol açıyordu. Günlerce aynı tutarsızlığı düzeltme döngüsüne girdi.
+
+**Kök neden:** Duplike sorgu → her birini ayrı güncelleme gereksinimi → bir yerde düzeltilince diğerinde kalan bug.
+
+**Çözüm:** `FscMassBalanceService.cs` (Services klasörü) — TEK merkezi hesap:
+```csharp
+// Tüm controller'larda sadece 1 satır:
+(await FscMassBalanceService.ComputeAsync(_context)).ApplyToViewData(ViewData);
+```
+
+**Kural — FSC Kütle Dengesi tanımları (bir daha değişmez):**
+- **Giriş** = `Lot.SourceSerialId == null` + `!PartiNo.StartsWith("YM")` + `(DispatchNo != null || InvoiceNo != null || IsOpeningStock)` → `Sum(InitialWeight)`
+- **Kalan** = Scope'taki tüm seriler (satın alma + dönüşüm YM) `CurrentWeight > 0` → `Sum(CurrentWeight)`
+- **Tüketim** = Giriş − Kalan (türetilmiş, computed property; dönüşüm YM Kalan'da olduğundan tüketim = üretim tüketimi + dönüşüm firesi)
+- **Kapsam** = HAMMADDE + YARI MAMUL + YARI MAMÜL + BURGU SAP (GroupName.ToUpper() ile match)
+- **FSC'siz tespiti** = `FscType.Name.ToLower().Contains("siz")` (ToUpper + Turkish İ bug'ından kaçınmak için)
+
+**Eklenecek yeni sayfa için:** Sadece `FscMassBalanceService.ComputeAsync` çağır. Sorgu yazmak yasak.
+
+**Uygulandığı:** commit `a88c6cf` (refactor).
