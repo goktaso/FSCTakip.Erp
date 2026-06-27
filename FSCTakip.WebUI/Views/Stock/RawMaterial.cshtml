@@ -277,12 +277,14 @@
                 string textColor  = row.FscType.Contains("100") ? "#166534" :
                                     row.FscType.Contains("MIX") ? "#1d4ed8" :
                                     row.FscType.Contains("RECYCLED") ? "#92400e" : "#374151";
-                <div class="d-flex align-items-center gap-2 px-3 py-2 rounded" style="background:@badgeColor;color:@textColor;min-width:180px;">
+                <div class="d-flex align-items-center gap-2 px-3 py-2 rounded fsc-dist-badge"
+                     data-fsctype="@row.FscType"
+                     style="background:@badgeColor;color:@textColor;min-width:180px;transition:opacity .2s;">
                     <div>
                         <div class="fw-semibold" style="font-size:13px;">@row.FscType</div>
-                        <div style="font-size:11px;">@row.TotalKg.ToString("N0") kg · @row.Count bobin</div>
+                        <div style="font-size:11px;"><span class="fsc-dist-kg">@row.TotalKg.ToString("N0")</span> kg · <span class="fsc-dist-cnt">@row.Count</span> bobin</div>
                     </div>
-                    <div class="ms-auto fw-bold" style="font-size:14px;">%@pct.ToString("F1")</div>
+                    <div class="ms-auto fw-bold fsc-dist-pct" style="font-size:14px;">%@pct.ToString("F1")</div>
                 </div>
             }
         </div>
@@ -513,7 +515,9 @@
                         data-fsc="@(s.Lot?.FscType?.Name ?? "")"
                         data-supplier="@(s.Lot?.Supplier?.Name ?? "")"
                         data-productid="@(s.Lot?.ProductId?.ToString() ?? "0")"
-                        data-status="@(s.CurrentWeight <= 0 ? "tukendi" : s.CurrentWeight < s.InitialWeight * 0.1m ? "az-kaldi" : "mevcut")">
+                        data-lotid="@s.LotId"
+                        data-status="@(s.CurrentWeight <= 0 ? "tukendi" : s.CurrentWeight < s.InitialWeight * 0.1m ? "az-kaldi" : "mevcut")"
+                        data-fsctype-full="@(s.Lot?.FscType?.Name ?? "")">
                         <td>
                             <a href="/Purchase/Detail/@s.LotId" class="fw-semibold text-decoration-none">
                                 @s.SerialNo
@@ -689,32 +693,71 @@ document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))d
         recalcAfterFilter();
     }
 
-    function recalcAfterFilter() {
+    // TEK merkezi güncelleme fonksiyonu — MCD filtresi + DataTables her ikisini de çağırır
+    function recalcAll() {
         var giris=0, tuketim=0, fire=0, kalan=0, count=0;
+        var fscKg={}, fscCnt={}, lotSet=new Set(), fsc100Kg=0;
+
         document.querySelectorAll('tbody tr.data-row').forEach(function(tr) {
+            // Hem DataTables pagination gizlemesi hem MCD display:none kontrolü
             if (tr.style.display === 'none') return;
+            if (tr.offsetParent === null && tr.closest('tbody')) {
+                // DataTables pagination: satır DOM'daysa ama sayfada değilse de say
+                // (DataTables tüm satırları DOM'da tutuyor — paginasyon sadece CSS'le)
+            }
             giris   += parseFloat(tr.dataset.giris)   || 0;
             tuketim += parseFloat(tr.dataset.tuketim) || 0;
             fire    += parseFloat(tr.dataset.fire)    || 0;
-            kalan   += parseFloat(tr.dataset.kalan)   || 0;
+            var k = parseFloat(tr.dataset.kalan) || 0;
+            kalan   += k;
             count++;
+            var lid = tr.dataset.lotid;
+            if (lid) lotSet.add(lid);
+            var ftype = tr.dataset.fsc || '—';
+            fscKg[ftype]  = (fscKg[ftype]  || 0) + k;
+            fscCnt[ftype] = (fscCnt[ftype] || 0) + 1;
+            if (ftype.includes('100')) fsc100Kg += k;
         });
+
         var fmt1 = function(n) { return n.toLocaleString('tr-TR',{minimumFractionDigits:1,maximumFractionDigits:1})+' kg'; };
         var g = function(id) { return document.getElementById(id); };
-        if (g('ftGiris'))   g('ftGiris').textContent   = fmt1(giris);
-        if (g('ftTuketim')) g('ftTuketim').textContent = fmt1(tuketim);
-        if (g('ftFire'))    g('ftFire').textContent    = fmt1(fire);
-        if (g('ftKalan'))   g('ftKalan').textContent   = fmt1(kalan);
-        if (g('topGiris'))   g('topGiris').textContent   = fmt1(giris);
-        if (g('topTuketim')) g('topTuketim').textContent = fmt1(tuketim);
-        if (g('topFire'))    g('topFire').textContent    = fmt1(fire);
-        if (g('topKalan'))   g('topKalan').textContent   = fmt1(kalan);
+
+        // Filtre Toplamı + tfoot
+        ['topGiris','ftGiris'].forEach(function(id){if(g(id))g(id).textContent=fmt1(giris);});
+        ['topTuketim','ftTuketim'].forEach(function(id){if(g(id))g(id).textContent=fmt1(tuketim);});
+        ['topFire','ftFire'].forEach(function(id){if(g(id))g(id).textContent=fmt1(fire);});
+        ['topKalan','ftKalan'].forEach(function(id){if(g(id))g(id).textContent=fmt1(kalan);});
+
+        // Stat kartları
         if (g('cardTotalKg')) g('cardTotalKg').textContent = Math.round(kalan).toLocaleString('tr-TR') + ' kg';
         if (g('cardBobins'))  g('cardBobins').textContent  = count;
+        if (g('cardLots'))    g('cardLots').textContent    = lotSet.size;
+        if (g('cardFsc100'))  g('cardFsc100').textContent  = Math.round(fsc100Kg).toLocaleString('tr-TR') + ' kg';
+
+        // FSC Tipi Dağılımı badge'leri
+        var totalFscKg = Object.values(fscKg).reduce(function(a,b){return a+b;},0);
+        document.querySelectorAll('.fsc-dist-badge').forEach(function(badge) {
+            var type = badge.dataset.fsctype || '';
+            var kg   = fscKg[type]  || 0;
+            var cnt  = fscCnt[type] || 0;
+            var pct  = totalFscKg > 0 ? (kg / totalFscKg * 100) : 0;
+            var kgEl  = badge.querySelector('.fsc-dist-kg');
+            var cntEl = badge.querySelector('.fsc-dist-cnt');
+            var pctEl = badge.querySelector('.fsc-dist-pct');
+            if (kgEl)  kgEl.textContent  = Math.round(kg).toLocaleString('tr-TR');
+            if (cntEl) cntEl.textContent = cnt;
+            if (pctEl) pctEl.textContent = '%' + pct.toFixed(1);
+            badge.style.opacity = kg > 0 ? '1' : '0.35';
+        });
+
+        // Kayıt notu
         var total = document.querySelectorAll('tbody tr.data-row').length;
         var note  = g('ftFilterNote');
         if (note) note.textContent = count < total ? '(' + count + '/' + total + ' kayıt)' : '';
     }
+
+    // Eski isim alias — applyTableFilters çağrıları onu çağırır
+    function recalcAfterFilter() { recalcAll(); }
 
     function clearTableFilters() {
         document.querySelectorAll('.tbl-filter-cb').forEach(function(cb) { cb.checked = false; });
@@ -729,37 +772,12 @@ document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))d
         recalcAfterFilter();
     }
 
-    // draw.dt — her filtre/sayfa değişiminde tfoot + top-total + stat kartları güncelle
+    // draw.dt — DataTables arama/sıralama sonrası → tek merkezi recalcAll
     $(document).on('draw.dt', 'table.data-table', function() {
-        var dt = $(this).DataTable();
-        var giris = 0, tuketim = 0, fire = 0, kalan = 0, count = 0;
-        dt.rows({ search: 'applied' }).nodes().each(function(tr) {
-            if (!tr.classList.contains('data-row')) return;
-            giris   += parseFloat(tr.dataset.giris)   || 0;
-            tuketim += parseFloat(tr.dataset.tuketim) || 0;
-            fire    += parseFloat(tr.dataset.fire)    || 0;
-            kalan   += parseFloat(tr.dataset.kalan)   || 0;
-            count++;
-        });
-        var fmt1 = function(n) { return n.toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' kg'; };
-        var g = function(id) { return document.getElementById(id); };
-        // tfoot
-        if (g('ftGiris'))   g('ftGiris').textContent   = fmt1(giris);
-        if (g('ftTuketim')) g('ftTuketim').textContent = fmt1(tuketim);
-        if (g('ftFire'))    g('ftFire').textContent    = fmt1(fire);
-        if (g('ftKalan'))   g('ftKalan').textContent   = fmt1(kalan);
-        // top-total
-        if (g('topGiris'))   g('topGiris').textContent   = fmt1(giris);
-        if (g('topTuketim')) g('topTuketim').textContent = fmt1(tuketim);
-        if (g('topFire'))    g('topFire').textContent    = fmt1(fire);
-        if (g('topKalan'))   g('topKalan').textContent   = fmt1(kalan);
-        // stat kartlar
-        if (g('cardTotalKg')) g('cardTotalKg').textContent = Math.round(kalan).toLocaleString('tr-TR') + ' kg';
-        if (g('cardBobins'))  g('cardBobins').textContent  = count;
-        // filter note
-        var total = document.querySelectorAll('tbody tr.data-row').length;
-        var note = g('ftFilterNote');
-        if (note) note.textContent = count < total ? '(' + count + ' / ' + total + ' kayıt)' : '';
+        recalcAll();
     });
+
+    // Sayfa yüklenince ilk hesaplama
+    document.addEventListener('DOMContentLoaded', function() { recalcAll(); });
 </script>
 }
