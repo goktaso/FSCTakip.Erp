@@ -371,7 +371,17 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                                 }
                                 else
                                 {
-                                    <span class="text-muted">Serbest</span>
+                                    <span class="text-muted" style="font-size:11px;">Serbest</span>
+                                    @if (Model.Status != WorkOrderStatus.Tamamlandi)
+                                    {
+                                        <br>
+                                        <button onclick="editDetail(@d.Id)"
+                                                class="btn btn-link p-0 mt-1"
+                                                style="font-size:10px;color:#f59e0b;text-decoration:none;"
+                                                title="Bileşen atanmamış — düzenleyip ETİKET/GÖVDE/SAP seç">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>Bileşen ata
+                                        </button>
+                                    }
                                 }
                             </td>
                             <td class="text-end fw-semibold">@d.ConsumedWeight.ToString("N2")</td>
