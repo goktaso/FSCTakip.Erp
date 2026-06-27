@@ -31,8 +31,12 @@ namespace FSCTakip.WebUI.Controllers
                 .Include(l => l.Product).ThenInclude(p => p!.PaperColor)
                 .Include(l => l.Product).ThenInclude(p => p!.ProductGroup)
                 .Include(l => l.Serials)
-                // Yalnizca dogrudan satin alma girisleri -- donusum ciktilari (SourceSerialId dolu) haric
-                .Where(l => l.SourceSerialId == null)
+                // Sadece gerçek satın alma girişleri: fatura VEYA irsaliye VEYA devir (açılış stoku)
+                // Dönüşüm output lotları (SourceSerialId dolu) + faturasız/irsaliyesiz YM lotları hariç
+                .Where(l => l.SourceSerialId == null
+                         && (l.DispatchNo != null
+                          || l.InvoiceNo != null
+                          || l.Serials.Any(s => s.IsOpeningStock)))
                 .AsQueryable();
 
             // Kullanıcı herhangi bir filtre uyguladı mı?
