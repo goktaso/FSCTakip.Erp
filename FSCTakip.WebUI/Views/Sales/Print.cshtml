@@ -1,0 +1,163 @@
+@model FSCTakip.Core.Entities.SalesOrder
+@{
+    Layout = null;
+    var today = DateTime.Now;
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FSC Sevk Belgesi — @Model.SalesOrderNo</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #1a1a1a; background: #fff; padding: 20mm 15mm; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1565c0; padding-bottom: 10px; margin-bottom: 16px; }
+.company-name { font-size: 16pt; font-weight: 700; color: #1565c0; }
+.doc-title { font-size: 13pt; font-weight: 700; color: #1a1a1a; margin-top: 4px; }
+.doc-meta { text-align: right; font-size: 10pt; color: #444; line-height: 1.6; }
+.fsc-badge { display: inline-block; background: #1e3d14; color: #fff; font-weight: 700; font-size: 9pt; padding: 3px 10px; border-radius: 4px; margin-top: 4px; }
+.section { margin-bottom: 14px; }
+.section-title { font-size: 9pt; font-weight: 700; color: #1565c0; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-bottom: 8px; }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; }
+.info-row { display: flex; gap: 6px; font-size: 10pt; }
+.info-label { color: #666; min-width: 110px; flex-shrink: 0; }
+.info-value { font-weight: 600; }
+table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+th { background: #1565c0; color: #fff; font-weight: 600; padding: 6px 8px; text-align: left; }
+td { padding: 5px 8px; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+tr:nth-child(even) td { background: #f5f8ff; }
+.fsc-tag { display: inline-block; background: #e8f5e9; color: #1b5e20; font-size: 8pt; font-weight: 600; padding: 1px 6px; border-radius: 3px; border: 1px solid #a5d6a7; }
+.footer { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 12px; font-size: 9pt; color: #666; display: flex; justify-content: space-between; }
+.declaration-box { margin-top: 16px; border: 1.5px solid #1565c0; border-radius: 6px; padding: 10px 14px; background: #f0f4ff; }
+.declaration-box strong { color: #1565c0; display: block; margin-bottom: 4px; font-size: 10pt; }
+.declaration-box p { font-size: 9pt; line-height: 1.5; color: #333; }
+.signature-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 24px; }
+.sig-box { border-top: 1px solid #999; padding-top: 6px; text-align: center; font-size: 9pt; color: #555; }
+@@media print {
+  body { padding: 10mm; }
+  .no-print { display: none !important; }
+  @* Force color print *@
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+</style>
+</head>
+<body>
+
+<div class="no-print" style="background:#1565c0;color:#fff;padding:8px 16px;margin-bottom:16px;border-radius:4px;display:flex;justify-content:space-between;align-items:center;">
+  <span style="font-weight:600;">FSC Sevk Belgesi Önizleme</span>
+  <button onclick="window.print()" style="background:#fff;color:#1565c0;border:none;padding:6px 16px;border-radius:4px;font-weight:700;cursor:pointer;">🖨 Yazdır / PDF Kaydet</button>
+</div>
+
+<!-- BAŞLIK -->
+<div class="header">
+  <div>
+    <div class="company-name">ARD SİSTEM VE DANIŞMANLIK</div>
+    <div class="doc-title">FSC Sevk Belgesi</div>
+    <div class="fsc-badge">FSC® CoC Belgeli Sevkiyat</div>
+  </div>
+  <div class="doc-meta">
+    <div><strong>Belge No:</strong> @Model.SalesOrderNo</div>
+    <div><strong>Düzenleme Tarihi:</strong> @today.ToString("dd.MM.yyyy")</div>
+    <div><strong>Sevk Tarihi:</strong> @(Model.DispatchDate?.ToString("dd.MM.yyyy") ?? "-")</div>
+    @if (!string.IsNullOrEmpty(Model.DispatchNo))
+    {
+      <div><strong>İrsaliye No:</strong> @Model.DispatchNo</div>
+    }
+    @if (!string.IsNullOrEmpty(Model.InvoiceNo))
+    {
+      <div><strong>Fatura No:</strong> @Model.InvoiceNo</div>
+    }
+  </div>
+</div>
+
+<!-- MÜŞTERİ BİLGİLERİ -->
+<div class="section">
+  <div class="section-title">Alıcı Bilgileri</div>
+  <div class="info-grid">
+    <div class="info-row"><span class="info-label">Firma:</span><span class="info-value">@(Model.Customer?.Name ?? "-")</span></div>
+    <div class="info-row"><span class="info-label">FSC Lisans No:</span><span class="info-value">@(Model.Customer?.FscLicenseCode ?? "—")</span></div>
+    @if (!string.IsNullOrEmpty(Model.DeliveryAddress))
+    {
+      <div class="info-row" style="grid-column:1/-1"><span class="info-label">Teslimat Adresi:</span><span class="info-value">@Model.DeliveryAddress</span></div>
+    }
+    @if (!string.IsNullOrEmpty(Model.PlateNumber))
+    {
+      <div class="info-row"><span class="info-label">Araç Plakası:</span><span class="info-value">@Model.PlateNumber</span></div>
+    }
+  </div>
+</div>
+
+<!-- ÜRÜN SATIRLARI -->
+<div class="section">
+  <div class="section-title">Sevk Edilen Ürünler</div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Ürün Adı</th>
+        <th>FSC Tipi</th>
+        <th>İş Emri</th>
+        <th style="text-align:right">Miktar</th>
+        <th>Birim</th>
+      </tr>
+    </thead>
+    <tbody>
+      @{ int rowNum = 1; }
+      @foreach (var line in Model.Lines.OrderBy(l => l.Id))
+      {
+        var fscType = line.Product?.FscType?.Code ?? "—";
+        <tr>
+          <td>@(rowNum++)</td>
+          <td>@(line.Product?.ProductName ?? "—")</td>
+          <td><span class="fsc-tag">@fscType</span></td>
+          <td>@(line.WorkOrder?.WorkOrderNo ?? "—")</td>
+          <td style="text-align:right">@line.Quantity.ToString("N0")</td>
+          <td>@line.Unit</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- FSC BEYANI -->
+<div class="declaration-box">
+  <strong>FSC® Chain of Custody Beyanı</strong>
+  <p>
+    Bu belgede yer alan ürünler, FSC® sertifikalı tedarik zinciri kapsamında üretilmiş ve sevk edilmiştir.
+    FSC sertifika sistemine göre, bu sevkiyatta yer alan malzemeler FSC® izleme gerekliliklerini karşılamaktadır.
+    İlgili lot ve hammadde takip bilgilerine FSC Takip ERP sistemi üzerinden erişilebilir.
+  </p>
+  @{
+    var fscTypes = Model.Lines
+        .Where(l => l.Product?.FscType != null)
+        .Select(l => l.Product!.FscType!.Code)
+        .Distinct().ToList();
+  }
+  @if (fscTypes.Any())
+  {
+    <p style="margin-top:6px;"><strong>Bu sevkiyattaki FSC sertifika tipleri: </strong>
+      @foreach (var ft in fscTypes)
+      {
+        <span class="fsc-tag" style="margin-right:4px;">@ft</span>
+      }
+    </p>
+  }
+</div>
+
+<!-- İMZA ALANLARI -->
+<div class="signature-row">
+  <div class="sig-box">Düzenleyen / Satış Sorumlusu</div>
+  <div class="sig-box">Sevk Edilen / Depo</div>
+  <div class="sig-box">Teslim Alan / Alıcı Kaşe-İmza</div>
+</div>
+
+<!-- ALT BİLGİ -->
+<div class="footer">
+  <div>© @today.Year ARD Sistem ve Danışmanlık · FSC Takip ERP</div>
+  <div>Bu belge elektronik ortamda üretilmiştir. @today.ToString("dd.MM.yyyy HH:mm")</div>
+</div>
+
+</body>
+</html>

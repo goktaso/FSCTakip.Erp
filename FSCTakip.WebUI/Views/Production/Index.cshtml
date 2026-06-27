@@ -1,0 +1,598 @@
+@model IEnumerable<FSCTakip.Core.Entities.WorkOrder>
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "İş Emirleri";
+    var products = ViewBag.Products as List<Product> ?? new();
+    var machines = ViewBag.Machines as List<Machine> ?? new();
+    var productIds = ViewBag.ProductIds as int[] ?? Array.Empty<int>();
+    var allProducts = ViewBag.Products as List<Product> ?? new();
+
+    var total      = Model.Count();
+    var taslak     = Model.Count(w => w.Status == WorkOrderStatus.Taslak);
+    var uretimde   = Model.Count(w => w.Status == WorkOrderStatus.Uretimde);
+    var tamamlandi = Model.Count(w => w.Status == WorkOrderStatus.Tamamlandi);
+    var toplamUretim = Model.Sum(w => w.ActualQuantity);
+}
+
+@section TopbarPrimary {
+    <button class="btn-topbar-add" onclick="openNewWorkOrder()">
+        <span class="btn-add-icon"><i class="fas fa-plus"></i></span>
+        Yeni Üretim Başlat
+    </button>
+}
+
+@section TopbarActions {
+    <button class="topbar-btn btn-filter" onclick="toggleFilter()">
+        <i class="fas fa-filter"></i> Filtrele
+    </button>
+    <a href="/Production/ExportIndex" class="topbar-btn btn-excel">
+        <i class="fas fa-file-excel"></i> Excel
+    </a>
+    @if (User.IsInRole("Admin") || Context.Session.GetString("UserRole") == "Admin")
+    {
+        <button class="topbar-btn" style="background:#7c3aed;color:#fff;" onclick="recalcQty()" title="Mevcut hatalı üretim adetlerini yeniden hesapla">
+            <i class="fas fa-sync-alt"></i> Üretim Adeti Düzelt
+        </button>
+    }
+}
+
+<!-- Stat Kartları -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-clipboard-list"></i></div>
+            <div>
+                <div class="stat-value">@total</div>
+                <div class="stat-label">Toplam İş Emri</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon amber"><i class="fas fa-spinner"></i></div>
+            <div>
+                <div class="stat-value">@uretimde</div>
+                <div class="stat-label">Üretimde</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div class="stat-value">@tamamlandi</div>
+                <div class="stat-label">Tamamlandı</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="fas fa-boxes"></i></div>
+            <div>
+                <div class="stat-value">@toplamUretim.ToString("N0")</div>
+                <div class="stat-label">Toplam Üretim (adet)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtre Paneli -->
+<div id="filterPanel" class="filter-panel mb-3" style="display:none;">
+    <form method="get" action="/Production/Index">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Başlangıç Tarihi</label>
+                <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Bitiş Tarihi</label>
+                <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Ürün</label>
+                <div class="mcd" id="mcd-prod-idx" data-placeholder="— Tümü —">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-prod-idx')">
+                        <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " seçildi" : "— Tümü —")</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-prod-idx-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Ürün ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <label class="mcd-row mcd-header">
+                            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-prod-idx')">
+                            <span>Tümünü Seç / Temizle</span>
+                        </label>
+                        <div class="mcd-items">
+                            @foreach (var p in allProducts)
+                            {
+                                bool sel = productIds.Contains(p.Id);
+                                <label class="mcd-row">
+                                    <input type="checkbox" name="productIds" value="@p.Id" class="mcd-cb"
+                                           onchange="mcdUpdate('mcd-prod-idx')"
+                                           @(sel ? "checked" : "")>
+                                    <span class="mcd-name" title="@p.ProductName">@p.ProductName</span>
+                                    @if (!string.IsNullOrEmpty(p.ProductCode))  { <span class="mcd-sub">@p.ProductCode</span> }
+                                    @if (!string.IsNullOrEmpty(p.ExternalCode)) { <span class="mcd-ext">@p.ExternalCode</span> }
+                                </label>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Durum</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">— Tümü —</option>
+                    <option value="1">Taslak</option>
+                    <option value="2">Üretimde</option>
+                    <option value="3">Tamamlandı</option>
+                    <option value="4">İptal</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2 align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                    <i class="fas fa-search me-1"></i> Sorgula
+                </button>
+                <a href="/Production/Index" class="btn btn-outline-secondary btn-sm flex-fill">
+                    <i class="fas fa-times me-1"></i> Temizle
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tablo -->
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>İŞ EMRİ NO</th>
+                <th>ÜRÜN</th>
+                <th>MAKİNE</th>
+                <th>PLAN TARİHİ</th>
+                <th class="text-center">PLAN (adet)</th>
+                <th class="text-center">GERÇEK (adet)</th>
+                <th class="text-center">TÜKETİM (kg)</th>
+                <th class="text-center">FİRE (kg)</th>
+                <th class="text-center">DURUM</th>
+                <th class="text-center">İŞLEM</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Any())
+            {
+                <tr>
+                    <td colspan="10">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-industry"></i></div>
+                            <h6>Henüz iş emri yok</h6>
+                            <p><strong>+ Yeni İş Emri</strong> butonu ile üretim planlamaya başlayın.</p>
+                        </div>
+                    </td>
+                </tr>
+            }
+            @foreach (var wo in Model)
+            {
+                var tuketim = wo.ProductionDetails.Sum(d => d.ConsumedWeight);
+                var fire    = wo.ProductionDetails.Sum(d => d.WasteWeight);
+
+                var (statusClass, statusLabel, statusIcon) = wo.Status switch {
+                    WorkOrderStatus.Taslak     => ("badge-gray",   "Taslak",      "fas fa-file-alt"),
+                    WorkOrderStatus.Uretimde   => ("badge-amber",  "Üretimde",    "fas fa-spinner"),
+                    WorkOrderStatus.Tamamlandi => ("badge-green",  "Tamamlandı",  "fas fa-check-circle"),
+                    WorkOrderStatus.Iptal      => ("badge-red",    "İptal",       "fas fa-times-circle"),
+                    _ => ("badge-gray", "—", "fas fa-circle")
+                };
+
+                <tr>
+                    <td>
+                        <a href="/Production/Detail/@wo.Id" class="table-link fw-semibold">
+                            @wo.WorkOrderNo
+                        </a>
+                    </td>
+                    <td>
+                        <div class="fw-semibold" style="font-size:13px;">@wo.Product?.ProductName</div>
+                        <div class="text-muted" style="font-size:11px;">
+                            @wo.Product?.ProductCode
+                            @if (!string.IsNullOrWhiteSpace(wo.Product?.ExternalCode))
+                            {
+                                <span class="badge" style="background:#eef2ff;color:#3730a3;font-weight:500;margin-left:4px;" title="Dış stok kodu">@wo.Product!.ExternalCode</span>
+                            }
+                        </div>
+                    </td>
+                    <td class="text-muted">@wo.Machine?.Name</td>
+                    <td class="text-muted">@wo.PlannedDate.ToString("dd.MM.yyyy")</td>
+                    <td class="text-center fw-semibold">@wo.PlannedQuantity.ToString("N0")</td>
+                    <td class="text-center">
+                        @if (wo.ActualQuantity > 0)
+                        {
+                            var pct = wo.PlannedQuantity > 0 ? wo.ActualQuantity / wo.PlannedQuantity * 100 : 0;
+                            <span class="badge @(pct >= 100 ? "badge-green" : "badge-blue")">
+                                @wo.ActualQuantity.ToString("N0")
+                            </span>
+                        }
+                        else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="text-center">
+                        @if (tuketim > 0)
+                        {
+                            <span class="badge badge-navy">@tuketim.ToString("N2") kg</span>
+                        }
+                        else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="text-center">
+                        @if (fire > 0)
+                        {
+                            <span class="badge badge-red">@fire.ToString("N2") kg</span>
+                        }
+                        else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="text-center">
+                        <span class="badge @statusClass">
+                            <i class="@statusIcon me-1"></i>@statusLabel
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex gap-1 justify-content-center">
+                            <a href="/Production/Detail/@wo.Id"
+                               class="btn btn-sm" style="padding:4px 9px;border-radius:6px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
+                               title="Detay / Tüketim Gir">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            @if (wo.Status != WorkOrderStatus.Tamamlandi && wo.Status != WorkOrderStatus.Iptal)
+                            {
+                                <button onclick="editWorkOrder(@wo.Id)"
+                                        class="btn btn-sm" style="padding:4px 9px;border-radius:6px;background:#f9fafb;color:#374151;border:1px solid #e5e7eb;"
+                                        title="Düzenle">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                @if (wo.Status == WorkOrderStatus.Uretimde)
+                                {
+                                    <button onclick="completeWorkOrder(@wo.Id, '@wo.WorkOrderNo')"
+                                            class="btn btn-sm" style="padding:4px 9px;border-radius:6px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;"
+                                            title="Tamamlandı Olarak İşaretle">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                }
+                                <button onclick="deleteWorkOrder(@wo.Id, '@wo.WorkOrderNo')"
+                                        class="btn btn-sm" style="padding:4px 9px;border-radius:6px;background:#fff5f5;color:#dc2626;border:1px solid #fecaca;"
+                                        title="Sil">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- İş Emri Modal -->
+<div class="modal fade" id="workOrderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-industry" style="font-size:13px;color:#fff;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold mb-0" id="woModalTitle">Yeni Üretim</h5>
+                        <div style="font-size:11px;opacity:.6;color:#fff;" id="woModalSubtitle">İş emri numarası otomatik atanacak</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="woId">
+                <!-- Düzenleme modunda iş emri no ve durum gösterilir -->
+                <div id="woEditFields" style="display:none;" class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">İş Emri No</label>
+                        <input type="text" id="woNo" class="form-control" readonly
+                               style="background:#f8fafc;color:#6b7280;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Durum</label>
+                        <select id="woStatus" class="form-select">
+                            <option value="1">Taslak</option>
+                            <option value="2">Üretimde</option>
+                            <option value="3">Tamamlandı</option>
+                            <option value="4">İptal</option>
+                        </select>
+                    </div>
+                    <div class="col-12"><hr class="my-0"></div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <label class="form-label fw-semibold">Üretilecek Ürün <span class="text-danger">*</span></label>
+                        <!-- MCD görsel panel — gizli select'in üstünde -->
+                        <div class="mcd" id="mcd-wo-prod" data-placeholder="— Ürün seçiniz —" style="width:100%;margin-bottom:8px;">
+                            <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-wo-prod')">
+                                <span class="mcd-lbl">— Ürün seçiniz —</span>
+                                <i class="fas fa-angle-down mcd-arrow"></i>
+                            </button>
+                            <div class="mcd-panel" id="mcd-wo-prod-panel" style="display:none;width:100%;">
+                                <div class="mcd-search-row">
+                                    <input type="text" class="mcd-search" placeholder="Stok kodu, dış kod veya ürün adı ile ara..." oninput="mcdSearch(this)">
+                                </div>
+                                <div class="mcd-items" style="max-height:220px;">
+                                    @foreach (var p in products)
+                                    {
+                                        var pc  = (p.ProductCode  ?? "").Trim();
+                                        var ec  = (p.ExternalCode ?? "").Trim();
+                                        var pn  = (p.ProductName  ?? "").Trim();
+                                        <label class="mcd-row" onclick="woProductSelect(@p.Id, '@pn.Replace("'", "\\'")'); return false;">
+                                            <span class="mcd-name" title="@pn">@pn</span>
+                                            @if (!string.IsNullOrEmpty(pc)) { <span class="mcd-sub">@pc</span> }
+                                            @if (!string.IsNullOrEmpty(ec)) { <span class="mcd-ext">@ec</span> }
+                                        </label>
+                                    }
+                                </div>
+                                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                            </div>
+                        </div>
+                        <!-- Gizli select — JS compatibility için korunuyor -->
+                        <select id="woProductId" class="form-select" size="1" style="display:none;">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var p in products)
+                            {
+                                <option value="@p.Id">@p.ProductName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Makine <span class="text-danger">*</span></label>
+                        <div class="qa-group">
+                            <select id="woMachineId" class="form-select">
+                                <option value="">— Seçiniz —</option>
+                                @foreach (var m in machines)
+                                {
+                                    <option value="@m.Id">@m.Name</option>
+                                }
+                            </select>
+                            <button type="button" class="qa-btn" onclick="openQuickAdd('machine','woMachineId')" title="Yeni Makine Ekle"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Üretim Tarihi <span class="text-danger">*</span></label>
+                        <input type="date" id="woDate" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Planlanan Miktar <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" id="woQty" class="form-control" step="1" min="1" placeholder="0">
+                            <span class="input-group-text">adet</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" title="Netsis / ERP iş emri numarası">Harici İş Emri No <i class="fas fa-info-circle text-muted" style="font-size:10px;"></i></label>
+                        <input type="text" id="woExternalOrderNo" class="form-control" placeholder="ERP iş emri no">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Notlar</label>
+                        <input type="text" id="woNotes" class="form-control" placeholder="Opsiyonel...">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-primary px-4" id="woSaveBtn" onclick="saveWorkOrder()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+.mcd{position:relative}
+.mcd-btn{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:#fff;border:1px solid #d1d5db;color:#111;padding:5px 10px;border-radius:6px;font-size:13px}
+.mcd-btn:hover{border-color:#1976d2}
+.mcd-panel{position:absolute;top:calc(100% + 4px);left:0;min-width:300px;max-width:400px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:1050;display:flex;flex-direction:column;overflow:hidden}
+.mcd-search-row{padding:8px 10px;border-bottom:1px solid #f1f5f9}
+.mcd-search{width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:5px 10px;font-size:12.5px;outline:none}
+.mcd-header{background:#f8fafc;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12.5px;color:#374151}
+.mcd-items{overflow-y:auto;max-height:260px}
+.mcd-row{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:12.5px;user-select:none}
+.mcd-row:hover{background:#eff6ff}
+.mcd-cb,.mcd-all-cb{cursor:pointer;accent-color:#1976d2;min-width:15px;height:15px}
+.mcd-name{flex:1;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.mcd-sub{font-size:10.5px;color:#374151;background:#f3f4f6;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.mcd-ext{font-size:10.5px;color:#3730a3;background:#eef2ff;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.mcd-arrow{color:#6b7280;font-size:11px}
+</style>
+<script>
+if(!window._mcdReady){window._mcdReady=true;
+window.mcdOpen=function(id){var p=document.getElementById(id+'-panel');var o=p&&p.style.display!=='none';document.querySelectorAll('.mcd-panel').forEach(function(x){x.style.display='none'});if(!o&&p){p.style.display='flex';mcdUpdate(id)}};
+window.mcdSearch=function(el){var t=el.value.toLowerCase();el.closest('.mcd-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(t)?'':'none'})};
+window.mcdToggleAll=function(cb,id){document.getElementById(id+'-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){if(r.style.display!=='none'){var c=r.querySelector('.mcd-cb');if(c)c.checked=cb.checked}});mcdUpdate(id)};
+window.mcdUpdate=function(id){var p=document.getElementById(id+'-panel');var c=document.getElementById(id);if(!p||!c)return;var n=p.querySelectorAll('.mcd-cb:checked').length;var l=c.querySelector('.mcd-lbl');if(l)l.textContent=n===0?(c.dataset.placeholder||'— Seçiniz —'):n+' seçildi';var a=p.querySelector('.mcd-all-cb');var v=p.querySelectorAll('.mcd-row:not(.mcd-header):not([style*="none"]) .mcd-cb').length;if(a&&v>0)a.checked=(n>=v)};
+document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'})});}
+</script>
+<script>
+let _woEditMode = false;
+
+function openNewWorkOrder() {
+    _woEditMode = false;
+    document.getElementById('woId').value        = '';
+    document.getElementById('woNo').value        = '';
+    document.getElementById('woDate').value      = new Date().toISOString().split('T')[0];
+    document.getElementById('woProductId').value = '';
+    document.getElementById('woMachineId').value = '';
+    document.getElementById('woQty').value       = '';
+    document.getElementById('woNotes').value            = '';
+    document.getElementById('woExternalOrderNo').value  = '';
+    document.getElementById('woEditFields').style.display = 'none';
+    // MCD'yi sıfırla
+    var lbl = document.querySelector('#mcd-wo-prod .mcd-lbl');
+    if (lbl) lbl.textContent = '— Ürün seçiniz —';
+    document.getElementById('woModalTitle').textContent   = 'Yeni Üretim';
+    document.getElementById('woModalSubtitle').textContent = 'İş emri numarası otomatik atanacak';
+    document.getElementById('woSaveBtn').innerHTML = '<i class="fas fa-save me-1"></i> Kaydet & Başlat';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('workOrderModal')).show();
+}
+
+function editWorkOrder(id) {
+    _woEditMode = true;
+    fetch(`/Production/GetWorkOrder/${id}`)
+        .then(r => r.json()).then(res => {
+            if (!res.success) return;
+            const d = res.data;
+            document.getElementById('woId').value        = d.id;
+            document.getElementById('woNo').value        = d.workOrderNo;
+            document.getElementById('woDate').value      = d.plannedDate;
+            document.getElementById('woProductId').value = d.productId;
+            document.getElementById('woMachineId').value = d.machineId;
+            setTimeout(updateWoProdLabel, 50);
+            document.getElementById('woQty').value       = d.plannedQuantity;
+            document.getElementById('woStatus').value    = d.status;
+            document.getElementById('woNotes').value           = d.notes || '';
+            document.getElementById('woExternalOrderNo').value = d.externalOrderNo || '';
+            document.getElementById('woEditFields').style.display = '';
+            document.getElementById('woModalTitle').textContent    = 'Düzenle — ' + d.workOrderNo;
+            document.getElementById('woModalSubtitle').textContent = d.workOrderNo;
+            document.getElementById('woSaveBtn').innerHTML = '<i class="fas fa-save me-1"></i> Güncelle';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('workOrderModal')).show();
+        });
+}
+
+function saveWorkOrder() {
+    if (!document.getElementById('woProductId').value ||
+        !document.getElementById('woMachineId').value ||
+        !document.getElementById('woDate').value ||
+        !document.getElementById('woQty').value) {
+        showToast('Ürün, Makine, Tarih ve Miktar zorunludur.', 'warning');
+        return;
+    }
+    const btn = document.getElementById('woSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Kaydediliyor...';
+
+    const fd = new FormData();
+    const id = document.getElementById('woId').value;
+    if (id) fd.append('Id', id);
+    fd.append('WorkOrderNo',     document.getElementById('woNo').value);
+    fd.append('ProductId',       document.getElementById('woProductId').value);
+    fd.append('MachineId',       document.getElementById('woMachineId').value);
+    fd.append('PlannedDate',     document.getElementById('woDate').value);
+    fd.append('PlannedQuantity', document.getElementById('woQty').value);
+    // Yeni kayıt: her zaman "Üretimde" (2) başlar
+    fd.append('Status',          _woEditMode ? document.getElementById('woStatus').value : '2');
+    fd.append('ExternalOrderNo', document.getElementById('woExternalOrderNo').value);
+    fd.append('Notes',           document.getElementById('woNotes').value);
+
+    fetch('/Production/SaveWorkOrder', { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('workOrderModal'))?.hide();
+                showToast(res.workOrderNo + ' kaydedildi.', 'success');
+                // Yeni iş emri → detay sayfasına yönlendir
+                if (!_woEditMode && res.workOrderId) {
+                    setTimeout(() => { window.location.href = '/Production/Detail/' + res.workOrderId; }, 800);
+                } else {
+                    setTimeout(() => location.reload(), 1000);
+                }
+            } else {
+                showToast(res.message, 'error');
+            }
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = _woEditMode
+                ? '<i class="fas fa-save me-1"></i> Güncelle'
+                : '<i class="fas fa-save me-1"></i> Kaydet & Başlat';
+        });
+}
+
+function completeWorkOrder(id, no) {
+    Swal.fire({
+        title: 'İş Emrini Tamamla',
+        text: `${no} iş emri tamamlandı olarak işaretlensin mi?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Tamamla',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#16a34a'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        const fd = new FormData(); fd.append('id', id);
+        fetch('/Production/CompleteWorkOrder', { method: 'POST', body: fd })
+            .then(r => r.json()).then(res => {
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    Swal.fire({
+                        title: 'FSC CoC Zinciri Eksik',
+                        html: '<div style="text-align:left;font-size:13px;line-height:1.7;">' +
+                              res.message.replace(/\n/g, '<br>') + '</div>',
+                        icon: 'error',
+                        confirmButtonText: 'Tamam',
+                        confirmButtonColor: '#1565c0'
+                    });
+                }
+            });
+    });
+}
+
+function deleteWorkOrder(id, no) {
+    Swal.fire({
+        title: 'İş Emrini Sil',
+        text: `${no} iş emri silinecek. Devam edilsin mi?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Sil',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#dc2626'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        const fd = new FormData(); fd.append('id', id);
+        fetch('/Production/DeleteWorkOrder', { method: 'POST', body: fd })
+            .then(r => r.json()).then(res => {
+                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1200); }
+                else showToast(res.message, 'error');
+            });
+    });
+}
+
+/* ─── WO ÜRÜN MCD FONKSİYONLARI ───────────── */
+function woProductSelect(id, name) {
+    document.getElementById('woProductId').value = id;
+    var lbl = document.querySelector('#mcd-wo-prod .mcd-lbl');
+    if (lbl) lbl.textContent = name;
+    document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
+}
+
+function updateWoProdLabel() {
+    var sel = document.getElementById('woProductId');
+    var opt = sel ? sel.options[sel.selectedIndex] : null;
+    var lbl = document.querySelector('#mcd-wo-prod .mcd-lbl');
+    if (lbl && opt && opt.value) lbl.textContent = opt.text;
+    else if (lbl) lbl.textContent = '— Ürün seçiniz —';
+}
+
+function recalcQty() {
+    Swal.fire({
+        title: 'Üretim Adeti Düzelt',
+        text: 'Tüm iş emirlerindeki hatalı üretim adetleri yeniden hesaplanacak. Devam edilsin mi?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Düzelt',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#7c3aed'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        fetch('/Production/RecalcAllActualQty', { method: 'POST' })
+            .then(r => r.json()).then(res => {
+                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 1500); }
+                else showToast(res.message, 'error');
+            });
+    });
+}
+</script>
+}

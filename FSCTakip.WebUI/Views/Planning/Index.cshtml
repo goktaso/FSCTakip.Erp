@@ -1,8 +1,220 @@
+@using FSCTakip.Core.Entities
 @{
-    ViewData["Title"] = "Üretim Planlama";
+    ViewData["Title"] = ViewData["Title"]?.ToString() ?? "Üretim Planı";
+    var workOrders   = ViewBag.WorkOrders   as List<WorkOrder>  ?? new();
+    var machines     = ViewBag.Machines     as List<Machine>    ?? new();
+    var overdue      = ViewBag.OverdueOrders as List<WorkOrder> ?? new();
+    DateTime currentMonth = ViewBag.CurrentMonth ?? DateTime.Today;
+    DateTime prevMonth    = ViewBag.PrevMonth    ?? DateTime.Today.AddMonths(-1);
+    DateTime nextMonth    = ViewBag.NextMonth    ?? DateTime.Today.AddMonths(1);
+    var culture           = new System.Globalization.CultureInfo("tr-TR");
 }
-<div class="card shadow-sm border-0 p-5 text-center">
-    <i class="fas fa-calendar-alt fa-4x text-muted mb-3"></i>
-    <h4 class="text-dark">Üretim Planlama</h4>
-    <p class="text-muted">Bu modül yakında aktif olacaktır.</p>
+
+@section TopbarActions {
+    <a href="/Planning?year=@prevMonth.Year&month=@prevMonth.Month" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-chevron-left"></i>
+    </a>
+    <span class="fw-semibold px-2" style="font-size:14px;">@currentMonth.ToString("MMMM yyyy", culture)</span>
+    <a href="/Planning?year=@nextMonth.Year&month=@nextMonth.Month" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-chevron-right"></i>
+    </a>
+    <a href="/Planning" class="btn btn-outline-primary btn-sm ms-2">Bugün</a>
+    <a href="/Production/Index" class="btn btn-primary btn-sm ms-2">
+        <i class="fas fa-list me-1"></i> İş Emirleri
+    </a>
+}
+
+<!-- Gecikmiş uyarı -->
+@if (overdue.Any())
+{
+    <div class="p-3 rounded mb-3 d-flex align-items-start gap-2" style="background:#fef2f2;border:1px solid #fecaca;font-size:12.5px;">
+        <i class="fas fa-exclamation-triangle mt-1" style="color:#dc2626;flex-shrink:0;"></i>
+        <div>
+            <strong style="color:#991b1b;">@overdue.Count gecikmiş iş emri:</strong>
+            @foreach (var wo in overdue.Take(5))
+            {
+                <span class="badge bg-danger ms-1" style="font-size:11px;">@wo.WorkOrderNo</span>
+                <span class="text-muted ms-1" style="font-size:11px;">(@wo.PlannedDate.ToString("dd.MM") — @(wo.Product?.ProductName ?? "?"))</span>
+            }
+            @if (overdue.Count > 5) { <span class="text-muted ms-1" style="font-size:11px;">+@(overdue.Count - 5) daha</span> }
+        </div>
+    </div>
+}
+
+<div class="row g-3">
+    <!-- Sol: Takvim -->
+    <div class="col-md-8">
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <span style="width:32px;height:32px;border-radius:8px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-calendar-alt" style="color:#1d4ed8;font-size:14px;"></i>
+                </span>
+                <strong style="font-size:14px;">Üretim Takvimi</strong>
+                <span class="badge badge-blue ms-1">@workOrders.Count iş emri</span>
+            </div>
+            <div id="calendar" style="padding:16px;"></div>
+        </div>
+    </div>
+
+    <!-- Sağ: Bu ay iş emirleri listesi -->
+    <div class="col-md-4">
+        <div class="table-card">
+            <div class="p-3 border-bottom">
+                <strong style="font-size:14px;"><i class="fas fa-list me-2 text-muted"></i>Bu Ay İş Emirleri</strong>
+            </div>
+            @if (!workOrders.Any())
+            {
+                <div class="text-center text-muted py-4 small">Bu ay planlı iş emri yok.</div>
+            }
+            @foreach (var wo in workOrders.OrderBy(w => w.PlannedDate))
+            {
+                var statusBadge = wo.Status switch
+                {
+                    WorkOrderStatus.Tamamlandi => "badge-success",
+                    WorkOrderStatus.Uretimde   => "badge-primary",
+                    WorkOrderStatus.Iptal      => "bg-secondary text-white",
+                    _                          => "badge-warning"
+                };
+                var statusLabel = wo.Status switch
+                {
+                    WorkOrderStatus.Tamamlandi => "Tamam",
+                    WorkOrderStatus.Uretimde   => "Üretimde",
+                    WorkOrderStatus.Iptal      => "İptal",
+                    _                          => "Beklemede"
+                };
+                <div class="p-3 border-bottom wo-item" style="cursor:pointer;" onclick="showDetail(@wo.Id)">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="fw-semibold" style="font-size:13px;">@wo.WorkOrderNo</div>
+                            <div class="text-muted small">@(wo.Product?.ProductName ?? "—")</div>
+                            <div class="text-muted small">
+                                <i class="fas fa-calendar me-1"></i>@wo.PlannedDate.ToString("dd.MM.yyyy")
+                                @if (wo.Machine != null)
+                                {
+                                    <span class="ms-2"><i class="fas fa-cog me-1"></i>@wo.Machine.Name</span>
+                                }
+                            </div>
+                        </div>
+                        <span class="badge @statusBadge ms-2">@statusLabel</span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Makine Doluluk -->
+        @{
+            var machineLoad = ViewBag.MachineLoad as List<FSCTakip.WebUI.Controllers.MachineLoadRow>;
+        }
+        @if (machineLoad != null)
+        {
+            <div class="table-card mt-3">
+                <div class="p-3 border-bottom">
+                    <strong style="font-size:14px;"><i class="fas fa-cog me-2 text-muted"></i>Makine Yükü</strong>
+                </div>
+                @foreach (var ml in machineLoad)
+                {
+                    <div class="p-2 border-bottom d-flex justify-content-between align-items-center small">
+                        <span class="fw-semibold">@ml.Machine</span>
+                        <div>
+                            <span class="badge badge-warning ms-1">@ml.Planned bekliyor</span>
+                            <span class="badge badge-primary ms-1">@ml.Active üretimde</span>
+                            <span class="badge badge-success ms-1">@ml.Done tamam</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
 </div>
+
+<!-- İş Emri Detay Modal -->
+<div class="modal fade" id="woDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header" style="background:#1e3d14;">
+                <h5 class="modal-title text-white fw-semibold">
+                    <i class="fas fa-clipboard-list me-2"></i><span id="modal_woNo">İş Emri Detayı</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="woDetailBody">
+                <div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <a id="modal_editBtn" href="#" class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i> İş Emrine Git
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<!-- FullCalendar CDN -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/tr.global.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            locale:       'tr',
+            initialView:  'dayGridMonth',
+            initialDate:  '@currentMonth.ToString("yyyy-MM-dd")',
+            headerToolbar: {
+                left:   'prev,next today',
+                center: 'title',
+                right:  'dayGridMonth,listWeek'
+            },
+            events: '/Planning/GetCalendarData',
+            eventClick: function(info) {
+                showDetail(info.event.id);
+            },
+            eventDrop: function(info) {
+                var newDate = info.event.startStr;
+                $.post('/Planning/UpdatePlannedDate', { id: info.event.id, plannedDate: newDate }, function(res) {
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                    } else {
+                        showToast(res.message, 'error');
+                        info.revert();
+                    }
+                });
+            },
+            editable:   true,
+            droppable:  true,
+            height:     'auto'
+        });
+        calendar.render();
+    });
+
+    function showDetail(id) {
+        document.getElementById('woDetailBody').innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</div>';
+        new bootstrap.Modal(document.getElementById('woDetailModal')).show();
+
+        $.get('/Planning/GetWorkOrderDetail/' + id, function(res) {
+            if (!res.success) {
+                document.getElementById('woDetailBody').innerHTML = '<p class="text-danger">Detay yüklenemedi.</p>';
+                return;
+            }
+            document.getElementById('modal_woNo').textContent = res.workOrderNo;
+            document.getElementById('modal_editBtn').href = '/Production/Detail/' + id;
+            document.getElementById('woDetailBody').innerHTML = `
+                <div class="row g-2">
+                    <div class="col-6"><small class="text-muted">Ürün</small><div class="fw-semibold">${res.productName}</div></div>
+                    <div class="col-6"><small class="text-muted">Ürün Kodu</small><div class="fw-semibold">${res.productCode}</div></div>
+                    <div class="col-6"><small class="text-muted">FSC Tipi</small><div>${res.fscType}</div></div>
+                    <div class="col-6"><small class="text-muted">Makine</small><div>${res.machineName}</div></div>
+                    <div class="col-6"><small class="text-muted">Planlı Tarih</small><div>${res.plannedDate || '—'}</div></div>
+                    <div class="col-6"><small class="text-muted">Durum</small><div>${res.status}</div></div>
+                    <div class="col-6"><small class="text-muted">Planlı Adet</small><div class="fw-semibold">${res.plannedQty?.toLocaleString('tr-TR')} ad</div></div>
+                    <div class="col-6"><small class="text-muted">Gerçekleşen</small><div class="fw-semibold">${res.actualQty?.toLocaleString('tr-TR')} ad</div></div>
+                    ${res.notes ? `<div class="col-12"><small class="text-muted">Not</small><div class="small text-muted">${res.notes}</div></div>` : ''}
+                </div>`;
+        });
+    }
+
+    // showToast global olarak _Layout.cshtml'de tanımlı — yerel tanım kaldırıldı
+</script>
+}

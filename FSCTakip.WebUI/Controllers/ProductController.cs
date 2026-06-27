@@ -1,4 +1,4 @@
-using FSCTakip.Core.Entities;
+﻿using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +6,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace FSC_ERP.Controllers
+namespace FSCTakip.WebUI.Controllers
 {
     public class ProductController : BaseController
     {
@@ -63,6 +63,17 @@ namespace FSC_ERP.Controllers
             await _context.SaveChangesAsync();
             return Json(new { success = true, isActive = item.IsActive });
         }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteBagType(int id)
+        {
+            var item = await _context.BagTypes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+            _context.BagTypes.Remove(item);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Torba tipi silindi." });
+        }
         #endregion
 
         #region Ürün Grupları
@@ -70,6 +81,28 @@ namespace FSC_ERP.Controllers
         {
             var groups = await _context.ProductGroups.OrderBy(g => g.GroupName).ToListAsync();
             return View(groups);
+        }
+
+        // POST /Product/QuickAddGroup — inline hızlı ürün grubu ekleme
+        [HttpPost]
+        public async Task<IActionResult> QuickAddGroup(string GroupName, int? GroupCode)
+        {
+            if (string.IsNullOrWhiteSpace(GroupName))
+                return Json(new { success = false, message = "Grup adı zorunludur." });
+            var code = GroupCode ?? (await _context.ProductGroups.MaxAsync(g => (int?)g.GroupCode) ?? 0) + 1;
+            var g = new ProductGroup
+            {
+                GroupName   = GroupName.Trim().ToUpper(new System.Globalization.CultureInfo("tr-TR")),
+                GroupCode   = code,
+                RangeStart  = code * 1000,
+                RangeEnd    = code * 1000 + 999,
+                IsActive    = true,
+                CreatedDate = DateTime.Now,
+                CreatedBy   = User.Identity?.Name ?? "System"
+            };
+            _context.ProductGroups.Add(g);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, id = g.Id, text = g.GroupName });
         }
 
         [HttpPost]
@@ -123,6 +156,32 @@ namespace FSC_ERP.Controllers
         {
             var data = await _context.BagTypes.OrderBy(b => b.Name).Select(b => new { b.Id, b.Name, b.Code, Durum = b.IsActive ? "AKTİF" : "PASİF" }).ToListAsync();
             return ExportToExcel(data, "TorbaTipleri");
+        }
+
+        // GET /Product/ExportProductGroups
+        public async Task<IActionResult> ExportProductGroups()
+        {
+            var data = await _context.ProductGroups.OrderBy(g => g.GroupCode).Select(g => new {
+                GrupKodu   = g.GroupCode,
+                GrupAdi    = g.GroupName,
+                AralikBas  = g.RangeStart,
+                AralikBit  = g.RangeEnd,
+                Durum      = g.IsActive ? "AKTİF" : "PASİF"
+            }).ToListAsync();
+            return ExportToExcel(data, "UrunGruplari");
+        }
+
+        // POST /Product/DeleteProductGroup
+        [HttpPost]
+        public async Task<IActionResult> DeleteProductGroup(int id)
+        {
+            var item = await _context.ProductGroups.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            var used = await _context.Products.AnyAsync(p => p.ProductGroupId == id);
+            if (used) return Json(new { success = false, message = "Bu grup ürünlerde kullanılmaktadır." });
+            _context.ProductGroups.Remove(item);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Grup silindi." });
         }
     }
 }

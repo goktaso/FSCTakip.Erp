@@ -2,343 +2,2961 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>@ViewData["Title"] - FSC ERP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"] - FSC Takip ERP</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css">
-    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.min.css">
 
     <style>
+        :root {
+            --sidebar-bg:      #1a2744;
+            --sidebar-hover:   rgba(255,255,255,.07);
+            --sidebar-active:  rgba(25,118,210,.22);
+            --accent:          #1976d2;
+            --accent-dark:     #1565c0;
+            --accent-light:    #e3f2fd;
+            --topbar-h:        56px;
+            --sidebar-w:       250px;
+            --sidebar-w-col:   64px;
+            --card-radius:     10px;
+            --shadow-sm:       0 1px 4px rgba(0,0,0,.08);
+            --shadow-md:       0 4px 16px rgba(0,0,0,.12);
+            --text-muted:      #6b7280;
+            --border:          #e5e7eb;
+            --bg-page:         #f0f2f5;
+            --table-header-bg: #1a2744;
+            --table-header-color: #fff;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
         body {
             margin: 0;
-            background: #f4f7f6;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            font-size: 14px;
+            background: var(--bg-page);
+            color: #111827;
             overflow-x: hidden;
         }
 
-        .main-wrapper {
-            display: flex;
-            height: 100vh;
-            position: relative;
-        }
-
-        /* --- SIDEBAR - Yapı korundu, renkler FSC yeşili yapıldı --- */
+        /* ── SIDEBAR ───────────────────────────────────── */
         .sidebar {
-            width: 260px;
-            min-width: 260px;
-            background: #1e3d14; /* Mavi-gri yerine Koyu Orman Yeşili */
-            color: white;
-            display: flex;
-            flex-direction: column;
-            transition: all 0.3s;
+            position: fixed; top: 0; left: 0;
+            width: var(--sidebar-w);
+            height: 100vh;
+            background: var(--sidebar-bg);
+            display: flex; flex-direction: column;
+            transition: width .25s cubic-bezier(.4,0,.2,1);
             z-index: 1050;
-        }
-
-            .sidebar.collapsed {
-                width: 70px;
-                min-width: 70px;
-            }
-
-                .sidebar.collapsed .sidebar-header h4, .sidebar.collapsed .menu-label, .sidebar.collapsed .nav-link span, .sidebar.collapsed .nav-link .float-right {
-                    display: none !important;
-                }
-
-                .sidebar.collapsed .collapse {
-                    display: none !important;
-                }
-
-        .sidebar-header {
-            padding: 20px;
-            background: #142a0d; /* Başlık alanı daha koyu yeşil */
-            text-align: center;
-        }
-
-        .menu-label {
-            padding: 15px 20px 5px 20px;
-            font-size: 0.7rem;
-            color: #8da386; /* Yazılar yeşilimsi gri */
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .nav-link {
-            color: #bdc3c7;
-            padding: 12px 20px;
-            display: block;
-            text-decoration: none !important;
-            transition: 0.2s;
-            cursor: pointer;
-        }
-
-            .nav-link:hover {
-                background: #2c5e1a; /* Hover yeşili */
-                color: #ffffff;
-            }
-
-            .nav-link.active {
-                background: #4ca637; /* Aktif sayfa yeşili */
-                color: white !important;
-            }
-
-            .nav-link i {
-                width: 25px;
-                color: #4ca637; /* İkonlar açık yeşil */
-            }
-
-            .nav-link.active i {
-                color: white !important;
-            }
-
-        .collapse-inner {
-            background: #142a0d;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .collapse-item {
-            padding: 10px 20px 10px 50px;
-            color: #bdc3c7 !important;
-            font-size: 0.85rem;
-            text-decoration: none !important;
-            display: block;
-        }
-
-            .collapse-item:hover {
-                background: #243342;
-                color: #4ca637 !important;
-            }
-
-            .collapse-item.active {
-                color: white !important;
-                font-weight: bold;
-                background: #4ca637;
-            }
-
-        /* --- CONTENT AREA & BUTONLAR - Senin orijinal renklerin korundu --- */
-        .content-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            width: 100%;
             overflow: hidden;
         }
+        .sidebar.collapsed { width: var(--sidebar-w-col); }
 
-        .page-header {
-            background: white;
-            padding: 10px 20px;
-            border-bottom: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        .sidebar-logo {
+            display: flex; align-items: center; gap: 10px;
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            white-space: nowrap; overflow: hidden;
+            text-decoration: none;
+            background: rgba(0,0,0,.15);
+        }
+        .sidebar-logo .logo-icon {
+            width: 34px; height: 34px; border-radius: 8px;
+            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 15px; color: #fff;
+        }
+        .sidebar-logo .logo-text { color: #fff; font-weight: 700; font-size: 15px; line-height: 1.2; }
+        .sidebar-logo .logo-sub  { color: rgba(255,255,255,.45); font-size: 10px; font-weight: 400; letter-spacing:.03em; }
+        .sidebar.collapsed .logo-text,
+        .sidebar.collapsed .logo-sub { display: none; }
+
+        .sidebar-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px 0; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
+
+        .nav-section {
+            padding: 14px 16px 4px;
+            font-size: 10px; font-weight: 600; letter-spacing: .1em;
+            color: rgba(255,255,255,.28); text-transform: uppercase;
+            white-space: nowrap; overflow: hidden;
+        }
+        .sidebar.collapsed .nav-section { opacity: 0; height: 0; padding: 0; }
+
+        .nav-item { margin: 1px 6px; }
+        .nav-link-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 10px; border-radius: 7px;
+            color: rgba(255,255,255,.65); font-size: 13.5px; font-weight: 500;
+            text-decoration: none; white-space: nowrap; overflow: hidden;
+            transition: background .15s, color .15s;
+            cursor: pointer; border: none; background: none; width: 100%; text-align: left;
+        }
+        .nav-link-item:hover { background: var(--sidebar-hover); color: #fff; }
+        .nav-link-item.active {
+            background: var(--sidebar-active);
+            color: #fff;
+            box-shadow: inset 3px 0 0 var(--accent);
+        }
+        .nav-link-item.active::after {
+            content: '';
+            position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+            width: 4px; height: 70%; border-radius: 4px 0 0 4px;
+            background: var(--accent); opacity: .6;
+        }
+        .nav-item { position: relative; }
+        .nav-link-item .nav-icon {
+            width: 22px; text-align: center; font-size: 14px; flex-shrink: 0;
+            color: rgba(255,255,255,.45);
+        }
+        .nav-link-item.active .nav-icon,
+        .nav-link-item:hover .nav-icon { color: #60a5fa; }
+        .nav-link-item .nav-label { flex: 1; }
+        .nav-link-item .nav-arrow {
+            font-size: 10px; transition: transform .2s;
+            color: rgba(255,255,255,.3);
+        }
+        .nav-link-item[aria-expanded="true"] .nav-arrow { transform: rotate(90deg); }
+        .sidebar.collapsed .nav-label,
+        .sidebar.collapsed .nav-arrow { display: none; }
+
+        /* ── Sidebar Tooltip (kolaps modda hover) ────── */
+        .sidebar.collapsed .nav-item .nav-tooltip {
+            position: absolute; left: calc(var(--sidebar-w-col) + 8px); top: 50%;
+            transform: translateY(-50%);
+            background: #1a2744; color: #fff; font-size: 12px; font-weight: 500;
+            padding: 6px 11px; border-radius: 7px; white-space: nowrap;
+            box-shadow: 0 4px 14px rgba(0,0,0,.3); z-index: 2000;
+            opacity: 0; pointer-events: none;
+            transition: opacity .15s, left .15s;
+        }
+        .sidebar.collapsed .nav-item .nav-tooltip::before {
+            content: '';
+            position: absolute; right: 100%; top: 50%; transform: translateY(-50%);
+            border: 5px solid transparent; border-right-color: #1a2744;
+        }
+        .sidebar.collapsed .nav-item:hover .nav-tooltip { opacity: 1; left: calc(var(--sidebar-w-col) + 12px); }
+
+        /* Güvenlik: nav-item içindeki istenmeyen serbest metin/tooltip kopyaları görünmesin */
+        .sidebar .nav-item > .nav-tooltip {
+            display: none !important;
+        }
+        .sidebar .nav-item > :not(.nav-link-item):not(.nav-tooltip) {
+            display: none !important;
         }
 
-        .header-top {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 10px;
+        .nav-sub { padding-left: 12px; }
+        .nav-sub .nav-item { margin: 1px 0; }
+        .nav-sub .nav-link-item {
+            font-size: 13px; font-weight: 400;
+            padding: 7px 10px;
+            color: rgba(255,255,255,.5);
+        }
+        .nav-sub .nav-link-item::before {
+            content: ''; width: 5px; height: 5px; border-radius: 50%;
+            background: rgba(255,255,255,.2); flex-shrink: 0;
+        }
+        .nav-sub .nav-link-item.active::before,
+        .nav-sub .nav-link-item:hover::before { background: #60a5fa; }
+        .sidebar.collapsed .nav-sub { display: none; }
+
+        /* ── COLLAPSIBLE NAV SECTIONS ──────────────────────────── */
+        .nav-section-toggle {
+            width: 100%; display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px 4px;
+            background: none; border: none; cursor: pointer;
+            font-size: 10px; font-weight: 600; letter-spacing: .1em;
+            color: rgba(255,255,255,.30); text-transform: uppercase;
+            white-space: nowrap; overflow: hidden;
+            transition: color .15s; line-height: 1.4;
+        }
+        .nav-section-toggle:hover { color: rgba(255,255,255,.52); }
+        .nav-section-toggle:focus { outline: none; box-shadow: none; }
+        .nav-section-arrow {
+            font-size: 9px; flex-shrink: 0; margin-left: 4px;
+            color: rgba(255,255,255,.22);
+            transition: transform .22s ease;
+        }
+        .nav-section-toggle[aria-expanded="true"] .nav-section-arrow { transform: rotate(90deg); }
+        /* Aktif bölüm başlığı highlight */
+        .nav-section-toggle:has(+ .nav-section-collapse .nav-link-item.active) {
+            color: rgba(255,255,255,.9);
+            background: rgba(25,118,210,.12);
+            border-radius: 6px;
+        }
+        /* İkon-only modda başlıklar gizlenir, tüm öğeler görünür kalır */
+        .sidebar.collapsed .nav-section-toggle {
+            opacity: 0; height: 0; padding: 0; pointer-events: none; overflow: hidden;
+        }
+        .sidebar.collapsed .nav-section-collapse { display: block !important; }
+
+        /* ── Sidebar Arama ──────────────────────────────── */
+        .sidebar-search-wrap {
+            padding: 8px 10px 4px;
+            border-bottom: 1px solid rgba(255,255,255,.07);
+            flex-shrink: 0;
+        }
+        .sidebar.collapsed .sidebar-search-wrap { display: none; }
+        .sidebar-search-box {
+            position: relative; display: flex; align-items: center;
+        }
+        .sidebar-search-box input {
+            width: 100%; padding: 7px 10px 7px 32px;
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 8px; color: #fff; font-size: 12.5px;
+            outline: none; transition: background .15s, border-color .15s;
+        }
+        .sidebar-search-box input::placeholder { color: rgba(255,255,255,.35); }
+        .sidebar-search-box input:focus {
+            background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.28);
+        }
+        .sidebar-search-box .srch-icon {
+            position: absolute; left: 10px; font-size: 11px;
+            color: rgba(255,255,255,.35); pointer-events: none;
+        }
+        .sidebar-search-box .srch-clear {
+            position: absolute; right: 8px; font-size: 11px;
+            color: rgba(255,255,255,.4); cursor: pointer;
+            display: none; background: none; border: none; padding: 2px 4px;
+            line-height: 1;
+        }
+        .sidebar-search-box .srch-clear:hover { color: rgba(255,255,255,.8); }
+        .sidebar-no-result {
+            padding: 12px 16px; font-size: 12px;
+            color: rgba(255,255,255,.35); text-align: center; display: none;
+        }
+        /* Arama sırasında highlight */
+        .nav-label mark {
+            background: rgba(25,118,210,.55); color: #fff;
+            border-radius: 3px; padding: 0 2px;
         }
 
-        #hamburgerBtn {
-            background: #1e3d14; /* Hamburger butonu sidebar ile uyumlu yeşil */
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
+        .sidebar-footer {
+            padding: 10px 12px;
+            border-top: 1px solid rgba(255,255,255,.08);
+            white-space: nowrap; overflow: hidden;
+            background: rgba(0,0,0,.15);
+        }
+        .sidebar-user {
+            display: flex; align-items: center; gap: 10px;
+            color: rgba(255,255,255,.6); font-size: 12px;
+        }
+        .sidebar-user .avatar {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; color: #fff; font-weight: 700; flex-shrink: 0;
+        }
+        .sidebar.collapsed .sidebar-user span { display: none; }
+
+        /* ── TOPBAR ────────────────────────────────────── */
+        .topbar {
+            position: fixed; top: 0;
+            left: var(--sidebar-w); right: 0;
+            height: var(--topbar-h);
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center;
+            padding: 0 18px; gap: 10px;
+            transition: left .25s cubic-bezier(.4,0,.2,1);
+            z-index: 1000; box-shadow: 0 1px 6px rgba(0,0,0,.07);
+        }
+        .sidebar.collapsed ~ .page-shell .topbar { left: var(--sidebar-w-col); }
+
+        .topbar-toggle {
+            width: 34px; height: 34px; border-radius: 7px;
+            border: 1px solid var(--border); background: transparent;
+            display: flex; align-items: center; justify-content: center;
+            color: #374151; cursor: pointer; flex-shrink: 0;
+            transition: background .15s;
+        }
+        .topbar-toggle:hover { background: var(--accent-light); color: var(--accent); }
+
+        .topbar-title { font-size: 15px; font-weight: 600; color: #111827; }
+        .topbar-breadcrumb { font-size: 11.5px; color: var(--text-muted); }
+
+        .topbar-user {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 10px; border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #fafafa;
+        }
+        .topbar-user .user-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; color: #fff;
+        }
+        .topbar-user .user-name { font-size: 12.5px; font-weight: 600; color: #111827; }
+        .topbar-user .user-role { font-size: 11px; color: var(--text-muted); }
+
+        .topbar-actions { display: flex; align-items: center; gap: 6px; }
+        .topbar-btn {
+            height: 32px; padding: 0 13px; border-radius: 7px; font-size: 12.5px;
+            font-weight: 500; display: inline-flex; align-items: center; gap: 6px;
+            border: 1px solid var(--border); background: #fff; color: #374151;
+            cursor: pointer; text-decoration: none; transition: all .15s;
+        }
+        .topbar-btn:hover { background: var(--bg-page); color: #111827; }
+        .topbar-btn.btn-primary-custom {
+            background: var(--accent); border-color: var(--accent); color: #fff;
+        }
+        .topbar-btn.btn-primary-custom:hover { background: var(--accent-dark); color: #fff; }
+        .topbar-btn.btn-excel { color: #166534; border-color: #bbf7d0; background: #f0fdf4; }
+        .topbar-btn.btn-excel:hover { background: #dcfce7; color: #166534; }
+        .topbar-btn.btn-pdf { color: #991b1b; border-color: #fecaca; background: #fff5f5; }
+        .topbar-btn.btn-pdf:hover { background: #fee2e2; color: #991b1b; }
+        .topbar-btn.btn-filter { color: #92400e; border-color: #fde68a; background: #fffbeb; }
+        .topbar-btn.btn-filter:hover { background: #fef3c7; color: #92400e; }
+        .btn-logout {
+            width: 32px; height: 32px; border-radius: 7px; padding: 0;
+            border: 1px solid #fecaca; background: #fff5f5; color: #dc2626;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all .15s; font-size: 13px;
+        }
+        .btn-logout:hover { background: #fee2e2; }
+
+        /* ── Topbar ikon butonları (zil, dark mode) ─── */
+        .topbar-icon-btn {
+            position: relative;
+            width: 36px; height: 36px; border-radius: 8px; border: 1px solid #d1d5db;
+            background: #f3f4f6; color: #374151; font-size: 15px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all .15s; flex-shrink: 0;
+            box-shadow: 0 1px 2px rgba(0,0,0,.06);
+        }
+        .topbar-icon-btn:hover { background: #e2e8f0; color: var(--accent); border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,.1); }
+
+        /* ── Bildirim badge ── */
+        .notif-badge {
+            position: absolute; top: -4px; right: -4px;
+            min-width: 17px; height: 17px; border-radius: 9px; padding: 0 4px;
+            background: #ef4444; color: #fff; font-size: 10px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid #fff; line-height: 1;
         }
 
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 5px;
-            scrollbar-width: none;
+        /* ── Bildirim dropdown ── */
+        .notif-dropdown {
+            display: none; position: absolute; top: calc(100% + 8px); right: 0;
+            width: 310px; background: #fff; border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,.14); border: 1px solid var(--border);
+            z-index: 2000; overflow: hidden;
+        }
+        .notif-dropdown.show { display: block; }
+        .notif-header {
+            padding: 10px 14px; font-size: 12.5px; font-weight: 700; color: #111827;
+            border-bottom: 1px solid var(--border); background: #f9fafb;
+        }
+        .notif-list { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; }
+        .notif-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; font-size: 12px; cursor: pointer; transition: background .12s;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .notif-item:hover { background: #f9fafb; }
+        .notif-item i { font-size: 13px; flex-shrink: 0; }
+        .notif-item.notif-danger   { border-left: 3px solid #ef4444; }
+        .notif-item.notif-danger i { color: #ef4444; }
+        .notif-item.notif-warning  { border-left: 3px solid #f59e0b; }
+        .notif-item.notif-warning i{ color: #f59e0b; }
+        .notif-item.notif-info     { border-left: 3px solid #3b82f6; }
+        .notif-item.notif-info i   { color: #3b82f6; }
+        .notif-empty { padding: 16px 14px; font-size: 12px; color: var(--text-muted); text-align: center; }
+
+        /* ── Dark Mode ── */
+        body.dark-mode {
+            --bg-page: #0f172a; --border: #1e293b; --text-muted: #94a3b8;
+            --table-header-bg: #0f172a;
+            background: #0f172a; color: #e2e8f0;
+        }
+        body.dark-mode .topbar { background: #1e293b; border-color: #334155; }
+        body.dark-mode .table-card,
+        body.dark-mode .stat-card,
+        body.dark-mode .card { background: #1e293b; border-color: #334155; }
+        body.dark-mode .stat-label { color: #94a3b8; }
+        body.dark-mode .data-table thead { background: #0f172a; }
+        body.dark-mode .data-table tbody tr:hover { background: rgba(255,255,255,.04); }
+        body.dark-mode .topbar-user { background: #334155; border-color: #475569; }
+        body.dark-mode .topbar-user .user-name { color: #e2e8f0; }
+        body.dark-mode .topbar-icon-btn { background: #334155; border-color: #475569; color: #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+        body.dark-mode .notif-dropdown { background: #1e293b; border-color: #334155; }
+        body.dark-mode .notif-header   { background: #0f172a; color: #e2e8f0; border-color: #334155; }
+        body.dark-mode .notif-item     { border-bottom-color: #334155; }
+        body.dark-mode .notif-item:hover { background: #334155; }
+        body.dark-mode .page-header .page-title { color: #e2e8f0; }
+        body.dark-mode .text-muted { color: #94a3b8 !important; }
+        body.dark-mode .topbar-title  { color: #e2e8f0; }
+        body.dark-mode .topbar-btn    { background: #334155; border-color: #475569; color: #cbd5e1; }
+        body.dark-mode .topbar-btn:hover { background: #475569; }
+        body.dark-mode .btn-logout    { background: rgba(239,68,68,.12); border-color: #ef4444; }
+        body.dark-mode .form-control,
+        body.dark-mode .form-select   { background: #334155; border-color: #475569; color: #e2e8f0; }
+        body.dark-mode .modal-content { background: #1e293b; }
+        body.dark-mode .modal-header  { border-color: #334155; }
+        body.dark-mode .modal-body    { color: #e2e8f0; }
+        body.dark-mode .modal-footer  { border-color: #334155; }
+
+        /* Topbar birincil aksiyon butonu */
+        .topbar-primary { display: flex; align-items: center; }
+        .btn-topbar-add {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 0 20px; height: 36px; border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            color: #fff !important; border: none; cursor: pointer;
+            font-size: 13.5px; font-weight: 600; letter-spacing: .01em;
+            box-shadow: 0 2px 8px rgba(25,118,210,.35);
+            transition: all .18s; text-decoration: none; white-space: nowrap;
+        }
+        .btn-topbar-add:hover {
+            background: linear-gradient(135deg, var(--accent-dark) 0%, #0d47a1 100%);
+            box-shadow: 0 4px 14px rgba(25,118,210,.45);
+            transform: translateY(-1px); color: #fff;
+        }
+        .btn-topbar-add .btn-add-icon {
+            width: 20px; height: 20px; border-radius: 5px;
+            background: rgba(255,255,255,.22);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; flex-shrink: 0;
         }
 
-        /* Senin orijinal buton renklerin (Turuncu, Yeşil, Mavi, Mor) dokunulmadı */
-        .btn-filter {
-            background-color: #f39c12;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
+        /* ── PAGE SHELL ────────────────────────────────── */
+        .page-shell {
+            margin-left: var(--sidebar-w);
+            transition: margin-left .25s cubic-bezier(.4,0,.2,1);
         }
-
-        .btn-excel {
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
-        }
-
-        .btn-print {
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
-        }
-
-        .btn-add {
-            background-color: #8e44ad;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            white-space: nowrap;
-        }
+        .sidebar.collapsed ~ .page-shell { margin-left: var(--sidebar-w-col); }
 
         .page-body {
-            padding: 20px;
-            overflow-y: auto;
-            flex: 1;
+            padding: 20px 22px 32px;
+            margin-top: var(--topbar-h);
+            min-height: calc(100vh - var(--topbar-h));
         }
 
-        .overlay {
-            display: none;
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1040;
+        /* ── CARDS ─────────────────────────────────────── */
+        .card {
+            border: 1px solid var(--border) !important;
+            border-radius: var(--card-radius) !important;
+            box-shadow: var(--shadow-sm);
+        }
+        .card-header-accent, .card-header-blue {
+            background: linear-gradient(135deg, #1a2744 0%, #243566 100%);
+            color: #fff; padding: 13px 18px;
+            border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+            font-weight: 600; font-size: 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .card-header-green {
+            background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+            color: #fff; padding: 13px 18px;
+            border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+            font-weight: 600; font-size: 14px;
+            display: flex; align-items: center; gap: 8px;
         }
 
-            .overlay.active {
-                display: block;
-            }
-
-        @@media (max-width: 992px) {
-            .sidebar {
-                position: fixed;
-                left: -260px;
-                height: 100%;
-            }
-
-                .sidebar.active {
-                    left: 0;
-                }
+        /* ── STAT CARDS ────────────────────────────────── */
+        .stat-card {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 16px 18px;
+            display: flex; align-items: center; gap: 14px;
+            box-shadow: var(--shadow-sm); transition: box-shadow .2s, transform .2s;
         }
+        .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+        .stat-icon {
+            width: 44px; height: 44px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 17px; flex-shrink: 0;
+        }
+        .stat-icon.blue   { background: #dbeafe; color: #1d4ed8; }
+        .stat-icon.green  { background: #dcfce7; color: #166534; }
+        .stat-icon.amber  { background: #fef3c7; color: #92400e; }
+        .stat-icon.red    { background: #fee2e2; color: #991b1b; }
+        .stat-icon.purple { background: #ede9fe; color: #5b21b6; }
+        .stat-icon.navy   { background: #e0e7ff; color: #3730a3; }
+        .stat-value { font-size: 22px; font-weight: 700; color: #111827; line-height: 1; }
+        .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+        .stat-trend { font-size: 11px; font-weight: 500; }
+        .stat-trend.up   { color: #16a34a; }
+        .stat-trend.down { color: #dc2626; }
+
+        /* ── TABLE ─────────────────────────────────────── */
+        .table-card { border-radius: var(--card-radius); overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+        .table { margin: 0; }
+        .table thead th {
+            background: var(--table-header-bg); color: var(--table-header-color);
+            font-size: 11.5px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: .05em; padding: 11px 14px;
+            border-bottom: none; white-space: nowrap; border-color: rgba(255,255,255,.1);
+        }
+        .table thead th:first-child { border-radius: 0; }
+        .table-filter-row th {
+            background: #f1f5f9 !important; color: #374151 !important;
+            padding: 6px 8px !important; border-bottom: 1px solid var(--border) !important;
+            font-size: 11px !important; text-transform: none !important; letter-spacing: 0 !important;
+        }
+        .table-filter-row th select,
+        .table-filter-row th input {
+            width: 100%; font-size: 11px; padding: 3px 6px;
+            border: 1px solid #d1d5db; border-radius: 4px; background: #fff;
+        }
+        .table tbody tr { transition: background .1s; }
+        .table tbody tr:hover { background: #f8faff; }
+        .table tbody td { padding: 10px 14px; border-color: #f1f5f9; vertical-align: middle; }
+        .table tbody tr:last-child td { border-bottom: none; }
+        .table-link { color: var(--accent); text-decoration: none; font-weight: 500; }
+        .table-link:hover { color: var(--accent-dark); text-decoration: underline; }
+
+        /* ── BADGES ────────────────────────────────────── */
+        .badge { font-weight: 500; font-size: 11px; padding: 3px 9px; border-radius: 20px; }
+        .badge-green  { background: #dcfce7; color: #166534; }
+        .badge-red    { background: #fee2e2; color: #991b1b; }
+        .badge-amber  { background: #fef3c7; color: #92400e; }
+        .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+        .badge-gray   { background: #f3f4f6; color: #374151; }
+        .badge-purple { background: #ede9fe; color: #5b21b6; }
+        .badge-navy   { background: #e0e7ff; color: #3730a3; }
+
+        /* ── FILTER PANEL ──────────────────────────────── */
+        .filter-panel {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 14px 18px;
+            margin-bottom: 14px; box-shadow: var(--shadow-sm);
+            border-left: 3px solid var(--accent);
+        }
+
+        /* ── MODAL ─────────────────────────────────────── */
+        .modal-content { border: none !important; border-radius: 12px !important; box-shadow: 0 20px 60px rgba(0,0,0,.18) !important; overflow: hidden; }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border) !important; }
+        .modal-header.dark { background: var(--sidebar-bg); color: #fff; }
+        .modal-header.dark .btn-close { filter: invert(1) opacity(.7); }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--border) !important; }
+
+        .form-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+        .form-control, .form-select {
+            border-radius: 7px; border: 1px solid #d1d5db;
+            font-size: 13.5px; padding: 7px 11px;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent); box-shadow: 0 0 0 3px rgba(25,118,210,.15);
+        }
+        .input-group-text {
+            background: #f9fafb; border-color: #d1d5db;
+            color: var(--text-muted); font-size: 13px;
+        }
+
+        /* ── BUTTONS ───────────────────────────────────── */
+        .btn { border-radius: 7px; font-size: 13.5px; font-weight: 500; }
+        .btn-primary { background: var(--accent); border-color: var(--accent); }
+        .btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+        .btn-success { background: #16a34a; border-color: #16a34a; }
+        .btn-success:hover { background: #15803d; border-color: #15803d; }
+        .btn-sm { border-radius: 6px; font-size: 12px; }
+
+        /* ── PROGRESS ──────────────────────────────────── */
+        .progress { border-radius: 20px; background: #e9ecef; height: 6px; }
+        .progress-bar { border-radius: 20px; transition: width .4s ease; }
+
+        /* ── TABLET (769–1024px) ───────────────────────── */
+        @@media (min-width: 769px) and (max-width: 1024px) {
+            .page-body { padding: 16px 18px 28px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .topbar-user .user-name,
+            .topbar-user .user-role { font-size: 11px; }
+        }
+
+        /* ── MOBILE (≤768px) ───────────────────────────── */
+        @@media (max-width: 768px) {
+            /* Sidebar: gizli, overlay ile açılır */
+            .sidebar { transform: translateX(-100%); width: var(--sidebar-w) !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .page-shell { margin-left: 0 !important; }
+            .topbar { left: 0 !important; padding: 0 12px; gap: 8px; }
+            .page-body { padding: 12px 12px 24px; }
+            .topbar-user { display: none; }
+
+            /* Tablo: yatay kaydırma */
+            .card > .card-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .table { min-width: 480px; }
+            .data-table { min-width: 480px; }
+
+            /* İstatistik kartları: 2 sütun */
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-card { padding: 12px 14px; }
+            .stat-value { font-size: 18px; }
+
+            /* Dokunma hedefleri */
+            .btn { min-height: 36px; }
+            .topbar-btn { height: 36px; padding: 0 11px; }
+            .btn-topbar-add { height: 38px; padding: 0 12px; font-size: 12.5px; }
+            .form-control, .form-select { padding: 8px 10px; font-size: 14px; }
+
+            /* Toast: ekranın altında tam genişlik */
+            .toast-container { bottom: 16px; right: 10px; left: 10px; }
+            .toast-container > div { min-width: unset !important; width: 100%; }
+
+            /* Modal: daha dar ekrana uygun */
+            .modal-dialog { margin: 8px auto; }
+            .modal-body { padding: 16px; }
+        }
+
+        /* ── KÜÇÜK TELEFON (≤576px) ─────────────────────── */
+        @@media (max-width: 576px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .modal-dialog { margin: 6px; max-width: calc(100vw - 12px); }
+            .topbar-title { font-size: 13px; }
+            .filter-form { flex-direction: column; align-items: stretch; }
+            .filter-form .form-control,
+            .filter-form .form-select { min-width: unset; width: 100%; }
+            .page-body { padding: 10px 10px 20px; }
+        }
+
+        /* ── OVERLAY ───────────────────────────────────── */
+        .sidebar-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.45); z-index: 1049;
+        }
+        .sidebar-overlay.active { display: block; }
+
+        /* ── SCROLLBAR ─────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c1c8d4; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* ── ANIMATIONS ────────────────────────────────── */
+        .fade-in { animation: fadeIn .3s ease; }
+        @@keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+
+        /* ── BELGE NO LİNKİ ────────────────────────────── */
+        .doc-num-btn {
+            background: none; border: none; padding: 0; cursor: pointer;
+            font-size: inherit; font-weight: 600; color: #1a2744;
+            text-decoration: underline; text-decoration-style: dotted;
+            text-underline-offset: 3px; transition: color .15s;
+        }
+        .doc-num-btn:hover { color: var(--accent); text-decoration-style: solid; }
+
+        /* ── STATS GRID ────────────────────────────────── */
+        .stats-grid {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        /* ── DATA TABLE ────────────────────────────────── */
+        .data-table {
+            width: 100%; border-collapse: collapse; font-size: 13px; margin: 0;
+        }
+        .data-table thead tr {
+            background: var(--table-header-bg);
+        }
+        .data-table thead th {
+            color: var(--table-header-color); font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: .06em;
+            padding: 11px 14px; white-space: nowrap; border: none;
+        }
+        .data-table tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background .12s;
+        }
+        .data-table tbody tr:nth-child(even) { background: #fafbfd; }
+        .data-table tbody tr:hover { background: #eff6ff !important; }
+        .data-table tbody tr:last-child { border-bottom: none; }
+        .data-table tbody td {
+            padding: 10px 14px; vertical-align: middle; color: #374151;
+        }
+        .data-table tfoot td {
+            padding: 10px 14px; background: #f1f5f9;
+            border-top: 2px solid #e2e8f0; font-weight: 600; font-size: 12px;
+        }
+
+        /* ── DATATABLES OVERRIDE ──────────────────────── */
+        div.dataTables_wrapper { padding: 0; }
+        div.dataTables_wrapper div.dataTables_length,
+        div.dataTables_wrapper div.dataTables_filter,
+        div.dataTables_wrapper div.dataTables_info,
+        div.dataTables_wrapper div.dataTables_paginate { padding: 10px 14px; font-size: 12px; }
+        div.dataTables_wrapper div.dataTables_filter { text-align: right; }
+        div.dataTables_wrapper div.dataTables_filter input {
+            border: 1px solid var(--border); border-radius: 7px; padding: 4px 10px;
+            font-size: 12px; outline: none; width: 180px;
+        }
+        div.dataTables_wrapper div.dataTables_filter input:focus { border-color: var(--accent); }
+        div.dataTables_wrapper div.dataTables_length select {
+            border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; font-size: 12px;
+        }
+        div.dataTables_paginate .paginate_button {
+            border-radius: 6px !important; border: 1px solid var(--border) !important;
+            padding: 4px 10px !important; font-size: 12px !important; margin: 0 2px !important;
+        }
+        div.dataTables_paginate .paginate_button.current,
+        div.dataTables_paginate .paginate_button.current:hover {
+            background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important;
+        }
+        div.dataTables_paginate .paginate_button:hover {
+            background: var(--bg-page) !important; border-color: var(--border) !important; color: #374151 !important;
+        }
+        table.dataTable.no-footer { border-bottom: none; }
+        table.dataTable thead .sorting::after,
+        table.dataTable thead .sorting_asc::after,
+        table.dataTable thead .sorting_desc::after { opacity: .7; }
+        body.dark-mode div.dataTables_wrapper div.dataTables_filter input,
+        body.dark-mode div.dataTables_wrapper div.dataTables_length select { background:#334155;border-color:#475569;color:#e2e8f0; }
+        body.dark-mode div.dataTables_paginate .paginate_button { background:#1e293b!important;border-color:#334155!important;color:#94a3b8!important; }
+        body.dark-mode div.dataTables_wrapper div.dataTables_info,
+        body.dark-mode div.dataTables_wrapper div.dataTables_length { color:#94a3b8; }
+
+        /* ── SKELETON LOADER ───────────────────────────── */
+        @@keyframes shimmer {
+            0%   { background-position: -600px 0; }
+            100% { background-position: 600px 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f2f5 25%, #e8eaed 50%, #f0f2f5 75%);
+            background-size: 600px 100%; animation: shimmer 1.4s infinite linear;
+            border-radius: 6px; display: inline-block;
+        }
+        body.dark-mode .skeleton {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 600px 100%;
+        }
+        .skeleton-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .skeleton-row .sk-cell { height: 14px; border-radius: 4px; }
+
+        /* ── GLOBAL TOPBAR SEARCH ──────────────────────── */
+        .topbar-search-wrap {
+            position: relative; width: 220px;
+        }
+        .topbar-search-input {
+            width: 100%; height: 34px; border-radius: 8px; border: 1px solid var(--border);
+            padding: 0 10px 0 32px; font-size: 12.5px; background: #f9fafb;
+            outline: none; transition: all .15s, width .2s; color: #374151;
+        }
+        .topbar-search-input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(25,118,210,.1); width: 260px; }
+        .topbar-search-icon {
+            position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+            color: #9ca3af; font-size: 12px; pointer-events: none;
+        }
+        .topbar-search-kbd {
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            font-size: 10px; color: #9ca3af; background: #f3f4f6; border: 1px solid #e5e7eb;
+            border-radius: 4px; padding: 1px 5px; pointer-events: none;
+        }
+        .search-dropdown {
+            display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+            background: #fff; border-radius: 10px; border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0,0,0,.13); z-index: 2100; overflow: hidden;
+            max-height: 380px; overflow-y: auto;
+        }
+        .search-dropdown.show { display: block; }
+        .search-result-group { padding: 6px 0; border-bottom: 1px solid #f3f4f6; }
+        .search-result-group:last-child { border-bottom: none; }
+        .search-result-label { padding: 4px 14px; font-size: 10px; font-weight: 700;
+            color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+        .search-result-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 14px; cursor: pointer; transition: background .1s; font-size: 12.5px;
+        }
+        .search-result-item:hover { background: #f0f7ff; }
+        .search-result-item i { font-size: 13px; width: 18px; text-align: center; flex-shrink: 0; }
+        .search-result-item .sri-main { font-weight: 500; color: #111827; }
+        .search-result-item .sri-sub  { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+        .search-no-result { padding: 18px 14px; text-align: center; color: var(--text-muted); font-size: 12.5px; }
+        body.dark-mode .topbar-search-input { background:#334155;border-color:#475569;color:#e2e8f0; }
+        body.dark-mode .topbar-search-input:focus { background:#475569; }
+        body.dark-mode .topbar-search-kbd { background:#334155;border-color:#475569;color:#64748b; }
+        body.dark-mode .search-dropdown { background:#1e293b;border-color:#334155; }
+        body.dark-mode .search-result-item:hover { background:#334155; }
+        body.dark-mode .search-result-item .sri-main { color:#e2e8f0; }
+
+        /* ── PRINT ─────────────────────────────────────── */
+        @@media print {
+            .sidebar, .topbar, .topbar-actions, .btn-topbar-add,
+            .notif-wrap, #darkModeToggle, .topbar-search-wrap,
+            .modal, #pageProgressBar, .toast-container { display: none !important; }
+            .page-shell { margin-left: 0 !important; }
+            .page-body { padding: 0 !important; }
+            body { background: #fff !important; color: #000 !important; }
+            .table-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+            .data-table { font-size: 11px !important; }
+            .data-table thead { background: #1a2744 !important; -webkit-print-color-adjust: exact; }
+            .stat-card { border: 1px solid #e5e7eb !important; box-shadow: none !important; }
+            a { color: #000 !important; text-decoration: none !important; }
+            .badge { border: 1px solid #ccc; }
+        }
+
+        /* ── EMPTY STATE ───────────────────────────────── */
+        .empty-state {
+            padding: 56px 20px; text-align: center;
+        }
+        .empty-state .empty-icon {
+            width: 64px; height: 64px; border-radius: 16px;
+            background: #f1f5f9; display: inline-flex;
+            align-items: center; justify-content: center;
+            font-size: 28px; color: #94a3b8; margin-bottom: 14px;
+        }
+        .empty-state h6 { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+        .empty-state p { color: var(--text-muted); font-size: 12.5px; margin: 0; }
+        .empty-state i { font-size: 40px; color: #d1d5db; margin-bottom: 12px; display: block; }
+
+        /* ── TOAST ─────────────────────────────────────── */
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; }
+
+        /* ── PAGE TITLE BAR ────────────────────────────── */
+        .page-title-bar {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 12px 18px;
+            margin-bottom: 16px; box-shadow: var(--shadow-sm);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .page-title-bar .ptb-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: var(--accent-light); color: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+        }
+        .page-title-bar .ptb-title { font-size: 15px; font-weight: 700; color: #111827; }
+        .page-title-bar .ptb-sub { font-size: 12px; color: var(--text-muted); }
+        .page-title-bar .ptb-badge {
+            background: var(--accent); color: #fff;
+            font-size: 11px; font-weight: 600; padding: 2px 9px;
+            border-radius: 20px;
+        }
+
+        /* ── INFO CARD (açıklama kartı) ─────────────────── */
+        .info-card {
+            background: #f8faff; border: 1px solid #dbeafe;
+            border-radius: 10px; padding: 12px 16px;
+            display: flex; gap: 10px; align-items: flex-start;
+        }
+        .info-card.warning { background: #fffbeb; border-color: #fde68a; }
+        .info-card.danger  { background: #fef2f2; border-color: #fecaca; }
+        .info-card.success { background: #f0fdf4; border-color: #bbf7d0; }
+        .info-card i { font-size: 15px; margin-top: 1px; flex-shrink: 0; }
+
+        /* ── SECTION HEADER ────────────────────────────── */
+        .section-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 12px 16px; border-bottom: 1px solid var(--border);
+            background: #fff;
+        }
+        .section-header .sh-icon {
+            width: 30px; height: 30px; border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; flex-shrink: 0;
+        }
+        .section-header .sh-title { font-size: 13px; font-weight: 600; color: #1e293b; }
+        .section-header .sh-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+        .section-header .sh-actions { margin-left: auto; display: flex; gap: 6px; }
+
+        /* ── DETAIL ROW ────────────────────────────────── */
+        .detail-row {
+            display: flex; padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9; font-size: 13px;
+            align-items: flex-start;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row .dr-label {
+            width: 140px; flex-shrink: 0;
+            color: var(--text-muted); font-size: 12px;
+        }
+        .detail-row .dr-value { font-weight: 500; color: #1e293b; flex: 1; }
+
+        /* ── FSC BADGE ──────────────────────────────────── */
+        .fsc-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+        }
+        .fsc-badge.active  { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .fsc-badge.warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .fsc-badge.expired { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .fsc-badge.none    { background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; }
+
+        /* ── PROGRESS STACKED BAR ───────────────────────── */
+        .stock-bar {
+            height: 6px; border-radius: 4px; background: #e5e7eb;
+            overflow: hidden; min-width: 60px;
+        }
+        .stock-bar-fill {
+            height: 100%; border-radius: 4px;
+            transition: width .4s cubic-bezier(.4,0,.2,1);
+        }
+
+        /* ── NAV TABS IMPROVED ──────────────────────────── */
+        .nav-tabs .nav-link {
+            color: #6b7280; font-size: 13px; font-weight: 500;
+            padding: 8px 16px; border-radius: 8px 8px 0 0;
+            border: 1px solid transparent; transition: all .15s;
+        }
+        .nav-tabs .nav-link:hover { color: var(--accent); background: #f0f4ff; }
+        .nav-tabs .nav-link.active {
+            color: var(--accent); background: #fff;
+            border-color: var(--border) var(--border) #fff;
+            font-weight: 600;
+        }
+
+        /* ── TOPBAR PAGE TITLE ──────────────────────────── */
+        .topbar-page-title {
+            font-size: 14px; font-weight: 600; color: #1e293b; letter-spacing: -.01em;
+        }
+
+        /* ── QUICK ACTION CARD ──────────────────────────── */
+        .quick-action {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 12px; border-radius: 8px;
+            border: 1px solid var(--border); background: #fff;
+            text-decoration: none; color: #374151; font-size: 12.5px;
+            transition: all .15s; cursor: pointer;
+        }
+        .quick-action:hover {
+            border-color: var(--accent); background: #eff6ff;
+            color: var(--accent); transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(25,118,210,.12);
+        }
+        .quick-action i { font-size: 14px; flex-shrink: 0; }
+
+        /* ── PAGE HEADER ────────────────────────────────── */
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 18px; padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .page-title {
+            font-size: 17px; font-weight: 700; color: #1e293b;
+            margin: 0; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* ── FILTER CARD / FORM ─────────────────────────── */
+        .filter-card {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--card-radius); padding: 12px 16px;
+            margin-bottom: 14px; box-shadow: var(--shadow-sm);
+            border-left: 3px solid var(--accent);
+        }
+        .filter-form {
+            display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+        }
+        .filter-form .form-control,
+        .filter-form .form-select { min-width: 140px; }
+
+        /* ── BOOTSTRAP BADGE OVERRIDE ───────────────────── */
+        .badge-success  { background: #dcfce7 !important; color: #166534 !important; }
+        .badge-danger   { background: #fee2e2 !important; color: #991b1b !important; }
+        .badge-warning  { background: #fef3c7 !important; color: #92400e !important; }
+        .badge-info     { background: #dbeafe !important; color: #1d4ed8 !important; }
+        .badge-primary  { background: #dbeafe !important; color: #1d4ed8 !important; }
+        .badge-secondary{ background: #f3f4f6 !important; color: #374151 !important; }
+        /* soft variants (no !important — used inline alongside .badge) */
+        .badge-success-soft  { background: #dcfce7; color: #166534; }
+        .badge-danger-soft   { background: #fee2e2; color: #991b1b; }
+        .badge-warning-soft  { background: #fef3c7; color: #92400e; }
+        .badge-info-soft     { background: #dbeafe; color: #1d4ed8; }
+        .badge-secondary-soft{ background: #f3f4f6; color: #374151; }
+        .badge-amber         { background: #fef3c7 !important; color: #92400e !important; }
+
+        /* ── STOCK BAR COLORS ───────────────────────────── */
+        .bg-success-soft { background: #16a34a; }
+        .bg-warning-soft { background: #d97706; }
+        .bg-danger-soft  { background: #dc2626; }
+
+        /* ── QUICK-ADD INLINE BUTTON ─────────────────────── */
+        .qa-group { display: flex; gap: 4px; align-items: stretch; }
+        .qa-group > select,
+        .qa-group > .form-select { flex: 1; min-width: 0; }
+        .qa-btn {
+            width: 32px; min-width: 32px;
+            border-radius: 6px;
+            border: 1.5px dashed #93c5fd;
+            background: #eff6ff; color: #1d4ed8;
+            cursor: pointer; font-size: 12px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all .15s; padding: 0; line-height: 1;
+        }
+        .qa-btn:hover { background: #dbeafe; border-style: solid; border-color: #1d4ed8; transform: none; }
+        .qa-btn:active { background: #bfdbfe; }
+        /* QuickAdd modal header color band */
+        .qa-modal-header { border-radius: 0; padding: 14px 20px; }
     </style>
 </head>
 <body>
 
-    <div class="overlay" id="sidebarOverlay"></div>
+@{
+    var ctrl   = ViewContext.RouteData.Values["Controller"]?.ToString() ?? "";
+    var action = ViewContext.RouteData.Values["Action"]?.ToString() ?? "";
 
-    <div class="main-wrapper">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <h4 class="mb-0 text-white border-bottom pb-2">FSC ERP</h4>
-                <small class="text-info font-weight-bold">LOCAL SERVER | 2026</small>
-            </div>
+    // Hangi sidebar bölümü aktif?
+    var activeSection = ctrl switch {
+        "Purchase" or "Stock"                             => "hammadde",
+        "Planning" or "Production"                        => "uretim",
+        "Sales" or "Customers"                            => "satis",
+        "Suppliers" or "Products"                         => "tedarik",
+        "Reports" or "AuditPeriod"                        => "fsc-izleme",
+        "Conversion"                                      => "hammadde",
+        "DocumentArchive"                                 => "belge",
+        "Product" or "Paper" or "Machine" or "Warehouse"
+            or "Etl" or "Guide" or "UnitConversion"       => "tanim",
+        "Users" or "Groups" or "AuditLog"                 => "admin",
+        _                                                 => "genel"
+    };
 
-            <nav class="sidebar-menu overflow-auto">
-                <div class="menu-label">GENEL</div>
-                <a href="/Home/Index" class="nav-link"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+    string Sec(string id) => activeSection == id ? "show" : "";
+    string Exp(string id) => activeSection == id ? "true" : "false";
+}
 
-                <div class="menu-label">OPERASYONEL</div>
-                <a href="/Planning/Index" class="nav-link"><i class="fas fa-calendar-alt"></i> <span>Üretim Planlama</span></a>
-                <a href="/Stock/Index" class="nav-link"><i class="fas fa-warehouse"></i> <span>Stok Yönetimi</span></a>
-                <a href="/Shipping/Index" class="nav-link"><i class="fas fa-shipping-fast"></i> <span>Sevkiyat Paneli</span></a>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-                <div class="menu-label">TİCARİ</div>
-                <a href="/Customers/Index" class="nav-link"><i class="fas fa-user-tie"></i> <span>Müşteriler</span></a>
-                <a href="/Suppliers/Index" class="nav-link"><i class="fas fa-truck"></i> <span>Tedarikçiler</span></a>
-                <a href="/Products/Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Products" ? "active" : "")"><i class="fas fa-box"></i> <span>Ürünler</span></a>
+<!-- ── SIDEBAR ─────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
 
-                <div class="menu-label">SİSTEM AYARLARI</div>
+    <a class="sidebar-logo" href="/Home/Index">
+        <div class="logo-icon"><i class="fas fa-leaf"></i></div>
+        <div>
+            <div class="logo-text">FSC Takip ERP</div>
+            <div class="logo-sub">Kraft Kağıt İzlenebilirlik</div>
+        </div>
+    </a>
 
-                <div class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTorba">
-                        <i class="fas fa-shopping-bag"></i> <span>Torba Tanımları</span>
-                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
-                    </a>
-                    <div id="collapseTorba" class="collapse @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Product" ? "show" : "")">
-                        <div class="collapse-inner">
-                            <a class="collapse-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "BagTypes" ? "active" : "")" href="/Product/BagTypes">Torba Tipleri</a>
-                            <a class="collapse-item" href="/Product/Groups">Ürün Grupları</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#paperSet">
-                        <i class="fas fa-scroll"></i> <span>Kağıt Ayarları</span>
-                        <i class="fas fa-chevron-down float-right mt-1 small"></i>
-                    </a>
-                    <div id="paperSet" class="collapse @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Paper" ? "show" : "")">
-                        <div class="collapse-inner">
-                            <a class="collapse-item" href="/Paper/Types">Kağıt Tipleri</a>
-                            <a class="collapse-item" href="/Paper/Colors">Kağıt Renkleri</a>
-                            <a class="collapse-item" href="/Paper/Weights">Gramajlar</a>
-                            <a class="collapse-item" href="/Paper/Widths">Kağıt Enleri</a>
-                            <a class="collapse-item" href="/Paper/FscTypes">FSC Tipleri</a>
-                        </div>
-                    </div>
-                </div>
-
-                <a href="/Machine/Machines" class="nav-link"><i class="fas fa-industry"></i> <span>Makineler</span></a>
-
-            </nav>
-        </aside>
-
-        <main class="content-area">
-            <header class="page-header">
-                <div class="header-top">
-                    <button id="hamburgerBtn" type="button"><i class="fas fa-bars"></i></button>
-                    <h2 class="h5 mb-0 font-weight-bold text-dark">@ViewData["Title"]</h2>
-                </div>
-
-                <div class="action-buttons">
-                    <button class="btn-filter" onclick="toggleFilter()"><i class="fas fa-filter"></i> Filtrele</button>
-                    <button class="btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
-                    <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Yazdır</button>
-                    <button class="btn-add" id="globalAddBtn"><i class="fas fa-plus-circle"></i> Yeni Ekle</button>
-                </div>
-            </header>
-
-            <section class="page-body">
-                @RenderBody()
-            </section>
-        </main>
+    <!-- ── SIDEBAR ARAMA ──────────────────────────────────── -->
+    <div class="sidebar-search-wrap">
+        <div class="sidebar-search-box">
+            <i class="fas fa-search srch-icon"></i>
+            <input type="text" id="sidebarSearch" placeholder="FSC işlemi ara..." autocomplete="off" spellcheck="false">
+            <button class="srch-clear" id="sidebarSearchClear" title="Temizle">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
     </div>
 
-    <script src="~/lib/jquery/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <nav class="sidebar-nav">
 
-    <script>
-        $(document).ready(function() {
-            // Sidebar Toggle
-            $('#hamburgerBtn').click(function() {
-                if ($(window).width() > 992) { $('#sidebar').toggleClass('collapsed'); }
-                else { $('#sidebar').toggleClass('active'); $('#sidebarOverlay').toggleClass('active'); }
+        <div id="sidebarNoResult" class="sidebar-no-result">
+            <i class="fas fa-search me-1"></i> Sonuç bulunamadı
+        </div>
+
+        <!-- ── GENEL ─────────────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-genel" aria-expanded="@Exp("genel")">
+            <span><i class="fas fa-home me-1" style="font-size:11px;opacity:.6;"></i>Genel</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("genel")" id="sec-genel">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Home"?"active":"")" href="/Home/Index">
+                    <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ── HAMMADDE & STOK ───────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-hammadde" aria-expanded="@Exp("hammadde")">
+            <span><i class="fas fa-warehouse me-1"></i>Hammadde &amp; Stok</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("hammadde")" id="sec-hammadde">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Purchase"?"active":"")" href="/Purchase/Index">
+                    <span class="nav-icon"><i class="fas fa-truck-loading"></i></span>
+                    <span class="nav-label">Hammadde Girişi</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="RawMaterial"?"active":"")" href="/Stock/RawMaterial">
+                    <span class="nav-icon"><i class="fas fa-boxes"></i></span>
+                    <span class="nav-label">Hammadde Stoğu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Conversion"?"active":"")" href="/Conversion">
+                    <span class="nav-icon"><i class="fas fa-recycle"></i></span>
+                    <span class="nav-label">YM Dönüşüm</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="Summary"?"active":"")" href="/Stock/Summary">
+                    <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+                    <span class="nav-label">Stok Özeti</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="Movements"?"active":"")" href="/Stock/Movements">
+                    <span class="nav-icon"><i class="fas fa-exchange-alt"></i></span>
+                    <span class="nav-label">Stok Hareketleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="AdminStock"?"active":"")" href="/Stock/AdminStock">
+                    <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
+                    <span class="nav-label">Tüm Stok (Admin)</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ── ÜRETİM ─────────────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-uretim" aria-expanded="@Exp("uretim")">
+            <span><i class="fas fa-industry me-1"></i>Üretim</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("uretim")" id="sec-uretim">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Planning"?"active":"")" href="/Planning">
+                    <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
+                    <span class="nav-label">Üretim Planı</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Production"&&action=="Index"?"active":"")" href="/Production/Index">
+                    <span class="nav-icon"><i class="fas fa-industry"></i></span>
+                    <span class="nav-label">İş Emirleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Production"&&action=="WasteReport"?"active":"")" href="/Production/WasteReport">
+                    <span class="nav-icon"><i class="fas fa-burn"></i></span>
+                    <span class="nav-label">Fire Raporu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Production"&&action=="WasteManagement"?"active":"")" href="/Production/WasteManagement">
+                    <span class="nav-icon"><i class="fas fa-trash-alt"></i></span>
+                    <span class="nav-label">İmha Kayıtları</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ── SATIŞ & MÜŞTERİ ───────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-satis" aria-expanded="@Exp("satis")">
+            <span><i class="fas fa-shipping-fast me-1"></i>Satış &amp; Müşteri</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("satis")" id="sec-satis">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Sales"?"active":"")" href="/Sales/Index">
+                    <span class="nav-icon"><i class="fas fa-shipping-fast"></i></span>
+                    <span class="nav-label">Satış / Sevkiyat</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Customers"?"active":"")" href="/Customers/Index">
+                    <span class="nav-icon"><i class="fas fa-user-tie"></i></span>
+                    <span class="nav-label">Müşteriler</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="CustomerFsc"?"active":"")" href="/Reports/CustomerFsc">
+                    <span class="nav-icon"><i class="fas fa-id-card"></i></span>
+                    <span class="nav-label">Müşteri FSC</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ── TEDARİK & ÜRÜN ─────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-tedarik" aria-expanded="@Exp("tedarik")">
+            <span><i class="fas fa-truck me-1"></i>Tedarik &amp; Ürün</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("tedarik")" id="sec-tedarik">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Suppliers"?"active":"")" href="/Suppliers/Index">
+                    <span class="nav-icon"><i class="fas fa-truck"></i></span>
+                    <span class="nav-label">Tedarikçiler</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="SupplierFsc"?"active":"")" href="/Reports/SupplierFsc">
+                    <span class="nav-icon"><i class="fas fa-certificate"></i></span>
+                    <span class="nav-label">Tedarikçi FSC</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Products"?"active":"")" href="/Products/Index">
+                    <span class="nav-icon"><i class="fas fa-box-open"></i></span>
+                    <span class="nav-label">Ürünler</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ── FSC İZLENEBİLİRLİK ────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-fsc-izleme" aria-expanded="@Exp("fsc-izleme")">
+            <span><i class="fas fa-link me-1"></i>FSC İzlenebilirlik</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("fsc-izleme")" id="sec-fsc-izleme">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="ChainOfCustody"?"active":"")" href="/Reports/ChainOfCustody">
+                    <span class="nav-icon"><i class="fas fa-link"></i></span>
+                    <span class="nav-label">Chain of Custody</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="LotTrace"?"active":"")" href="/Reports/LotTrace">
+                    <span class="nav-icon"><i class="fas fa-search"></i></span>
+                    <span class="nav-label">Lot Takip</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="MaterialTrace"?"active":"")" href="/Reports/MaterialTrace">
+                    <span class="nav-icon"><i class="fas fa-microscope"></i></span>
+                    <span class="nav-label">Hammadde İzleme</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="FscConsumption"?"active":"")" href="/Reports/FscConsumption">
+                    <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+                    <span class="nav-label">FSC Tüketim</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="BomAnalysis"?"active":"")" href="/Reports/BomAnalysis">
+                    <span class="nav-icon"><i class="fas fa-sitemap"></i></span>
+                    <span class="nav-label">BOM Analizi</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="WasteAnalysis"?"active":"")" href="/Reports/WasteAnalysis">
+                    <span class="nav-icon"><i class="fas fa-burn"></i></span>
+                    <span class="nav-label">Fire Analizi</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="AuditReport"?"active":"")" href="/Reports/AuditReport">
+                    <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
+                    <span class="nav-label">Denetim Özeti</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="AuditPeriod"?"active":"")" href="/AuditPeriod">
+                    <span class="nav-icon"><i class="fas fa-calendar-check"></i></span>
+                    <span class="nav-label">Denetim Dönemleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Reports"&&action=="Warnings"?"active":"")" href="/Reports/Warnings">
+                    <span class="nav-icon"><i class="fas fa-exclamation-triangle" style="color:#fbbf24;"></i></span>
+                    <span class="nav-label">Uyarı Paneli</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ── BELGE YÖNETİMİ ───────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-belge" aria-expanded="@Exp("belge")">
+            <span><i class="fas fa-folder-open me-1" style="font-size:11px;opacity:.6;"></i>Belge Yönetimi</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("belge")" id="sec-belge">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="DocumentArchive"?"active":"")" href="/DocumentArchive">
+                    <span class="nav-icon"><i class="fas fa-folder-open"></i></span>
+                    <span class="nav-label">Belge Arşivi</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ── TANIMLAMALAR ──────────────────────────────────── -->
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-tanim" aria-expanded="@Exp("tanim")">
+            <span><i class="fas fa-cog me-1" style="font-size:11px;opacity:.6;"></i>Tanımlamalar</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("tanim")" id="sec-tanim">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Product"&&action=="BagTypes"?"active":"")" href="/Product/BagTypes">
+                    <span class="nav-icon"><i class="fas fa-shopping-bag"></i></span>
+                    <span class="nav-label">Torba Tipleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Product"&&action=="Groups"?"active":"")" href="/Product/Groups">
+                    <span class="nav-icon"><i class="fas fa-layer-group"></i></span>
+                    <span class="nav-label">Ürün Grupları</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Types"?"active":"")" href="/Paper/Types">
+                    <span class="nav-icon"><i class="fas fa-scroll"></i></span>
+                    <span class="nav-label">Kağıt Tipleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Colors"?"active":"")" href="/Paper/Colors">
+                    <span class="nav-icon"><i class="fas fa-palette"></i></span>
+                    <span class="nav-label">Kağıt Renkleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Weights"?"active":"")" href="/Paper/Weights">
+                    <span class="nav-icon"><i class="fas fa-balance-scale"></i></span>
+                    <span class="nav-label">Gramajlar</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="Widths"?"active":"")" href="/Paper/Widths">
+                    <span class="nav-icon"><i class="fas fa-ruler-horizontal"></i></span>
+                    <span class="nav-label">Kağıt Enleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Paper"&&action=="FscTypes"?"active":"")" href="/Paper/FscTypes">
+                    <span class="nav-icon"><i class="fas fa-leaf"></i></span>
+                    <span class="nav-label">FSC Tipleri</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Machine"?"active":"")" href="/Machine/Machines">
+                    <span class="nav-icon"><i class="fas fa-cogs"></i></span>
+                    <span class="nav-label">Makineler</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Warehouse"?"active":"")" href="/Warehouse/Index">
+                    <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
+                    <span class="nav-label">Depolar</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="UnitConversion"?"active":"")" href="/UnitConversion">
+                    <span class="nav-icon"><i class="fas fa-ruler-combined"></i></span>
+                    <span class="nav-label">Birim Dönüşüm</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Etl"?"active":"")" href="/Etl/Index">
+                    <span class="nav-icon"><i class="fas fa-sync-alt"></i></span>
+                    <span class="nav-label">ERP Entegrasyon</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Guide"&&action=="Index"?"active":"")" href="/Guide/Index">
+                    <span class="nav-icon"><i class="fas fa-book-open"></i></span>
+                    <span class="nav-label">Kullanım Kılavuzu</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Guide"&&action=="TestScenario"?"active":"")" href="/Guide/TestScenario">
+                    <span class="nav-icon"><i class="fas fa-flask"></i></span>
+                    <span class="nav-label">Test Senaryosu</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ── SİSTEM YÖNETİMİ ───────────────────────────────── -->
+        @if (Context.Session.GetString("IsAdmin") == "1")
+        {
+        <button class="nav-section-toggle" data-bs-toggle="collapse"
+                data-bs-target="#sec-admin" aria-expanded="@Exp("admin")">
+            <span><i class="fas fa-shield-alt me-1" style="font-size:11px;opacity:.6;"></i>Sistem Yönetimi</span>
+            <i class="fas fa-chevron-right nav-section-arrow"></i>
+        </button>
+        <div class="collapse nav-section-collapse @Sec("admin")" id="sec-admin">
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Users"?"active":"")" href="/Users">
+                    <span class="nav-icon"><i class="fas fa-users-cog"></i></span>
+                    <span class="nav-label">Kullanıcılar</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Groups"?"active":"")" href="/Groups">
+                    <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
+                    <span class="nav-label">Yetki Grupları</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="AuditLog"?"active":"")" href="/AuditLog">
+                    <span class="nav-icon"><i class="fas fa-history"></i></span>
+                    <span class="nav-label">Değişiklik Günlüğü</span>
+                </a>
+            </div>
+        </div>
+        }
+
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            @{
+                var sessionName = Context.Session.GetString("UserName") ?? "?";
+                var sessionUser = Context.Session.GetString("Username") ?? "";
+                var sessionIsAdmin = Context.Session.GetString("IsAdmin") == "1";
+                var avatarLetter  = sessionName.Length > 0 ? sessionName[0].ToString().ToUpper() : "?";
+            }
+            <div class="avatar">@avatarLetter</div>
+            <div>
+                <div style="color:#fff;font-size:12.5px;font-weight:600;">@sessionName</div>
+                <div style="font-size:10.5px;color:rgba(255,255,255,.4);">
+                    @(sessionIsAdmin ? "Admin" : "@" + sessionUser)
+                </div>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding:0 4px;">
+            <span style="font-size:9.5px;color:rgba(255,255,255,.25);">FSC ERP v@(System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(2) ?? "2.0")</span>
+            <button onclick="(new bootstrap.Modal(document.getElementById('shortcutsModal'))).show()"
+                    style="background:none;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer;padding:2px 4px;"
+                    title="Klavye Kısayolları (?)">
+                <i class="fas fa-keyboard"></i>
+            </button>
+        </div>
+    </div>
+</aside>
+
+<!-- ── PAGE SHELL ───────────────────────────────────────── -->
+<div class="page-shell" id="pageShell">
+
+    <!-- TOPBAR -->
+    <header class="topbar" id="topbar">
+        <button class="topbar-toggle" id="sidebarToggle" title="Menüyü aç/kapat">
+            <i class="fas fa-bars" style="font-size:13px;"></i>
+        </button>
+
+        <!-- Birincil aksiyon butonu (sol, belirgin) -->
+        @if (IsSectionDefined("TopbarPrimary"))
+        {
+            <div class="topbar-primary me-3">
+                @await RenderSectionAsync("TopbarPrimary", required: false)
+            </div>
+        }
+
+        <!-- Sayfa başlığı -->
+        <div style="min-width:0;flex:1;">
+            <div class="topbar-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@ViewData["Title"]</div>
+        </div>
+
+        <!-- Sayfa bazlı aksiyonlar + sağ araç çubuğu (margin-left:auto ile sağa yasla) -->
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto;">
+
+            <!-- Sayfa bazlı aksiyonlar -->
+            <div id="topbarActions" style="display:flex;align-items:center;gap:6px;">
+                @await RenderSectionAsync("TopbarActions", required: false)
+            </div>
+
+            <!-- Global Arama -->
+            <div class="topbar-search-wrap d-none d-xl-block">
+                <i class="fas fa-search topbar-search-icon"></i>
+                <input type="text" id="globalSearch" class="topbar-search-input"
+                       placeholder="Ara… (Ctrl+K)" autocomplete="off">
+                <div id="searchDropdown" class="search-dropdown"></div>
+            </div>
+
+            <!-- Bildirim Zili -->
+            <div class="notif-wrap" style="position:relative;">
+                <button id="notifBell" class="topbar-icon-btn" title="Bildirimler">
+                    <i class="fas fa-bell"></i>
+                    <span id="notifBadge" class="notif-badge" style="display:none;"></span>
+                </button>
+                <div id="notifDropdown" class="notif-dropdown">
+                    <div class="notif-header">
+                        <i class="fas fa-bell me-1"></i> Bildirimler
+                    </div>
+                    <ul id="notifList" class="notif-list">
+                        <li class="notif-empty">Yükleniyor…</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Dark Mode -->
+            <button id="darkModeToggle" class="topbar-icon-btn" title="Karanlık Mod (Ctrl+D)">
+                <i class="fas fa-moon" id="darkModeIcon"></i>
+            </button>
+
+            <!-- Kullanıcı bilgisi -->
+            <div class="topbar-user">
+                <div class="user-avatar">Ö</div>
+                <div class="d-none d-md-block">
+                    <div class="user-name">Özay Göktaş</div>
+                    <div class="user-role">Admin / Yönetici</div>
+                </div>
+            </div>
+
+            <!-- Çıkış -->
+            <button class="btn-logout" title="Çıkış Yap" onclick="location.href='/Account/Logout'">
+                <i class="fas fa-power-off"></i>
+            </button>
+
+        </div>
+    </header>
+
+    <!-- Sayfa yükleme çubuğu -->
+    <div id="pageProgressBar" style="position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,#1976d2,#42a5f5);z-index:9999;transition:width .3s ease,opacity .4s ease;opacity:1;pointer-events:none;"></div>
+
+    <!-- PAGE CONTENT -->
+    <main class="page-body fade-in">
+        @RenderBody()
+    </main>
+
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ── KLAVYE KISAYOLLARI MODAL ─────────────────────────────────── -->
+<div class="modal fade" id="shortcutsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+        <div class="modal-content" style="border-radius:14px;overflow:hidden;">
+            <div class="modal-header" style="background:#1a2744;color:#fff;border:none;padding:16px 20px;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-keyboard" style="color:#60a5fa;font-size:16px;"></i>
+                    <h6 class="modal-title mb-0 fw-bold">Klavye Kısayolları</h6>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body" style="padding:20px;columns:2;column-gap:20px;">
+                @{
+                    var shortcuts = new[] {
+                        ("Ctrl+K", "Global Arama"),
+                        ("Ctrl+N", "Yeni Kayıt Ekle"),
+                        ("Ctrl+E", "Excel'e Aktar"),
+                        ("Ctrl+F", "Filtre Paneli"),
+                        ("Ctrl+D", "Karanlık Mod"),
+                        ("Escape", "Modal Kapat"),
+                        ("?", "Bu Yardım Penceresi"),
+                    };
+                }
+                @foreach (var (key, label) in shortcuts)
+                {
+                    <div class="d-flex align-items-center gap-2 mb-3" style="break-inside:avoid;">
+                        <kbd style="background:#1a2744;color:#93c5fd;border:none;border-radius:6px;padding:4px 9px;font-size:12px;font-family:monospace;white-space:nowrap;">@key</kbd>
+                        <span style="font-size:13px;color:#374151;">@label</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── GLOBAL PDF GÖRÜNTÜLEYICI MODAL ──────────────────────────── -->
+<div class="modal fade" id="pdfViewerModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:92vw;">
+        <div class="modal-content" style="height:88vh;display:flex;flex-direction:column;">
+            <div class="modal-header dark py-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-file-pdf" style="color:#f87171;font-size:15px;"></i>
+                    <h5 class="modal-title fw-semibold mb-0 fs-6" id="pdfViewerTitle">Belge</h5>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a id="pdfViewerLink" href="#" target="_blank"
+                       class="btn btn-sm btn-outline-light" style="font-size:12px;padding:3px 10px;">
+                        <i class="fas fa-external-link-alt me-1"></i> Yeni Sekmede Aç
+                    </a>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            style="filter:invert(1) opacity(.7);"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0" style="flex:1;overflow:hidden;">
+                <iframe id="pdfViewerFrame" src=""
+                        style="width:100%;height:100%;border:none;display:block;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── GLOBAL QUICK-ADD MODAL ───────────────────────────────────── -->
+<div class="modal fade" id="quickAddModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+        <div class="modal-content">
+            <div class="modal-header qa-modal-header" id="qaHeader" style="background:#1a2744;color:#fff;">
+                <div class="d-flex align-items-center gap-2">
+                    <div id="qaHeaderIcon" style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" id="qaTitle" style="font-size:14px;">Yeni Kayıt</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaClose"></button>
+            </div>
+            <div class="modal-body p-4" id="qaBody">
+                <!-- Dinamik form alanları buraya gelir -->
+            </div>
+            <div class="modal-footer border-top" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaCancelBtn">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" id="qaSaveBtn">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── QA: TEDARİKÇİ TAM FORM MODALI ──────────────────────────────── -->
+<div class="modal fade" id="qaSupplierModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#1a2744;color:#fff;border-radius:10px 10px 0 0;padding:14px 20px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" style="font-size:14px;">Yeni Tedarikçi Ekle</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaSupplierClose"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Tedarikçi Ünvanı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaSuppName" placeholder="Büyük harf ile girilir" style="text-transform:uppercase;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Tedarikçi Kodu</label>
+                        <input type="text" class="form-control" id="qaSuppCode" readonly style="background:#f8fafc;color:#6b7280;" placeholder="Otomatik">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Yetkili Kişi</label>
+                        <input type="text" class="form-control" id="qaSuppContact">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Telefon <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaSuppPhone" placeholder="5xxxxxxxxx">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">E-Posta</label>
+                        <input type="text" class="form-control" id="qaSuppEmail" placeholder="ornek@firma.com" style="text-transform:lowercase;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Şehir</label>
+                        <input type="text" class="form-control" id="qaSuppCity">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Adres</label>
+                        <input type="text" class="form-control" id="qaSuppAddress">
+                    </div>
+                    <div class="col-md-4">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Vergi Dairesi</label>
+                                <input type="text" class="form-control" id="qaSuppTaxOffice">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Vergi No</label>
+                                <input type="text" class="form-control" id="qaSuppTaxNumber" maxlength="11">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <i class="fas fa-certificate text-success"></i>
+                                <span class="fw-semibold" style="font-size:13px;color:#166534;">FSC Sertifika Bilgileri</span>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">FSC Sertifika No</label>
+                                    <input type="text" class="form-control" id="qaSuppFscCode" placeholder="FSC-C123456">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Sertifika Bitiş Tarihi</label>
+                                    <input type="date" class="form-control" id="qaSuppFscDate">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaSupplierCancel">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" id="qaSupplierSave">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── QA: MÜŞTERİ TAM FORM MODALI ───────────────────────────────── -->
+<div class="modal fade" id="qaCustomerModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#1a2744;color:#fff;border-radius:10px 10px 0 0;padding:14px 20px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" style="font-size:14px;">Yeni Müşteri Ekle</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaCustomerClose"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Müşteri Ünvanı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaCustName" placeholder="Büyük harf ile girilir" style="text-transform:uppercase;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Müşteri Kodu</label>
+                        <input type="text" class="form-control" id="qaCustCode" readonly style="background:#f8fafc;color:#6b7280;" placeholder="Otomatik">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Vergi Dairesi</label>
+                        <input type="text" class="form-control" id="qaCustTaxOffice">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Vergi Numarası</label>
+                        <input type="text" class="form-control" id="qaCustTaxNumber" maxlength="11">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Telefon <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaCustPhone" placeholder="5xxxxxxxxx">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">E-Posta</label>
+                        <input type="text" class="form-control" id="qaCustEmail" placeholder="ornek@firma.com" style="text-transform:lowercase;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Şehir</label>
+                        <input type="text" class="form-control" id="qaCustCity">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold">Adres</label>
+                        <input type="text" class="form-control" id="qaCustAddress">
+                    </div>
+                    <div class="col-12">
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <i class="fas fa-certificate text-success"></i>
+                                <span class="fw-semibold" style="font-size:13px;color:#166534;">FSC Lisans Bilgileri</span>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">FSC Lisans Kodu</label>
+                                    <input type="text" class="form-control" id="qaCustFscCode" placeholder="FSC-C123456">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Sertifika Bitiş Tarihi</label>
+                                    <input type="date" class="form-control" id="qaCustFscDate">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaCustomerCancel">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" id="qaCustomerSave">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── QA: FSC TİPİ TAM FORM MODALI ──────────────────────────────── -->
+<div class="modal fade" id="qaFscTypeModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#166534;color:#fff;border-radius:10px 10px 0 0;padding:14px 20px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;">
+                        <i class="fas fa-certificate"></i>
+                    </div>
+                    <h6 class="mb-0 fw-semibold" style="font-size:14px;">Yeni FSC Sertifika Tipi Ekle</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" id="qaFscTypeClose"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Sertifika Adı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaFscName" placeholder="Örn: Mix">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Kısa Kod <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="qaFscCode" placeholder="Örn: FSC-MIX" style="text-transform:uppercase;">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Açıklama</label>
+                        <textarea class="form-control" rows="2" id="qaFscDescription"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="qaFscIsActive" checked>
+                            <label class="form-check-label small fw-semibold" for="qaFscIsActive">Aktif</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background:#f8fafc;border-radius:0 0 10px 10px;padding:12px 20px;">
+                <div class="text-muted small me-auto" style="font-size:11px;">
+                    <i class="fas fa-info-circle me-1"></i>Kaydedilince seçim listesine eklenir.
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="qaFscTypeCancel">İptal</button>
+                <button type="button" class="btn btn-success btn-sm px-4" id="qaFscTypeSave">
+                    <i class="fas fa-check me-1"></i> Kaydet & Seç
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="~/lib/jquery/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+(function () {
+    const sidebar  = document.getElementById('sidebar');
+    const overlay  = document.getElementById('sidebarOverlay');
+    const toggle   = document.getElementById('sidebarToggle');
+    const isMobile = () => window.innerWidth <= 768;
+    const isTablet = () => window.innerWidth > 768 && window.innerWidth <= 1024;
+
+    toggle.addEventListener('click', () => {
+        if (isMobile()) {
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('active');
+        } else {
+            sidebar.classList.toggle('collapsed');
+            // Tablet'te kullanıcı genişletti → 'false' kaydet (varsayılanı eziyor)
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+    });
+
+    overlay.addEventListener('click', () => {
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('active');
+    });
+
+    // Başlangıç durumu
+    if (!isMobile()) {
+        if (isTablet()) {
+            // Tablet: kullanıcı açıkça 'false' yazmadıysa kapalı başlat
+            if (localStorage.getItem('sidebarCollapsed') !== 'false') {
+                sidebar.classList.add('collapsed');
+            }
+        } else {
+            // Masaüstü: kayıtlı tercih
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                sidebar.classList.add('collapsed');
+            }
+        }
+    }
+
+    // Pencere boyutu değişince yeniden değerlendir (yön değişimi vb.)
+    let _resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(_resizeTimer);
+        _resizeTimer = setTimeout(() => {
+            if (isMobile()) {
+                // Mobil: sidebar'ı gizle
+                sidebar.classList.remove('collapsed');
+                sidebar.classList.remove('mobile-open');
+                overlay.classList.remove('active');
+            } else if (isTablet()) {
+                // Tablet'e geçildi: kullanıcı açmadıysa kapat
+                if (localStorage.getItem('sidebarCollapsed') !== 'false') {
+                    sidebar.classList.add('collapsed');
+                }
+            }
+        }, 150);
+    });
+})();
+
+// ── NAV SECTION COLLAPSE — localStorage ile durum kalıcı ────────────────
+(function () {
+    const KEY      = 'navSecState';
+    const sections = ['sec-genel', 'sec-fsc', 'sec-ticari', 'sec-rapor', 'sec-tanim'];
+
+    // Kayıtlı durumu oku
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+
+    sections.forEach(id => {
+        const el  = document.getElementById(id);
+        const btn = document.querySelector(`[data-bs-target="#${id}"]`);
+        if (!el || !btn) return;
+
+        // Eğer localStorage'da kayıt varsa sunucu-side durumunu geçersiz kıl
+        if (id in saved) {
+            if (saved[id]) {
+                el.classList.add('show');
+                btn.setAttribute('aria-expanded', 'true');
+            } else {
+                el.classList.remove('show');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        // Toggle olaylarını dinle ve kaydet
+        el.addEventListener('shown.bs.collapse',  () => saveSec(id, true));
+        el.addEventListener('hidden.bs.collapse', () => saveSec(id, false));
+    });
+
+    function saveSec(id, open) {
+        let s = {};
+        try { s = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+        s[id] = open;
+        localStorage.setItem(KEY, JSON.stringify(s));
+    }
+})();
+
+// ── Global PDF Viewer ────────────────────────────────────────────────────
+var _pdfModal = null;
+function showPdf(url, title) {
+    var el = document.getElementById('pdfViewerModal');
+    if (!el) { window.open(url, '_blank'); return; }
+    document.getElementById('pdfViewerTitle').textContent = title || 'Belge';
+    document.getElementById('pdfViewerFrame').src = url;
+    document.getElementById('pdfViewerLink').href = url;
+    if (!_pdfModal) _pdfModal = new bootstrap.Modal(el);
+    _pdfModal.show();
+}
+document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('pdfViewerModal');
+    if (el) el.addEventListener('hide.bs.modal', function () {
+        document.getElementById('pdfViewerFrame').src = '';
+    });
+});
+
+function showToast(msg, type = 'success') {
+    const icons  = { success:'check-circle', error:'times-circle', warning:'exclamation-triangle', info:'info-circle' };
+    const colors = { success:'#166534', error:'#991b1b', warning:'#92400e', info:'#1d4ed8' };
+    const bg     = { success:'#f0fdf4', error:'#fef2f2', warning:'#fffbeb', info:'#eff6ff' };
+    const id = 'toast-' + Date.now();
+    const el = document.createElement('div');
+    el.id = id;
+    el.style.cssText = `background:${bg[type]};border:1px solid ${colors[type]}33;border-left:4px solid ${colors[type]};
+        border-radius:10px;padding:11px 15px;margin-top:7px;display:flex;align-items:center;gap:10px;
+        min-width:280px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeIn .25s ease;font-size:13.5px;`;
+    el.innerHTML = `<i class="fas fa-${icons[type]}" style="color:${colors[type]};font-size:15px;"></i>
+        <span style="color:#111827;flex:1;">${msg}</span>
+        <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:15px;">×</button>`;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => el.remove(), 4500);
+}
+
+/* ── ARD Onay Diyaloğu — native confirm() yerine şık modal ─────────────── */
+(function ensureConfirmStyles() {
+    if (document.getElementById('appConfirmStyles')) return;
+    const s = document.createElement('style');
+    s.id = 'appConfirmStyles';
+    s.textContent = `
+      .app-confirm-overlay{position:fixed;inset:0;z-index:11000;display:flex;align-items:center;justify-content:center;
+        background:rgba(15,22,33,.55);backdrop-filter:blur(2px);opacity:0;transition:opacity .18s ease;padding:20px;}
+      .app-confirm-overlay.show{opacity:1;}
+      .app-confirm-card{background:#fff;border-radius:16px;max-width:400px;width:100%;padding:26px 24px 20px;
+        box-shadow:0 20px 60px rgba(0,0,0,.30);text-align:center;transform:translateY(8px) scale(.97);
+        transition:transform .18s cubic-bezier(.2,.8,.2,1);font-family:'Inter','Segoe UI',sans-serif;}
+      .app-confirm-overlay.show .app-confirm-card{transform:none;}
+      .app-confirm-icon{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+        margin:0 auto 14px;font-size:24px;}
+      .app-confirm-title{font-size:17px;font-weight:600;color:#111827;margin-bottom:7px;}
+      .app-confirm-msg{font-size:14px;line-height:1.55;color:#4b5563;margin-bottom:22px;}
+      .app-confirm-actions{display:flex;gap:10px;}
+      .app-confirm-btn{flex:1;border:none;border-radius:10px;padding:11px 16px;font-size:14px;font-weight:600;
+        cursor:pointer;transition:transform .12s ease,filter .12s ease;font-family:inherit;}
+      .app-confirm-btn:hover{transform:translateY(-1px);}
+      .app-confirm-btn.cancel{background:#f3f4f6;color:#374151;}
+      .app-confirm-btn.cancel:hover{background:#e5e7eb;}
+      .app-confirm-btn.ok{color:#fff;}
+      .app-confirm-btn.ok:hover{filter:brightness(1.05);}
+    `;
+    document.head.appendChild(s);
+})();
+
+function appConfirm(message, opts = {}) {
+    return new Promise(resolve => {
+        const danger = (opts.danger != null) ? opts.danger
+                     : /\bsil|kaldır|geri alınamaz|iptal et|dönüştür/i.test(message || '');
+        const accent = danger ? '#dc2626' : '#1976d2';
+        const icon   = opts.icon || (danger ? 'triangle-exclamation' : 'circle-question');
+        const title  = opts.title || (danger ? 'Onay Gerekiyor' : 'Onay');
+        const okText = opts.confirmText || (danger ? 'Evet, Devam Et' : 'Tamam');
+        const noText = opts.cancelText || 'İptal';
+        const esc = String(message || '')
+            .replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]))
+            .replace(/\n/g, '<br>');
+
+        const ov = document.createElement('div');
+        ov.className = 'app-confirm-overlay';
+        ov.innerHTML = `
+          <div class="app-confirm-card" role="alertdialog" aria-modal="true">
+            <div class="app-confirm-icon" style="background:${accent}1a;color:${accent};"><i class="fas fa-${icon}"></i></div>
+            <div class="app-confirm-title">${title}</div>
+            <div class="app-confirm-msg">${esc}</div>
+            <div class="app-confirm-actions">
+              <button type="button" class="app-confirm-btn cancel">${noText}</button>
+              <button type="button" class="app-confirm-btn ok" style="background:${accent};box-shadow:0 4px 14px ${accent}59;">${okText}</button>
+            </div>
+          </div>`;
+        document.body.appendChild(ov);
+        requestAnimationFrame(() => ov.classList.add('show'));
+
+        const close = (val) => {
+            ov.classList.remove('show');
+            setTimeout(() => ov.remove(), 180);
+            document.removeEventListener('keydown', onKey);
+            resolve(val);
+        };
+        const onKey = (e) => {
+            if (e.key === 'Escape') close(false);
+            else if (e.key === 'Enter') close(true);
+        };
+        ov.querySelector('.ok').addEventListener('click', () => close(true));
+        ov.querySelector('.cancel').addEventListener('click', () => close(false));
+        ov.addEventListener('mousedown', (e) => { if (e.target === ov) close(false); });
+        document.addEventListener('keydown', onKey);
+        setTimeout(() => ov.querySelector('.ok')?.focus(), 50);
+    });
+}
+window.appConfirm = appConfirm;
+
+/* native alert() -> ARD temalı toast (hata tonu) */
+window.alert = function (m) { (window.showToast || function () {})(String(m), 'error'); };
+
+/* ── SweetAlert uyumlu shim: tüm Swal.fire(...) çağrılarını ARD temasına taşır ── */
+function appSwalFire(arg, _text, _icon) {
+    const o = (typeof arg === 'string') ? { title: arg, text: _text, icon: _icon } : (arg || {});
+    const palette = {
+        success:  ['#16a34a', 'circle-check'],
+        error:    ['#dc2626', 'circle-xmark'],
+        warning:  ['#d97706', 'triangle-exclamation'],
+        question: ['#1976d2', 'circle-question'],
+        info:     ['#1976d2', 'circle-info']
+    };
+    const type = o.icon || (o.showCancelButton ? 'question' : 'info');
+    const [accent, faIcon] = palette[type] || palette.info;
+    const esc = (s) => String(s == null ? '' : s)
+        .replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]))
+        .replace(/\n/g, '<br>');
+    const bodyHtml   = (o.html != null) ? o.html : esc(o.text);
+    const hasCancel  = !!o.showCancelButton;
+    const hasConfirm = o.showConfirmButton !== false;
+    const okText = o.confirmButtonText || 'Tamam';
+    const noText = o.cancelButtonText  || 'İptal';
+
+    return new Promise(resolve => {
+        const ov = document.createElement('div');
+        ov.className = 'app-confirm-overlay';
+        let actions = '';
+        if (hasCancel || hasConfirm) {
+            actions = '<div class="app-confirm-actions">';
+            if (hasCancel)  actions += `<button type="button" class="app-confirm-btn cancel">${noText}</button>`;
+            if (hasConfirm) actions += `<button type="button" class="app-confirm-btn ok" style="background:${accent};box-shadow:0 4px 14px ${accent}59;">${okText}</button>`;
+            actions += '</div>';
+        }
+        ov.innerHTML = `
+          <div class="app-confirm-card" role="alertdialog" aria-modal="true">
+            <div class="app-confirm-icon" style="background:${accent}1a;color:${accent};"><i class="fas fa-${faIcon}"></i></div>
+            ${o.title ? `<div class="app-confirm-title">${esc(o.title)}</div>` : ''}
+            ${bodyHtml ? `<div class="app-confirm-msg">${bodyHtml}</div>` : ''}
+            ${actions}
+          </div>`;
+        document.body.appendChild(ov);
+        requestAnimationFrame(() => ov.classList.add('show'));
+
+        let timer = null;
+        const close = (confirmed) => {
+            if (timer) clearTimeout(timer);
+            ov.classList.remove('show');
+            setTimeout(() => ov.remove(), 180);
+            document.removeEventListener('keydown', onKey);
+            resolve({ isConfirmed: confirmed, isDismissed: !confirmed, isDenied: false, value: confirmed });
+        };
+        const onKey = (e) => {
+            if (e.key === 'Escape') close(false);
+            else if (e.key === 'Enter' && hasConfirm) close(true);
+        };
+        ov.querySelector('.ok')?.addEventListener('click', () => close(true));
+        ov.querySelector('.cancel')?.addEventListener('click', () => close(false));
+        ov.addEventListener('mousedown', (e) => { if (e.target === ov) close(false); });
+        document.addEventListener('keydown', onKey);
+        if (hasConfirm) setTimeout(() => ov.querySelector('.ok')?.focus(), 50);
+        if (o.timer) timer = setTimeout(() => close(false), o.timer);
+    });
+}
+/* OK-only kısayol: appAlert('mesaj', { icon:'success', title:'...' }) */
+window.appAlert = (message, opts = {}) => appSwalFire(Object.assign({ text: message, icon: 'info' }, opts));
+/* Mevcut Swal.fire çağrılarını çağrı yerlerini değiştirmeden temalı yap */
+if (window.Swal) { window.Swal.fire = appSwalFire; }
+else { window.Swal = { fire: appSwalFire, close: function () {} }; }
+
+/* ── Sidebar Text-Node Guard (tekrar eden siyah yazıları engelle) ───── */
+(function () {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+
+    function cleanNavItems() {
+        document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
+            // nav-link dışındaki serbest text node'ları temizle
+            Array.from(item.childNodes).forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE && node.textContent && node.textContent.trim()) {
+                    node.textContent = '';
+                }
             });
+            // Daha önce eklenmiş tooltip/span kopyaları varsa kaldır
+            item.querySelectorAll(':scope > .nav-tooltip').forEach(el => el.remove());
+            item.querySelectorAll(':scope > span:not(.nav-link-item)').forEach(el => el.remove());
+        });
+    }
 
-            $('#sidebarOverlay').click(function() { $('#sidebar').removeClass('active'); $(this).removeClass('active'); });
+    cleanNavItems();
 
-            // Global Yeni Ekle
-            $('#globalAddBtn').click(function() {
-                if (typeof openAddModal === "function") { openAddModal(); }
-                else { Swal.fire('Bilgi', 'Bu sayfa için ekleme fonksiyonu henüz tanımlanmadı.', 'info'); }
+    // İleride tekrar eklenirse otomatik temizle
+    const observer = new MutationObserver(() => cleanNavItems());
+    observer.observe(sidebar, { childList: true, subtree: true, characterData: true });
+})();
+
+/* ── Sidebar Arama ──────────────────────────────────────────────────── */
+(function () {
+    const input   = document.getElementById('sidebarSearch');
+    const clearBtn= document.getElementById('sidebarSearchClear');
+    const noResult= document.getElementById('sidebarNoResult');
+    if (!input) return;
+
+    // Tüm menü öğelerini topla (bir kez)
+    const items = Array.from(document.querySelectorAll('.sidebar-nav .nav-item')).map(item => {
+        const link  = item.querySelector('.nav-link-item');
+        const label = item.querySelector('.nav-label');
+        // Bu öğenin ait olduğu collapse (section) div'ini bul
+        const section = item.closest('.nav-section-collapse');
+        // Section'ın toggle butonunu bul
+        const toggle = section ? document.querySelector(`[data-bs-target="#${section.id}"]`) : null;
+        return { item, link, label, section, toggle, originalText: label ? label.textContent.trim() : '' };
+    }).filter(x => x.label);
+
+    function highlight(text, query) {
+        if (!query) return text;
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark>$1</mark>');
+    }
+
+    function doSearch(q) {
+        const query = q.trim().toLowerCase();
+        clearBtn.style.display = query ? 'block' : 'none';
+        noResult.style.display = 'none';
+
+        if (!query) {
+            // Aramayı temizle — her şeyi normale döndür
+            items.forEach(({ item, label, section, toggle, originalText }) => {
+                item.style.display = '';
+                label.innerHTML = originalText;
+                // Açık olan section'ı kapat (orijinal sayfa durumuna dön)
+                if (section && section.dataset.searchOpened === '1') {
+                    section.classList.remove('show');
+                    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+                    delete section.dataset.searchOpened;
+                }
             });
+            return;
+        }
+
+        // Section'ları önce gizle
+        document.querySelectorAll('.nav-section-collapse').forEach(s => {
+            s._searchVisible = false;
         });
 
-        function toggleFilter() {
-            let panel = $('#filterPanel');
-            if(panel.length > 0) panel.slideToggle('fast');
-            else Swal.fire({ icon: 'info', title: 'Filtre', text: 'Bu sayfada aktif bir filtre paneli bulunamadı.', timer: 2000 });
+        let totalVisible = 0;
+        items.forEach(({ item, label, section, originalText }) => {
+            const match = originalText.toLowerCase().includes(query);
+            if (match) {
+                item.style.display = '';
+                label.innerHTML = highlight(originalText, q.trim());
+                if (section) section._searchVisible = true;
+                totalVisible++;
+            } else {
+                item.style.display = 'none';
+                label.innerHTML = originalText;
+            }
+        });
+
+        // Section'ları aç/kapat
+        document.querySelectorAll('.nav-section-collapse').forEach(sec => {
+            const toggle = document.querySelector(`[data-bs-target="#${sec.id}"]`);
+            if (sec._searchVisible) {
+                if (!sec.classList.contains('show')) {
+                    sec.classList.add('show');
+                    sec.dataset.searchOpened = '1';
+                    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+                }
+            } else {
+                if (sec.classList.contains('show') && sec.dataset.searchOpened === '1') {
+                    sec.classList.remove('show');
+                    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+                    delete sec.dataset.searchOpened;
+                }
+            }
+        });
+
+        noResult.style.display = totalVisible === 0 ? 'block' : 'none';
+    }
+
+    input.addEventListener('input', () => doSearch(input.value));
+
+    clearBtn.addEventListener('click', () => {
+        input.value = '';
+        doSearch('');
+        input.focus();
+    });
+
+    // Ctrl+K → arama kutusuna focus
+    document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar && sidebar.classList.contains('collapsed')) return;
+            e.preventDefault();
+            input.focus();
+            input.select();
+        }
+        if (e.key === 'Escape' && document.activeElement === input) {
+            input.value = '';
+            doSearch('');
+            input.blur();
+        }
+    });
+})();
+
+/* ── Keyboard Shortcuts ─────────────────────────────────────────────── */
+(function () {
+    let _shortcutsModal = null;
+    document.addEventListener('keydown', function (e) {
+        const tag = (document.activeElement || {}).tagName;
+        const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+        // ? → kısayol yardımı (input dışında)
+        if (e.key === '?' && !isInput) {
+            e.preventDefault();
+            const el = document.getElementById('shortcutsModal');
+            if (el) {
+                if (!_shortcutsModal) _shortcutsModal = new bootstrap.Modal(el);
+                _shortcutsModal.show();
+            }
+            return;
+        }
+        if (!e.ctrlKey && !e.metaKey) return;
+        switch (e.key) {
+            case 'n': case 'N':
+                e.preventDefault(); openAddModal(); break;
+            case 'e': case 'E':
+                e.preventDefault(); exportToExcel(); break;
+            case 'f': case 'F':
+                e.preventDefault(); toggleFilter(); break;
+            case 'd': case 'D':
+                if (!isInput) { e.preventDefault(); document.getElementById('darkModeToggle')?.click(); }
+                break;
+        }
+    });
+})();
+
+/* ── Page Progress Bar ──────────────────────────────────────────────── */
+(function () {
+    const bar = document.getElementById('pageProgressBar');
+    if (!bar) return;
+    let _t;
+    function start() {
+        clearTimeout(_t);
+        bar.style.width = '0%'; bar.style.opacity = '1';
+        bar.style.transition = 'width 8s cubic-bezier(.1,1,.1,1),opacity .4s';
+        setTimeout(() => { bar.style.width = '80%'; }, 10);
+    }
+    function done() {
+        bar.style.transition = 'width .2s ease,opacity .4s';
+        bar.style.width = '100%';
+        _t = setTimeout(() => { bar.style.opacity = '0'; setTimeout(() => { bar.style.width = '0%'; }, 400); }, 300);
+    }
+    // Link tıklamalarında başlat
+    document.addEventListener('click', e => {
+        const a = e.target.closest('a[href]');
+        if (!a) return;
+        const href = a.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('javascript') || a.target === '_blank') return;
+        if (a.hasAttribute('data-bs-toggle')) return;
+        start();
+    });
+    // Form submit'te başlat
+    document.addEventListener('submit', () => start());
+    // Yükleme bitince bitir
+    window.addEventListener('load', done);
+    // Eğer hâlâ yüklü değilse
+    if (document.readyState === 'complete') done();
+})();
+
+function toggleFilter() {
+    const p = document.getElementById('filterPanel');
+    if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+function openAddModal() {
+    const fn = window.openAddModalFn;
+    if (typeof fn === 'function') fn();
+    else showToast('Bu sayfa için ekleme formu tanımlanmadı.', 'info');
+}
+function exportToExcel() {
+    const ctrl   = '@ViewContext.RouteData.Values["Controller"]';
+    const action = '@ViewContext.RouteData.Values["Action"]';
+    window.location.href = `/${ctrl}/Export${action}`;
+}
+
+/* ── Bildirim Zili ──────────────────────────────────────────────────── */
+(function () {
+    const bell     = document.getElementById('notifBell');
+    const dropdown = document.getElementById('notifDropdown');
+    const badge    = document.getElementById('notifBadge');
+    const list     = document.getElementById('notifList');
+    if (!bell || !dropdown) return;
+
+    let loaded = false;
+
+    bell.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.contains('show');
+        dropdown.classList.toggle('show');
+        if (!isOpen && !loaded) {
+            loaded = true;
+            fetch('/Home/GetNotifications')
+                .then(r => r.json())
+                .then(data => {
+                    list.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        list.innerHTML = '<li class="notif-empty">Bildirim yok</li>';
+                        return;
+                    }
+                    let urgentCount = 0;
+                    data.forEach(n => {
+                        if (n.urgent) urgentCount++;
+                        const li = document.createElement('li');
+                        li.className = 'notif-item';
+                        const color = n.urgent ? '#dc2626' : '#d97706';
+                        li.innerHTML = `<i class="fas fa-circle" style="color:${color};font-size:7px;flex-shrink:0;margin-top:5px;"></i>
+                            <div><div style="font-size:12.5px;font-weight:600;color:#111827;">${n.title}</div>
+                            <div style="font-size:11.5px;color:#6b7280;">${n.message}</div></div>`;
+                        list.appendChild(li);
+                    });
+                    if (urgentCount > 0) {
+                        badge.textContent = urgentCount;
+                        badge.style.display = 'flex';
+                    }
+                })
+                .catch(() => { list.innerHTML = '<li class="notif-empty">Yüklenemedi</li>'; });
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!bell.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.remove('show');
+        }
+    });
+})();
+
+/* ── Dark Mode ──────────────────────────────────────────────────────── */
+(function () {
+    const btn  = document.getElementById('darkModeToggle');
+    const icon = document.getElementById('darkModeIcon');
+    if (!btn) return;
+
+    function applyDark(dark) {
+        document.body.classList.toggle('dark-mode', dark);
+        icon.className = dark ? 'fas fa-sun' : 'fas fa-moon';
+    }
+
+    applyDark(localStorage.getItem('darkMode') === '1');
+
+    btn.addEventListener('click', () => {
+        const dark = !document.body.classList.contains('dark-mode');
+        localStorage.setItem('darkMode', dark ? '1' : '0');
+        applyDark(dark);
+    });
+})();
+
+/* ── DataTables Global Init ─────────────────────────────────────────── */
+$(function () {
+    $.fn.dataTable.ext.errMode = 'none';
+
+    $('table.data-table[data-dt!="false"]').each(function () {
+        const tbl = $(this);
+        if ($.fn.DataTable.isDataTable(this)) return;
+
+        // Sütun sayısına göre pageLength ayarla
+        const opts = {
+            language: {
+                search:         'Ara:',
+                lengthMenu:     '_MENU_ kayıt',
+                info:           '_TOTAL_ kayıttan _START_–_END_ gösteriliyor',
+                infoEmpty:      'Kayıt bulunamadı',
+                infoFiltered:   '(_MAX_ içinden filtrelendi)',
+                zeroRecords:    'Eşleşen kayıt yok',
+                paginate:       { first:'«', previous:'‹', next:'›', last:'»' }
+            },
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Tümü']],
+            order: [],                       // varsayılan sıralama yok
+            stateSave: false,
+            responsive: false,
+            autoWidth: false,
+            dom: '<"d-flex align-items-center justify-content-between flex-wrap gap-2"lf>rtip',
+            drawCallback: function () {
+                // Sayfa değişince animasyon sıfırla
+                this.api().rows({ page: 'current' }).nodes().to$().css('opacity', 0).animate({ opacity: 1 }, 200);
+            }
+        };
+
+        // Sıralanmaması gereken aksiyon sütunları (son sütun genellikle)
+        const thLast = tbl.find('thead th:last-child');
+        if (thLast.text().trim() === '' || thLast.hasClass('no-sort')) {
+            const colCount = tbl.find('thead th').length;
+            opts.columnDefs = [{ orderable: false, targets: colCount - 1 }];
         }
 
-        function exportToExcel() {
-            let action = '@ViewContext.RouteData.Values["Action"]';
-            let controller = '@ViewContext.RouteData.Values["Controller"]';
-            window.location.href = `/${controller}/Export${action}`;
-        }
-    </script>
+        tbl.DataTable(opts);
+    });
+});
 
-    @await RenderSectionAsync("Scripts", required: false)
-</body>
+/* ── Global Topbar Arama ────────────────────────────────────────────── */
+(function () {
+    const input    = document.getElementById('globalSearch');
+    const dropdown = document.getElementById('searchDropdown');
+    if (!input) return;
+
+    let _timer, _lastQ = '';
+    const iconMap = {
+        'Müşteri':    { icon: 'fa-user-tie',    color: '#1d4ed8' },
+        'Tedarikçi':  { icon: 'fa-truck',       color: '#16a34a' },
+        'Ürün':       { icon: 'fa-box-open',    color: '#7c3aed' },
+        'Lot':        { icon: 'fa-layer-group', color: '#d97706' }
+    };
+
+    function render(data) {
+        dropdown.innerHTML = '';
+        if (!data || !data.length) {
+            dropdown.innerHTML = '<div class="search-no-result"><i class="fas fa-search me-2 opacity-50"></i>Sonuç bulunamadı</div>';
+            dropdown.classList.add('show');
+            return;
+        }
+        // Gruplara ayır
+        const groups = {};
+        data.forEach(item => {
+            (groups[item.type] = groups[item.type] || []).push(item);
+        });
+        Object.keys(groups).forEach(type => {
+            const grp = document.createElement('div');
+            grp.className = 'search-result-group';
+            const im = iconMap[type] || { icon: 'fa-circle', color: '#6b7280' };
+            grp.innerHTML = `<div class="search-result-label">${type}</div>`;
+            groups[type].forEach(item => {
+                const li = document.createElement('div');
+                li.className = 'search-result-item';
+                li.innerHTML = `<i class="fas ${im.icon}" style="color:${im.color};"></i>
+                    <div><div class="sri-main">${item.title}</div>${item.sub ? `<div class="sri-sub">${item.sub}</div>` : ''}</div>`;
+                li.onclick = () => { location.href = item.url; };
+                grp.appendChild(li);
+            });
+            dropdown.appendChild(grp);
+        });
+        dropdown.classList.add('show');
+    }
+
+    function search(q) {
+        if (q === _lastQ) return;
+        _lastQ = q;
+        if (q.length < 2) { dropdown.classList.remove('show'); return; }
+        dropdown.innerHTML = '<div class="search-no-result"><i class="fas fa-spinner fa-spin me-2"></i>Aranıyor…</div>';
+        dropdown.classList.add('show');
+        fetch('/Home/GlobalSearch?q=' + encodeURIComponent(q))
+            .then(r => r.json()).then(render).catch(() => dropdown.classList.remove('show'));
+    }
+
+    input.addEventListener('input', () => {
+        clearTimeout(_timer);
+        _timer = setTimeout(() => search(input.value.trim()), 280);
+    });
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { dropdown.classList.remove('show'); input.blur(); }
+    });
+    document.addEventListener('click', e => {
+        if (!input.parentElement.contains(e.target)) dropdown.classList.remove('show');
+    });
+
+    // Ctrl+K kısayolu
+    document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault(); input.focus(); input.select();
+        }
+    });
+})();
+
+/* ══════════════════════════════════════════════════════════════════
+   GLOBAL QUICK-ADD SİSTEMİ
+   Kullanım: openQuickAdd('supplier', 'supplierId')
+   Her kayıt türü için form alanları ve endpoint aşağıda tanımlı.
+══════════════════════════════════════════════════════════════════ */
+const QA_CONFIGS = {
+    supplier: {
+        title: 'Yeni Tedarikçi', icon: 'fas fa-truck', color: '#1565c0',
+        url: '/Suppliers/QuickAdd',
+        fields: [
+            { name:'Name',      label:'Tedarikçi Ünvanı',   req:true,  upper:true },
+            { name:'Phone',     label:'Telefon',             ph:'5xxxxxxxxx' },
+            { name:'TaxNumber', label:'Vergi Numarası',      maxlen:11 }
+        ]
+    },
+    customer: {
+        title: 'Yeni Müşteri', icon: 'fas fa-user-tie', color: '#1565c0',
+        url: '/Customers/QuickAdd',
+        fields: [
+            { name:'Name',  label:'Müşteri Ünvanı', req:true, upper:true },
+            { name:'Phone', label:'Telefon',         ph:'5xxxxxxxxx' }
+        ]
+    },
+    fsctype: {
+        title: 'Yeni FSC Tipi', icon: 'fas fa-certificate', color: '#166534',
+        url: '/Paper/QuickAddFscType',
+        fields: [
+            { name:'Name', label:'FSC Tipi (örn: FSC-MIX, FSC-100)', req:true, upper:true }
+        ]
+    },
+    productgroup: {
+        title: 'Yeni Ürün Grubu', icon: 'fas fa-layer-group', color: '#5b21b6',
+        url: '/Product/QuickAddGroup',
+        fields: [
+            { name:'GroupName', label:'Grup Adı',             req:true, upper:true },
+            { name:'GroupCode', label:'Grup Kodu (sayı)',     type:'number', min:1 }
+        ]
+    },
+    papercolor: {
+        title: 'Yeni Kağıt Rengi', icon: 'fas fa-palette', color: '#92400e',
+        url: '/Paper/QuickAddColor',
+        fields: [
+            { name:'Name', label:'Renk Adı', req:true, upper:true }
+        ]
+    },
+    paperweight: {
+        title: 'Yeni Gramaj', icon: 'fas fa-balance-scale', color: '#0e7490',
+        url: '/Paper/QuickAddWeight',
+        fields: [
+            { name:'Value', label:'Gramaj (gr/m²)', type:'number', req:true, min:1, step:'1' },
+            { name:'Unit',  label:'Birim',           type:'static', val:'gr/m²' }
+        ]
+    },
+    paperwidth: {
+        title: 'Yeni Kağıt Eni', icon: 'fas fa-arrows-alt-h', color: '#0e7490',
+        url: '/Paper/QuickAddWidth',
+        fields: [
+            { name:'Code',  label:'En Kodu (örn: B80)',  req:true, upper:true },
+            { name:'Value', label:'En Değeri (mm)',       type:'number', req:true, min:1 }
+        ]
+    },
+    papertype: {
+        title: 'Yeni Kağıt Tipi', icon: 'fas fa-file-alt', color: '#374151',
+        url: '/Paper/QuickAddPaperType',
+        fields: [
+            { name:'Name', label:'Kağıt Tipi Adı', req:true, upper:true }
+        ]
+    },
+    machine: {
+        title: 'Yeni Makine', icon: 'fas fa-cogs', color: '#374151',
+        url: '/Machine/QuickAdd',
+        fields: [
+            { name:'Name', label:'Makine Adı', req:true, upper:true }
+        ]
+    },
+    warehouse: {
+        title: 'Yeni Depo', icon: 'fas fa-warehouse', color: '#374151',
+        url: '/Warehouse/QuickAdd',
+        fields: [
+            { name:'Name', label:'Depo Adı', req:true, upper:true }
+        ]
+    }
+};
+
+// ── FULL-FORM MODALS: Tedarikçi / Müşteri / FSC Tipi ──────────────────
+// Her modalın kendi singleton + target select ID'si
+
+var _qaFullModals = {};
+var _qaFullTargetId = {};
+
+function _getOrCreateModal(id) {
+    if (!_qaFullModals[id]) {
+        _qaFullModals[id] = new bootstrap.Modal(document.getElementById(id));
+    }
+    return _qaFullModals[id];
+}
+
+function _resetAndOpenFullModal(modalId, targetSelectId) {
+    _qaFullTargetId[modalId] = targetSelectId;
+    // Tüm input/textarea temizle
+    document.querySelectorAll('#' + modalId + ' input:not([readonly]):not([type="checkbox"]), #' + modalId + ' textarea').forEach(el => {
+        el.value = '';
+        el.classList.remove('is-invalid');
+    });
+    // Checkbox'ları sıfırla
+    document.querySelectorAll('#' + modalId + ' input[type="checkbox"]').forEach(el => { el.checked = true; });
+    _getOrCreateModal(modalId).show();
+    setTimeout(() => {
+        const first = document.querySelector('#' + modalId + ' input:not([readonly])');
+        if (first) first.focus();
+    }, 350);
+}
+
+async function _saveFullModal(modalId, url, buildFd, btnId, labelBase) {
+    const fd  = buildFd();
+    if (!fd) return; // validation failed
+    const btn = document.getElementById(btnId);
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Kaydediliyor...';
+    try {
+        const res  = await fetch(url, { method: 'POST', body: fd });
+        const json = await res.json();
+        if (json.success) {
+            const targetId = _qaFullTargetId[modalId];
+            const sel = document.getElementById(targetId);
+            if (sel) {
+                const opt = new Option(json.text, json.id, true, true);
+                sel.appendChild(opt);
+                sel.value = json.id;
+                sel.dispatchEvent(new Event('change'));
+            }
+            _getOrCreateModal(modalId).hide();
+            showToast(labelBase + ': "' + json.text + '" eklendi.', 'success');
+        } else {
+            showToast(json.message || 'Kayıt hatası.', 'error');
+        }
+    } catch(e) {
+        showToast('Bağlantı hatası.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> Kaydet & Seç';
+    }
+}
+
+// ── TEDARİKÇİ TAM FORM ────────────────────────────────────────────────
+(function () {
+    document.getElementById('qaSupplierClose')?.addEventListener('click', () => _getOrCreateModal('qaSupplierModal').hide());
+    document.getElementById('qaSupplierCancel')?.addEventListener('click', () => _getOrCreateModal('qaSupplierModal').hide());
+    document.getElementById('qaSupplierSave')?.addEventListener('click', () => {
+        const name  = document.getElementById('qaSuppName').value.trim();
+        const phone = document.getElementById('qaSuppPhone').value.trim();
+        if (!name) { document.getElementById('qaSuppName').classList.add('is-invalid'); return; }
+        if (!phone) { document.getElementById('qaSuppPhone').classList.add('is-invalid'); return; }
+        document.getElementById('qaSuppName').classList.remove('is-invalid');
+        document.getElementById('qaSuppPhone').classList.remove('is-invalid');
+
+        _saveFullModal('qaSupplierModal', '/Suppliers/QuickAdd', () => {
+            const fd = new FormData();
+            fd.append('Name',          name.toUpperCase());
+            fd.append('ContactPerson', document.getElementById('qaSuppContact').value.trim());
+            fd.append('Phone',         phone);
+            fd.append('Email',         document.getElementById('qaSuppEmail').value.trim());
+            fd.append('City',          document.getElementById('qaSuppCity').value.trim());
+            fd.append('Address',       document.getElementById('qaSuppAddress').value.trim());
+            fd.append('TaxOffice',     document.getElementById('qaSuppTaxOffice').value.trim());
+            fd.append('TaxNumber',     document.getElementById('qaSuppTaxNumber').value.trim());
+            fd.append('FscCode',       document.getElementById('qaSuppFscCode').value.trim());
+            fd.append('FscExpiryDate', document.getElementById('qaSuppFscDate').value);
+            return fd;
+        }, 'qaSupplierSave', 'Tedarikçi');
+    });
+})();
+
+// ── MÜŞTERİ TAM FORM ──────────────────────────────────────────────────
+(function () {
+    document.getElementById('qaCustomerClose')?.addEventListener('click', () => _getOrCreateModal('qaCustomerModal').hide());
+    document.getElementById('qaCustomerCancel')?.addEventListener('click', () => _getOrCreateModal('qaCustomerModal').hide());
+    document.getElementById('qaCustomerSave')?.addEventListener('click', () => {
+        const name  = document.getElementById('qaCustName').value.trim();
+        const phone = document.getElementById('qaCustPhone').value.trim();
+        if (!name) { document.getElementById('qaCustName').classList.add('is-invalid'); return; }
+        if (!phone) { document.getElementById('qaCustPhone').classList.add('is-invalid'); return; }
+        document.getElementById('qaCustName').classList.remove('is-invalid');
+        document.getElementById('qaCustPhone').classList.remove('is-invalid');
+
+        _saveFullModal('qaCustomerModal', '/Customers/QuickAdd', () => {
+            const fd = new FormData();
+            fd.append('Name',           name.toUpperCase());
+            fd.append('Phone',          phone);
+            fd.append('Email',          document.getElementById('qaCustEmail').value.trim());
+            fd.append('TaxOffice',      document.getElementById('qaCustTaxOffice').value.trim());
+            fd.append('TaxNumber',      document.getElementById('qaCustTaxNumber').value.trim());
+            fd.append('City',           document.getElementById('qaCustCity').value.trim());
+            fd.append('Address',        document.getElementById('qaCustAddress').value.trim());
+            fd.append('FscLicenseCode', document.getElementById('qaCustFscCode').value.trim());
+            fd.append('FscExpiryDate',  document.getElementById('qaCustFscDate').value);
+            return fd;
+        }, 'qaCustomerSave', 'Müşteri');
+    });
+})();
+
+// ── FSC TİPİ TAM FORM ─────────────────────────────────────────────────
+(function () {
+    document.getElementById('qaFscTypeClose')?.addEventListener('click', () => _getOrCreateModal('qaFscTypeModal').hide());
+    document.getElementById('qaFscTypeCancel')?.addEventListener('click', () => _getOrCreateModal('qaFscTypeModal').hide());
+    document.getElementById('qaFscTypeSave')?.addEventListener('click', () => {
+        const name = document.getElementById('qaFscName').value.trim();
+        const code = document.getElementById('qaFscCode').value.trim();
+        let valid = true;
+        if (!name) { document.getElementById('qaFscName').classList.add('is-invalid'); valid = false; }
+        else document.getElementById('qaFscName').classList.remove('is-invalid');
+        if (!code) { document.getElementById('qaFscCode').classList.add('is-invalid'); valid = false; }
+        else document.getElementById('qaFscCode').classList.remove('is-invalid');
+        if (!valid) return;
+
+        _saveFullModal('qaFscTypeModal', '/Paper/QuickAddFscType', () => {
+            const fd = new FormData();
+            fd.append('Name',        name);
+            fd.append('Code',        code.toUpperCase());
+            fd.append('Description', document.getElementById('qaFscDescription').value.trim());
+            fd.append('IsActive',    document.getElementById('qaFscIsActive').checked ? 'true' : 'false');
+            return fd;
+        }, 'qaFscTypeSave', 'FSC Tipi');
+    });
+})();
+
+// ── GENEL QUICK-ADD ROUTER ─────────────────────────────────────────────
+// supplier / customer / fsctype → tam form modalları
+// Diğerleri → basit jenerik modal
+
+var _qaModal = null;
+var _qaTargetSelectId = null;
+var _qaCurrentConfig = null;
+
+function openQuickAdd(type, targetSelectId) {
+    // Tam form modal türleri
+    if (type === 'supplier') { _resetAndOpenFullModal('qaSupplierModal', targetSelectId); return; }
+    if (type === 'customer') { _resetAndOpenFullModal('qaCustomerModal', targetSelectId); return; }
+    if (type === 'fsctype')  { _resetAndOpenFullModal('qaFscTypeModal',  targetSelectId); return; }
+
+    // Jenerik basit modal (diğerleri)
+    const cfg = QA_CONFIGS[type];
+    if (!cfg) { console.error('QuickAdd: unknown type', type); return; }
+    _qaTargetSelectId = targetSelectId;
+    _qaCurrentConfig  = cfg;
+
+    // Header
+    document.getElementById('qaTitle').textContent = cfg.title;
+    const icon = document.getElementById('qaHeaderIcon');
+    icon.innerHTML = `<i class="${cfg.icon}"></i>`;
+    document.getElementById('qaHeader').style.background = cfg.color;
+
+    // Form alanlarını oluştur
+    let html = '<div class="row g-3">';
+    cfg.fields.forEach(f => {
+        if (f.type === 'static') {
+            html += `<div class="col-6">
+                <label class="form-label small fw-semibold">${f.label}</label>
+                <input type="text" class="form-control form-control-sm" value="${f.val||''}" readonly style="background:#f8fafc;">
+                <input type="hidden" name="${f.name}" value="${f.val||''}">
+            </div>`;
+        } else if (f.type === 'number') {
+            html += `<div class="col-6">
+                <label class="form-label small fw-semibold">${f.label}${f.req?'<span class="text-danger ms-1">*</span>':''}</label>
+                <input type="number" class="form-control form-control-sm" name="${f.name}"
+                       ${f.min!==undefined?'min="'+f.min+'"':''} ${f.step?'step="'+f.step+'"':'step="1"'}
+                       ${f.req?'required':''}>
+            </div>`;
+        } else {
+            html += `<div class="col-12">
+                <label class="form-label small fw-semibold">${f.label}${f.req?'<span class="text-danger ms-1">*</span>':''}</label>
+                <input type="text" class="form-control form-control-sm" name="${f.name}"
+                       ${f.ph?'placeholder="'+f.ph+'"':''} ${f.maxlen?'maxlength="'+f.maxlen+'"':''}
+                       ${f.req?'required':''} ${f.upper?'style="text-transform:uppercase;"':''}>
+            </div>`;
+        }
+    });
+    html += '</div>';
+    document.getElementById('qaBody').innerHTML = html;
+
+    if (!_qaModal) {
+        const el = document.getElementById('quickAddModal');
+        _qaModal = new bootstrap.Modal(el);
+        document.getElementById('qaClose').addEventListener('click',  () => _qaModal.hide());
+        document.getElementById('qaCancelBtn').addEventListener('click', () => _qaModal.hide());
+        document.getElementById('qaSaveBtn').addEventListener('click', saveQuickAdd);
+    }
+    _qaModal.show();
+    setTimeout(() => { const inp = document.querySelector('#qaBody input:not([readonly])'); if(inp) inp.focus(); }, 350);
+}
+
+async function saveQuickAdd() {
+    const cfg = _qaCurrentConfig;
+    const body = document.getElementById('qaBody');
+
+    const inputs = body.querySelectorAll('input[required]');
+    let valid = true;
+    inputs.forEach(i => { if (!i.value.trim()) { i.classList.add('is-invalid'); valid = false; } else { i.classList.remove('is-invalid'); } });
+    if (!valid) return;
+
+    body.querySelectorAll('input[style*="uppercase"]').forEach(i => { i.value = i.value.toUpperCase(); });
+
+    const fd = new FormData();
+    body.querySelectorAll('input[name]').forEach(i => fd.append(i.name, i.value.trim()));
+
+    const btn = document.getElementById('qaSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Kaydediliyor...';
+
+    try {
+        const res  = await fetch(cfg.url, { method:'POST', body: fd });
+        const json = await res.json();
+        if (json.success) {
+            const sel = document.getElementById(_qaTargetSelectId);
+            if (sel) {
+                const opt = new Option(json.text, json.id, true, true);
+                sel.appendChild(opt);
+                sel.value = json.id;
+                sel.dispatchEvent(new Event('change'));
+            }
+            _qaModal.hide();
+            showToast(`${cfg.title.replace('Yeni ','')}: "${json.text}" eklendi.`, 'success');
+        } else {
+            showToast(json.message || 'Kayıt hatası.', 'error');
+        }
+    } catch(e) {
+        showToast('Bağlantı hatası.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> Kaydet & Seç';
+    }
+}
+</script>
+
+@await RenderSectionAsync("Scripts", required: false)
+
+<!-- ═══════════════════════════════════════════════════════════
+     MCD — Multi-Check Dropdown (Global Bilesen)
+     Tum sayfalarda otomatik yuklenir.
+     Sayfalarda Scripts bolugunde tekrar tanimlamaya GEREK YOK.
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+.mcd{position:relative;display:block}
+.mcd-btn{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--surface,#fff);border:1px solid var(--border,#d1d5db);color:var(--text,#111);padding:5px 10px;border-radius:6px;font-size:13px;white-space:nowrap}
+.mcd-btn:hover,.mcd-btn:focus{border-color:#1976d2;outline:none}
+.mcd-panel{position:absolute;top:calc(100% + 4px);left:0;min-width:300px;max-width:420px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:2000;display:flex;flex-direction:column;overflow:hidden}
+.mcd-search-row{padding:8px 10px;border-bottom:1px solid #f1f5f9;flex-shrink:0}
+.mcd-search{width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:5px 10px;font-size:12.5px;outline:none;color:#111}
+.mcd-search:focus{border-color:#1976d2;box-shadow:0 0 0 2px rgba(25,118,210,.12)}
+.mcd-header{background:#f8fafc;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12.5px;color:#374151;flex-shrink:0}
+.mcd-items{overflow-y:auto;max-height:260px}
+.mcd-row{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;font-size:12.5px;user-select:none}
+.mcd-row:hover{background:#eff6ff}
+.mcd-cb,.mcd-all-cb,.mcd-rb{cursor:pointer;accent-color:#1976d2;min-width:15px;height:15px;flex-shrink:0}
+.mcd-name{flex:1;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+.mcd-sub{font-size:10.5px;color:#374151;background:#f3f4f6;padding:1px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.mcd-ext{font-size:10.5px;color:#3730a3;background:#eef2ff;padding:1px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.mcd-arrow{color:#6b7280;font-size:11px;flex-shrink:0;margin-left:6px}
+.mcd-empty{padding:12px;text-align:center;color:#9ca3af;font-size:12.5px}
+</style>
+<script>
+// ── MCD Global Functions ─────────────────────────────────────
+window.mcdOpen=function(id){
+    var p=document.getElementById(id+'-panel');
+    var o=p&&p.style.display!=='none';
+    document.querySelectorAll('.mcd-panel').forEach(function(x){x.style.display='none'});
+    if(!o&&p){p.style.display='flex';mcdUpdate(id);
+        var s=p.querySelector('.mcd-search');if(s){s.value='';mcdSearch(s);}
+    }
+};
+window.mcdSearch=function(el){
+    var t=el.value.toLowerCase().trim();
+    var panel=el.closest('.mcd-panel');
+    var empty=panel.querySelector('.mcd-empty');
+    var vis=0;
+    panel.querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){
+        var show=!t||r.textContent.toLowerCase().includes(t);
+        r.style.display=show?'':'none';
+        if(show)vis++;
+    });
+    if(empty)empty.style.display=vis===0?'':'none';
+};
+window.mcdToggleAll=function(cb,id){
+    var panel=document.getElementById(id+'-panel');
+    if(!panel)return;
+    panel.querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){
+        if(r.style.display!=='none'){var c=r.querySelector('.mcd-cb');if(c)c.checked=cb.checked;}
+    });
+    mcdUpdate(id);
+};
+window.mcdUpdate=function(id){
+    var panel=document.getElementById(id+'-panel');
+    var cont=document.getElementById(id);
+    if(!panel||!cont)return;
+    var n=panel.querySelectorAll('.mcd-cb:checked').length;
+    var lbl=cont.querySelector('.mcd-lbl');
+    if(lbl)lbl.textContent=n===0?(cont.dataset.placeholder||'— Seçiniz —'):n+' seçildi';
+    var allCb=panel.querySelector('.mcd-all-cb');
+    if(allCb){
+        var vis=panel.querySelectorAll('.mcd-row:not(.mcd-header):not([style*="none"]) .mcd-cb').length;
+        allCb.checked=vis>0&&n>=vis;
+        allCb.indeterminate=n>0&&n<vis;
+    }
+};
+window.mcdSingleSelect=function(id,val,label){
+    var cont=document.getElementById(id);
+    var lbl=cont?cont.querySelector('.mcd-lbl'):null;
+    if(lbl)lbl.textContent=label||'— Seçildi —';
+    setTimeout(function(){document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'});},80);
+};
+// Panel dışı tıklayınca kapat
+document.addEventListener('mousedown',function(e){
+    if(!e.target.closest('.mcd'))
+        document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'});
+});
+</script>
+
+<script>
+// Global fetch wrapper: 401 (oturum sona erdi) yakalayıp login sayfasına yönlendirir
+async function fetchJson(url, options) {
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+        try {
+            const j = await res.json();
+            if (j.sessionExpired) {
+                await appAlert({ type: 'warning', title: 'Oturum Sona Erdi', text: j.message || 'Lütfen yeniden giriş yapın.' });
+                window.location.href = '/Account/Login';
+                return null;
+            }
+        } catch {}
+        window.location.href = '/Account/Login';
+        return null;
+    }
+    return res;
+}
+</script>
+
+<!-- Global CSRF: jQuery AJAX + fetch POST isteklerine token ekler -->
+@Html.AntiForgeryToken()
+<script>
+(function() {
+    var tokenEl  = document.querySelector('input[name="__RequestVerificationToken"]');
+    var tokenVal = tokenEl ? tokenEl.value : '';
+
+    // jQuery icin
+    if (tokenVal && window.jQuery) {
+        $.ajaxSetup({ headers: { 'RequestVerificationToken': tokenVal } });
+    }
+
+    // fetch() icin global sarmalayici — POST/PUT/DELETE isteklerine otomatik token ekler
+    var _origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+        opts = opts || {};
+        var method = (opts.method || 'GET').toUpperCase();
+        if (method !== 'GET' && method !== 'HEAD' && tokenVal) {
+            if (opts.headers instanceof Headers) {
+                if (!opts.headers.has('RequestVerificationToken'))
+                    opts.headers.set('RequestVerificationToken', tokenVal);
+            } else {
+                opts.headers = opts.headers || {};
+                opts.headers['RequestVerificationToken'] = opts.headers['RequestVerificationToken'] || tokenVal;
+            }
+        }
+        return _origFetch.call(this, url, opts);
+    };
+})();
+</script></body>
 </html>

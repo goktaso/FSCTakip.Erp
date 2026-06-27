@@ -1,14 +1,31 @@
-using FSCTakip.Core.Entities;
+﻿using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using FSC_ERP.Controllers;
-
-namespace FSC_ERP.Controllers
+using System;
+namespace FSCTakip.WebUI.Controllers
 {
     public class MachineController : BaseController
     {
         public MachineController(AppDbContext context) : base(context) { }
+
+        // POST /Machine/QuickAdd — inline hızlı makine ekleme
+        [HttpPost]
+        public async Task<IActionResult> QuickAdd(string Name)
+        {
+            if (string.IsNullOrWhiteSpace(Name))
+                return Json(new { success = false, message = "Makine adı zorunludur." });
+            var m = new Machine
+            {
+                Name        = Name.Trim().ToUpper(new System.Globalization.CultureInfo("tr-TR")),
+                IsActive    = true,
+                CreatedDate = DateTime.Now,
+                CreatedBy   = User.Identity?.Name ?? "System"
+            };
+            _context.Machines.Add(m);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, id = m.Id, text = m.Name });
+        }
 
         // --- ÜRETİM TANIMLARI ---
 
@@ -54,9 +71,21 @@ namespace FSC_ERP.Controllers
             if (machine == null)
                 return Json(new { success = false, message = "Makine bulunamadı." });
 
-            _context.Machines.Remove(machine);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "Makine silindi." });
+            var usedInWorkOrders = await _context.WorkOrders.AnyAsync(w => w.MachineId == id);
+            var usedInProduction = await _context.ProductionDetails.AnyAsync(p => p.MachineId == id);
+            if (usedInWorkOrders || usedInProduction)
+                return Json(new { success = false, message = "Bu makine iş emirlerinde kullanılmaktadır. Silmek yerine pasife alabilirsiniz." });
+
+            try
+            {
+                _context.Machines.Remove(machine);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Makine silindi." });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu makine silinemez." });
+            }
         }
 
         public async Task<IActionResult> ExportMachines()

@@ -1,0 +1,545 @@
+@model FSCTakip.Core.Entities.SalesOrder
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = $"Sipariş — {Model.SalesOrderNo}";
+    var products   = ViewBag.Products   as List<Product>   ?? new();
+    var workOrders = ViewBag.WorkOrders as List<WorkOrder> ?? new();
+
+    var toplamAdet  = Model.Lines.Sum(l => l.Quantity);
+    var toplamTutar = Model.Lines.Sum(l => l.Quantity * l.UnitPrice);
+
+    var statusBadge = Model.Status switch {
+        SalesOrderStatus.Taslak       => "badge-amber",
+        SalesOrderStatus.TeslimEdildi => "badge-green",
+        SalesOrderStatus.Iptal        => "badge-red",
+        _ => "badge-gray"
+    };
+    var statusText = Model.Status switch {
+        SalesOrderStatus.Taslak       => "Taslak",
+        SalesOrderStatus.TeslimEdildi => "Teslim Edildi",
+        SalesOrderStatus.Iptal        => "İptal",
+        _ => ""
+    };
+}
+
+@section TopbarActions {
+    <a href="/Sales/Print/@Model.Id" target="_blank" class="topbar-btn" style="background:#1976d2;color:#fff;border:none;padding:6px 14px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">
+        <i class="fas fa-print me-1"></i> FSC Sevk Belgesi
+    </a>
+    @if (Model.Status == SalesOrderStatus.Taslak)
+    {
+        <button class="topbar-btn btn-primary-custom" onclick="openDispatchModal()" style="background:#16a34a;border-color:#16a34a;">
+            <i class="fas fa-truck me-1"></i> Sevk Et
+        </button>
+    }
+    <a href="/Reports/Traceability/@Model.Id" class="topbar-btn" title="Satış → Üretim → Lot tam izlenebilirlik zinciri">
+        <i class="fas fa-search me-1"></i> Tam İzlenebilirlik
+    </a>
+    <a href="/Sales/Index" class="topbar-btn">
+        <i class="fas fa-arrow-left"></i> Siparişler
+    </a>
+}
+
+<div class="row g-3">
+
+    <!-- Sol Panel: Sipariş Bilgisi -->
+    <div class="col-lg-4">
+
+        <div class="card mb-3">
+            <div class="card-header-accent">
+                <i class="fas fa-file-invoice me-2"></i>Sipariş Bilgisi
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0" style="font-size:13px;">
+                    <tr><td class="text-muted ps-3" style="width:40%">Sipariş No</td><td class="fw-semibold">@Model.SalesOrderNo</td></tr>
+                    <tr><td class="text-muted ps-3">Durum</td><td><span class="badge @statusBadge">@statusText</span></td></tr>
+                    <tr><td class="text-muted ps-3">Müşteri</td>
+                        <td>
+                            <div class="fw-semibold">@Model.Customer?.Name</div>
+                            @if (Model.Customer?.IsFscActive == true)
+                            {
+                                <span class="badge badge-green" style="font-size:10px;"><i class="fas fa-certificate me-1"></i>FSC Sertifikalı</span>
+                            }
+                        </td>
+                    </tr>
+                    <tr><td class="text-muted ps-3">Sipariş Tarihi</td><td>@Model.OrderDate.ToString("dd.MM.yyyy")</td></tr>
+                    @if (Model.DispatchDate.HasValue)
+                    {
+                        <tr><td class="text-muted ps-3">Sevk Tarihi</td><td class="fw-semibold" style="color:#16a34a;">@Model.DispatchDate.Value.ToString("dd.MM.yyyy")</td></tr>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.DispatchNo))
+                    {
+                        <tr>
+                            <td class="text-muted ps-3">İrsaliye No</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(Model.DispatchPdfPath))
+                                {
+                                    <button class="doc-num-btn"
+                                            data-pdf-path="/Document/Serve?key=@Model.DispatchPdfPath"
+                                            data-pdf-title="İrsaliye — @Model.DispatchNo"
+                                            onclick="showPdfFromBtn(this)"
+                                            title="İrsaliyeyi görüntüle">
+                                        <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@Model.DispatchNo
+                                    </button>
+                                }
+                                else { <span>@Model.DispatchNo</span> }
+                            </td>
+                        </tr>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.InvoiceNo))
+                    {
+                        <tr>
+                            <td class="text-muted ps-3">Fatura No</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(Model.InvoicePdfPath))
+                                {
+                                    <button class="doc-num-btn"
+                                            data-pdf-path="/Document/Serve?key=@Model.InvoicePdfPath"
+                                            data-pdf-title="Fatura — @Model.InvoiceNo"
+                                            onclick="showPdfFromBtn(this)"
+                                            title="Faturayı görüntüle">
+                                        <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@Model.InvoiceNo
+                                    </button>
+                                }
+                                else { <span>@Model.InvoiceNo</span> }
+                            </td>
+                        </tr>
+                    }
+                    @if (Model.InvoiceAmount.HasValue)
+                    {
+                        <tr><td class="text-muted ps-3">Tutar</td><td class="fw-semibold">@Model.InvoiceAmount.Value.ToString("N2") @Model.Currency</td></tr>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.PlateNumber))
+                    {
+                        <tr><td class="text-muted ps-3">Araç Plakası</td><td>@Model.PlateNumber</td></tr>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.DeliveryAddress))
+                    {
+                        <tr><td class="text-muted ps-3">Teslimat Adresi</td><td style="font-size:12px;">@Model.DeliveryAddress</td></tr>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <tr><td class="text-muted ps-3">Notlar</td><td style="font-size:12px;">@Model.Notes</td></tr>
+                    }
+                    <tr>
+                        <td class="text-muted ps-3" style="vertical-align:top;padding-top:10px;">Belge Yükle</td>
+                        <td style="padding-top:10px;">
+                            <div class="d-flex flex-column gap-2" style="max-width:340px;">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text" style="font-size:11px;min-width:78px;"><i class="fas fa-file-pdf me-1 text-danger"></i>İrsaliye</span>
+                                    <input type="file" id="salesDispatchFile" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="uploadSalesDoc('dispatch')">Yükle</button>
+                                </div>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text" style="font-size:11px;min-width:78px;"><i class="fas fa-file-invoice me-1 text-warning"></i>Fatura</span>
+                                    <input type="file" id="salesInvoiceFile" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="uploadSalesDoc('invoice')">Yükle</button>
+                                </div>
+                                <div class="form-text" style="font-size:10.5px;">PDF/JPEG/PNG · max 20 MB</div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Özet -->
+        <div class="card mb-3">
+            <div class="card-header-accent">
+                <i class="fas fa-chart-bar me-2"></i>Özet
+            </div>
+            <div class="card-body p-3">
+                <div class="row g-2 text-center">
+                    <div class="col-6">
+                        <div style="font-size:22px;font-weight:700;color:#1976d2;">@Model.Lines.Count</div>
+                        <div style="font-size:11px;color:#6b7280;">Kalem Sayısı</div>
+                    </div>
+                    <div class="col-6">
+                        <div style="font-size:22px;font-weight:700;color:#1976d2;">@toplamAdet.ToString("N0")</div>
+                        <div style="font-size:11px;color:#6b7280;">Toplam Adet</div>
+                    </div>
+                    <div class="col-12 mt-2" style="border-top:1px solid #f1f5f9;padding-top:10px;">
+                        <div style="font-size:18px;font-weight:700;color:#16a34a;">@toplamTutar.ToString("N2") <span style="font-size:12px;color:#6b7280;">@Model.Currency</span></div>
+                        <div style="font-size:11px;color:#6b7280;">Hesaplanan Tutar</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FSC CoC Bilgisi -->
+        @if (Model.Customer?.IsFscActive == true && Model.Lines.Any(l => l.WorkOrderId.HasValue))
+        {
+            <div class="card" style="border-color:#bbf7d0;">
+                <div class="card-header-green">
+                    <i class="fas fa-link me-2"></i>FSC Chain of Custody
+                </div>
+                <div class="card-body p-3" style="font-size:12.5px;">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="fas fa-check-circle text-success mt-1"></i>
+                        <div>
+                            Bu sipariş FSC CoC zincirine dahildir.<br>
+                            <span class="text-muted">Hammadde → Üretim → Satış takibi tamamdır.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+    </div>
+
+    <!-- Sağ Panel: Kalemler -->
+    <div class="col-lg-8">
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span style="font-weight:600;font-size:14px;">Sipariş Kalemleri</span>
+            @if (Model.Status == SalesOrderStatus.Taslak)
+            {
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#lineModal">
+                    <i class="fas fa-plus me-1"></i> Kalem Ekle
+                </button>
+            }
+        </div>
+
+        <div class="table-card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ÜRÜN</th>
+                        <th>İŞ EMRİ (FSC)</th>
+                        <th class="text-end">MİKTAR</th>
+                        <th>BİRİM</th>
+                        <th class="text-end">BİRİM FİYAT</th>
+                        <th class="text-end">TUTAR</th>
+                        <th>NOTLAR</th>
+                        @if (Model.Status == SalesOrderStatus.Taslak)
+                        {
+                            <th>İŞLEM</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Lines.Any())
+                    {
+                        <tr><td colspan="8">
+                            <div class="empty-state">
+                                <i class="fas fa-plus-circle" style="color:#1976d2;"></i>
+                                <p>Henüz kalem yok. "Kalem Ekle" butonuyla ürün ekleyin.</p>
+                            </div>
+                        </td></tr>
+                    }
+                    @foreach (var line in Model.Lines)
+                    {
+                        <tr>
+                            <td>
+                                <div class="fw-semibold" style="font-size:13px;">@line.Product?.ProductName</div>
+                                <div class="text-muted" style="font-size:11px;">@line.Product?.ProductCode</div>
+                            </td>
+                            <td>
+                                @if (line.WorkOrder != null)
+                                {
+                                    <a href="/Production/Detail/@line.WorkOrderId" class="table-link" style="font-size:12px;">
+                                        @line.WorkOrder.WorkOrderNo
+                                    </a>
+                                    <div class="text-muted" style="font-size:10px;">FSC CoC ✓</div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted" style="font-size:12px;">—</span>
+                                }
+                            </td>
+                            <td class="text-end fw-semibold">@line.Quantity.ToString("N0")</td>
+                            <td class="text-muted">@line.Unit</td>
+                            <td class="text-end">@line.UnitPrice.ToString("N2")</td>
+                            <td class="text-end fw-semibold">@((line.Quantity * line.UnitPrice).ToString("N2"))</td>
+                            <td class="text-muted" style="font-size:12px;">@line.Notes</td>
+                            @if (Model.Status == SalesOrderStatus.Taslak)
+                            {
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="editLine(@line.Id)" title="Düzenle">
+                                            <i class="fas fa-pen"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteLine(@line.Id)" title="Sil">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.Lines.Any())
+                {
+                    <tfoot>
+                        <tr style="background:#f8faff;font-weight:600;">
+                            <td colspan="2" class="text-end text-muted" style="font-size:12px;">TOPLAM</td>
+                            <td class="text-end">@toplamAdet.ToString("N0")</td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-end" style="color:#16a34a;">@toplamTutar.ToString("N2") @Model.Currency</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Kalem Modal -->
+<div class="modal fade" id="lineModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header card-header-accent">
+                <span id="lineModalTitle"><i class="fas fa-plus me-2"></i>Kalem Ekle</span>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <input type="hidden" id="lineId">
+                <div class="row g-2">
+                    <div class="col-12">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <label class="form-label mb-0">Ürün *</label>
+                            <div class="d-flex align-items-center gap-1" style="font-size:12px;">
+                                <span class="text-muted">Göster:</span>
+                                <label class="d-flex align-items-center gap-1 mb-0" style="cursor:pointer;">
+                                    <input type="radio" name="productFilter" value="mamul" checked onchange="filterProducts(this.value)"> Mamul
+                                </label>
+                                <label class="d-flex align-items-center gap-1 mb-0" style="cursor:pointer;">
+                                    <input type="radio" name="productFilter" value="all" onchange="filterProducts(this.value)"> Tümü
+                                </label>
+                            </div>
+                        </div>
+                        <select id="lineProductId" class="form-select form-select-sm">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var p in products)
+                            {
+                                var grpName = p.ProductGroup?.GroupName ?? "";
+                                <option value="@p.Id" data-group="@grpName">@p.ProductCode — @p.ProductName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">
+                            İş Emri
+                            <span class="text-muted" style="font-size:11px;">(FSC CoC için seçiniz)</span>
+                        </label>
+                        <select id="lineWorkOrderId" class="form-select form-select-sm">
+                            <option value="">— Seçiniz (opsiyonel) —</option>
+                            @foreach (var wo in workOrders)
+                            {
+                                <option value="@wo.Id">@wo.WorkOrderNo — @wo.Product?.ProductName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label">Miktar *</label>
+                        <input type="number" id="lineQty" class="form-control form-control-sm" step="1" min="1">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label">Birim</label>
+                        <input type="text" id="lineUnit" class="form-control form-control-sm" value="Adet">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label">Birim Fiyat</label>
+                        <input type="number" id="linePrice" class="form-control form-control-sm" step="0.01" min="0" value="0">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Notlar</label>
+                        <input type="text" id="lineNotes" class="form-control form-control-sm">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-primary btn-sm" id="lineSaveBtn" onclick="saveLine()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sevk Et Modal -->
+<div class="modal fade" id="dispatchModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header card-header-green">
+                <span><i class="fas fa-truck me-2"></i>Siparişi Sevk Et</span>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="alert alert-success" style="font-size:13px;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Sevk edildiğinde durum <strong>Teslim Edildi</strong> olarak güncellenir ve
+                    stok hareketi otomatik oluşturulur.
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label">Sevk Tarihi</label>
+                        <input type="date" id="dispatchDate" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">İrsaliye No</label>
+                        <input type="text" id="dispatchNo" class="form-control form-control-sm" value="@Model.DispatchNo">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Araç Plakası</label>
+                        <input type="text" id="dispatchPlate" class="form-control form-control-sm" value="@Model.PlateNumber">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-success btn-sm" onclick="confirmDispatch()">
+                    <i class="fas fa-truck me-1"></i> Sevk Et
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function showPdfFromBtn(btn) {
+    showPdf(btn.dataset.pdfPath, btn.dataset.pdfTitle);
+}
+
+const salesOrderId = @Model.Id;
+
+// Satış belgesi yükle (irsaliye/fatura)
+function uploadSalesDoc(type) {
+    const input = document.getElementById(type === 'invoice' ? 'salesInvoiceFile' : 'salesDispatchFile');
+    const file = input && input.files[0];
+    if (!file) { showToast('Önce dosya seçin.', 'warning'); return; }
+    const fd = new FormData();
+    fd.append('orderId', salesOrderId);
+    fd.append('docType', type);
+    fd.append('file', file);
+    fetch('/Sales/UploadDocument', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 800); }
+            else showToast(res.message, 'error');
+        })
+        .catch(() => showToast('Yükleme sırasında hata oluştu.', 'error'));
+}
+
+function filterProducts(mode) {
+    const sel = document.getElementById('lineProductId');
+    const current = sel.value;
+    Array.from(sel.options).forEach(opt => {
+        if (!opt.value) return; // "Seçiniz" her zaman görünür
+        if (mode === 'mamul') {
+            const grp = (opt.dataset.group || '').toUpperCase();
+            opt.hidden = !grp.startsWith('MAMUL');
+        } else {
+            opt.hidden = false;
+        }
+    });
+    // Seçili ürün gizlendiyse sıfırla
+    if (sel.value && sel.options[sel.selectedIndex]?.hidden) sel.value = '';
+}
+
+// Kalem modal sıfırla
+let _lineEditMode = false;
+document.getElementById('lineModal').addEventListener('show.bs.modal', function () {
+    if (!_lineEditMode) {
+        document.getElementById('lineId').value = '';
+        document.getElementById('lineProductId').value = '';
+        document.getElementById('lineWorkOrderId').value = '';
+        document.getElementById('lineQty').value = '';
+        document.getElementById('lineUnit').value = 'Adet';
+        document.getElementById('linePrice').value = '0';
+        document.getElementById('lineNotes').value = '';
+        document.getElementById('lineModalTitle').innerHTML = '<i class="fas fa-plus me-2"></i>Kalem Ekle';
+        // Her açılışta "Mamul" filtresine döndür
+        document.querySelector('input[name="productFilter"][value="mamul"]').checked = true;
+        filterProducts('mamul');
+    }
+    _lineEditMode = false;
+});
+
+function editLine(id) {
+    _lineEditMode = true;
+    const rows = document.querySelectorAll('tbody tr');
+    // Fetch ile değil doğrudan DOM'dan okumak yerine model verisi sayfa içinden okunur.
+    // Basitçe sayfayı yenile + modal aç — production'da API endpoint kullanılabilir
+    fetch(`/Sales/GetLine/${id}`)
+        .then(r => r.json()).then(res => {
+            if (!res.success) { _lineEditMode = false; showToast(res.message || 'Kayıt yüklenemedi.', 'error'); return; }
+            const d = res.data;
+            document.getElementById('lineId').value          = d.id;
+            document.getElementById('lineProductId').value   = d.productId;
+            document.getElementById('lineWorkOrderId').value = d.workOrderId || '';
+            document.getElementById('lineQty').value         = d.quantity;
+            document.getElementById('lineUnit').value        = d.unit;
+            document.getElementById('linePrice').value       = d.unitPrice;
+            document.getElementById('lineNotes').value       = d.notes || '';
+            document.getElementById('lineModalTitle').innerHTML = '<i class="fas fa-pen me-2"></i>Kalem Düzenle';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('lineModal')).show();
+        })
+        .catch(() => { _lineEditMode = false; showToast('Bağlantı hatası.', 'error'); });
+}
+
+function saveLine() {
+    const productId = document.getElementById('lineProductId').value;
+    const qty       = document.getElementById('lineQty').value;
+    if (!productId || !qty) { showToast('Ürün ve miktar zorunludur', 'warning'); return; }
+
+    const saveBtn = document.getElementById('lineSaveBtn');
+    if (saveBtn) { saveBtn.disabled = true; }
+
+    const fd = new FormData();
+    fd.append('lineId',       document.getElementById('lineId').value || '0');
+    fd.append('salesOrderId', salesOrderId);
+    fd.append('productId',    productId);
+    fd.append('workOrderId',  document.getElementById('lineWorkOrderId').value || '0');
+    fd.append('quantity',     qty);
+    fd.append('unitPrice',    document.getElementById('linePrice').value || '0');
+    fd.append('unit',         document.getElementById('lineUnit').value);
+    fd.append('notes',        document.getElementById('lineNotes').value);
+
+    fetch('/Sales/SaveLine', { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('lineModal'))?.hide();
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 800);
+            } else { showToast(res.message, 'error'); }
+        })
+        .catch(() => showToast('Bağlantı hatası.', 'error'))
+        .finally(() => { if (saveBtn) saveBtn.disabled = false; });
+}
+
+async function deleteLine(id) {
+    if (!await appConfirm('Bu kalemi silmek istiyor musunuz?')) return;
+    fetch(`/Sales/DeleteLine/${id}`, { method: 'POST' })
+        .then(r => r.json()).then(res => {
+            showToast(res.message, res.success ? 'success' : 'error');
+            if (res.success) setTimeout(() => location.reload(), 800);
+        });
+}
+
+function openDispatchModal() {
+    document.getElementById('dispatchDate').value = new Date().toISOString().split('T')[0];
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('dispatchModal')).show();
+}
+
+function confirmDispatch() {
+    const fd = new FormData();
+    fd.append('dispatchDate', document.getElementById('dispatchDate').value);
+    fd.append('dispatchNo',   document.getElementById('dispatchNo').value);
+    fd.append('plateNumber',  document.getElementById('dispatchPlate').value);
+
+    fetch(`/Sales/Dispatch/${salesOrderId}`, { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('dispatchModal'))?.hide();
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else { showToast(res.message, 'error'); }
+        });
+}
+</script>
+}

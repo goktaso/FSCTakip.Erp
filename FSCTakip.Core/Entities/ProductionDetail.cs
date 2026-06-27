@@ -1,35 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-
 namespace FSCTakip.Core.Entities
 {
-    // Enum'u namespace içinde ama sınıfın dışında tanımlıyoruz
-    public enum ConsumptionArea
-    {
-        TorbaGovde = 1,
-        Sap = 2,
-        Etiket = 3,
-        Yapiskan = 4
-    }
-
     public class ProductionDetail : BaseEntity
     {
         public int WorkOrderId { get; set; }
+        public virtual WorkOrder WorkOrder { get; set; } = null!;
+
         public int FscSerialId { get; set; }
-        public DateTime ProductionDate { get; set; }
+        public virtual FscSerial FscSerial { get; set; } = null!;
 
-        // Artık burası hata vermeyecektir
         public int MachineId { get; set; }
-        public virtual Machine Machine { get; set; }
+        public virtual Machine Machine { get; set; } = null!;
 
-        public ConsumptionArea UsedIn { get; set; }
+        /// <summary>
+        /// Hangi reçete bileşeni için tüketildi? (nullable — eski kayıtlarda boş olabilir)
+        /// FSC CoC mass-balance için: gövde / sap / etiket vb. ayrımı
+        /// </summary>
+        public int? WorkOrderRecipeId { get; set; }
+        public virtual WorkOrderRecipe? WorkOrderRecipe { get; set; }
+
+        public DateTime ProductionDate { get; set; } = DateTime.Today;
 
         public decimal ConsumedWeight { get; set; }
-        public decimal WasteWeight { get; set; } // Eklediğimiz fire alanı
+        public decimal WasteWeight { get; set; }
         public decimal ProducedQuantity { get; set; }
-        public decimal ConversionRate { get; set; }
 
-        public virtual WorkOrder WorkOrder { get; set; }
-        public virtual FscSerial FscSerial { get; set; }
+        public string? Notes { get; set; }
+
+        /// <summary>
+        /// True ise bu satırdaki ConsumedWeight / WasteWeight birim dönüşümü uygulanmış (KG).
+        /// False/null ise orijinal birimde (örn. MT) olabilir.
+        /// </summary>
+        public bool UnitConverted { get; set; }
     }
 }

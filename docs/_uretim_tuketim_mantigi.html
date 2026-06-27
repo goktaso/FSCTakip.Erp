@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm 15mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #1f2937; font-size: 11.5px; line-height: 1.55; margin: 0;
+  }
+  /* Header */
+  .head {
+    display: flex; align-items: center; gap: 16px;
+    border-bottom: 3px solid #1976d2; padding-bottom: 12px; margin-bottom: 18px;
+  }
+  .head img { height: 54px; }
+  .head .t1 { font-size: 17px; font-weight: 700; color: #0d47a1; letter-spacing:.3px; }
+  .head .t2 { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .doctitle {
+    background: linear-gradient(135deg,#1976d2,#0d47a1); color:#fff;
+    padding: 12px 16px; border-radius: 10px; margin-bottom: 16px;
+  }
+  .doctitle h1 { font-size: 16px; margin: 0; font-weight: 700; }
+  .doctitle p { margin: 4px 0 0; font-size: 11px; opacity: .9; }
+
+  h2 {
+    font-size: 13.5px; color: #0d47a1; margin: 18px 0 8px;
+    border-left: 4px solid #1976d2; padding-left: 9px;
+  }
+  p { margin: 0 0 8px; }
+  ol, ul { margin: 0 0 8px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  code { background:#eef2ff; color:#1e3a8a; padding:1px 5px; border-radius:4px; font-family:'Consolas',monospace; font-size:10.5px; }
+  .formula {
+    background:#0f1621; color:#e5e7eb; padding:10px 14px; border-radius:8px;
+    font-family:'Consolas',monospace; font-size:11px; margin:8px 0;
+  }
+  table { width:100%; border-collapse: collapse; margin: 8px 0 12px; font-size:11px; }
+  th { background:#1976d2; color:#fff; text-align:left; padding:7px 10px; font-weight:600; }
+  td { padding:6px 10px; border-bottom:1px solid #e5e7eb; }
+  tr:nth-child(even) td { background:#f8faff; }
+  .box { border-radius:8px; padding:11px 14px; margin:10px 0; }
+  .gap { background:#fef3c7; border:1px solid #fbbf24; }
+  .gap b { color:#92400e; }
+  .sol { background:#ecfdf5; border:1px solid #6ee7b7; }
+  .sol b { color:#065f46; }
+  .warn { background:#fef2f2; border:1px solid #fca5a5; }
+  .warn b { color:#991b1b; }
+  .muted { color:#6b7280; font-size:10.5px; }
+  .foot { margin-top:22px; border-top:1px solid #e5e7eb; padding-top:8px; color:#9ca3af; font-size:9.5px; text-align:center; }
+  .big { font-size:13px; font-weight:700; color:#0d47a1; }
+</style>
+</head>
+<body>
+
+  <div class="head">
+    <img src="file:///C:/Users/User/Desktop/FSC_ERP_Blackboxai/FSCTakip.WebUI/wwwroot/images/ard_logo.png" alt="ARD">
+    <div>
+      <div class="t1">ARD SİSTEM VE DANIŞMANLIK</div>
+      <div class="t2">FSC Takip ERP · Kraft Kağıt İzlenebilirlik Sistemi</div>
+    </div>
+  </div>
+
+  <div class="doctitle">
+    <h1>Üretim &amp; Tüketim İş Mantığı — Açıklama ve İyileştirme Önerisi</h1>
+    <p>İş emrinde "Yeni Üretim Başlat" ve "Tüketim Gir" akışları · Hammadde ihtiyaç hesabı</p>
+  </div>
+
+  <h2>A) "Yeni Üretim Başlat" (İş Emri) Akışı</h2>
+  <ol>
+    <li><b>Üretim → Yeni İş Emri:</b> Ürün, Makine, <b>Planlanan Adet</b> (örn. 42.000) ve tarih girilir. → <code>WorkOrder.PlannedQuantity</code></li>
+    <li>İş emri <b>Detay</b> sayfasında, ürünün reçetesindeki (BOM) hammaddeler için <b>BOM Bileşeni</b> satırları oluşturulur. Her satırda bir <b>"Planlanan Miktar (kg)"</b> vardır. → <code>WorkOrderRecipe.PlannedQuantity</code></li>
+    <li><b>Kritik nokta:</b> Bu planlanan kg değeri sistem tarafından <b>hesaplanmaz — kullanıcı elle yazar.</b> "Reçeteden Yükle" butonu bile reçeteyi yalnızca <i>gösterir</i> ve not alanına metin yazar; <code>standart miktar × üretilecek adet</code> çarpımını yapıp kutuya doldurmaz.</li>
+  </ol>
+
+  <h2>B) "Tüketim Gir" Akışı</h2>
+  <ol>
+    <li>Tüketim modalında: <b>bobin (seri)</b>, <b>tüketim kg</b>, <b>fire kg</b>, <b>üretilen adet</b> ve isteğe bağlı <b>reçete bileşeni</b> seçilir. → <code>ProductionDetail</code></li>
+    <li>Reçete bileşeni seçilince çıkan sarı "Bu Bileşen İçin İhtiyaç" kutusu şunu hesaplar:</li>
+  </ol>
+  <div class="formula">Kalan İhtiyaç = PlannedQuantity − (önceki tüketim+fire + yeni tüketim+fire)</div>
+  <p><b>Yani "ihtiyaç" tamamen A-adımındaki elle girilen <code>PlannedQuantity</code> değerine dayanır</b> — reçeteye ve üretilen adede bağlı bağımsız bir hesap değildir.</p>
+
+  <h2>C) Tespit Edilen Eksik</h2>
+  <div class="box gap">
+    Reçetede gereken veri <b>zaten mevcuttur</b>: <code>ProductRecipe.StandardQuantity</code> = birim ürün başına standart hammadde miktarı.
+    Ancak sistem hiçbir yerde şu çarpımı <b>otomatik yapmaz</b>:
+    <div class="formula" style="margin-top:8px;">Beklenen Tüketim = StandardQuantity (adet başına kg) × Üretilen Adet</div>
+    Bu yüzden "42.000 adet için ne kadar hammadde gitmeli?" sorusunun cevabını sistem <b>vermez</b> →
+    operatörün yazdığına güvenmek ya da dışarıda elle hesaplamak gerekir.
+  </div>
+
+  <h2>D) Örnek — Senaryonuz</h2>
+  <ul>
+    <li>Satış siparişi: <b>152.000 adet</b> (satış tarafı).</li>
+    <li>İş emri planlanan: bu partide <b>42.000 adet</b> üretilecek.</li>
+    <li>Reçete tanımı (örnek): <b>1 adet ürün = 0,055 kg kraft</b> → <code>StandardQuantity = 0,055</code></li>
+  </ul>
+  <table>
+    <tr><th>Kalem</th><th>Hesap</th><th>Sonuç</th></tr>
+    <tr><td>42.000 adet için <b>beklenen</b> tüketim</td><td>42.000 × 0,055</td><td class="big">2.310 kg</td></tr>
+    <tr><td>Operatör girer (gerçek)</td><td>—</td><td>örn. 2.480 kg</td></tr>
+    <tr><td><b>Sapma</b></td><td>(2.480 − 2.310) / 2.310</td><td class="big">+%7,4 fazla</td></tr>
+  </table>
+  <p>Sistem bu şekilde hem hedefi otomatik koyar, hem operatörün girdiği değerle <b>anında karşılaştırıp sapmayı</b> gösterir.</p>
+
+  <h2>E) Önerilen Çözüm</h2>
+  <div class="box sol">
+    <b>1) BOM satırı eklerken otomatik planlanan:</b> "Reçeteden Yükle" → her bileşen için
+    <code>PlannedQuantity = StandardQuantity × WorkOrder.PlannedQuantity</code> ile satırlar otomatik oluşturulur
+    (elle yazmak yerine; gerekirse üzerine yazılabilir).<br><br>
+    <b>2) Tüketim modalında canlı tahmin:</b> "Üretilen adet" alanına 42.000 yazılınca,
+    <b>"Reçeteye göre beklenen tüketim: 2.310 kg"</b> + girilen gerçek değerle <b>sapma %</b> anında görünür
+    (yeşil / sarı / kırmızı uyarı).
+  </div>
+
+  <h2>F) Ön Koşul</h2>
+  <div class="box warn">
+    Bu otomatik hesap <b>reçeteye (ProductRecipe) bağlıdır.</b> Şu an veritabanında yalnızca <b>3 reçete</b> tanımlı
+    (108 ürün var). Reçetesi olmayan üründe sistem hesaplayamaz — o ürünler için önce
+    <b>Ürünler → Reçete</b> sayfasından "1 adet = ? kg" tanımı girilmelidir.
+  </div>
+
+  <p class="muted">Not: Hesabın doğru çalışması için reçetedeki <code>StandardQuantity</code> tabanının ("1 adet başına kg" mı, "1000 adet başına" mı) netleştirilmesi gerekir.</p>
+
+  <div class="foot">
+    ARD Sistem ve Danışmanlık · FSC Takip ERP — İş Mantığı Notu · Oluşturulma: 13.06.2026
+  </div>
+
+</body>
+</html>

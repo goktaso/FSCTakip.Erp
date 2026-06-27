@@ -1,0 +1,367 @@
+@model List<FSCTakip.Core.Entities.FscDocument>
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "Belge Arşivi";
+    var selCat    = ViewBag.Category  as DocumentCategory?;
+    var selYear   = ViewBag.Year      as int?;
+    var search    = ViewBag.Search    as string ?? "";
+    var years     = ViewBag.Years     as List<int> ?? new();
+    var countList = ViewBag.Counts    as List<dynamic> ?? new();
+
+    // Kategori meta
+    var catMeta = new Dictionary<DocumentCategory, (string Label, string Icon, string Color)>
+    {
+        [DocumentCategory.CocSertifika]  = ("CoC Sertifikası",           "certificate",       "#16a34a"),
+        [DocumentCategory.TedarikciSert] = ("Tedarikçi Sertifikaları",   "file-contract",     "#0891b2"),
+        [DocumentCategory.FscAgreement]  = ("FSC Anlaşmaları",           "handshake",         "#7c3aed"),
+        [DocumentCategory.ElKitabi]      = ("El Kitabı",                 "book-open",         "#b45309"),
+        [DocumentCategory.OrgSema]       = ("Organizasyon Şeması",       "sitemap",           "#0f766e"),
+        [DocumentCategory.Talimat]       = ("Talimatlar & Prosedürler",  "list-check",        "#c2410c"),
+        [DocumentCategory.Egitim]        = ("Eğitim Kayıtları",         "graduation-cap",    "#4338ca"),
+        [DocumentCategory.Artwork]       = ("Artworkler",                "palette",           "#be185d"),
+        [DocumentCategory.AtamaYazisi]   = ("Atama Yazıları",            "user-tie",          "#065f46"),
+        [DocumentCategory.DuzelticiF]    = ("Düzeltici Faaliyetler",     "wrench",            "#9a3412"),
+        [DocumentCategory.IsAkis]        = ("İş Akış Şeması",           "diagram-project",   "#1d4ed8"),
+        [DocumentCategory.Standart]      = ("FSC Standartları",          "scale-balanced",    "#374151"),
+        [DocumentCategory.Form]          = ("Formlar & Kayıtlar",        "folder-open",       "#6b21a8"),
+        [DocumentCategory.Diger]         = ("Diğer",                     "file",              "#6b7280"),
+    };
+
+    string CatLabel(DocumentCategory c) => catMeta.TryGetValue(c, out var m) ? m.Label : c.ToString();
+    string CatIcon(DocumentCategory c)  => catMeta.TryGetValue(c, out var m) ? m.Icon  : "file";
+    string CatColor(DocumentCategory c) => catMeta.TryGetValue(c, out var m) ? m.Color : "#6b7280";
+
+    string ExtIcon(string ext) => ext switch {
+        ".pdf"  => "fa-file-pdf",
+        ".docx" or ".doc" => "fa-file-word",
+        ".xlsx" or ".xls" => "fa-file-excel",
+        ".pptx" or ".ppt" => "fa-file-powerpoint",
+        ".jpg" or ".jpeg" or ".png" => "fa-file-image",
+        _ => "fa-file"
+    };
+    string ExtColor(string ext) => ext switch {
+        ".pdf"  => "#dc2626",
+        ".docx" or ".doc" => "#2563eb",
+        ".xlsx" or ".xls" => "#16a34a",
+        ".pptx" or ".ppt" => "#ea580c",
+        _ => "#6b7280"
+    };
+    string FmtSize(long b) => b < 1048576 ? $"{b/1024.0:F0} KB" : $"{b/1048576.0:F1} MB";
+}
+
+@section TopbarPrimary {
+    <button class="topbar-btn btn-primary-custom" onclick="openUpload()">
+        <i class="fas fa-upload me-1"></i> Belge Yükle
+    </button>
+}
+
+@section TopbarActions {
+    <a href="/DocumentArchive" class="topbar-btn @(selCat == null && selYear == null && string.IsNullOrEmpty(search) ? "active" : "")">
+        <i class="fas fa-folder-open me-1"></i> Tüm Belgeler
+    </a>
+}
+
+<div class="row g-3">
+
+    <!-- Sol: Kategori filtre paneli -->
+    <div class="col-lg-3">
+        <div class="card mb-3">
+            <div class="card-header-accent"><i class="fas fa-filter me-2"></i>Kategoriler</div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" style="font-size:13px;">
+                    @foreach (DocumentCategory cat in Enum.GetValues<DocumentCategory>())
+                    {
+                        var isActive = selCat == cat;
+                        var href = $"/DocumentArchive?category={(int)cat}{(selYear.HasValue ? "&year=" + selYear : "")}{(!string.IsNullOrEmpty(search) ? "&search=" + Uri.EscapeDataString(search) : "")}";
+                        <a href="@href"
+                           class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-2 px-3 @(isActive ? "active" : "")"
+                           style="@(isActive ? $"background:{CatColor(cat)};border-color:{CatColor(cat)};color:#fff;" : "")">
+                            <span>
+                                <i class="fas fa-@(CatIcon(cat)) me-2" style="@(isActive ? "color:#fff;" : $"color:{CatColor(cat)};") width:16px;"></i>
+                                @CatLabel(cat)
+                            </span>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (years.Any())
+        {
+            <div class="card">
+                <div class="card-header-accent"><i class="fas fa-calendar me-2"></i>Yıla Göre</div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" style="font-size:13px;">
+                        @foreach (var y in years)
+                        {
+                            var isActive = selYear == y;
+                            var href = $"/DocumentArchive?year={y}{(selCat.HasValue ? "&category=" + (int)selCat : "")}{(!string.IsNullOrEmpty(search) ? "&search=" + Uri.EscapeDataString(search) : "")}";
+                            <a href="@href"
+                               class="list-group-item list-group-item-action py-2 px-3 @(isActive ? "active" : "")">
+                                <i class="fas fa-calendar-alt me-2"></i>@y
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Sağ: Belge listesi -->
+    <div class="col-lg-9">
+
+        <!-- Arama -->
+        <div class="filter-card mb-3">
+            <form method="get" action="/DocumentArchive" class="d-flex gap-2 align-items-center flex-wrap">
+                @if (selCat.HasValue) { <input type="hidden" name="category" value="@((int)selCat)"> }
+                @if (selYear.HasValue) { <input type="hidden" name="year" value="@selYear"> }
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Belge adı veya etiket ara..." style="max-width:280px;" value="@search">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search me-1"></i>Ara</button>
+                @if (!string.IsNullOrEmpty(search)) {
+                    <a href="/DocumentArchive@(selCat.HasValue ? "?category="+(int)selCat : "")" class="btn btn-outline-secondary btn-sm">Temizle</a>
+                }
+            </form>
+        </div>
+
+        <!-- Başlık -->
+        <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+            <div class="fw-semibold" style="font-size:14px;color:#374151;">
+                @if (selCat.HasValue)
+                {
+                    <i class="fas fa-@(CatIcon(selCat.Value)) me-2" style="color:@CatColor(selCat.Value);"></i>
+                    @CatLabel(selCat.Value)
+                }
+                else { <span><i class="fas fa-folder-open me-2 text-muted"></i>Tüm Belgeler</span> }
+            </div>
+            <span class="text-muted" style="font-size:12px;">@Model.Count belge</span>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="card">
+                <div class="card-body text-center py-5 text-muted">
+                    <i class="fas fa-folder-open fa-3x mb-3 d-block"></i>
+                    Bu kategoride henüz belge yok.
+                    <br><button class="btn btn-sm btn-primary mt-2" onclick="openUpload()"><i class="fas fa-upload me-1"></i>Belge Yükle</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row g-2">
+                @foreach (var doc in Model)
+                {
+                    var viewable = new[] { ".pdf", ".jpg", ".jpeg", ".png" }.Contains(doc.FileExtension);
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card h-100 doc-card" style="border-left:3px solid @CatColor(doc.Category);">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-start gap-2 mb-2">
+                                    <i class="fas @ExtIcon(doc.FileExtension) fa-2x flex-shrink-0" style="color:@ExtColor(doc.FileExtension);margin-top:2px;"></i>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="fw-semibold text-truncate" style="font-size:13px;" title="@doc.Title">@doc.Title</div>
+                                        <div class="text-muted" style="font-size:11px;">
+                                            <span class="badge" style="background:@(CatColor(doc.Category))22;color:@CatColor(doc.Category);font-size:10px;">@CatLabel(doc.Category)</span>
+                                            <span class="ms-1">@doc.Year</span>
+                                            · @FmtSize(doc.FileSize)
+                                        </div>
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(doc.Notes))
+                                {
+                                    <div class="text-muted mb-2" style="font-size:11px;line-height:1.4;">@doc.Notes</div>
+                                }
+                                @if (!string.IsNullOrEmpty(doc.Tags))
+                                {
+                                    <div class="mb-2">
+                                        @foreach (var tag in doc.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                        {
+                                            <span class="badge badge-gray me-1" style="font-size:10px;">@tag.Trim()</span>
+                                        }
+                                    </div>
+                                }
+                                <div class="d-flex gap-1 mt-2">
+                                    @if (viewable)
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary flex-grow-1 doc-view-btn"
+                                                data-doc-id="@doc.Id" data-doc-title="@doc.Title"
+                                                style="font-size:11px;">
+                                            <i class="fas fa-eye me-1"></i> Görüntüle
+                                        </button>
+                                    }
+                                    <a href="/DocumentArchive/Serve/@doc.Id" download="@doc.FileName"
+                                       class="btn btn-sm btn-outline-secondary @(viewable ? "" : "flex-grow-1")"
+                                       style="font-size:11px;" title="İndir">
+                                        <i class="fas fa-download"></i>@(viewable ? "" : " İndir")
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger doc-delete-btn" style="font-size:11px;"
+                                            data-doc-id="@doc.Id" data-doc-title="@doc.Title"
+                                            title="Sil">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- PDF Görüntüleyici Modal -->
+<div class="modal fade" id="docViewerModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl" style="max-width:90vw;height:90vh;margin:5vh auto;">
+        <div class="modal-content" style="height:100%;">
+            <div class="modal-header dark py-2">
+                <span class="fw-semibold text-white" id="docViewerTitle" style="font-size:14px;"></span>
+                <div class="d-flex gap-2 ms-auto me-2">
+                    <button class="btn btn-sm btn-outline-light" onclick="printDoc()" title="Yazdır">
+                        <i class="fas fa-print me-1"></i> Yazdır
+                    </button>
+                    <a id="docDownloadBtn" href="#" download class="btn btn-sm btn-outline-light" title="İndir">
+                        <i class="fas fa-download me-1"></i> İndir
+                    </a>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="flex:1;overflow:hidden;">
+                <iframe id="docViewerFrame" src="" style="width:100%;height:100%;border:none;display:block;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yükleme Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <h6 class="modal-title text-white"><i class="fas fa-upload me-2"></i>Belge Yükle</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Belge Başlığı <span class="text-danger">*</span></label>
+                        <input type="text" id="upTitle" class="form-control" placeholder="Örn: KMK FSC Sertifikası 2025">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Kategori <span class="text-danger">*</span></label>
+                        <select id="upCategory" class="form-select">
+                            @foreach (DocumentCategory cat in Enum.GetValues<DocumentCategory>())
+                            {
+                                <option value="@((int)cat)">@CatLabel(cat)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Yıl <span class="text-danger">*</span></label>
+                        <input type="number" id="upYear" class="form-control" value="@DateTime.Today.Year" min="2020" max="2035">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Dosya <span class="text-danger">*</span></label>
+                        <input type="file" id="upFile" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.pptx">
+                        <div class="form-text">PDF, JPG, PNG, Word, Excel, PowerPoint · Max 50 MB</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Notlar</label>
+                        <textarea id="upNotes" class="form-control" rows="2" placeholder="Belge hakkında kısa açıklama..."></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Etiketler</label>
+                        <input type="text" id="upTags" class="form-control" placeholder="Virgülle ayırın: KMK, sertifika, 2025">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-primary px-4" id="upSaveBtn" onclick="uploadDoc()">
+                    <i class="fas fa-upload me-1"></i> Yükle
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+.doc-card { transition: box-shadow .15s, transform .1s; }
+.doc-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); transform: translateY(-1px); }
+</style>
+<script>
+let _currentDocId = null;
+
+document.addEventListener('click', function (e) {
+    const viewBtn = e.target.closest('.doc-view-btn');
+    if (viewBtn) { viewDoc(parseInt(viewBtn.dataset.docId), viewBtn.dataset.docTitle); return; }
+    const delBtn = e.target.closest('.doc-delete-btn');
+    if (delBtn) { deleteDoc(parseInt(delBtn.dataset.docId), delBtn.dataset.docTitle); return; }
+});
+
+function viewDoc(id, title) {
+    _currentDocId = id;
+    document.getElementById('docViewerTitle').textContent = title;
+    document.getElementById('docViewerFrame').src = '/DocumentArchive/Serve/' + id;
+    document.getElementById('docDownloadBtn').href = '/DocumentArchive/Serve/' + id;
+    document.getElementById('docDownloadBtn').download = title;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('docViewerModal')).show();
+}
+
+function printDoc() {
+    const frame = document.getElementById('docViewerFrame');
+    frame.contentWindow?.print();
+}
+
+function openUpload() {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('uploadModal')).show();
+}
+
+async function uploadDoc() {
+    const title = document.getElementById('upTitle').value.trim();
+    const cat   = document.getElementById('upCategory').value;
+    const year  = document.getElementById('upYear').value;
+    const file  = document.getElementById('upFile').files[0];
+
+    if (!title) { showToast('Belge başlığı zorunludur.', 'warning'); return; }
+    if (!file)  { showToast('Dosya seçiniz.', 'warning'); return; }
+
+    const btn = document.getElementById('upSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Yükleniyor...';
+
+    const fd = new FormData();
+    fd.append('title',    title);
+    fd.append('category', cat);
+    fd.append('year',     year);
+    fd.append('notes',    document.getElementById('upNotes').value);
+    fd.append('tags',     document.getElementById('upTags').value);
+    fd.append('file',     file);
+
+    try {
+        const res  = await fetch('/DocumentArchive/Upload', { method: 'POST', body: fd });
+        const json = await res.json();
+        if (json.success) {
+            bootstrap.Modal.getInstance(document.getElementById('uploadModal'))?.hide();
+            showToast('Belge yüklendi.', 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast(json.message, 'danger');
+        }
+    } catch(e) {
+        showToast('Yükleme hatası: ' + e.message, 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-upload me-1"></i> Yükle';
+    }
+}
+
+async function deleteDoc(id, title) {
+    const ok = await appConfirm(`"${title}" belgesini silmek istediğinize emin misiniz?`, { danger: true });
+    if (!ok) return;
+    const res  = await fetch('/DocumentArchive/Delete/' + id, { method: 'POST' });
+    const json = await res.json();
+    if (json.success) { showToast('Belge silindi.', 'success'); setTimeout(() => location.reload(), 600); }
+    else showToast(json.message, 'danger');
+}
+</script>
+}

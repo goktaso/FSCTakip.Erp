@@ -3,22 +3,24 @@
     ViewData["Title"] = "Kağıt Tipi Tanımları";
 }
 
-@* --- ÜST PANEL: Standart Buton Grubu (Filtre, Excel, Yazdır, Ekle) --- *@
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-layer-group mr-2"></i>Kağıt Tipi Listesi</h5>
-    <div>
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn-topbar-add" onclick="openAddModal()">
+            <span class="btn-add-icon"><i class="fas fa-plus"></i></span>
+            Yeni Tip Ekle
+        </button>
+    </div>
+    <div class="d-flex gap-2 ms-auto align-items-center">
         <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
             <i class="fas fa-filter"></i> Filtrele
         </button>
         <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()">
             <i class="fas fa-file-excel"></i> Excel
         </button>
-        <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
-            <i class="fas fa-print"></i> Yazdır
-        </button>
-        <button class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
-            <i class="fas fa-plus"></i> Yeni Tip Ekle
-        </button>
+        <span class="topbar-user">
+            <i class="fas fa-user-circle"></i>
+            @(User.Identity?.Name ?? "Kullanıcı")
+        </span>
     </div>
 </div>
 
@@ -40,22 +42,28 @@
 </div>
 
 @* --- TABLO ALANI --- *@
-<div class="card shadow-sm border-0">
+<div class="card shadow-sm border-0 table-card">
+    <div class="table-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-layer-group text-primary"></i>
+            <span>Kağıt Tipi Listesi</span>
+            <span class="badge badge-blue">@Model.Count() kayıt</span>
+        </div>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="typesTable">
+            <table class="table table-hover align-middle mb-0 data-table" id="typesTable">
                 <thead class="bg-light text-dark text-uppercase small font-weight-bold">
                     <tr>
                         <th style="width: 60px;">ID</th>
                         <th>Kağıt Tipi Adı</th>
                         <th>Kısa Kod</th>
-                        @* [YENİ]: Durum Switch Sütunu *@
                         <th class="text-center">Durum</th>
                         <th class="text-right" style="width: 150px;">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model != null)
+                    @if (Model != null && Model.Any())
                     {
                         foreach (var item in Model)
                         {
@@ -64,7 +72,6 @@
                                 <td><strong class="text-primary">@item.Name</strong></td>
                                 <td><span class="badge badge-light border">@item.ShortCode</span></td>
 
-                                @* --- [BAŞLANGIÇ: YENİ DURUM SWITCH] --- *@
                                 <td class="text-center">
                                     <div class="custom-control custom-switch">
                                         <input type="checkbox" class="custom-control-input" id="status_@item.Id"
@@ -77,7 +84,6 @@
                                         </label>
                                     </div>
                                 </td>
-                                @* --- [BİTİŞ: YENİ DURUM SWITCH] --- *@
 
                                 <td class="text-right">
                                     <button class="btn btn-sm btn-outline-primary mr-1"
@@ -91,6 +97,16 @@
                             </tr>
                         }
                     }
+                    else
+                    {
+                        <tr><td colspan="5">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-layer-group"></i></div>
+                                <h6>Henüz kağıt tipi kaydı yok</h6>
+                                <p>+ Yeni Tip Ekle butonunu kullanın.</p>
+                            </div>
+                        </td></tr>
+                    }
                 </tbody>
             </table>
         </div>
@@ -101,9 +117,9 @@
 <div class="modal fade" id="addTypeModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-secondary text-white">
-                <h6 class="modal-title font-weight-bold">Kağıt Tipi Formu</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            <div class="modal-header dark">
+                <h6 class="modal-title font-weight-bold"><i class="fas fa-layer-group mr-2"></i>Kağıt Tipi Formu</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Paper" asp-action="SaveType" method="post">
                 <div class="modal-body">
@@ -122,7 +138,7 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light p-2">
-                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Kapat</button>
                     <button type="submit" class="btn btn-secondary btn-sm px-3 text-white">Kaydet</button>
                 </div>
             </form>
@@ -132,7 +148,6 @@
 
 @section Scripts {
     <script>
-        // Tablo filtreleme
         function filterTable() {
             var value = $("#searchTerm").val().toLowerCase();
             $("#typesTable tbody tr").filter(function() {
@@ -140,7 +155,6 @@
             });
         }
 
-        // --- [YENİ: DURUM GÜNCELLEME (AJAX)] ---
         function toggleTypeStatus(id) {
             $.post('/Paper/ToggleTypeStatus', { id: id }, function (res) {
                 if (res.success) {
@@ -162,8 +176,8 @@
             $('#typeName').val('');
             $('#typeShortCode').val('');
             $('#isActiveSwitch').prop('checked', true);
-            $('.modal-title').text('Yeni Kağıt Tipi');
-            $('#addTypeModal').modal('show');
+            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Kağıt Tipi');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('addTypeModal')).show();
         }
 
         function editType(id, name, shortCode, isActive) {
@@ -171,8 +185,8 @@
             $('#typeName').val(name);
             $('#typeShortCode').val(shortCode);
             $('#isActiveSwitch').prop('checked', isActive);
-            $('.modal-title').text('Kağıt Tipi Düzenle');
-            $('#addTypeModal').modal('show');
+            $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Kağıt Tipi Düzenle');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('addTypeModal')).show();
         }
 
         function deleteType(id) {

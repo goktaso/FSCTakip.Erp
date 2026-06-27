@@ -1,0 +1,490 @@
+@model BomAnalysisModel
+@using FSCTakip.Core.Entities
+@using FSCTakip.WebUI.Controllers
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "BOM Bileşen Analizi";
+    var allWorkOrders = ViewBag.AllWorkOrders as List<SelectListItem> ?? new List<SelectListItem>();
+    int? selWoId = ViewBag.WorkOrderId as int?;
+    var woLabel = allWorkOrders.FirstOrDefault(w => w.Value == selWoId?.ToString())?.Text ?? "— Tümü —";
+    var productIds  = ViewBag.ProductIds  as int[] ?? Array.Empty<int>();
+    var allProducts = ViewBag.AllProducts as List<FSCTakip.Core.Entities.Product> ?? new();
+}
+
+@section TopbarActions {
+    <a href="/Reports/ExportBomAnalysis?startDate=@ViewBag.StartDate&endDate=@ViewBag.EndDate"
+       class="topbar-btn">
+        <i class="fas fa-file-excel"></i> Excel
+    </a>
+    <a href="/Reports/AuditReport" class="topbar-btn">
+        <i class="fas fa-clipboard-check"></i> Denetim Özeti
+    </a>
+}
+
+<!-- Filtre Paneli -->
+<div class="filter-panel mb-3">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+        <div style="display:flex;flex-direction:column;min-width:140px;">
+            <label class="form-label" style="font-size:12px;">Başlangıç Tarihi</label>
+            <input type="date" name="startDate" class="form-control form-control-sm" value="@ViewBag.StartDate">
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:140px;">
+            <label class="form-label" style="font-size:12px;">Bitiş Tarihi</label>
+            <input type="date" name="endDate" class="form-control form-control-sm" value="@ViewBag.EndDate">
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:220px;">
+            <label class="form-label" style="font-size:12px;">İş Emri (Opsiyonel)</label>
+            <div class="mcd" id="mcd-bom-wo" data-placeholder="— Tümü —" style="min-width:220px;">
+                <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-bom-wo')">
+                    <span class="mcd-lbl">@woLabel</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-bom-wo-panel" style="display:none;">
+                    <div class="mcd-search-row">
+                        <input type="text" class="mcd-search" placeholder="İş emri ara..." oninput="mcdSearch(this)">
+                    </div>
+                    <div class="mcd-items">
+                        <label class="mcd-row">
+                            <input type="radio" name="workOrderId" value="" class="mcd-rb"
+                                   onchange="mcdSingleSelect('mcd-bom-wo','','— Tümü —')"
+                                   checked="@(selWoId == null ? "checked" : null)">
+                            <span class="mcd-name">— Tümü —</span>
+                        </label>
+                        @foreach (var wo in allWorkOrders)
+                        {
+                            <label class="mcd-row">
+                                <input type="radio" name="workOrderId" value="@wo.Value" class="mcd-rb"
+                                       onchange="mcdSingleSelect('mcd-bom-wo','@wo.Value','@Html.Raw(wo.Text.Replace("'", "\\'"))')"
+                                       checked="@(selWoId?.ToString() == wo.Value ? "checked" : null)">
+                                <span class="mcd-name">@wo.Text</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:220px;">
+            <label class="form-label" style="font-size:12px;">Ürün / Mamul</label>
+            <div class="mcd" id="mcd-bom-prod" data-placeholder="— Tümü —">
+                <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-bom-prod')">
+                    <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " seçildi" : "— Tümü —")</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-bom-prod-panel" style="display:none;">
+                    <div class="mcd-search-row">
+                        <input type="text" class="mcd-search" placeholder="Ürün ara..." oninput="mcdSearch(this)">
+                    </div>
+                    <label class="mcd-row mcd-header">
+                        <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-bom-prod')">
+                        <span>Tümünü Seç / Temizle</span>
+                    </label>
+                    <div class="mcd-items">
+                        @foreach (var p in allProducts)
+                        {
+                            bool sel = productIds.Contains(p.Id);
+                            <label class="mcd-row">
+                                <input type="checkbox" name="productIds" value="@p.Id" class="mcd-cb"
+                                       onchange="mcdUpdate('mcd-bom-prod')"
+                                       checked="@(sel ? "checked" : null)">
+                                <span class="mcd-name" title="@p.ProductName">@p.ProductName</span>
+                                @if (!string.IsNullOrEmpty(p.ProductCode))  { <span class="mcd-sub">@p.ProductCode</span> }
+                                @if (!string.IsNullOrEmpty(p.ExternalCode)) { <span class="mcd-ext">@p.ExternalCode</span> }
+                            </label>
+                        }
+                    </div>
+                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex align-items-end pb-1">
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-search me-1"></i> Filtrele
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Özet Kartlar -->
+@{
+    var totalWOs       = Model.WorkOrders.Count;
+    var withBom        = Model.WorkOrders.Count(w => w.HasBom);
+    var withoutBom     = totalWOs - withBom;
+    var totalConsumed  = Model.WorkOrders.Sum(w => w.TotalConsumedKg);
+    var totalWaste     = Model.WorkOrders.Sum(w => w.TotalWasteKg);
+    var totalProduced  = Model.WorkOrders.Sum(w => w.TotalProducedQty);
+    var overPlanComps  = Model.WorkOrders.SelectMany(w => w.Components).Count(c => c.IsOverPlan);
+}
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-icon navy" style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                <i class="fas fa-industry"></i>
+            </div>
+            <div>
+                <div class="stat-value" id="cardWOs" style="font-size:18px;">@totalWOs</div>
+                <div class="stat-label">İş Emri</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-icon blue" style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                <i class="fas fa-weight-hanging"></i>
+            </div>
+            <div>
+                <div class="stat-value" id="cardConsumed" style="font-size:18px;">@totalConsumed.ToString("N0")</div>
+                <div class="stat-label">Toplam Tüketim (kg)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-icon @(totalWaste > 0 ? "red" : "green")" style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                <i class="fas fa-burn"></i>
+            </div>
+            <div>
+                <div class="stat-value" id="cardWaste" style="font-size:18px;">@totalWaste.ToString("N0")</div>
+                <div class="stat-label">Toplam Fire (kg)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-icon @(overPlanComps > 0 ? "amber" : "green")" style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div>
+                <div class="stat-value" id="cardOverPlan" style="font-size:18px;">@overPlanComps</div>
+                <div class="stat-label">Plan Aşımı</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!Model.WorkOrders.Any())
+{
+    <div class="table-card">
+        <div class="empty-state">
+            <i class="fas fa-sitemap"></i>
+            <p>Seçilen dönemde üretim kaydı bulunamadı.</p>
+        </div>
+    </div>
+}
+else
+{
+    @foreach (var wo in Model.WorkOrders)
+    {
+        var (statusClass, statusLabel) = wo.Status switch {
+            WorkOrderStatus.Uretimde   => ("badge-amber", "Üretimde"),
+            WorkOrderStatus.Tamamlandi => ("badge-green", "Tamamlandı"),
+            WorkOrderStatus.Iptal      => ("badge-red",   "İptal"),
+            _ => ("badge-gray", "—")
+        };
+        var fireRate = wo.TotalConsumedKg > 0 ? (wo.TotalWasteKg / wo.TotalConsumedKg * 100) : 0;
+
+        <div class="table-card mb-3 wo-card">
+            <!-- İş Emri Başlığı -->
+            <div style="background:var(--table-header-bg);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <a href="/Production/Detail/@wo.WorkOrderId"
+                       style="color:#fff;font-size:14px;font-weight:700;text-decoration:none;">
+                        <i class="fas fa-industry me-1"></i>@wo.WorkOrderNo
+                    </a>
+                    <span style="color:rgba(255,255,255,.7);font-size:13px;">@wo.ProductName</span>
+                    @if (!string.IsNullOrEmpty(wo.FscTypeName))
+                    {
+                        <span class="badge badge-green" style="font-size:10px;">@wo.FscTypeName</span>
+                    }
+                    <span class="badge @statusClass" style="font-size:10px;">@statusLabel</span>
+                    @if (!wo.HasBom)
+                    {
+                        <span class="badge" style="background:rgba(251,191,36,.2);color:#fbbf24;font-size:10px;border:1px solid rgba(251,191,36,.4);">
+                            <i class="fas fa-exclamation-triangle me-1"></i>BOM tanımlı değil
+                        </span>
+                    }
+                </div>
+                <div style="display:flex;gap:16px;color:rgba(255,255,255,.8);font-size:12px;white-space:nowrap;">
+                    <span><i class="fas fa-calendar me-1"></i>@wo.PlannedDate.ToString("dd.MM.yyyy")</span>
+                    <span><i class="fas fa-cogs me-1"></i>@wo.MachineName</span>
+                    <span style="color:#86efac;"><i class="fas fa-boxes me-1"></i>@wo.TotalProducedQty.ToString("N0") adet</span>
+                </div>
+            </div>
+
+            <!-- Özet çizgi -->
+            <div style="background:#f8fafc;padding:8px 18px;display:flex;gap:20px;font-size:12px;color:#374151;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;">
+                <span><strong>Plan:</strong> @wo.PlannedQty.ToString("N0") adet</span>
+                <span><strong>Üretilen:</strong> <span class="text-success fw-bold">@wo.TotalProducedQty.ToString("N0") adet</span></span>
+                <span><strong>Toplam Tüketim:</strong> @wo.TotalConsumedKg.ToString("N2") kg</span>
+                <span><strong>Toplam Fire:</strong> <span style="color:#dc2626;">@wo.TotalWasteKg.ToString("N2") kg</span></span>
+                <span><strong>Fire %:</strong>
+                    <span style="color:@(fireRate < 3 ? "#166534" : fireRate < 6 ? "#92400e" : "#991b1b");">
+                        %@fireRate.ToString("N1")
+                    </span>
+                </span>
+            </div>
+
+            @if (!wo.HasBom && !wo.UnlinkedComponents.Any())
+            {
+                <div class="text-center text-muted py-4" style="font-size:13px;">
+                    <i class="fas fa-info-circle mb-2 d-block fs-4"></i>
+                    Bu iş emrinde BOM bileşeni tanımlı değil ve tüketim kaydı yok.
+                </div>
+            }
+            else
+            {
+                <!-- BOM Bileşen Tablosu -->
+                <table class="table mb-0">
+                    <thead>
+                        <tr style="font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;color:#6b7280;background:#f9fafb;">
+                            <th style="padding:8px 14px;font-weight:600;">Bileşen / Hammadde</th>
+                            <th style="padding:8px 8px;font-weight:600;">FSC Tipi</th>
+                            <th class="text-end" style="padding:8px 8px;font-weight:600;">Planlanan</th>
+                            <th class="text-end" style="padding:8px 8px;font-weight:600;">Tüketilen</th>
+                            <th class="text-end" style="padding:8px 8px;font-weight:600;">Fire</th>
+                            <th class="text-end" style="padding:8px 8px;font-weight:600;">Fire %</th>
+                            <th class="text-end" style="padding:8px 8px;font-weight:600;">Üretilen</th>
+                            <th style="padding:8px 8px;font-weight:600;">Mass-Balance</th>
+                            <th style="padding:8px 14px;font-weight:600;">Kaynaklar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var comp in wo.Components)
+                        {
+                            var mbOk     = comp.PlannedKg == 0 || !comp.IsOverPlan;
+                            var rowBg    = comp.IsOverPlan ? "#fff5f5" : "transparent";
+                            var compFire = comp.FireRate;
+                            <tr style="font-size:12.5px;background:@rowBg;">
+                                <td style="padding:10px 14px;">
+                                    <div style="font-weight:600;color:#111827;">@comp.ComponentName</div>
+                                    @if (!string.IsNullOrEmpty(comp.ComponentCode))
+                                    {
+                                        <div style="font-size:10.5px;color:#9ca3af;">@comp.ComponentCode</div>
+                                    }
+                                </td>
+                                <td style="padding:10px 8px;">
+                                    @if (!string.IsNullOrEmpty(comp.FscTypeName))
+                                    {
+                                        <span class="badge badge-green" style="font-size:10px;">@comp.FscTypeName</span>
+                                    }
+                                    else { <span class="text-muted" style="font-size:11px;">—</span> }
+                                    @if (comp.InputFscTypes.Any())
+                                    {
+                                        <div style="font-size:10px;color:#6b7280;margin-top:2px;">
+                                            Giriş: @string.Join(", ", comp.InputFscTypes)
+                                        </div>
+                                    }
+                                </td>
+                                <td class="text-end" style="padding:10px 8px;color:#6b7280;">
+                                    @(comp.PlannedKg > 0 ? comp.PlannedKg.ToString("N2") + " kg" : "—")
+                                </td>
+                                <td class="text-end fw-semibold" style="padding:10px 8px;">
+                                    @if (comp.ConsumedKg > 0)
+                                    {
+                                        <span style="color:@(comp.IsOverPlan ? "#dc2626" : "#111827");">
+                                            @comp.ConsumedKg.ToString("N2") kg
+                                        </span>
+                                        @if (comp.PlannedKg > 0)
+                                        {
+                                            var pct = (double)(comp.ConsumedKg / comp.PlannedKg * 100);
+                                            <div style="font-size:10px;color:#9ca3af;">%@pct.ToString("N0")</div>
+                                        }
+                                    }
+                                    else { <span class="text-muted">0.00 kg</span> }
+                                </td>
+                                <td class="text-end" style="padding:10px 8px;">
+                                    @if (comp.WasteKg > 0)
+                                    {
+                                        <span class="badge badge-red">@comp.WasteKg.ToString("N2") kg</span>
+                                    }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td class="text-end" style="padding:10px 8px;">
+                                    @if (comp.ConsumedKg > 0)
+                                    {
+                                        <span style="color:@(compFire < 3 ? "#166534" : compFire < 6 ? "#92400e" : "#991b1b");font-weight:600;font-size:12px;">
+                                            %@compFire.ToString("N1")
+                                        </span>
+                                    }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td class="text-end" style="padding:10px 8px;">
+                                    @if (comp.ProducedQty > 0)
+                                    {
+                                        <span class="badge badge-blue">@comp.ProducedQty.ToString("N0") adet</span>
+                                    }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td style="padding:10px 8px;">
+                                    @if (comp.PlannedKg > 0)
+                                    {
+                                        if (comp.IsOverPlan)
+                                        {
+                                            <span style="color:#dc2626;font-size:11px;font-weight:600;">
+                                                <i class="fas fa-times-circle me-1"></i>Plan Aşıldı
+                                            </span>
+                                        }
+                                        else if (comp.IsNearPlan)
+                                        {
+                                            <span style="color:#16a34a;font-size:11px;font-weight:600;">
+                                                <i class="fas fa-check-circle me-1"></i>Dengeli
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span style="color:#f59e0b;font-size:11px;font-weight:600;">
+                                                <i class="fas fa-clock me-1"></i>Devam Ediyor
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span style="color:#9ca3af;font-size:11px;">Plansız</span>
+                                    }
+                                </td>
+                                <td style="padding:10px 14px;font-size:11px;max-width:160px;">
+                                    @if (comp.LotNos.Any())
+                                    {
+                                        <div class="text-muted" title="@string.Join(", ", comp.LotNos)">
+                                            <i class="fas fa-box me-1"></i>@string.Join(", ", comp.LotNos.Take(2))@(comp.LotNos.Count > 2 ? $" +{comp.LotNos.Count-2}" : "")
+                                        </div>
+                                    }
+                                    @if (comp.SupplierNames.Any())
+                                    {
+                                        <div class="text-muted" style="font-size:10px;" title="@string.Join(", ", comp.SupplierNames)">
+                                            <i class="fas fa-truck me-1"></i>@string.Join(", ", comp.SupplierNames.Take(1))@(comp.SupplierNames.Count > 1 ? $" +{comp.SupplierNames.Count-1}" : "")
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+
+                        @foreach (var comp in wo.UnlinkedComponents)
+                        {
+                            <tr style="font-size:12.5px;background:#fffbeb;">
+                                <td style="padding:10px 14px;" colspan="1">
+                                    <div style="color:#92400e;font-style:italic;font-size:12px;">
+                                        <i class="fas fa-unlink me-1"></i>@comp.ComponentName
+                                    </div>
+                                </td>
+                                <td style="padding:10px 8px;"><span class="text-muted" style="font-size:11px;">—</span></td>
+                                <td class="text-end" style="padding:10px 8px;"><span class="text-muted">—</span></td>
+                                <td class="text-end fw-semibold" style="padding:10px 8px;color:#92400e;">
+                                    @comp.ConsumedKg.ToString("N2") kg
+                                </td>
+                                <td class="text-end" style="padding:10px 8px;">
+                                    @if (comp.WasteKg > 0)
+                                    {
+                                        <span class="badge badge-red">@comp.WasteKg.ToString("N2") kg</span>
+                                    }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td class="text-end" style="padding:10px 8px;">
+                                    @if (comp.ConsumedKg > 0)
+                                    {
+                                        <span style="color:#92400e;font-size:12px;">%@comp.FireRate.ToString("N1")</span>
+                                    }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td class="text-end" style="padding:10px 8px;">
+                                    @if (comp.ProducedQty > 0)
+                                    {
+                                        <span class="badge badge-blue">@comp.ProducedQty.ToString("N0") adet</span>
+                                    }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td style="padding:10px 8px;">
+                                    <span style="color:#f59e0b;font-size:11px;">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Takipsiz
+                                    </span>
+                                </td>
+                                <td style="padding:10px 14px;font-size:11px;">
+                                    @if (comp.LotNos.Any())
+                                    {
+                                        <div class="text-muted">
+                                            <i class="fas fa-box me-1"></i>@string.Join(", ", comp.LotNos.Take(2))
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+
+                        <!-- Toplam satırı -->
+                        @if (wo.Components.Any() || wo.UnlinkedComponents.Any())
+                        {
+                            <tr style="background:#f0fdf4;font-weight:700;font-size:12.5px;border-top:2px solid #bbf7d0;">
+                                <td style="padding:9px 14px;color:#166534;">
+                                    <i class="fas fa-sigma me-1"></i>TOPLAM
+                                </td>
+                                <td colspan="2"></td>
+                                <td class="text-end" style="padding:9px 8px;color:#166534;">@wo.TotalConsumedKg.ToString("N2") kg</td>
+                                <td class="text-end" style="padding:9px 8px;color:#dc2626;">@wo.TotalWasteKg.ToString("N2") kg</td>
+                                <td class="text-end" style="padding:9px 8px;color:@(fireRate < 3 ? "#166534" : "#991b1b");">
+                                    %@fireRate.ToString("N1")
+                                </td>
+                                <td class="text-end" style="padding:9px 8px;">
+                                    <span class="badge badge-green">@wo.TotalProducedQty.ToString("N0") adet</span>
+                                </td>
+                                <td colspan="2"></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (!wo.HasBom)
+                {
+                    <div class="p-3" style="background:#fffbeb;border-top:1px solid #fde68a;">
+                        <div style="font-size:12px;color:#92400e;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Bu iş emri için BOM bileşenleri tanımlı değil.
+                            <a href="/Production/Detail/@wo.WorkOrderId" class="fw-semibold text-warning">
+                                İş emrine git → Bileşen Ekle
+                            </a>
+                            butonunu kullanarak reçete satırlarını bağlayın.
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+}
+
+@section Scripts {
+<script>
+    // Topbar globalSearch → WO kartlarını filtrele (ürün adı / WO no / FSC tipi ile)
+    var si = document.getElementById('globalSearch');
+    var sd = document.getElementById('searchDropdown');
+    if (si) {
+        if (sd) sd.classList.remove('show');
+        si.addEventListener('input', function (e) {
+            if (sd) sd.classList.remove('show');
+            var q = this.value.toLowerCase().trim();
+            var cards = document.querySelectorAll('.wo-card');
+            var vis = 0;
+            cards.forEach(function (card) {
+                var text = card.textContent.toLowerCase();
+                var show = q === '' || text.includes(q);
+                card.style.display = show ? '' : 'none';
+                if (show) vis++;
+            });
+            // Stat kartları güncelle
+            var g = function (id) { return document.getElementById(id); };
+            if (q === '') {
+                if (g('cardWOs')) g('cardWOs').textContent = cards.length;
+            } else {
+                if (g('cardWOs')) g('cardWOs').textContent = vis + ' / ' + cards.length;
+            }
+            e.stopPropagation();
+        }, true);
+        si.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                document.querySelectorAll('.wo-card').forEach(function (c) { c.style.display = ''; });
+                var g = function (id) { return document.getElementById(id); };
+                if (g('cardWOs')) g('cardWOs').textContent = document.querySelectorAll('.wo-card').length;
+                e.preventDefault(); e.stopPropagation();
+            }
+        }, true);
+    }
+</script>
+}

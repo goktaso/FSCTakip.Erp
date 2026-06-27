@@ -1,0 +1,433 @@
+@model List<FSCTakip.Core.Entities.StockMovement>
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "Stok Hareketleri";
+    var products       = ViewBag.Products       as List<Product>                           ?? new();
+    var suppliers      = ViewBag.Suppliers      as List<FSCTakip.Core.Entities.Supplier>   ?? new();
+    var fscTypes       = ViewBag.FscTypes       as List<FSCTakip.Core.Entities.FscType>    ?? new();
+    var purchaseLotMap = ViewBag.PurchaseLotMap as Dictionary<string, FscLot>              ?? new();
+    var salesOrderMap  = ViewBag.SalesOrderMap  as Dictionary<string, SalesOrder>          ?? new();
+    string? start      = ViewBag.StartDate;
+    string? end        = ViewBag.EndDate;
+    string? stockCode  = ViewBag.StockCode as string;
+    var filtSupplierIds = ViewBag.SupplierIds as int[] ?? Array.Empty<int>();
+    var filtFscTypeIds  = ViewBag.FscTypeIds  as int[] ?? Array.Empty<int>();
+    var productIds     = ViewBag.ProductIds as int[] ?? Array.Empty<int>();
+}
+
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fw-semibold" style="color:var(--text);font-size:14px;">
+            <i class="fas fa-exchange-alt me-2 text-primary"></i>Stok Hareketleri
+        </span>
+    </div>
+    <div class="d-flex gap-2 ms-auto">
+        <span class="topbar-user">
+            <i class="fas fa-user-circle"></i>
+            @(User.Identity?.Name ?? "Kullanıcı")
+        </span>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="filter-card">
+    <form method="get" action="/Stock/Movements" class="filter-form" style="align-items:flex-end;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;flex-direction:column;min-width:130px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">STOK</label>
+            <input type="text" name="stockCode" class="form-control form-control-sm"
+                   value="@stockCode" placeholder="Stok kodu / adı..." style="max-width:180px;"
+                   title="Stok kodu (ERP/dahili) veya stok adı ile ara" />
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:220px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">ÜRÜN</label>
+            <div class="mcd" id="mcd-products" data-placeholder="— Ürün —" style="min-width:220px;">
+            <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-products')">
+                <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " ürün seçildi" : "— Ürün —")</span>
+                <i class="fas fa-angle-down mcd-arrow"></i>
+            </button>
+            <div class="mcd-panel" id="mcd-products-panel" style="display:none;">
+                <div class="mcd-search-row">
+                    <input type="text" class="mcd-search" placeholder="Ürün ara..." oninput="mcdSearch(this)">
+                </div>
+                <label class="mcd-row mcd-header">
+                    <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-products')">
+                    <span>Tümünü Seç / Temizle</span>
+                </label>
+                <div class="mcd-items">
+                    @foreach (var p in products)
+                    {
+                        bool sel = productIds.Contains(p.Id);
+                        <label class="mcd-row">
+                            <input type="checkbox" name="productIds" value="@p.Id" class="mcd-cb"
+                                   onchange="mcdUpdate('mcd-products')"
+                                   checked="@(sel ? "checked" : null)">
+                            <span class="mcd-name" title="@p.ProductName">@p.ProductName</span>
+                            @if (!string.IsNullOrEmpty(p.ProductCode))
+                            { <span class="mcd-sub">@p.ProductCode</span> }
+                            @if (!string.IsNullOrEmpty(p.ExternalCode))
+                            { <span class="mcd-ext">@p.ExternalCode</span> }
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:150px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">HAR. TİPİ</label>
+            @{ var selType = ViewBag.MovementType?.ToString() ?? "";
+               var typeLabel = selType == "4" ? "Satın Alma" : selType == "1" ? "Üretim" : selType == "3" ? "Satış" : selType == "5" ? "Tüketim" : selType == "2" ? "Transfer" : "— Tümü —"; }
+            <div class="mcd" id="mcd-mov-type" data-placeholder="— Tümü —">
+                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-mov-type')">
+                    <span class="mcd-lbl">@typeLabel</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
+                </button>
+                <div class="mcd-panel" id="mcd-mov-type-panel" style="display:none;">
+                    <div class="mcd-items">
+                        <label class="mcd-row"><input type="radio" name="type" value="" class="mcd-rb" onchange="mcdSingleSelect('mcd-mov-type','','— Tümü —')" @(selType==""?"checked":null)><span class="mcd-name">— Tümü —</span></label>
+                        <label class="mcd-row"><input type="radio" name="type" value="4" class="mcd-rb" onchange="mcdSingleSelect('mcd-mov-type','4','Satın Alma')" @(selType=="4"?"checked":null)><span class="mcd-name">Satın Alma Girişi</span></label>
+                        <label class="mcd-row"><input type="radio" name="type" value="1" class="mcd-rb" onchange="mcdSingleSelect('mcd-mov-type','1','Üretim')" @(selType=="1"?"checked":null)><span class="mcd-name">Üretim Girişi</span></label>
+                        <label class="mcd-row"><input type="radio" name="type" value="3" class="mcd-rb" onchange="mcdSingleSelect('mcd-mov-type','3','Satış')" @(selType=="3"?"checked":null)><span class="mcd-name">Satış Çıkışı</span></label>
+                        <label class="mcd-row"><input type="radio" name="type" value="5" class="mcd-rb" onchange="mcdSingleSelect('mcd-mov-type','5','Tüketim')" @(selType=="5"?"checked":null)><span class="mcd-name">Tüketim (Çıkış)</span></label>
+                        <label class="mcd-row"><input type="radio" name="type" value="2" class="mcd-rb" onchange="mcdSingleSelect('mcd-mov-type','2','Transfer')" @(selType=="2"?"checked":null)><span class="mcd-name">Depo Transferi</span></label>
+                    </div>
+                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:160px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">TEDARİKÇİ</label>
+            <div class="mcd" id="mcd-mov-sup" data-placeholder="— Tedarikçi —" style="min-width:160px;">
+            <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-mov-sup')">
+                <span class="mcd-lbl">@(filtSupplierIds.Length > 0 ? filtSupplierIds.Length + " seçildi" : "— Tedarikçi —")</span>
+                <i class="fas fa-angle-down mcd-arrow"></i>
+            </button>
+            <div class="mcd-panel" id="mcd-mov-sup-panel" style="display:none;">
+                <div class="mcd-search-row">
+                    <input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)">
+                </div>
+                <label class="mcd-row mcd-header">
+                    <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-mov-sup')">
+                    <span>Tümünü Seç / Temizle</span>
+                </label>
+                <div class="mcd-items">
+                    @foreach (var s in suppliers)
+                    {
+                        bool sel = filtSupplierIds.Contains(s.Id);
+                        <label class="mcd-row">
+                            <input type="checkbox" name="supplierIds" value="@s.Id" class="mcd-cb"
+                                   onchange="mcdUpdate('mcd-mov-sup')"
+                                   checked="@(sel ? "checked" : null)">
+                            <span class="mcd-name">@s.Name</span>
+                        </label>
+                    }
+                </div>
+                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+            </div>
+        </div>
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:130px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">FSC TİPİ</label>
+            <div class="mcd" id="mcd-mov-fsc" data-placeholder="— FSC Tipi —" style="min-width:130px;">
+            <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-mov-fsc')">
+                <span class="mcd-lbl">@(filtFscTypeIds.Length > 0 ? filtFscTypeIds.Length + " seçildi" : "— FSC Tipi —")</span>
+                <i class="fas fa-angle-down mcd-arrow"></i>
+            </button>
+            <div class="mcd-panel" id="mcd-mov-fsc-panel" style="display:none;">
+                <div class="mcd-search-row">
+                    <input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)">
+                </div>
+                <label class="mcd-row mcd-header">
+                    <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-mov-fsc')">
+                    <span>Tümünü Seç / Temizle</span>
+                </label>
+                <div class="mcd-items">
+                    @foreach (var f in fscTypes)
+                    {
+                        bool sel = filtFscTypeIds.Contains(f.Id);
+                        <label class="mcd-row">
+                            <input type="checkbox" name="fscTypeIds" value="@f.Id" class="mcd-cb"
+                                   onchange="mcdUpdate('mcd-mov-fsc')"
+                                   checked="@(sel ? "checked" : null)">
+                            <span class="mcd-name">@f.Name</span>
+                        </label>
+                    }
+                </div>
+                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+            </div>
+        </div>
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:120px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">BAŞLANGIÇ</label>
+            <input type="date" name="startDate" class="form-control form-control-sm" value="@start" />
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:120px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">BİTİŞ</label>
+            <input type="date" name="endDate" class="form-control form-control-sm" value="@end" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Filtrele</button>
+        <a href="/Stock/Movements" class="btn btn-outline-secondary btn-sm">Temizle</a>
+        <div class="ms-auto">
+            <a href="/Stock/ExportMovements" class="btn btn-success btn-sm"><i class="fas fa-file-excel me-1"></i>Excel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+    @if (Model.Any())
+    {
+        <div class="d-flex align-items-center justify-content-between px-4 py-2 mb-2 rounded-3"
+             style="background:rgba(25,118,210,.08);border:1px solid rgba(25,118,210,.2);font-size:13px;">
+            <div class="d-flex align-items-center gap-3">
+                <i class="fas fa-sigma text-primary"></i>
+                <span style="font-weight:600;">Filtreye Göre Toplam</span>
+                <span class="text-muted small">(<span id="bandCount">@Model.Count</span> hareket)</span>
+            </div>
+            <div class="d-flex gap-4">
+                <div>
+                    <span class="text-muted small">Giriş:</span>
+                    <strong class="text-success ms-1" id="bandGiris">
+                        @Model.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity).ToString("N0")
+                    </strong>
+                </div>
+                <div>
+                    <span class="text-muted small">Çıkış:</span>
+                    <strong class="text-danger ms-1" id="bandCikis">
+                        @Model.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity).ToString("N0")
+                    </strong>
+                </div>
+                <div>
+                    <span class="text-muted small">Net:</span>
+                    <strong class="ms-1" id="bandNet">
+                        @((Model.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity) - Model.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity)).ToString("N0"))
+                    </strong>
+                </div>
+            </div>
+        </div>
+    }
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>TARİH</th>
+                    <th>TİP</th>
+                    <th>ÜRÜN</th>
+                    <th class="text-end">MİKTAR</th>
+                    <th>BİRİM</th>
+                    <th>BELGELER</th>
+                    <th>MÜŞTERİ / AÇIKLAMA</th>
+                    <th>PLAKA</th>
+                    <th>İŞ EMRİ</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="9">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-exchange-alt"></i></div>
+                            <h6>Stok hareketi bulunamadı</h6>
+                            <p>Seçilen filtre kriterlerine uygun hareket kaydı yok.</p>
+                        </div>
+                    </td></tr>
+                }
+                @foreach (var m in Model)
+                {
+                    string tipClass = m.Type switch {
+                        MovementType.PurchaseEntry         => "badge-info",
+                        MovementType.ProductionEntry       => "badge-primary",
+                        MovementType.SalesDispatch         => "badge-danger",
+                        MovementType.ProductionConsumption => "badge-warning",
+                        MovementType.WarehouseTransfer     => "badge-secondary",
+                        _ => "badge-secondary"
+                    };
+                    string tipText = m.Type switch {
+                        MovementType.PurchaseEntry         => "Satın Alma",
+                        MovementType.ProductionEntry       => "Üretim",
+                        MovementType.SalesDispatch         => "Satış",
+                        MovementType.ProductionConsumption => "Tüketim",
+                        MovementType.WarehouseTransfer     => "Transfer",
+                        _ => m.Type.ToString()
+                    };
+                    bool isGiris = m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry;
+                    bool isCikis = m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption;
+
+                    // Belge bilgisi — alış için FscLot, satış için SalesOrder
+                    FscLot?    purchaseLot  = null;
+                    SalesOrder? salesOrder  = null;
+                    if (m.Type == MovementType.PurchaseEntry && m.DocumentNo != null)
+                        purchaseLotMap.TryGetValue(m.DocumentNo, out purchaseLot);
+                    if (m.Type == MovementType.SalesDispatch && m.DocumentNo != null)
+                        salesOrderMap.TryGetValue(m.DocumentNo, out salesOrder);
+
+                    <tr class="data-row"
+                        data-qty="@m.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                        data-giris="@(isGiris ? m.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0")"
+                        data-cikis="@(isCikis ? m.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0")">
+                        <td class="small text-muted">@m.DocumentDate.ToString("dd.MM.yyyy")</td>
+                        <td><span class="badge @tipClass">@tipText</span></td>
+                        <td>
+                            <strong class="small">@(m.Product?.ProductName ?? "—")</strong>
+                            @if (!string.IsNullOrEmpty(m.Product?.ProductCode))
+                            {
+                                <div class="text-muted" style="font-size:10px;">
+                                    <i class="fas fa-tag me-1"></i>@m.Product.ProductCode
+                                    @if (!string.IsNullOrEmpty(m.Product.ExternalCode))
+                                    {
+                                        <span class="ms-1 badge" style="background:#eef2ff;color:#3730a3;font-size:9px;">@m.Product.ExternalCode</span>
+                                    }
+                                </div>
+                            }
+                        </td>
+                        <td class="text-end fw-semibold @(isGiris ? "text-success" : isCikis ? "text-danger" : "")">
+                            @(isGiris ? "+" : isCikis ? "-" : "")@m.Quantity.ToString("N0")
+                        </td>
+                        <td class="small text-muted">@m.Unit</td>
+                        <td>
+                            @* --- Alış hareketi: irsaliye + fatura PDF --- *@
+                            @if (purchaseLot != null)
+                            {
+                                @if (!string.IsNullOrEmpty(purchaseLot.DispatchNo))
+                                {
+                                    <div class="small mb-1">
+                                        <i class="fas fa-truck me-1 text-muted" title="İrsaliye"></i>
+                                        @if (!string.IsNullOrEmpty(purchaseLot.DispatchPdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@purchaseLot.DispatchPdfPath','İrsaliye — @purchaseLot.DispatchNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@purchaseLot.DispatchNo
+                                            </button>
+                                        }
+                                        else { <span>@purchaseLot.DispatchNo</span> }
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(purchaseLot.InvoiceNo))
+                                {
+                                    <div class="small">
+                                        <i class="fas fa-file-invoice me-1 text-muted" title="Fatura"></i>
+                                        @if (!string.IsNullOrEmpty(purchaseLot.InvoicePdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@purchaseLot.InvoicePdfPath','Fatura — @purchaseLot.InvoiceNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@purchaseLot.InvoiceNo
+                                            </button>
+                                        }
+                                        else { <span>@purchaseLot.InvoiceNo</span> }
+                                    </div>
+                                }
+                                @if (string.IsNullOrEmpty(purchaseLot.DispatchNo) && string.IsNullOrEmpty(purchaseLot.InvoiceNo))
+                                {
+                                    <span class="small text-muted">@(m.DocumentNo ?? "—")</span>
+                                }
+                            }
+                            @* --- Satış hareketi: irsaliye + fatura PDF --- *@
+                            else if (salesOrder != null)
+                            {
+                                <div class="small mb-1 fw-semibold text-muted" style="font-size:10px;">@salesOrder.SalesOrderNo</div>
+                                @if (!string.IsNullOrEmpty(salesOrder.DispatchNo))
+                                {
+                                    <div class="small mb-1">
+                                        <i class="fas fa-truck me-1 text-muted" title="İrsaliye"></i>
+                                        @if (!string.IsNullOrEmpty(salesOrder.DispatchPdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@salesOrder.DispatchPdfPath','İrsaliye — @salesOrder.DispatchNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@salesOrder.DispatchNo
+                                            </button>
+                                        }
+                                        else { <span>@salesOrder.DispatchNo</span> }
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(salesOrder.InvoiceNo))
+                                {
+                                    <div class="small">
+                                        <i class="fas fa-file-invoice me-1 text-muted" title="Fatura"></i>
+                                        @if (!string.IsNullOrEmpty(salesOrder.InvoicePdfPath))
+                                        {
+                                            <button class="doc-num-btn" onclick="showPdf('/@salesOrder.InvoicePdfPath','Fatura — @salesOrder.InvoiceNo')">
+                                                <i class="fas fa-file-pdf" style="color:#dc2626;font-size:10px;margin-right:3px;"></i>@salesOrder.InvoiceNo
+                                            </button>
+                                        }
+                                        else { <span>@salesOrder.InvoiceNo</span> }
+                                    </div>
+                                }
+                            }
+                            @* --- Diğer hareketler: sadece belge no --- *@
+                            else
+                            {
+                                <span class="small fw-semibold">@(m.DocumentNo ?? "—")</span>
+                            }
+                        </td>
+                        <td class="small text-muted">
+                            @if (m.Customer != null) { <span>@m.Customer.Name</span> }
+                            else if (!string.IsNullOrEmpty(m.Description)) { <span>@m.Description</span> }
+                            else { <span>—</span> }
+                        </td>
+                        <td class="small text-muted">@(m.PlateNumber ?? "—")</td>
+                        <td class="small text-muted">
+                            @if (m.WorkOrderId.HasValue)
+                            {
+                                <a href="/Production/Detail/@m.WorkOrderId" class="text-primary">
+                                    <i class="fas fa-link me-1"></i>IE-@m.WorkOrderId
+                                </a>
+                            }
+                            else { <span>—</span> }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.Any())
+    {
+        <div class="table-footer d-flex justify-content-between align-items-center px-3 py-2 border-top small text-muted">
+            <span id="footerCount">@Model.Count kayıt</span>
+            <span>
+                Toplam Giriş: <strong class="text-success" id="footerGiris">
+                    @Model.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity).ToString("N0")
+                </strong>
+                &nbsp;|&nbsp;
+                Toplam Çıkış: <strong class="text-danger" id="footerCikis">
+                    @Model.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity).ToString("N0")
+                </strong>
+            </span>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+    $(document).on('init.dt', 'table.data-table', function() {
+        var dt = $(this).DataTable();
+        var si = document.getElementById('globalSearch');
+        var sd = document.getElementById('searchDropdown');
+        if (!si) return;
+        if (sd) sd.classList.remove('show');
+        si.addEventListener('input', function(e) {
+            if (sd) sd.classList.remove('show');
+            dt.search(this.value).draw();
+            e.stopPropagation();
+        }, true);
+        si.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { this.value = ''; dt.search('').draw(); e.preventDefault(); e.stopPropagation(); }
+        }, true);
+    });
+
+    $(document).on('draw.dt', 'table.data-table', function() {
+        var dt = $(this).DataTable();
+        var count = 0, giris = 0, cikis = 0;
+        dt.rows({ search: 'applied' }).nodes().each(function(tr) {
+            if (!tr.classList.contains('data-row')) return;
+            count++;
+            giris += parseFloat(tr.dataset.giris) || 0;
+            cikis += parseFloat(tr.dataset.cikis) || 0;
+        });
+        var fmt = function(n) { return Math.round(n).toLocaleString('tr-TR'); };
+        var g = function(id) { return document.getElementById(id); };
+        if (g('bandCount'))  g('bandCount').textContent  = count;
+        if (g('bandGiris'))  g('bandGiris').textContent  = fmt(giris);
+        if (g('bandCikis'))  g('bandCikis').textContent  = fmt(cikis);
+        if (g('bandNet'))    g('bandNet').textContent    = fmt(giris - cikis);
+        if (g('footerCount')) g('footerCount').textContent = count + ' kayıt';
+        if (g('footerGiris')) g('footerGiris').textContent = fmt(giris);
+        if (g('footerCikis')) g('footerCikis').textContent = fmt(cikis);
+    });
+</script>
+}

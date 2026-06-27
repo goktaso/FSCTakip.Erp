@@ -3,13 +3,25 @@
     public class FscSerial : BaseEntity
     {
         public int LotId { get; set; }
-        public string SerialNo { get; set; } // Örn: S2026-001-01
-        public decimal InitialWeight { get; set; } // Giriş Kilogramı
-        public decimal CurrentWeight { get; set; } // Kalan Kilogram
+        public string SerialNo { get; set; } = string.Empty;
+        /// <summary>Bobin bazında lot numarası (opsiyonel). Tedarikçi bazı durumlarda bobin başına lot kodu verir.</summary>
+        public string? LotNo { get; set; }
+        public decimal InitialWeight { get; set; }
+        public decimal CurrentWeight { get; set; }
 
-        // Geçen yıldan mı devretti? (Denetim karşılaştırması için)
+        /// <summary>
+        /// Sisteme girildiği orijinal miktar (birim dönüşümünden önce).
+        /// Null ise giriş zaten KG'dir.
+        /// </summary>
+        public decimal? OriginalQuantity { get; set; }
+
+        /// <summary>Orijinal birim (örn: "MT"). Null ise giriş zaten KG.</summary>
+        public string? OriginalUnit { get; set; }
+
         public bool IsOpeningStock { get; set; }
+        public string? Notes { get; set; }
 
-        public virtual FscLot Lot { get; set; }
+        public virtual FscLot Lot { get; set; } = null!;
+        public virtual ICollection<ProductionDetail> ProductionDetails { get; set; } = new List<ProductionDetail>();
     }
 }

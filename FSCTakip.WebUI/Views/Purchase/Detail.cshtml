@@ -1,0 +1,483 @@
+@model FSCTakip.Core.Entities.FscLot
+@{
+    ViewData["Title"] = $"Parti — {Model.PartiNo}";
+    var fscOk   = Model.Supplier?.IsFscActive == true && (Model.Supplier.FscExpiryDate == null || Model.Supplier.FscExpiryDate >= DateTime.Today);
+    var toplamKg = Model.Serials.Sum(s => s.InitialWeight);
+    var kalanKg  = Model.Serials.Sum(s => s.CurrentWeight);
+    var tuketim  = toplamKg > 0 ? (toplamKg - kalanKg) / toplamKg * 100 : 0;
+}
+
+@section TopbarActions {
+    <a href="/Purchase/Index" class="topbar-btn">
+        <i class="fas fa-arrow-left"></i> Geri
+    </a>
+    <button class="topbar-btn btn-primary-custom" onclick="openSerialModal(0)">
+        <i class="fas fa-plus"></i> Bobin Ekle
+    </button>
+}
+
+<div class="row g-4">
+
+    <!-- Sol: Lot bilgi + belgeler -->
+    <div class="col-lg-4">
+
+        <!-- Lot Bilgi Kartı -->
+        <div class="card mb-3">
+            <div class="card-header-accent">
+                <i class="fas fa-box-open"></i> Parti Bilgileri
+            </div>
+            <div class="card-body" style="padding:20px;">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span style="font-size:22px;font-weight:700;color:var(--accent-dark);">@Model.PartiNo</span>
+                    @if (!fscOk)
+                    {
+                        <span class="badge badge-amber"><i class="fas fa-exclamation-triangle me-1"></i>FSC Geçersiz</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-green"><i class="fas fa-check me-1"></i>FSC Geçerli</span>
+                    }
+                </div>
+
+                <div class="row g-2" style="font-size:13px;">
+                    <div class="col-6">
+                        <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;">Tedarikçi</div>
+                        <div class="fw-semibold">@Model.Supplier?.Name</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;">FSC Tipi</div>
+                        <span class="badge badge-green">@Model.FscType?.Name</span>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;">Geliş Tarihi</div>
+                        <div>@Model.ArrivalDate.ToString("dd.MM.yyyy")</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;">Araç Plakası</div>
+                        <div>@(Model.TruckPlate ?? "—")</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;">İrsaliye No</div>
+                        <div>
+                            @if (!string.IsNullOrEmpty(Model.DispatchNo) && !string.IsNullOrEmpty(Model.DispatchPdfPath))
+                            {
+                                <button class="doc-num-btn"
+                                        data-pdf-path="/Document/Serve?key=@Model.DispatchPdfPath"
+                                        data-pdf-title="İrsaliye — @Model.DispatchNo"
+                                        onclick="showPdfFromBtn(this)"
+                                        title="İrsaliyeyi görüntüle">
+                                    <i class="fas fa-file-pdf me-1" style="color:#dc2626;font-size:11px;"></i>@Model.DispatchNo
+                                </button>
+                            }
+                            else { @(Model.DispatchNo ?? "—") }
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;">Fatura No</div>
+                        <div>
+                            @if (!string.IsNullOrEmpty(Model.InvoiceNo) && !string.IsNullOrEmpty(Model.InvoicePdfPath))
+                            {
+                                <button class="doc-num-btn"
+                                        data-pdf-path="/Document/Serve?key=@Model.InvoicePdfPath"
+                                        data-pdf-title="Fatura — @Model.InvoiceNo"
+                                        onclick="showPdfFromBtn(this)"
+                                        title="Faturayı görüntüle">
+                                    <i class="fas fa-file-invoice me-1" style="color:#d97706;font-size:11px;"></i>@Model.InvoiceNo
+                                </button>
+                            }
+                            else { @(Model.InvoiceNo ?? "—") }
+                        </div>
+                    </div>
+                    @if (Model.InvoiceAmount.HasValue)
+                    {
+                        <div class="col-12">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;">Fatura Tutarı</div>
+                            <div class="fw-semibold">@Model.InvoiceAmount.Value.ToString("N2") @Model.Currency</div>
+                        </div>
+                    }
+                    @if (Model.Product != null)
+                    {
+                        <div class="col-12">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;">Hammadde Ürünü</div>
+                            <div>@Model.Product.ProductCode — @Model.Product.ProductName</div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <div class="col-12">
+                            <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;">Not</div>
+                            <div class="fst-italic text-muted">@Model.Notes</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Özet Stat Kartları -->
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:20px;font-weight:700;color:#166534;">@toplamKg.ToString("N1")</div>
+                    <div style="font-size:11px;color:#4b7c5b;">Giriş (kg)</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:20px;font-weight:700;color:#92400e;">@kalanKg.ToString("N1")</div>
+                    <div style="font-size:11px;color:#92400e;">Kalan (kg)</div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;">
+                    <div class="d-flex justify-content-between mb-1" style="font-size:12px;">
+                        <span class="text-muted">Tüketim</span>
+                        <span class="fw-semibold">%@tuketim.ToString("N1")</span>
+                    </div>
+                    <div class="progress" style="height:8px;">
+                        <div class="progress-bar @(tuketim < 50 ? "bg-success" : tuketim < 80 ? "bg-warning" : "bg-danger")"
+                             style="width:@tuketim.ToString("N0")%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Belgeler Kartı -->
+        <div class="card">
+            <div class="card-header-green" style="font-size:13px;">
+                <i class="fas fa-file-pdf"></i> Dijital Belgeler
+            </div>
+            <div class="card-body" style="padding:16px;">
+                <div class="mb-3">
+                    <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">İRSALİYE</div>
+                    @if (!string.IsNullOrEmpty(Model.DispatchPdfPath))
+                    {
+                        <div class="d-flex gap-2">
+                            <button data-pdf-path="/Document/Serve?key=@Model.DispatchPdfPath"
+                                    data-pdf-title="İrsaliye — @Model.DispatchNo"
+                                    onclick="showPdfFromBtn(this)"
+                                    class="btn btn-sm flex-fill"
+                                    style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;">
+                                <i class="fas fa-file-pdf me-1"></i> Görüntüle
+                            </button>
+                            <button onclick="uploadDoc('dispatch')"
+                                    class="btn btn-sm" style="background:#f9fafb;border:1px solid var(--border);border-radius:8px;"
+                                    title="Değiştir"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    }
+                    else
+                    {
+                        <button onclick="uploadDoc('dispatch')" class="btn btn-sm w-100"
+                                style="background:#f9fafb;border:1px dashed #d1d5db;border-radius:8px;color:var(--text-muted);">
+                            <i class="fas fa-upload me-1"></i> İrsaliye Yükle
+                        </button>
+                    }
+                </div>
+                <div>
+                    <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">FATURA</div>
+                    @if (!string.IsNullOrEmpty(Model.InvoicePdfPath))
+                    {
+                        <div class="d-flex gap-2">
+                            <button data-pdf-path="/Document/Serve?key=@Model.InvoicePdfPath"
+                                    data-pdf-title="Fatura — @Model.InvoiceNo"
+                                    onclick="showPdfFromBtn(this)"
+                                    class="btn btn-sm flex-fill"
+                                    style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:8px;">
+                                <i class="fas fa-file-invoice me-1"></i> Görüntüle
+                            </button>
+                            <button onclick="uploadDoc('invoice')"
+                                    class="btn btn-sm" style="background:#f9fafb;border:1px solid var(--border);border-radius:8px;"
+                                    title="Değiştir"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    }
+                    else
+                    {
+                        <button onclick="uploadDoc('invoice')" class="btn btn-sm w-100"
+                                style="background:#f9fafb;border:1px dashed #d1d5db;border-radius:8px;color:var(--text-muted);">
+                            <i class="fas fa-upload me-1"></i> Fatura Yükle
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ: Bobin Listesi -->
+    <div class="col-lg-8">
+        <div class="table-card">
+            <div style="background:linear-gradient(135deg,var(--sidebar-bg),#1a3d0f);color:#fff;padding:14px 18px;
+                        display:flex;align-items:center;justify-content:space-between;border-radius:12px 12px 0 0;">
+                <div class="fw-semibold" style="font-size:14px;">
+                    <i class="fas fa-scroll me-2"></i> Bobinler
+                    <span style="background:rgba(255,255,255,.15);padding:2px 8px;border-radius:20px;font-size:12px;margin-left:6px;">
+                        @Model.Serials.Count adet
+                    </span>
+                </div>
+                <button onclick="openSerialModal(0)"
+                        style="background:var(--accent);border:none;color:#fff;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;">
+                    <i class="fas fa-plus me-1"></i> Bobin Ekle
+                </button>
+            </div>
+
+            @if (!Model.Serials.Any())
+            {
+                <div class="empty-state">
+                    <i class="fas fa-scroll"></i>
+                    <p>Henüz bobin eklenmemiş.<br><strong>Bobin Ekle</strong> butonunu kullanın.</p>
+                </div>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Seri No</th>
+                            <th>Lot No</th>
+                            <th class="text-end">Giriş (kg)</th>
+                            <th class="text-end">Kalan (kg)</th>
+                            <th style="width:120px;">Tüketim</th>
+                            <th class="text-center">Üretim</th>
+                            <th class="text-center">Durum</th>
+                            <th class="text-center">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model.Serials.OrderBy(x => x.SerialNo))
+                        {
+                            var oran  = s.InitialWeight > 0 ? (s.InitialWeight - s.CurrentWeight) / s.InitialWeight * 100 : 0;
+                            var bar   = oran < 50 ? "bg-success" : (oran < 80 ? "bg-warning" : "bg-danger");
+                            var durum = s.CurrentWeight <= 0 ? "Tükendi" : (s.IsOpeningStock ? "Devir" : "Aktif");
+                            var durumCls = durum == "Aktif" ? "badge-green" : (durum == "Devir" ? "badge-blue" : "badge-gray");
+                            <tr>
+                                <td class="fw-semibold">@s.SerialNo</td>
+                                <td class="small text-muted">@(s.LotNo ?? "—")</td>
+                                <td class="text-end">@s.InitialWeight.ToString("N2")</td>
+                                <td class="text-end fw-semibold" style="color:@(s.CurrentWeight > 0 ? "var(--accent-dark)" : "#9ca3af");">
+                                    @s.CurrentWeight.ToString("N2")
+                                </td>
+                                <td>
+                                    <div class="progress" style="height:6px;margin-bottom:2px;">
+                                        <div class="progress-bar @bar" style="width:@oran.ToString("N0")%"></div>
+                                    </div>
+                                    <div style="font-size:10px;color:var(--text-muted);">%@oran.ToString("N0")</div>
+                                </td>
+                                <td class="text-center">
+                                    @if (s.ProductionDetails.Any())
+                                    {
+                                        <span class="badge badge-purple">@s.ProductionDetails.Count kayıt</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:#d1d5db;font-size:12px;">—</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge @durumCls">@durum</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex gap-1 justify-content-center">
+                                        <button onclick="openSerialModal(@s.Id)"
+                                                class="btn btn-sm"
+                                                style="padding:4px 9px;border-radius:6px;background:#f9fafb;border:1px solid var(--border);color:#374151;">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        @if (!s.ProductionDetails.Any())
+                                        {
+                                            <button onclick="deleteSerial(@s.Id,'@s.SerialNo')"
+                                                    class="btn btn-sm"
+                                                    style="padding:4px 9px;border-radius:6px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Bobin Modal -->
+<div class="modal fade" id="serialModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:30px;height:30px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-scroll" style="font-size:12px;color:#fff;"></i>
+                    </div>
+                    <h5 class="modal-title fw-semibold mb-0" id="serialModalTitle">Bobin Ekle</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="serialId">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Seri No <span class="text-muted fw-normal">(boş=otomatik)</span></label>
+                        <input type="text" id="serialNo" class="form-control" placeholder="@Model.PartiNo-B01">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Lot No <span class="text-muted fw-normal">(opsiyonel)</span></label>
+                        <input type="text" id="serialLotNo" class="form-control" placeholder="Bobin lot numarası">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Giriş Ağırlığı (kg) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" id="initialWeight" class="form-control" step="0.01" min="0.01">
+                            <span class="input-group-text">kg</span>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="isOpeningStock">
+                            <label class="form-check-label" for="isOpeningStock" style="font-size:13px;">
+                                Devir stok (önceki dönemden)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Not</label>
+                        <input type="text" id="serialNotes" class="form-control" placeholder="Opsiyonel...">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-success px-4" onclick="saveSerial()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Belge Yükleme Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#166534;color:#fff;">
+                <h5 class="modal-title fw-semibold mb-0" id="uploadModalTitle">
+                    <i class="fas fa-upload me-2"></i>Belge Yükle
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="uploadDocType">
+                <label class="form-label">PDF Dosyası</label>
+                <input type="file" id="uploadFile" class="form-control" accept=".pdf">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-success btn-sm px-3" onclick="doUpload()">
+                    <i class="fas fa-upload me-1"></i> Yükle
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function showPdfFromBtn(btn) {
+    showPdf(btn.dataset.pdfPath, btn.dataset.pdfTitle);
+}
+
+const lotId = @Model.Id;
+
+function openSerialModal(id) {
+    document.getElementById('serialId').value = id;
+    document.getElementById('serialNo').value = '';
+    document.getElementById('serialLotNo').value = '';
+    document.getElementById('initialWeight').value = '';
+    document.getElementById('isOpeningStock').checked = false;
+    document.getElementById('serialNotes').value = '';
+
+    if (id > 0) {
+        document.getElementById('serialModalTitle').textContent = 'Bobin Düzenle';
+        fetch(`/Purchase/GetSerial/${id}`).then(r => r.json()).then(res => {
+            if (!res.success) return;
+            document.getElementById('serialNo').value = res.data.serialNo;
+            document.getElementById('serialLotNo').value = res.data.lotNo || '';
+            document.getElementById('initialWeight').value = res.data.initialWeight;
+            document.getElementById('isOpeningStock').checked = res.data.isOpeningStock;
+            document.getElementById('serialNotes').value = res.data.notes || '';
+        });
+    } else {
+        document.getElementById('serialModalTitle').textContent = 'Yeni Bobin Ekle';
+    }
+    new bootstrap.Modal(document.getElementById('serialModal')).show();
+}
+
+function saveSerial() {
+    const weight = document.getElementById('initialWeight').value;
+    if (!weight || parseFloat(weight) <= 0) {
+        showToast('Giriş ağırlığı zorunludur.', 'warning');
+        return;
+    }
+    const fd = new FormData();
+    fd.append('LotId', lotId);
+    const sid = document.getElementById('serialId').value;
+    if (sid) fd.append('Id', sid);
+    fd.append('SerialNo',       document.getElementById('serialNo').value);
+    fd.append('LotNo',          document.getElementById('serialLotNo').value);
+    fd.append('InitialWeight',  weight);
+    fd.append('IsOpeningStock', document.getElementById('isOpeningStock').checked);
+    fd.append('Notes',          document.getElementById('serialNotes').value);
+
+    fetch('/Purchase/SaveSerial', { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('serialModal'))?.hide();
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 800);
+            } else showToast(res.message, 'error');
+        });
+}
+
+function deleteSerial(id, no) {
+    Swal.fire({
+        title: 'Bobin silinsin mi?', text: `${no} geri alınamaz.`,
+        icon: 'warning', showCancelButton: true,
+        confirmButtonText: 'Sil', cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#dc2626', cancelButtonColor: '#6b7280',
+        borderRadius: '12px'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        const fd = new FormData(); fd.append('id', id);
+        fetch('/Purchase/DeleteSerial', { method: 'POST', body: fd })
+            .then(r => r.json()).then(res => {
+                if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 800); }
+                else showToast(res.message, 'error');
+            });
+    });
+}
+
+function uploadDoc(type) {
+    document.getElementById('uploadDocType').value = type;
+    document.getElementById('uploadModalTitle').innerHTML =
+        `<i class="fas fa-upload me-2"></i>${type === 'dispatch' ? 'İrsaliye' : 'Fatura'} Yükle`;
+    document.getElementById('uploadFile').value = '';
+    new bootstrap.Modal(document.getElementById('uploadModal')).show();
+}
+
+function doUpload() {
+    const file = document.getElementById('uploadFile').files[0];
+    if (!file) { showToast('Lütfen bir dosya seçin.', 'warning'); return; }
+    const fd = new FormData();
+    fd.append('lotId',   lotId);
+    fd.append('docType', document.getElementById('uploadDocType').value);
+    fd.append('file',    file);
+    fetch('/Purchase/UploadDocument', { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('uploadModal'))?.hide();
+                showToast('Belge yüklendi.', 'success');
+                setTimeout(() => location.reload(), 800);
+            } else showToast(res.message, 'error');
+        });
+}
+</script>
+}

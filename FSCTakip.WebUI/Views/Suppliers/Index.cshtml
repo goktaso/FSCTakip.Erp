@@ -1,222 +1,549 @@
 @model IEnumerable<FSCTakip.Core.Entities.Supplier>
 @{
-    ViewData["Title"] = "Tedarikçi Yönetimi";
+    ViewData["Title"] = "Tedarikçiler";
+    var total    = Model?.Count() ?? 0;
+    var active   = Model?.Count(s => s.IsActive) ?? 0;
+    var fscOk    = Model?.Count(s => s.IsFscActive && s.FscExpiryDate.HasValue && s.FscExpiryDate.Value > DateTime.Today) ?? 0;
+    var expiring = Model?.Count(s => s.FscExpiryDate.HasValue && s.FscExpiryDate.Value <= DateTime.Today.AddDays(90) && s.FscExpiryDate.Value > DateTime.Today) ?? 0;
 }
 
-@* --- ÜST PANEL --- *@
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-truck mr-2 text-primary"></i>Tedarikçi Listesi</h5>
-    <div>
-        <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
-            <i class="fas fa-filter"></i> Filtrele
-        </button>
-        <button class="btn btn-sm btn-outline-success" onclick="location.href='@Url.Action("ExportSuppliers", "Suppliers")'">
-            <i class="fas fa-file-excel"></i> Excel
-        </button>
-        <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
-            <i class="fas fa-print"></i> Yazdır
-        </button>
-        <button class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
-            <i class="fas fa-plus"></i> Yeni Tedarikçi Ekle
-        </button>
+@section TopbarPrimary {
+    <button class="btn-topbar-add" onclick="openAddModal()">
+        <span class="btn-add-icon"><i class="fas fa-plus"></i></span>
+        Yeni Tedarikçi
+    </button>
+}
+@section TopbarActions {
+    <button class="topbar-btn btn-filter" onclick="$('#filterPanel').slideToggle()">
+        <i class="fas fa-filter"></i> Filtrele
+    </button>
+    <button class="topbar-btn" onclick="openFscImportModal()"
+            style="color:#92400e;border-color:#fde68a;background:#fffbeb;"
+            title="FSC kodlarını Excel ile toplu güncelle">
+        <i class="fas fa-certificate"></i> FSC Yükle
+    </button>
+    <button class="topbar-btn btn-excel" onclick="location.href='/Suppliers/ExportSuppliers'">
+        <i class="fas fa-file-excel"></i> Excel
+    </button>
+}
+
+<!-- Stat Kartları -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-truck"></i></div>
+            <div>
+                <div class="stat-value" id="cardTotal">@total</div>
+                <div class="stat-label">Toplam Tedarikçi</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div class="stat-value" id="cardActive">@active</div>
+                <div class="stat-label">Aktif Tedarikçi</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon @(fscOk > 0 ? "green" : "red")"><i class="fas fa-certificate"></i></div>
+            <div>
+                <div class="stat-value" id="cardFscOk">@fscOk</div>
+                <div class="stat-label">FSC Sertifikalı</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon @(expiring > 0 ? "amber" : "green")"><i class="fas fa-exclamation-triangle"></i></div>
+            <div>
+                <div class="stat-value" id="cardExpiring">@expiring</div>
+                <div class="stat-label">90 Günde Bitiyor</div>
+                @if (expiring > 0)
+                {
+                    <div style="font-size:10px;color:#f59e0b;">⚠ FSC uyarısı var</div>
+                }
+            </div>
+        </div>
     </div>
 </div>
 
-@* --- FİLTRELEME PANELİ --- *@
-<div id="filterPanel" class="card mb-3 shadow-sm border-left-primary" style="display:none;">
-    <div class="card-body py-3">
-        <div class="row align-items-end">
-            <div class="col-md-9">
-                <label class="small font-weight-bold text-uppercase">Tedarikçi Ara</label>
-                <input type="text" id="supplierSearch" class="form-control form-control-sm" placeholder="İsim, Kod veya FSC No ile arayın...">
-            </div>
-            <div class="col-md-3">
-                <button class="btn btn-primary btn-sm btn-block" onclick="filterSuppliers()">
-                    <i class="fas fa-search mr-1"></i> Sorgula
+<!-- Filtre Paneli -->
+<div id="filterPanel" class="filter-panel mb-3" style="display:none;">
+    <div class="d-flex align-items-end gap-2 flex-wrap">
+        <div style="display:flex;flex-direction:column;min-width:260px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">TEDARİKÇİ ARA</label>
+            <input type="text" id="supplierSearch" class="form-control form-control-sm"
+                   placeholder="İsim, kod veya FSC no ile arayın..." oninput="filterSuppliers()">
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:160px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">FSC DURUMU</label>
+            <div class="mcd" id="mcd-supp-fsc" data-placeholder="— Tümü —">
+                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-supp-fsc')">
+                    <span class="mcd-lbl" id="mcd-supp-fsc-lbl">— Tümü —</span>
+                    <i class="fas fa-angle-down mcd-arrow"></i>
                 </button>
+                <div class="mcd-panel" id="mcd-supp-fsc-panel" style="display:none;">
+                    <div class="mcd-items">
+                        <label class="mcd-row"><input type="radio" name="_suppFscFilter" value="" class="mcd-rb" onchange="setSuppFscFilter('')" checked><span class="mcd-name">— Tümü —</span></label>
+                        <label class="mcd-row"><input type="radio" name="_suppFscFilter" value="active" class="mcd-rb" onchange="setSuppFscFilter('active')"><span class="mcd-name">FSC Aktif</span></label>
+                        <label class="mcd-row"><input type="radio" name="_suppFscFilter" value="expiring" class="mcd-rb" onchange="setSuppFscFilter('expiring')"><span class="mcd-name">Yakında Bitiyor</span></label>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-
-@* --- TABLO ALANI --- *@
-<div class="card shadow-sm border-0">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="suppliersTable">
-                <thead class="bg-light text-dark text-uppercase small font-weight-bold">
-                    <tr>
-                        <th>Tedarikçi Adı</th>
-                        <th>Kod</th>
-                        <th>İletişim (Yetkili / Tel / Mail)</th> @* Başlık güncellendi *@
-                        <th>FSC No / Geçerlilik</th>
-                        <th class="text-center">Durum</th>
-                        <th class="text-right" style="width: 130px;">İşlemler</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model)
-                    {
-                        <tr>
-                            <td><strong class="text-primary text-uppercase">@item.Name</strong></td>
-                            <td><small class="badge badge-light border">@item.SupplierCode</small></td>
-                            <td>
-                                <small class="font-weight-bold">@item.ContactPerson</small><br />
-                                <small class="text-muted">@item.Phone</small><br />
-                                @* Mail adresi eklendi ve küçük harf zorunluluğu getirildi *@
-                                <small class="text-info" style="text-transform: lowercase !important;">@(item.Email ?? "-")</small>
-                            </td>
-                            <td>
-                                <span class="badge badge-info">@item.FscCode</span> <br />
-                                <small class="text-muted">@item.FscExpiryDate?.ToString("dd.MM.yyyy")</small>
-                            </td>
-                            <td class="text-center">
-                                <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="status_@item.Id"
-                                           @(item.IsActive ? "checked" : "") onchange="toggleSupplierStatus(@item.Id)">
-                                    <label class="custom-control-label" for="status_@item.Id">
-                                        <span id="badge_@item.Id" class="badge @(item.IsActive ? "badge-success" : "badge-secondary")">
-                                            @(item.IsActive ? "Aktif" : "Pasif")
-                                        </span>
-                                    </label>
-                                </div>
-                            </td>
-                            <td class="text-right">
-                                <button class="btn btn-sm btn-outline-primary mr-1" onclick="editSupplier(@item.Id)">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteSupplier(@item.Id)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div style="align-self:flex-end;">
+            <button class="btn btn-outline-secondary btn-sm" onclick="clearFilter()">
+                <i class="fas fa-times me-1"></i> Temizle
+            </button>
         </div>
     </div>
 </div>
 
-@* --- MODAL --- *@
-<div class="modal fade" id="supplierModal" tabindex="-1" role="dialog" aria-hidden="true">
+<!-- Tablo -->
+<div class="table-card">
+    <table class="data-table" id="suppliersTable">
+        <thead>
+            <tr>
+                <th>TEDARİKÇİ ADI</th>
+                <th>KOD</th>
+                <th>İLETİŞİM</th>
+                <th>VERGİ</th>
+                <th>FSC SERTİFİKA</th>
+                <th class="text-center">DURUM</th>
+                <th class="text-center">İŞLEM</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model == null || !Model.Any())
+            {
+                <tr><td colspan="7">
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="fas fa-truck"></i></div>
+                        <h6>Henüz tedarikçi kaydı yok</h6>
+                        <p><strong>+ Yeni Tedarikçi</strong> butonu ile ilk tedarikçinizi ekleyin.</p>
+                    </div>
+                </td></tr>
+            }
+            @foreach (var item in Model ?? Enumerable.Empty<FSCTakip.Core.Entities.Supplier>())
+            {
+                var fscDays  = item.FscExpiryDate.HasValue ? (int)(item.FscExpiryDate.Value - DateTime.Today).TotalDays : (int?)null;
+                var fscClass = !item.IsFscActive ? "fsc-badge none"
+                             : item.IsFscActive && fscDays.HasValue && fscDays.Value > 30 ? "fsc-badge active"
+                             : fscDays.HasValue && fscDays.Value <= 0 ? "fsc-badge expired"
+                             : "fsc-badge warning";
+                <tr>
+                    <td>
+                        <div class="fw-semibold" style="font-size:13px;color:#1d4ed8;">@item.Name</div>
+                        @if (!string.IsNullOrEmpty(item.ContactPerson))
+                        {
+                            <div class="text-muted" style="font-size:11px;">
+                                <i class="fas fa-user me-1"></i>@item.ContactPerson
+                            </div>
+                        }
+                    </td>
+                    <td>
+                        <span class="badge badge-gray" style="font-size:11px;letter-spacing:.03em;">@item.SupplierCode</span>
+                        @if (!string.IsNullOrEmpty(item.ExternalCode))
+                        {
+                            <div class="text-muted" style="font-size:10px;margin-top:2px;" title="Harici ERP Kodu">
+                                <i class="fas fa-link me-1"></i>@item.ExternalCode
+                            </div>
+                        }
+                    </td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(item.Phone))
+                        {
+                            <div style="font-size:12px;"><i class="fas fa-phone me-1 text-muted"></i>@item.Phone</div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.Email))
+                        {
+                            <div style="font-size:11px;color:#1d4ed8;text-transform:lowercase;">
+                                <i class="fas fa-envelope me-1 text-muted"></i>@item.Email
+                            </div>
+                        }
+                    </td>
+                    <td>
+                        <div style="font-size:12px;font-weight:500;">@(item.TaxOffice ?? "—")</div>
+                        <div class="text-muted" style="font-size:11px;">@(item.TaxNumber ?? "—")</div>
+                    </td>
+                    <td>
+                        @if (!item.IsFscActive)
+                        {
+                            <span class="fsc-badge none"><i class="fas fa-times-circle"></i> FSC Yok</span>
+                        }
+                        else if (!string.IsNullOrEmpty(item.FscCode))
+                        {
+                            <span class="@fscClass">
+                                <i class="fas fa-certificate"></i> @item.FscCode
+                            </span>
+                            <div class="text-muted" style="font-size:11px;margin-top:3px;">
+                                @if (fscDays.HasValue)
+                                {
+                                    @(fscDays.Value <= 0 ? "⚠ Süresi geçti" : fscDays.Value <= 30 ? $"⚠ {fscDays.Value} gün kaldı" : $"✓ {item.FscExpiryDate!.Value:dd.MM.yyyy}")
+                                }
+                            </div>
+                        }
+                        else { <span class="fsc-badge warning"><i class="fas fa-exclamation-circle"></i> Kod eksik</span> }
+                    </td>
+                    <td class="text-center">
+                        <span class="badge @(item.IsActive ? "badge-green" : "badge-gray")" id="badge_@item.Id">
+                            @(item.IsActive ? "Aktif" : "Pasif")
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex gap-1 justify-content-center">
+                            <button class="btn btn-sm" title="Düzenle" onclick="editSupplier(@item.Id)"
+                                    style="padding:4px 10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button class="btn btn-sm" title="@(item.IsActive ? "Pasife Al" : "Aktife Al")"
+                                    onclick="toggleSupplierStatus(@item.Id)"
+                                    style="padding:4px 10px;background:#f9fafb;color:#374151;border:1px solid #e5e7eb;border-radius:6px;">
+                                <i class="fas fa-power-off"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Tedarikçi Modal -->
+<div class="modal fade" id="supplierModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-secondary text-white">
-                <h6 class="modal-title font-weight-bold"><i class="fas fa-truck mr-2"></i>Tedarikçi Formu</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-truck" style="color:#93c5fd;font-size:15px;"></i>
+                    <h5 class="modal-title fw-semibold mb-0 fs-6" id="supplierModalTitle">Tedarikçi Formu</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form asp-controller="Suppliers" asp-action="Save" method="post">
+            <form asp-controller="Suppliers" asp-action="Save" method="post" id="supplierForm">
                 <div class="modal-body">
                     <input type="hidden" name="Id" id="suppId" value="0" />
-                    <div class="row">
-                        <div class="col-md-8 form-group">
-                            <label class="small font-weight-bold text-uppercase">Tedarikçi Ünvanı <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control text-uppercase" name="Name" id="suppName" required>
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Tedarikçi Ünvanı <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="Name" id="suppName" required
+                                   style="text-transform:uppercase;" placeholder="Büyük harf ile girilir">
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label class="small font-weight-bold text-uppercase">Tedarikçi Kodu</label>
-                            <input type="text" class="form-control" name="SupplierCode" id="suppCode" readonly placeholder="Otomatik">
+                        <div class="col-md-2">
+                            <label class="form-label">Dahili Kod</label>
+                            <input type="text" class="form-control" name="SupplierCode" id="suppCode"
+                                   readonly style="background:#f8fafc;color:#6b7280;" placeholder="Otomatik">
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold text-uppercase">Yetkili Kişi <span class="text-danger">*</span></label>
+                        <div class="col-md-2">
+                            <label class="form-label" title="Netsis / ERP kayıt kodu (CARI_KOD)">Harici Kod <i class="fas fa-info-circle text-muted" style="font-size:10px;"></i></label>
+                            <input type="text" class="form-control" name="ExternalCode" id="suppExtCode"
+                                   placeholder="Örn: S-00078" style="text-transform:uppercase;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Yetkili Kişi <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="ContactPerson" id="suppContact" required>
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold text-uppercase">Telefon <span class="text-danger">*</span></label>
-                            <input type="tel" class="form-control" name="Phone" id="suppPhone" placeholder="Sadece Rakam" required>
+                        <div class="col-md-6">
+                            <label class="form-label">Telefon <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="Phone" id="suppPhone" required placeholder="5xxxxxxxxx">
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="small font-weight-bold text-uppercase">E-Posta</label>
-                        @* style="text-transform: lowercase;" ile görsel kontrol sağlandı *@
-                        <input type="text" class="form-control" name="Email" id="suppEmail" placeholder="orn@mail.com" style="text-transform: lowercase;">
-                    </div>
-                    <div class="row bg-light p-2 mt-2 border-radius">
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold text-uppercase">FSC Sertifika No</label>
-                            <input type="text" class="form-control" name="FscCode" id="suppFsc">
+                        <div class="col-md-6">
+                            <label class="form-label">E-Posta</label>
+                            <input type="text" class="form-control" name="Email" id="suppEmail"
+                                   placeholder="ornek@firma.com" style="text-transform:lowercase;">
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="small font-weight-bold text-uppercase">Sertifika Bitiş Tarihi</label>
-                            <input type="date" class="form-control" name="FscExpiryDate" id="suppDate">
+                        <div class="col-md-6">
+                            <label class="form-label">Şehir</label>
+                            <input type="text" class="form-control" name="City" id="suppCity">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Adres</label>
+                            <input type="text" class="form-control" name="Address" id="suppAddress">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label">Vergi Dairesi</label>
+                                    <input type="text" class="form-control" name="TaxOffice" id="suppTaxOffice">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Vergi No</label>
+                                    <input type="text" class="form-control" name="TaxNumber" id="suppTaxNumber" maxlength="11">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- FSC Bölümü -->
+                        <div class="col-12">
+                            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;">
+                                <div class="d-flex align-items-center gap-2 mb-3">
+                                    <i class="fas fa-certificate text-success"></i>
+                                    <span class="fw-semibold" style="font-size:13px;color:#166534;">FSC Sertifika Bilgileri</span>
+                                </div>
+                                <div class="mb-2">
+                                    <input type="hidden" name="IsFscActive" value="false">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="IsFscActive" value="true"
+                                               id="suppIsFsc" onchange="toggleSuppFscFields(this.checked)">
+                                        <label class="form-check-label fw-semibold" for="suppIsFsc" style="font-size:13px;color:#166534;">
+                                            FSC Belgeli Tedarikçi
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="row g-2" id="suppFscFields" style="display:none;">
+                                    <div class="col-md-6">
+                                        <label class="form-label">FSC Sertifika No</label>
+                                        <input type="text" class="form-control" name="FscCode" id="suppFsc"
+                                               placeholder="FSC-C123456">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Sertifika Bitiş Tarihi</label>
+                                        <input type="date" class="form-control" name="FscExpiryDate" id="suppDate">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-light p-2">
-                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
-                    <button type="submit" class="btn btn-secondary btn-sm px-4 text-white">Kaydet</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4" id="supplierSaveBtn" onclick="saveSupplier()">
+                        <i class="fas fa-save me-1"></i> Kaydet
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- FSC Toplu Güncelleme Modal -->
+<div class="modal fade" id="fscImportModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#92400e;color:#fff;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-certificate" style="font-size:15px;"></i>
+                    <h5 class="modal-title fw-semibold mb-0 fs-6">FSC Kodu Toplu Güncelleme</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) opacity(.7);"></button>
+            </div>
+            <div class="modal-body">
+                <div class="info-card warning mb-3">
+                    <i class="fas fa-info-circle" style="color:#d97706;"></i>
+                    <div style="font-size:12.5px;">
+                        <ol class="mb-0 ps-3">
+                            <li><strong>FSC Şablonu İndir</strong> butonu ile şablonu indirin.</li>
+                            <li>Sarı alanlara <strong>FscKodu</strong> ve <strong>FscBitisTarihi</strong> girin.</li>
+                            <li>Dosyayı kaydedin ve aşağıdan yükleyin.</li>
+                        </ol>
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label">Excel Dosyası (.xlsx)</label>
+                    <input type="file" id="fscFile" class="form-control form-control-sm" accept=".xlsx,.xls">
+                    <div class="text-muted mt-1" style="font-size:11.5px;">
+                        <i class="fas fa-info-circle me-1"></i>Yalnızca FSC_Kodlari şablonu kabul edilir.
+                    </div>
+                </div>
+                <div id="fscImportResult" style="display:none;" class="mt-3"></div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <a href="/Suppliers/ExportFscTemplate" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-download me-1"></i> Şablonu İndir
+                </a>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
+                    <button type="button" id="fscUploadBtn" class="btn btn-sm px-4"
+                            style="background:#92400e;color:#fff;" onclick="uploadFscCodes()">
+                        <i class="fas fa-upload me-1"></i> Yükle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
-    <script>
-        $(document).ready(function () {
-            // E-posta: Türkçe karakter düzeltme ve otomatik küçültme [cite: 2026-03-04]
-            $('#suppEmail').on('input blur', function () {
-                let val = $(this).val()
-                    .replace(/İ/g, 'i')
-                    .replace(/I/g, 'ı')
-                    .replace(/\s/g, '') // Boşlukları siler
-                    .toLowerCase();
-                $(this).val(val);
-            });
+<script>
+    var _suppFscVal = '';
 
-            // Telefon: Sadece rakama izin ver (Maks 11 hane)
-            $('#suppPhone').on('input', function () {
-                this.value = this.value.replace(/\D/g, '').slice(0, 11);
-            });
+    function setSuppFscFilter(val) {
+        _suppFscVal = val;
+        var labels = { '': '— Tümü —', 'active': 'FSC Aktif', 'expiring': 'Yakında Bitiyor' };
+        var lbl = document.getElementById('mcd-supp-fsc-lbl');
+        if (lbl) lbl.textContent = labels[val] || '— Tümü —';
+        document.querySelectorAll('#mcd-supp-fsc-panel .mcd-rb').forEach(function(rb) { rb.checked = rb.value === val; });
+        document.querySelectorAll('.mcd-panel').forEach(function(p) { p.style.display = 'none'; });
+        filterSuppliers();
+    }
+
+    function toggleSuppFscFields(checked) {
+        document.getElementById('suppFscFields').style.display = checked ? '' : 'none';
+        if (!checked) {
+            document.getElementById('suppFsc').value = '';
+            document.getElementById('suppDate').value = '';
+        }
+    }
+
+    function filterSuppliers() {
+        var search = (document.getElementById('supplierSearch').value || '').toLowerCase();
+        var fscVal = _suppFscVal;
+        var total=0, active=0, fscOk=0, expiring=0;
+        document.querySelectorAll('#suppliersTable tbody tr').forEach(function(tr) {
+            var text    = tr.textContent.toLowerCase();
+            var badge   = tr.querySelector('.fsc-badge');
+            var statusBadge = tr.querySelector('.badge.badge-green, .badge.badge-gray');
+            var fscMatch = fscVal === '' ? true
+                : fscVal === 'active'   ? (badge && badge.classList.contains('active'))
+                : (badge && badge.classList.contains('warning'));
+            var show = (text.includes(search) && fscMatch);
+            tr.style.display = show ? '' : 'none';
+            if (show) {
+                total++;
+                if (statusBadge && statusBadge.textContent.trim() === 'Aktif') active++;
+                if (badge && badge.classList.contains('active')) fscOk++;
+                if (badge && badge.classList.contains('warning')) expiring++;
+            }
         });
+        var g = function(id) { return document.getElementById(id); };
+        if (g('cardTotal'))    g('cardTotal').textContent    = total;
+        if (g('cardActive'))   g('cardActive').textContent   = active;
+        if (g('cardFscOk'))    g('cardFscOk').textContent    = fscOk;
+        if (g('cardExpiring')) g('cardExpiring').textContent = expiring;
+    }
 
-        function filterSuppliers() {
-            var value = $("#supplierSearch").val().toLowerCase();
-            $("#suppliersTable tbody tr").filter(function () {
-                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
-            });
+    $(document).on('init.dt', '#suppliersTable', function() {
+        var si = document.getElementById('globalSearch');
+        var sd = document.getElementById('searchDropdown');
+        if (!si) return;
+        if (sd) sd.classList.remove('show');
+        si.addEventListener('input', function(e) {
+            if (sd) sd.classList.remove('show');
+            var supplierSearch = document.getElementById('supplierSearch');
+            if (supplierSearch) { supplierSearch.value = this.value; }
+            filterSuppliers();
+            e.stopPropagation();
+        }, true);
+    });
+
+    function clearFilter() {
+        document.getElementById('supplierSearch').value = '';
+        setSuppFscFilter('');
+    }
+
+    async function saveSupplier() {
+        const btn = document.getElementById('supplierSaveBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Kaydediliyor...';
+        const fd = new FormData(document.getElementById('supplierForm'));
+        try {
+            const res  = await fetch('/Suppliers/Save', { method: 'POST', body: fd });
+            const json = await res.json();
+            if (json.success) {
+                bootstrap.Modal.getInstance(document.getElementById('supplierModal'))?.hide();
+                showToast(json.message || 'Kaydedildi.', 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(json.message || 'Kayıt başarısız.', 'danger');
+            }
+        } catch (e) {
+            showToast('Sunucu hatası: ' + e.message, 'danger');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save me-1"></i> Kaydet';
         }
+    }
 
-        function openAddModal() {
-            $('#suppId').val(0);
-            $('#suppName').val('');
-            $('#suppCode').val('');
-            $('#suppContact').val('');
-            $('#suppPhone').val('');
-            $('#suppEmail').val('');
-            $('#suppFsc').val('');
-            $('#suppDate').val('');
-            $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Tedarikçi Ekle');
-            $('#supplierModal').modal('show');
-        }
+    function openAddModal() {
+        document.getElementById('supplierForm').reset();
+        document.getElementById('suppId').value = 0;
+        document.getElementById('supplierModalTitle').textContent = 'Yeni Tedarikçi Ekle';
+        document.getElementById('suppIsFsc').checked = false;
+        toggleSuppFscFields(false);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('supplierModal')).show();
+    }
 
-        function editSupplier(id) {
-            $.get('/Suppliers/GetSupplier/' + id, function (res) {
-                if (res.success) {
-                    $('#suppId').val(res.data.id);
-                    $('#suppName').val(res.data.name);
-                    $('#suppCode').val(res.data.supplierCode);
-                    $('#suppContact').val(res.data.contactPerson);
-                    $('#suppPhone').val(res.data.phone);
-                    $('#suppEmail').val(res.data.email);
-                    $('#suppFsc').val(res.data.fscCode);
-                    if (res.data.fscExpiryDate) $('#suppDate').val(res.data.fscExpiryDate.split('T')[0]);
-                    $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Tedarikçi Düzenle');
-                    $('#supplierModal').modal('show');
+    function editSupplier(id) {
+        $.get('/Suppliers/GetSupplier/' + id, function (res) {
+            if (res.success) {
+                document.getElementById('suppId').value      = res.data.id;
+                document.getElementById('suppName').value    = res.data.name;
+                document.getElementById('suppCode').value    = res.data.supplierCode;
+                document.getElementById('suppContact').value = res.data.contactPerson || '';
+                document.getElementById('suppPhone').value   = res.data.phone || '';
+                document.getElementById('suppEmail').value   = res.data.email || '';
+                document.getElementById('suppAddress').value = res.data.address || '';
+                document.getElementById('suppCity').value    = res.data.city || '';
+                document.getElementById('suppTaxOffice').value = res.data.taxOffice || '';
+                document.getElementById('suppTaxNumber').value = res.data.taxNumber || '';
+                const isFsc = !!res.data.isFscActive;
+                document.getElementById('suppIsFsc').checked = isFsc;
+                toggleSuppFscFields(isFsc);
+                document.getElementById('suppFsc').value     = res.data.fscCode || '';
+                if (res.data.fscExpiryDate)
+                    document.getElementById('suppDate').value = res.data.fscExpiryDate.split('T')[0];
+                document.getElementById('suppExtCode').value  = res.data.externalCode || '';
+                document.getElementById('supplierModalTitle').textContent = 'Tedarikçi Düzenle';
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('supplierModal')).show();
+            }
+        });
+    }
+
+    function toggleSupplierStatus(id) {
+        $.post('/Suppliers/ToggleStatus', { id: id }, function (res) {
+            if (res.success) {
+                const badge = document.getElementById('badge_' + id);
+                if (badge) {
+                    badge.className = 'badge ' + (res.isActive ? 'badge-green' : 'badge-gray');
+                    badge.textContent = res.isActive ? 'Aktif' : 'Pasif';
                 }
-            });
-        }
+            }
+        });
+    }
 
-        function toggleSupplierStatus(id) {
-            $.post('/Suppliers/ToggleStatus', { id: id }, function (res) {
-                if (res.success) {
-                    const badge = $(`#badge_${id}`);
-                    res.isActive ? badge.removeClass('badge-secondary').addClass('badge-success').text('Aktif')
-                                 : badge.removeClass('badge-success').addClass('badge-secondary').text('Pasif');
-                }
+    function openFscImportModal() {
+        document.getElementById('fscFile').value = '';
+        document.getElementById('fscImportResult').style.display = 'none';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('fscImportModal')).show();
+    }
+
+    function uploadFscCodes() {
+        const file = document.getElementById('fscFile').files[0];
+        if (!file) { showToast('Lütfen bir Excel dosyası seçin.', 'warning'); return; }
+        const btn = document.getElementById('fscUploadBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Yükleniyor...';
+        const fd = new FormData();
+        fd.append('file', file);
+        fetch('/Suppliers/ImportFscCodes', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(res => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-upload me-1"></i> Yükle';
+                const box = document.getElementById('fscImportResult');
+                box.style.display = '';
+                box.className = res.success ? 'info-card success' : 'info-card danger';
+                box.innerHTML = `<i class="fas fa-${res.success ? 'check-circle' : 'times-circle'}"></i>
+                    <div style="font-size:12.5px;"><strong>${res.message}</strong>` +
+                    (res.errors?.length ? '<ul class="mb-0 mt-1 ps-3">' + res.errors.map(e => `<li>${e}</li>`).join('') + '</ul>' : '') +
+                    '</div>';
+                if (res.success) setTimeout(() => location.reload(), 2000);
+            })
+            .catch(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-upload me-1"></i> Yükle';
+                showToast('Bağlantı hatası.', 'error');
             });
-        }
-    </script>
+    }
+
+    document.getElementById('suppEmail')?.addEventListener('blur', function() {
+        this.value = this.value.replace(/İ/g,'i').replace(/I/g,'ı').replace(/\s/g,'').toLowerCase();
+    });
+    document.getElementById('suppPhone')?.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g,'').slice(0,11);
+    });
+</script>
 }

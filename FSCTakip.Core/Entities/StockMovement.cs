@@ -5,10 +5,11 @@ namespace FSCTakip.Core.Entities
     // Hareketin ne olduğunu belirleyen sabit liste
     public enum MovementType
     {
-        ProductionEntry = 1,   // Üretimden depoya giriş (Mamul)
+        ProductionEntry = 1,   // Üretimden depoya giriş (Mamul / yarı mamül)
         WarehouseTransfer = 2,  // Depolar arası mal kaydırma
         SalesDispatch = 3,      // Müşteriye sevkiyat (İrsaliye/Fatura)
-        PurchaseEntry = 4       // Tedarikçiden hammadde girişi
+        PurchaseEntry = 4,      // Tedarikçiden hammadde girişi
+        ProductionConsumption = 5  // Üretim/dönüşümde hammadde-yarı mamül tüketimi (çıkış)
     }
 
     public class StockMovement : BaseEntity
@@ -18,7 +19,7 @@ namespace FSCTakip.Core.Entities
 
         // --- ERP SİSTEMİ İLE EŞLEŞME (ENTEGRASYON) ---
         // Gerçek ERP'deki benzersiz ID ve Evrak No
-        public int ErpReferenceId { get; set; }
+        public int? ErpReferenceId { get; set; }
         public string DocumentNo { get; set; }
         public DateTime DocumentDate { get; set; }
 
@@ -26,8 +27,9 @@ namespace FSCTakip.Core.Entities
         public int ProductId { get; set; }
         public virtual Product Product { get; set; }
 
-        public decimal Quantity { get; set; }
-        public string Unit { get; set; } // Adet, Kg, Ton vb.
+        public decimal Quantity   { get; set; }          // Orijinal birim cinsinden miktar (MT, ADET vb.)
+        public string  Unit      { get; set; }           // Orijinal birim
+        public decimal? QuantityKg { get; set; }         // KG karsiligi (birim KG ise null, dönüsüm varsa dolu)
 
         // --- DEPO YÖNETİMİ ---
         public int? FromWarehouseId { get; set; } // Çıkış yapılan depo
@@ -38,14 +40,14 @@ namespace FSCTakip.Core.Entities
         public int? CustomerId { get; set; }
         public virtual Customer Customer { get; set; }
 
-        public string PlateNumber { get; set; }   // Araç Plakası
-        public string DeliveryAddress { get; set; } // Teslim Adresi
+        public string? PlateNumber { get; set; }   // Araç Plakası
+        public string? DeliveryAddress { get; set; } // Teslim Adresi
 
         // --- İZLENEBİLİRLİK (FSC İÇİN) ---
         // Bu hareket hangi iş emrinden kaynaklandı?
         public int? WorkOrderId { get; set; }
         public virtual WorkOrder WorkOrder { get; set; }
 
-        public string Description { get; set; } // "Acil sevkiyat", "Numune" vb. notlar
+        public string? Description { get; set; } // "Acil sevkiyat", "Numune" vb. notlar
     }
 }

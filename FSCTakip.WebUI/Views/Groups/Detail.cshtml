@@ -1,0 +1,221 @@
+@model FSCTakip.Core.Entities.PermissionGroup
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = $"Grup Yetkileri — {Model.Name}";
+    var allModules = ViewBag.AllModules as List<PermissionModule> ?? new();
+}
+
+@section TopbarPrimary {
+    <button class="btn btn-primary btn-sm px-3" onclick="savePermissions()">
+        <i class="fas fa-save me-1"></i> Yetkileri Kaydet
+    </button>
+}
+@section TopbarActions {
+    <a href="/Groups" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Gruplar
+    </a>
+}
+
+<div class="topbar-area mb-3">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fw-semibold" style="color:var(--text);font-size:14px;">
+            <i class="fas fa-shield-alt me-2 text-primary"></i>@Model.Name
+        </span>
+        @if (!Model.IsActive)
+        {
+            <span class="badge bg-warning text-dark">Pasif</span>
+        }
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Sol: Modül Yetki Matrisi -->
+    <div class="col-lg-8">
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fas fa-table text-primary"></i>
+                <strong style="font-size:14px;">Modül Yetki Matrisi</strong>
+                <small class="text-muted ms-2">(grup düzeyinde — kullanıcıya bireysel override eklenebilir)</small>
+            </div>
+            <div class="">
+                <table class="table table-sm table-bordered mb-0">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th style="width:40%">Modül</th>
+                            <th class="text-center">
+                                <i class="fas fa-eye text-primary" title="Okuma"></i> Oku
+                            </th>
+                            <th class="text-center">
+                                <i class="fas fa-pen text-success" title="Yazma"></i> Yaz
+                            </th>
+                            <th class="text-center">
+                                <i class="fas fa-trash text-danger" title="Silme"></i> Sil
+                            </th>
+                            <th class="text-center">
+                                <button class="btn btn-xs btn-outline-secondary py-0 px-1 small" onclick="selectAll(true)" title="Tümünü işaretle">
+                                    <i class="fas fa-check-square"></i> Tümü
+                                </button>
+                                <button class="btn btn-xs btn-outline-secondary py-0 px-1 small ms-1" onclick="selectAll(false)" title="Tümünü kaldır">
+                                    <i class="fas fa-square"></i> Kaldır
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="permTable">
+                        @foreach (var m in allModules)
+                        {
+                            var perm = Model.Permissions.FirstOrDefault(p => p.ModuleId == m.Id);
+                            var r = perm?.CanRead ?? false;
+                            var w = perm?.CanWrite ?? false;
+                            var d = perm?.CanDelete ?? false;
+                            <tr data-module-id="@m.Id">
+                                <td>
+                                    <i class="@m.IconClass me-1 text-secondary"></i>
+                                    <span class="fw-semibold">@m.DisplayName</span>
+                                    @if (!string.IsNullOrEmpty(m.Description))
+                                    {
+                                        <small class="text-muted d-block">@m.Description</small>
+                                    }
+                                </td>
+                                <td class="text-center align-middle">
+                                    <input type="checkbox" class="form-check-input cb-read" @(r ? "checked" : "")
+                                           onchange="syncRow(this)" />
+                                </td>
+                                <td class="text-center align-middle">
+                                    <input type="checkbox" class="form-check-input cb-write" @(w ? "checked" : "")
+                                           onchange="syncRow(this)" />
+                                </td>
+                                <td class="text-center align-middle">
+                                    <input type="checkbox" class="form-check-input cb-delete" @(d ? "checked" : "")
+                                           onchange="syncRow(this)" />
+                                </td>
+                                <td class="text-center align-middle">
+                                    <div class="form-check form-check-inline mb-0">
+                                        <input type="checkbox" class="form-check-input cb-all"
+                                               @(r && w && d ? "checked" : "")
+                                               onchange="toggleRowAll(this)" title="Tüm yetkiler" />
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ: Üyeler -->
+    <div class="col-lg-4">
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:var(--brand);border-radius:12px 12px 0 0;">
+                <i class="fas fa-users" style="color:#fff;"></i>
+                <strong style="font-size:14px;color:#fff;">Grup Üyeleri</strong>
+                <span class="badge bg-white text-dark ms-1">@Model.UserGroups.Count</span>
+            </div>
+            <div class="">
+                @if (Model.UserGroups.Any())
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var ug in Model.UserGroups)
+                        {
+                            <li class="list-group-item d-flex align-items-center py-2">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2"
+                                     style="width:32px;height:32px;font-size:12px;flex-shrink:0;">
+                                    @(ug.User?.FullName?.Substring(0, 1).ToUpper() ?? "?")
+                                </div>
+                                <div>
+                                    <div class="fw-semibold small">@ug.User?.FullName</div>
+                                    <small class="text-muted">@ug.User?.Username</small>
+                                </div>
+                                @if (ug.User?.IsAdmin == true)
+                                {
+                                    <span class="badge bg-danger ms-auto">Admin</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-user-slash fa-2x mb-2 d-block"></i>
+                        Bu grupta kullanıcı yok.
+                    </div>
+                }
+            </div>
+            @if (Model.UserGroups.Any())
+            {
+                <div class="p-2 border-top small text-muted">
+                    Kullanıcı atamak için <a href="/Users">Kullanıcı Yönetimi</a> sayfasını kullanın.
+                </div>
+            }
+        </div>
+
+        <div class="table-card mt-3">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fas fa-info-circle text-primary"></i>
+                <strong style="font-size:13px;">Yetki Seviyeleri</strong>
+            </div>
+            <div class="p-3 small">
+                <div class="mb-1"><i class="fas fa-eye text-primary me-1"></i><strong>Oku:</strong> Listeyi ve detayı görüntüler.</div>
+                <div class="mb-1"><i class="fas fa-pen text-success me-1"></i><strong>Yaz:</strong> Yeni kayıt ekler, mevcut kaydı düzenler.</div>
+                <div class="mb-1"><i class="fas fa-trash text-danger me-1"></i><strong>Sil:</strong> Kayıt silebilir, durum değiştirebilir.</div>
+                <hr class="my-2" />
+                <div class="text-muted">Bireysel override için kullanıcı detayına gidin.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const groupId = @Model.Id;
+
+function syncRow(cb) {
+    const row = cb.closest('tr');
+    const r = row.querySelector('.cb-read').checked;
+    const w = row.querySelector('.cb-write').checked;
+    const d = row.querySelector('.cb-delete').checked;
+    row.querySelector('.cb-all').checked = r && w && d;
+    // Yaz veya Sil işaretliyse Oku da işaretli olmalı
+    if ((w || d) && !r) row.querySelector('.cb-read').checked = true;
+}
+
+function toggleRowAll(cb) {
+    const row = cb.closest('tr');
+    row.querySelector('.cb-read').checked = cb.checked;
+    row.querySelector('.cb-write').checked = cb.checked;
+    row.querySelector('.cb-delete').checked = cb.checked;
+}
+
+function selectAll(checked) {
+    document.querySelectorAll('#permTable input[type=checkbox]').forEach(cb => cb.checked = checked);
+}
+
+function savePermissions() {
+    const rows = document.querySelectorAll('#permTable tr[data-module-id]');
+    const permissions = [];
+    rows.forEach(row => {
+        permissions.push({
+            moduleId: parseInt(row.dataset.moduleId),
+            canRead:  row.querySelector('.cb-read').checked,
+            canWrite: row.querySelector('.cb-write').checked,
+            canDelete: row.querySelector('.cb-delete').checked
+        });
+    });
+
+    fetch('/Groups/SavePermissions?groupId=' + groupId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(permissions)
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            showToast(d.message, 'success');
+        } else {
+            showToast(d.message, 'error');
+        }
+    });
+}
+
+</script>
+}

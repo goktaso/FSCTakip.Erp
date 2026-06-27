@@ -1,0 +1,169 @@
+@model List<FSCTakip.Core.Entities.Customer>
+@{
+    ViewData["Title"] = "Müşteri FSC Lisans Durumu";
+    DateTime today = ViewBag.Today;
+    var sf = ViewBag.StatusFilter as string ?? "";
+}
+
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fw-semibold" style="color:var(--text);font-size:14px;">
+            <i class="fas fa-certificate me-2 text-warning"></i>Müşteri FSC Lisans Durumu
+        </span>
+    </div>
+    <div class="d-flex gap-2 ms-auto">
+        <span class="topbar-user">
+            <i class="fas fa-user-circle"></i>
+            @(User.Identity?.Name ?? "Kullanıcı")
+        </span>
+    </div>
+</div>
+
+<!-- Filtre Paneli -->
+<div class="filter-card mb-3">
+    <form method="get" action="/Reports/CustomerFsc" class="d-flex gap-2 align-items-center flex-wrap">
+        <select name="status" class="form-select form-select-sm" style="max-width:180px;">
+            <option value="">— Tüm Durumlar —</option>
+            <option value="valid"    selected="@(sf == "valid"    ? "selected" : null)">Geçerli</option>
+            <option value="expiring" selected="@(sf == "expiring" ? "selected" : null)">Yakında Bitiyor</option>
+            <option value="expired"  selected="@(sf == "expired"  ? "selected" : null)">Geçersiz</option>
+        </select>
+        <input type="text" name="search" class="form-control form-control-sm"
+               placeholder="Müşteri adı ara..." style="max-width:220px;"
+               value="@(ViewBag.SearchFilter as string ?? "")">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Filtrele</button>
+        <a href="/Reports/CustomerFsc" class="btn btn-outline-secondary btn-sm">Temizle</a>
+    </form>
+</div>
+
+<!-- Stat Cards -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-shield-alt"></i></div>
+        <div class="stat-info"><div class="stat-value" id="cardValid">@ViewBag.Valid</div><div class="stat-label">Geçerli Lisans</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="stat-info"><div class="stat-value" id="cardExpiring">@ViewBag.Expiring</div><div class="stat-label">30 Gün İçinde Bitiyor</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-times-circle"></i></div>
+        <div class="stat-info"><div class="stat-value" id="cardExpired">@ViewBag.Expired</div><div class="stat-label">Süresi Geçmiş / Pasif</div></div>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>MÜŞTERİ KODU</th>
+                    <th>MÜŞTERİ ADI</th>
+                    <th>FSC LİSANS KODU</th>
+                    <th>SON GEÇERLİLİK</th>
+                    <th>KALAN GÜN</th>
+                    <th>DURUM</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model)
+                {
+                    int? daysLeft = c.FscExpiryDate.HasValue ? (int)(c.FscExpiryDate.Value - today).TotalDays : null;
+                    string statusClass, statusText, rowStatus;
+
+                    if (!c.IsFscActive || (daysLeft.HasValue && daysLeft <= 0))
+                    {
+                        statusClass = "badge-danger"; statusText = "Geçersiz"; rowStatus = "expired";
+                    }
+                    else if (daysLeft.HasValue && daysLeft <= 30)
+                    {
+                        statusClass = "badge-warning"; statusText = "Yakında Bitiyor"; rowStatus = "expiring";
+                    }
+                    else
+                    {
+                        statusClass = "badge-success"; statusText = "Geçerli"; rowStatus = "valid";
+                    }
+
+                    <tr class="data-row @(rowStatus == "expiring" ? "table-warning" : rowStatus == "expired" ? "table-danger" : "")"
+                        data-status="@rowStatus">
+                        <td class="text-muted small">@c.CustomerCode</td>
+                        <td><strong>@c.Name</strong></td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(c.FscLicenseCode))
+                            {
+                                <span class="badge badge-primary">@c.FscLicenseCode</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">—</span>
+                            }
+                        </td>
+                        <td class="small">
+                            @if (c.FscExpiryDate.HasValue)
+                            {
+                                @c.FscExpiryDate.Value.ToString("dd.MM.yyyy")
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="small fw-semibold @(daysLeft.HasValue && daysLeft <= 30 ? "text-danger" : "text-muted")">
+                            @if (daysLeft.HasValue)
+                            {
+                                if (daysLeft <= 0) { <span>Süresi Geçti</span> }
+                                else { <span>@daysLeft gün</span> }
+                            }
+                            else { <span class="text-muted">—</span> }
+                        </td>
+                        <td><span class="badge @statusClass">@statusText</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="alert alert-warning mt-3" style="font-size:13px;">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Uyarı:</strong> FSC lisansı sona eren müşterilere FSC etiketli ürün satışı yapılması CoC zincirini tehlikeye atar. Denetimde bu tablonun tüm satırları <strong>Geçerli</strong> olmalıdır.
+</div>
+
+@section Scripts {
+<script>
+    // Topbar globalSearch → DT
+    $(document).on('init.dt', 'table.data-table', function () {
+        var dt = $(this).DataTable();
+        var si = document.getElementById('globalSearch');
+        var sd = document.getElementById('searchDropdown');
+        if (!si) return;
+        if (sd) sd.classList.remove('show');
+        si.addEventListener('input', function (e) {
+            if (sd) sd.classList.remove('show');
+            dt.search(this.value).draw();
+            e.stopPropagation();
+        }, true);
+        si.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { this.value = ''; dt.search('').draw(); e.preventDefault(); e.stopPropagation(); }
+        }, true);
+    });
+
+    // draw.dt → stat kartları güncelle
+    $(document).on('draw.dt', 'table.data-table', function () {
+        var dt = $(this).DataTable();
+        var valid = 0, expiring = 0, expired = 0;
+        dt.rows({ search: 'applied' }).nodes().each(function (tr) {
+            if (!tr.classList.contains('data-row')) return;
+            var s = tr.dataset.status;
+            if (s === 'valid')         valid++;
+            else if (s === 'expiring') expiring++;
+            else                       expired++;
+        });
+        var g = function (id) { return document.getElementById(id); };
+        if (g('cardValid'))    g('cardValid').textContent    = valid;
+        if (g('cardExpiring')) g('cardExpiring').textContent = expiring;
+        if (g('cardExpired'))  g('cardExpired').textContent  = expired;
+    });
+</script>
+}

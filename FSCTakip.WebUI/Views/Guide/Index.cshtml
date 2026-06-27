@@ -1,0 +1,1556 @@
+@{
+    ViewData["Title"] = "Kullanım Kılavuzu";
+    var mdContent = ViewBag.MarkdownContent as string ?? "";
+}
+
+<style>
+    /* ── GUIDE LAYOUT ──────────────────────────────── */
+    .guide-shell {
+        display: flex;
+        gap: 0;
+        min-height: calc(100vh - 56px - 40px);
+        position: relative;
+    }
+
+    /* TOC sidebar */
+    .guide-toc {
+        width: 260px;
+        flex-shrink: 0;
+        position: sticky;
+        top: 20px;
+        align-self: flex-start;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--card-radius);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+    }
+    .guide-toc-header {
+        background: var(--table-header-bg);
+        color: #fff;
+        padding: 12px 16px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .guide-toc-list {
+        padding: 8px 0;
+        max-height: calc(100vh - 160px);
+        overflow-y: auto;
+    }
+    .guide-toc-list::-webkit-scrollbar { width: 3px; }
+    .guide-toc-list::-webkit-scrollbar-thumb { background: #d1d5db; }
+
+    .toc-item {
+        display: block;
+        padding: 7px 16px;
+        font-size: 13px;
+        color: #374151;
+        text-decoration: none;
+        border-left: 3px solid transparent;
+        transition: all .15s;
+        cursor: pointer;
+    }
+    .toc-item:hover { background: #f8faff; color: var(--accent); border-left-color: #bfdbfe; }
+    .toc-item.active { background: var(--accent-light); color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+    .toc-item .toc-num { color: var(--text-muted); font-size: 11px; margin-right: 6px; }
+
+    /* Status badges in TOC */
+    .toc-badge {
+        float: right;
+        font-size: 10px;
+        padding: 1px 6px;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+    .toc-badge.done { background: #dcfce7; color: #166534; }
+    .toc-badge.wip  { background: #fef3c7; color: #92400e; }
+    .toc-badge.plan { background: #f3f4f6; color: #6b7280; }
+
+    /* Content area */
+    .guide-content {
+        flex: 1;
+        min-width: 0;
+        padding-left: 24px;
+    }
+
+    /* Markdown rendered content */
+    .md-body {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--card-radius);
+        padding: 36px 40px;
+        box-shadow: var(--shadow-sm);
+        font-size: 14.5px;
+        line-height: 1.7;
+        color: #1f2937;
+    }
+
+    .md-body h1 {
+        font-size: 24px; font-weight: 700; color: #111827;
+        border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-bottom: 24px;
+    }
+    .md-body h2 {
+        font-size: 18px; font-weight: 700; color: var(--table-header-bg);
+        margin-top: 40px; margin-bottom: 16px;
+        padding: 10px 16px;
+        background: #f0f4f8;
+        border-left: 4px solid var(--accent);
+        border-radius: 0 8px 8px 0;
+    }
+    .md-body h3 {
+        font-size: 15px; font-weight: 700; color: #374151;
+        margin-top: 28px; margin-bottom: 10px;
+    }
+    .md-body h4 {
+        font-size: 13.5px; font-weight: 600; color: #374151;
+        margin-top: 20px; margin-bottom: 8px;
+    }
+
+    .md-body p { margin-bottom: 12px; }
+
+    .md-body pre {
+        background: #0f1621;
+        color: #e2e8f0;
+        border-radius: 10px;
+        padding: 18px 20px;
+        font-family: 'Cascadia Code', 'Consolas', monospace;
+        font-size: 12.5px;
+        line-height: 1.6;
+        overflow-x: auto;
+        margin: 16px 0;
+    }
+    .md-body code {
+        background: #f1f5f9;
+        color: #1e40af;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12.5px;
+        font-family: 'Cascadia Code', 'Consolas', monospace;
+    }
+    .md-body pre code { background: none; color: inherit; padding: 0; }
+
+    .md-body table {
+        width: 100%; border-collapse: collapse;
+        margin: 16px 0; font-size: 13.5px;
+    }
+    .md-body table thead th {
+        background: var(--table-header-bg) !important;
+        color: #fff !important;
+        padding: 10px 14px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 12px;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+    .md-body table tbody td {
+        padding: 9px 14px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+    }
+    .md-body table tbody tr:hover { background: #f8faff; }
+    .md-body table tbody tr:last-child td { border-bottom: none; }
+
+    .md-body ul, .md-body ol {
+        padding-left: 22px;
+        margin-bottom: 12px;
+    }
+    .md-body li { margin-bottom: 5px; }
+    .md-body li > ul { margin-top: 5px; }
+
+    .md-body blockquote {
+        border-left: 4px solid var(--accent);
+        background: var(--accent-light);
+        padding: 12px 16px;
+        border-radius: 0 8px 8px 0;
+        margin: 16px 0;
+        font-size: 13.5px;
+        color: #1e40af;
+    }
+    .md-body blockquote p { margin: 0; }
+
+    .md-body a { color: var(--accent); text-decoration: none; }
+    .md-body a:hover { text-decoration: underline; }
+
+    .md-body hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 32px 0;
+    }
+
+    /* Section anchor highlight */
+    .md-body h2[id], .md-body h3[id] { scroll-margin-top: 80px; }
+
+    /* Status indicator at bottom */
+    .guide-status-bar {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 14px 20px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--card-radius);
+        margin-top: 20px;
+        font-size: 12px;
+    }
+    .guide-status-item { display: flex; align-items: center; gap: 6px; }
+
+    /* Print button area */
+    .guide-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    @@media print {
+        .guide-toc, .guide-toolbar, #sidebar, #topbar { display: none !important; }
+        .guide-content { padding: 0; }
+        .md-body { border: none; box-shadow: none; padding: 0; }
+    }
+
+    /* ── UI MOCKUP KARTLARI ─────────────────────────────────── */
+    .guide-mockup {
+        border: 1px solid #d1d9e0;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,.10);
+        margin: 20px 0 28px;
+        font-size: 12.5px;
+        background: #fff;
+    }
+    .guide-mockup::before {
+        content: 'EKRAN ÖNİZLEME';
+        display: block;
+        background: #f0f4f8;
+        border-bottom: 1px solid #d1d9e0;
+        padding: 5px 14px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .1em;
+        color: #6b7280;
+    }
+    .gm-topbar {
+        background: #fff;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 8px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    }
+    .gm-hamburger {
+        width: 28px; height: 28px;
+        display: flex; align-items: center; justify-content: center;
+        background: #f3f4f6; border-radius: 6px;
+        color: #374151; font-size: 12px; cursor: default;
+        flex-shrink: 0;
+    }
+    .gm-title { font-weight: 600; color: #111827; font-size: 13px; white-space: nowrap; }
+    .gm-spacer { flex: 1; }
+    .gm-user { color: #6b7280; font-size: 11.5px; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
+    .gm-btn-primary {
+        padding: 5px 12px; border-radius: 7px; border: none; cursor: default;
+        background: linear-gradient(135deg,#1976d2,#1565c0);
+        color: #fff; font-size: 12px; font-weight: 600;
+        display: flex; align-items: center; gap: 5px; white-space: nowrap;
+        box-shadow: 0 2px 6px rgba(25,118,210,.3);
+    }
+    .gm-btn-secondary {
+        padding: 5px 10px; border-radius: 6px; cursor: default;
+        border: 1px solid #e5e7eb; background: #fff;
+        color: #374151; font-size: 11.5px;
+        display: flex; align-items: center; gap: 4px; white-space: nowrap;
+    }
+    .gm-btn-excel {
+        padding: 5px 10px; border-radius: 6px; cursor: default;
+        border: 1px solid #bbf7d0; background: #f0fdf4;
+        color: #166534; font-size: 11.5px;
+        display: flex; align-items: center; gap: 4px;
+    }
+    .gm-body { padding: 14px 16px; background: #f0f2f5; min-height: 80px; }
+    .gm-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .gm-stat {
+        background: #fff; border: 1px solid #e5e7eb;
+        border-radius: 10px; padding: 12px 14px;
+        display: flex; align-items: center; gap: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .gm-stat-icon {
+        width: 36px; height: 36px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px; flex-shrink: 0;
+    }
+    .gm-stat-icon.blue   { background:#dbeafe; color:#1d4ed8; }
+    .gm-stat-icon.green  { background:#dcfce7; color:#166534; }
+    .gm-stat-icon.amber  { background:#fef3c7; color:#92400e; }
+    .gm-stat-icon.red    { background:#fee2e2; color:#991b1b; }
+    .gm-stat-icon.purple { background:#ede9fe; color:#5b21b6; }
+    .gm-stat-val  { font-size: 18px; font-weight: 700; color: #111827; line-height: 1; }
+    .gm-stat-lbl  { font-size: 10.5px; color: #6b7280; margin-top: 2px; }
+    .gm-table-wrap { background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .gm-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 0; }
+    .gm-table thead th {
+        background: #1a2744; color: #fff;
+        padding: 8px 12px; text-align: left;
+        font-size: 10.5px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: .04em;
+        white-space: nowrap;
+    }
+    .gm-table tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .gm-table tbody tr:last-child td { border-bottom: none; }
+    .gm-table tbody tr:hover { background: #f8faff; }
+    .gm-link { color: #1976d2; text-decoration: none; font-weight: 500; cursor: default; }
+    .gm-muted { color: #6b7280; }
+    .gm-badge {
+        display: inline-flex; align-items: center;
+        padding: 2px 8px; border-radius: 20px;
+        font-size: 10.5px; font-weight: 600; white-space: nowrap;
+    }
+    .gm-badge.green  { background: #dcfce7; color: #166534; }
+    .gm-badge.red    { background: #fee2e2; color: #991b1b; }
+    .gm-badge.amber  { background: #fef3c7; color: #92400e; }
+    .gm-badge.blue   { background: #dbeafe; color: #1d4ed8; }
+    .gm-badge.gray   { background: #f3f4f6; color: #374151; }
+    .gm-prog { height: 4px; background: #f1f5f9; border-radius: 3px; margin-top: 3px; overflow: hidden; min-width: 60px; }
+    .gm-prog-bar { height: 100%; border-radius: 3px; }
+    .gm-icon-btn {
+        width: 24px; height: 24px; border-radius: 5px; border: 1px solid #e5e7eb;
+        background: #fff; color: #6b7280; cursor: default;
+        display: inline-flex; align-items: center; justify-content: center; font-size: 10.5px;
+    }
+    .gm-info-card {
+        background: #fff; border: 1px solid #e5e7eb;
+        border-radius: 10px; overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .gm-info-header {
+        background: linear-gradient(135deg,#1a2744,#243566);
+        color: #fff; padding: 9px 14px;
+        font-size: 12px; font-weight: 600;
+        display: flex; align-items: center;
+    }
+    .gm-info-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 6px 14px; border-bottom: 1px solid #f1f5f9;
+        font-size: 11.5px;
+    }
+    .gm-info-row:last-child { border-bottom: none; }
+    .gm-info-row span:first-child { color: #6b7280; }
+</style>
+
+<!-- Toolbar -->
+<div class="guide-toolbar">
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge-blue badge px-3 py-2" style="font-size:13px;">
+            <i class="fas fa-book-open me-1"></i> Kullanım Kılavuzu
+        </span>
+        <span class="text-muted" style="font-size:12px;">FSC Takip ERP · Tüm Modüller</span>
+    </div>
+    <div class="d-flex gap-2">
+        <button onclick="window.print()" class="topbar-btn">
+            <i class="fas fa-print"></i> Yazdır
+        </button>
+        <a href="/docs/KULLANIM_KILAVUZU.md" download class="topbar-btn btn-excel">
+            <i class="fas fa-download"></i> .md İndir
+        </a>
+    </div>
+</div>
+
+<div class="guide-shell">
+
+    <!-- TOC -->
+    <div class="guide-toc">
+        <div class="guide-toc-header">
+            <i class="fas fa-list-ul"></i> İçindekiler
+        </div>
+        <div class="guide-toc-list">
+            <a class="toc-item" href="#giris" onclick="scrollTo('giris')">
+                <span class="toc-num">1.</span> Sisteme Giriş
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#dashboard" onclick="scrollTo('dashboard')">
+                <span class="toc-num">2.</span> Dashboard
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#menu" onclick="scrollTo('menu')">
+                <span class="toc-num">3.</span> Sol Menü
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#tedarikciler" onclick="scrollTo('tedarikciler')">
+                <span class="toc-num">4.</span> Tedarikçiler
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#musteriler" onclick="scrollTo('musteriler')">
+                <span class="toc-num">5.</span> Müşteriler
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#urunler" onclick="scrollTo('urunler')">
+                <span class="toc-num">6.</span> Ürünler
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#tanimlamalar" onclick="scrollTo('tanimlamalar')">
+                <span class="toc-num">7.</span> Tanımlamalar
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#hammadde" onclick="scrollTo('hammadde')">
+                <span class="toc-num">8.</span> Hammadde Girişi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#detail" onclick="scrollTo('detail')">
+                <span class="toc-num">9.</span> Bobin Takibi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#sss" onclick="scrollTo('sss')">
+                <span class="toc-num">10.</span> Sık Sorulan Sorular
+                <span class="toc-badge done">✓</span>
+            </a>
+
+            <a class="toc-item" href="#uretim" onclick="scrollTo('uretim')">
+                <span class="toc-num">11.</span> Üretim / İş Emirleri
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#uretim-detail" onclick="scrollTo('uretim-detail')">
+                <span class="toc-num">12.</span> Hammadde Tüketimi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#fire" onclick="scrollTo('fire')">
+                <span class="toc-num">13.</span> Fire Raporu
+                <span class="toc-badge done">✓</span>
+            </a>
+
+            <a class="toc-item" href="#satis" onclick="scrollTo('satis')">
+                <span class="toc-num">14.</span> Satış Siparişleri
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#satis-detail" onclick="scrollTo('satis-detail')">
+                <span class="toc-num">15.</span> Sevkiyat / Kalemler
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#stok" onclick="scrollTo('stok')">
+                <span class="toc-num">16.</span> Stok Durumu
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#stok-hareketleri" onclick="scrollTo('stok-hareketleri')">
+                <span class="toc-num">17.</span> Stok Hareketleri
+                <span class="toc-badge done">✓</span>
+            </a>
+
+            <a class="toc-item" href="#coc" onclick="scrollTo('coc')">
+                <span class="toc-num">18.</span> FSC CoC Raporu
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#lot-takip" onclick="scrollTo('lot-takip')">
+                <span class="toc-num">19.</span> Lot Takip
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#tedarikci-fsc" onclick="scrollTo('tedarikci-fsc')">
+                <span class="toc-num">20.</span> Tedarikçi FSC
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#depolar" onclick="scrollTo('depolar')">
+                <span class="toc-num">21.</span> Depo Tanımlamaları
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#recete" onclick="scrollTo('recete')">
+                <span class="toc-num">22.</span> Ürün Reçetesi — BOM
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#imha" onclick="scrollTo('imha')">
+                <span class="toc-num">23.</span> İmha Kayıtları
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#etl" onclick="scrollTo('etl')">
+                <span class="toc-num">24.</span> ERP Entegrasyon — ETL
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#netsis-sync" onclick="scrollTo('netsis-sync')">
+                <span class="toc-num">25.</span> Netsis Senkronizasyonu
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#lot-evrak" onclick="scrollTo('lot-evrak')">
+                <span class="toc-num">26.</span> Lot Evrak Görüntüleyici
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#denetim-ozet" onclick="scrollTo('denetim-ozet')">
+                <span class="toc-num">27.</span> Denetim Özet Raporu
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#tam-izlenebilirlik" onclick="scrollTo('tam-izlenebilirlik')">
+                <span class="toc-num">28.</span> Tam İzlenebilirlik
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#bom-analizi" onclick="scrollTo('bom-analizi')">
+                <span class="toc-num">29.</span> BOM Bileşen Analizi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#netsis-etl-excel" onclick="scrollTo('netsis-etl-excel')">
+                <span class="toc-num">30.</span> Netsis ETL Excel
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#hammadde-stogu" onclick="scrollTo('hammadde-stogu')">
+                <span class="toc-num">31.</span> Hammadde Stoğu
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#etl-oto-import" onclick="scrollTo('etl-oto-import')">
+                <span class="toc-num">32.</span> ETL Otomatik Import
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#kullanici-yonetimi" onclick="scrollTo('kullanici-yonetimi')">
+                <span class="toc-num">33.</span> Kullanıcı ve Yetki Yönetimi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#musteri-fsc" onclick="scrollTo('musteri-fsc')">
+                <span class="toc-num">34.</span> Müşteri FSC Lisans Durumu
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#uretim-plani" onclick="scrollTo('uretim-plani')">
+                <span class="toc-num">35.</span> Üretim Planı Takvimi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#fire-analizi" onclick="scrollTo('fire-analizi')">
+                <span class="toc-num">36.</span> Fire / Atık Analizi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#donem-kilidi" onclick="scrollTo('donem-kilidi')">
+                <span class="toc-num">37.</span> Dönem Kilidi
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#yari-mamul-donusum" onclick="scrollTo('yari-mamul-donusum')">
+                <span class="toc-num">38.</span> Yarı Mamül Dönüşüm
+                <span class="toc-badge done">✓</span>
+            </a>
+            <a class="toc-item" href="#denetim-rehberi" onclick="scrollTo('denetim-rehberi')">
+                <span class="toc-num">39.</span> FSC Denetim Rehberi
+                <span class="toc-badge done">✓</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="guide-content">
+        <div class="md-body" id="mdBody">
+            <!-- Markdown will be rendered here by marked.js -->
+        </div>
+
+        <!-- Status bar -->
+        <div class="guide-status-bar">
+            <div class="guide-status-item">
+                <span class="toc-badge done" style="float:none;">✓ Tamamlandı</span>
+                <span>39 bölüm (Hammadde → Üretim → Satış → Stok → FSC Raporlar → ETL → Netsis → Denetim → İzlenebilirlik → BOM → Hammadde Stoğu → ETL Import → RBAC → Müşteri FSC → Üretim Planı → Fire Analizi → Dönem Kilidi → Yarı Mamül Dönüşüm → FSC Denetim Rehberi)</span>
+            </div>
+            <div class="guide-status-item">
+                <span class="toc-badge done" style="float:none;">✓</span>
+                <span>v3.1 — Yarı Mamül Dönüşüm, FSC Denetim Rehberi eklendi</span>
+            </div>
+            <div class="ms-auto text-muted" style="font-size:11px;">
+                <i class="fas fa-sync-alt me-1"></i> Her modül tamamlandıktan sonra güncellenir
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    // Render markdown
+    const raw = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mdContent));
+
+    // Configure marked
+    marked.setOptions({
+        breaks: true,
+        gfm: true
+    });
+
+    document.getElementById('mdBody').innerHTML = marked.parse(raw);
+
+    // Add IDs to headings for anchor navigation
+    document.querySelectorAll('.md-body h2, .md-body h3').forEach(h => {
+        const text = h.textContent.trim();
+        // Map heading text to anchor IDs
+        const map = {
+            'Sisteme Giriş': 'giris',
+            'Ana Ekran (Dashboard)': 'dashboard',
+            'Sol Menü Yapısı': 'menu',
+            'Tedarikçi Yönetimi': 'tedarikciler',
+            'Müşteri Yönetimi': 'musteriler',
+            'Ürün Yönetimi': 'urunler',
+            'Sistem Tanımlamaları': 'tanimlamalar',
+            'Hammadde Girişi — FSC Lot': 'hammadde',
+            'Hammadde Detayı — Bobin / Seri Takibi': 'detail',
+            'Sık Sorulan Sorular': 'sss',
+            'Üretim — İş Emirleri': 'uretim',
+            'Üretim Detayı — Hammadde Tüketimi': 'uretim-detail',
+            'Fire Raporu': 'fire',
+            'Satış Siparişleri': 'satis',
+            'Satış Detayı — Kalem ve Sevkiyat': 'satis-detail',
+            'Stok Durumu': 'stok',
+            'Stok Hareketleri': 'stok-hareketleri',
+            'FSC Chain of Custody Raporu': 'coc',
+            'Lot Takip Raporu': 'lot-takip',
+            'Tedarikçi FSC Sertifika Durumu': 'tedarikci-fsc',
+            'Depo Tanımlamaları': 'depolar',
+            'Ürün Reçetesi — BOM': 'recete',
+            'İmha Kayıtları': 'imha',
+            'ERP Entegrasyonu — ETL': 'etl',
+            'Netsis Senkronizasyonu': 'netsis-sync',
+            'Üretim Fişi — Lot Evrak Görüntüleyici': 'lot-evrak',
+            'Denetim Özet Raporu': 'denetim-ozet',
+            'Tam İzlenebilirlik — Satış → Üretim → Lot': 'tam-izlenebilirlik',
+            'BOM Bileşen Analizi': 'bom-analizi',
+            'Netsis ETL Excel Dosyaları': 'netsis-etl-excel',
+            'Hammadde Stoğu — Bobin Bazlı': 'hammadde-stogu',
+            'ETL Otomatik Algıla Import': 'etl-oto-import',
+            'Kullanıcı ve Yetki Yönetimi': 'kullanici-yonetimi',
+            'Müşteri FSC Lisans Durumu': 'musteri-fsc',
+            'Üretim Planı Takvimi': 'uretim-plani',
+            'Fire / Atık Analizi': 'fire-analizi',
+            'Dönem Kilidi': 'donem-kilidi',
+            'Yarı Mamül Dönüşüm': 'yari-mamul-donusum',
+            'FSC Denetim Rehberi': 'denetim-rehberi'
+        };
+        for (const [key, id] of Object.entries(map)) {
+            if (text.includes(key.substring(0, 15))) {
+                h.id = id;
+                break;
+            }
+        }
+    });
+
+    // ── UI MOCKUP ENJEKSIYONU ──────────────────────────────────
+    // Uygulamanın gerçek CSS sınıfları ile piksel-düzeyi önizleme kartları
+    const mockups = {
+
+        'hammadde': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni Lot Ekle</button>
+    <span class="gm-title">Hammadde Girişleri</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-filter"></i> Filtrele</button>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats">
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-boxes"></i></div><div><div class="gm-stat-val">47</div><div class="gm-stat-lbl">Toplam Lot</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-weight-hanging"></i></div><div><div class="gm-stat-val">382.450</div><div class="gm-stat-lbl">Toplam Giriş (kg)</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon purple"><i class="fas fa-scroll"></i></div><div><div class="gm-stat-val">215</div><div class="gm-stat-lbl">Toplam Bobin</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-battery-half"></i></div><div><div class="gm-stat-val">128.900</div><div class="gm-stat-lbl">Kalan Hammadde (kg)</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>LOT NO</th><th>TEDARİKÇİ</th><th>FSC TİPİ</th><th>GELİŞ TARİHİ</th><th>BOBİN</th><th>GİRİŞ (kg)</th><th>KALAN (kg)</th><th>İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td><a class="gm-link fw-semibold">L2026-047</a></td><td>BOSNA HERSEK LTD</td><td><span class="gm-badge green">FSC-100%</span></td><td class="gm-muted">17.05.2026</td><td><span class="gm-badge blue">3</span></td><td class="fw-semibold">3.730</td><td><span style="color:#16a34a;font-weight:600;">2.070</span><div class="gm-prog"><div class="gm-prog-bar" style="width:55%;background:#16a34a;"></div></div></td><td><button class="gm-icon-btn" title="Detay"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn" title="Düzenle"><i class="fas fa-pen"></i></button></td></tr>
+          <tr><td><a class="gm-link fw-semibold">L2026-046</a></td><td>SEGEZHA GROUP</td><td><span class="gm-badge green">FSC-MIX</span></td><td class="gm-muted">14.05.2026</td><td><span class="gm-badge blue">5</span></td><td class="fw-semibold">6.150</td><td><span style="color:#92400e;font-weight:600;">1.230</span><div class="gm-prog"><div class="gm-prog-bar" style="width:20%;background:#f59e0b;"></div></div></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn"><i class="fas fa-pen"></i></button></td></tr>
+          <tr><td><a class="gm-link fw-semibold">L2026-045</a></td><td>OYKA KAGIT</td><td><span class="gm-badge green">FSC-100%</span></td><td class="gm-muted">10.05.2026</td><td><span class="gm-badge blue">4</span></td><td class="fw-semibold">4.920</td><td><span style="color:#991b1b;font-weight:600;">420</span><div class="gm-prog"><div class="gm-prog-bar" style="width:8%;background:#ef4444;"></div></div></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn"><i class="fas fa-pen"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'detail': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Hammadde Lot Detayı</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-arrow-left"></i> Geri</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body" style="display:grid;grid-template-columns:280px 1fr;gap:16px;">
+    <div>
+      <div class="gm-info-card">
+        <div class="gm-info-header"><i class="fas fa-boxes me-2"></i>Lot Bilgisi</div>
+        <div class="gm-info-row"><span>Lot No</span><strong>L2026-047</strong></div>
+        <div class="gm-info-row"><span>Tedarikçi</span><strong>BOSNA HERSEK</strong></div>
+        <div class="gm-info-row"><span>FSC Tipi</span><span class="gm-badge green">FSC-100%</span></div>
+        <div class="gm-info-row"><span>Geliş Tarihi</span><strong>17.05.2026</strong></div>
+        <div class="gm-info-row"><span>İrsaliye No</span><strong>IRS-2026-45</strong></div>
+      </div>
+      <div class="gm-info-card" style="margin-top:12px;">
+        <div class="gm-info-header"><i class="fas fa-chart-pie me-2"></i>Özet</div>
+        <div class="gm-info-row"><span>Giriş</span><strong>3.730 kg</strong></div>
+        <div class="gm-info-row"><span>Kalan</span><strong style="color:#16a34a;">2.070 kg</strong></div>
+        <div class="gm-info-row"><span>Tüketim</span><strong style="color:#1d4ed8;">%44.5</strong></div>
+        <div style="margin-top:8px;background:#f1f5f9;border-radius:6px;height:8px;overflow:hidden;"><div style="width:44.5%;height:100%;background:linear-gradient(90deg,#1976d2,#0d47a1);border-radius:6px;"></div></div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <strong style="font-size:13px;">Bobin Listesi</strong>
+        <button class="gm-btn-primary" style="padding:5px 12px;font-size:12px;"><i class="fas fa-plus"></i> Bobin Ekle</button>
+      </div>
+      <div class="gm-table-wrap">
+        <table class="gm-table">
+          <thead><tr><th>SERİ NO</th><th>GİRİŞ (kg)</th><th>KALAN (kg)</th><th>TÜKETİM %</th><th>İŞLEM</th></tr></thead>
+          <tbody>
+            <tr><td><strong>L2026-047-B01</strong></td><td>1.250</td><td><span style="color:#16a34a;font-weight:600;">890</span></td><td><span class="gm-badge amber">28.8%</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn" style="color:#ef4444;"><i class="fas fa-trash"></i></button></td></tr>
+            <tr><td><strong>L2026-047-B02</strong></td><td>1.180</td><td><span style="color:#16a34a;font-weight:600;">1.180</span></td><td><span class="gm-badge green">0.0%</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn" style="color:#ef4444;"><i class="fas fa-trash"></i></button></td></tr>
+            <tr><td><strong>L2026-047-B03</strong></td><td>1.300</td><td><span style="color:#991b1b;font-weight:600;">0</span></td><td><span class="gm-badge red">100%</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+        'uretim': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni İş Emri</button>
+    <span class="gm-title">İş Emirleri</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-filter"></i> Filtrele</button>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-clipboard-list"></i></div><div><div class="gm-stat-val">23</div><div class="gm-stat-lbl">Toplam İş Emri</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-spinner"></i></div><div><div class="gm-stat-val">5</div><div class="gm-stat-lbl">Üretimde</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="gm-stat-val">17</div><div class="gm-stat-lbl">Tamamlandı</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon purple"><i class="fas fa-box"></i></div><div><div class="gm-stat-val">48.200</div><div class="gm-stat-lbl">Toplam Üretim (adet)</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>İŞ EMRİ NO</th><th>ÜRÜN</th><th>MAKİNE</th><th>PLAN TARİHİ</th><th>PLANLANAN</th><th>ÜRETILEN</th><th>DURUM</th><th>İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td><a class="gm-link fw-semibold">IE2026-023</a></td><td style="font-size:12px;">KRAFT ÇUVALI 50KG</td><td class="gm-muted">MAKİNE-1</td><td class="gm-muted">17.05.2026</td><td>10.000</td><td class="fw-semibold">8.100</td><td><span class="gm-badge amber">Üretimde</span></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn" style="color:#16a34a;" title="Tamamla"><i class="fas fa-check"></i></button></td></tr>
+          <tr><td><a class="gm-link fw-semibold">IE2026-022</a></td><td style="font-size:12px;">VENTIL TORBA 25KG</td><td class="gm-muted">MAKİNE-2</td><td class="gm-muted">15.05.2026</td><td>5.000</td><td class="fw-semibold">5.000</td><td><span class="gm-badge green">Tamamlandı</span></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn"><i class="fas fa-pen"></i></button></td></tr>
+          <tr><td><a class="gm-link fw-semibold">IE2026-021</a></td><td style="font-size:12px;">KRAFT ÇUVALI 25KG</td><td class="gm-muted">MAKİNE-1</td><td class="gm-muted">12.05.2026</td><td>8.000</td><td class="fw-semibold">0</td><td><span class="gm-badge gray">Taslak</span></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button> <button class="gm-icon-btn"><i class="fas fa-pen"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'uretim-detail': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Üretim Detayı — IE2026-023</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary" style="color:#16a34a;border-color:#bbf7d0;background:#f0fdf4;"><i class="fas fa-check"></i> Tamamla</button>
+    <button class="gm-btn-secondary"><i class="fas fa-arrow-left"></i> İş Emirleri</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body" style="display:grid;grid-template-columns:280px 1fr;gap:16px;">
+    <div>
+      <div class="gm-info-card">
+        <div class="gm-info-header"><i class="fas fa-industry me-2"></i>İş Emri</div>
+        <div class="gm-info-row"><span>Numara</span><strong>IE2026-023</strong></div>
+        <div class="gm-info-row"><span>Ürün</span><strong style="font-size:11px;">KRAFT ÇUVALI 50KG</strong></div>
+        <div class="gm-info-row"><span>Makine</span><strong>MAKİNE-1</strong></div>
+        <div class="gm-info-row"><span>Durum</span><span class="gm-badge amber">Üretimde</span></div>
+        <div class="gm-info-row"><span>Plan</span><strong>10.000 adet</strong></div>
+      </div>
+      <div class="gm-info-card" style="margin-top:12px;">
+        <div class="gm-info-header"><i class="fas fa-chart-bar me-2"></i>Özet</div>
+        <div class="gm-info-row"><span>Üretilen</span><strong>8.100 adet</strong></div>
+        <div class="gm-info-row"><span>Tüketim</span><strong>2.430 kg</strong></div>
+        <div class="gm-info-row"><span>Fire</span><strong style="color:#991b1b;">43 kg</strong></div>
+        <div class="gm-info-row"><span>Fire %</span><span class="gm-badge green">%1.8</span></div>
+        <div style="margin-top:8px;">
+          <div style="font-size:11px;color:#6b7280;margin-bottom:4px;">%81 tamamlandı</div>
+          <div style="background:#f1f5f9;border-radius:6px;height:10px;overflow:hidden;"><div style="width:81%;height:100%;background:linear-gradient(90deg,#1976d2,#0d47a1);border-radius:6px;"></div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <strong style="font-size:13px;">Tüketim Kayıtları</strong>
+        <button class="gm-btn-primary" style="padding:5px 12px;font-size:12px;"><i class="fas fa-plus"></i> Tüketim Gir</button>
+      </div>
+      <div class="gm-table-wrap">
+        <table class="gm-table">
+          <thead><tr><th>TARİH</th><th>BOBİN</th><th>MAKİNE</th><th>TÜKETİM (kg)</th><th>FİRE (kg)</th><th>ÜRETİLEN (adet)</th><th>İŞLEM</th></tr></thead>
+          <tbody>
+            <tr><td class="gm-muted">17.05.2026</td><td><a class="gm-link">L2026-047-B01</a><div style="font-size:10px;color:#6b7280;">BOSNA HERSEK</div></td><td class="gm-muted">MAKİNE-1</td><td class="fw-semibold">1.250</td><td><span class="gm-badge red">25</span></td><td class="fw-semibold">4.200</td><td><button class="gm-icon-btn" style="color:#ef4444;"><i class="fas fa-trash"></i></button></td></tr>
+            <tr><td class="gm-muted">17.05.2026</td><td><a class="gm-link">L2026-047-B02</a><div style="font-size:10px;color:#6b7280;">BOSNA HERSEK</div></td><td class="gm-muted">MAKİNE-1</td><td class="fw-semibold">1.180</td><td><span class="gm-badge red">18</span></td><td class="fw-semibold">3.900</td><td><button class="gm-icon-btn" style="color:#ef4444;"><i class="fas fa-trash"></i></button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+        'fire': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Fire Raporu</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-filter"></i> Filtrele</button>
+    <button class="gm-btn-secondary"><i class="fas fa-arrow-left"></i> İş Emirleri</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats">
+      <div class="gm-stat"><div class="gm-stat-icon red"><i class="fas fa-burn"></i></div><div><div class="gm-stat-val">1.240</div><div class="gm-stat-lbl">Toplam Fire (kg)</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-weight-hanging"></i></div><div><div class="gm-stat-val">48.600</div><div class="gm-stat-lbl">Toplam Tüketim (kg)</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-percent"></i></div><div><div class="gm-stat-val">%2.55</div><div class="gm-stat-lbl">Genel Fire Oranı</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-list-alt"></i></div><div><div class="gm-stat-val">87</div><div class="gm-stat-lbl">Kayıt Sayısı</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>TARİH</th><th>İŞ EMRİ</th><th>ÜRÜN</th><th>BOBİN</th><th>LOT / TEDARİKÇİ</th><th>MAKİNE</th><th class="text-end">TÜKETİM (kg)</th><th class="text-end">FİRE (kg)</th><th class="text-end">FİRE %</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted">17.05.2026</td><td><a class="gm-link fw-semibold">IE2026-023</a></td><td style="font-size:12px;">KRAFT ÇUVALI 50KG</td><td><a class="gm-link">L047-B01</a></td><td><div style="font-size:11px;">L2026-047</div><div style="font-size:10px;color:#6b7280;">BOSNA HERSEK</div></td><td class="gm-muted">MAKİNE-1</td><td class="text-end fw-semibold">1.250</td><td class="text-end"><span class="gm-badge red">25</span></td><td class="text-end"><span class="gm-badge green">%2.0</span></td></tr>
+          <tr><td class="gm-muted">17.05.2026</td><td><a class="gm-link fw-semibold">IE2026-023</a></td><td style="font-size:12px;">KRAFT ÇUVALI 50KG</td><td><a class="gm-link">L047-B02</a></td><td><div style="font-size:11px;">L2026-047</div><div style="font-size:10px;color:#6b7280;">BOSNA HERSEK</div></td><td class="gm-muted">MAKİNE-1</td><td class="text-end fw-semibold">1.180</td><td class="text-end"><span class="gm-badge red">18</span></td><td class="text-end"><span class="gm-badge green">%1.5</span></td></tr>
+          <tr><td class="gm-muted">15.05.2026</td><td><a class="gm-link fw-semibold">IE2026-022</a></td><td style="font-size:12px;">VENTIL TORBA 25KG</td><td><a class="gm-link">L046-B03</a></td><td><div style="font-size:11px;">L2026-046</div><div style="font-size:10px;color:#6b7280;">SEGEZHA GROUP</div></td><td class="gm-muted">MAKİNE-2</td><td class="text-end fw-semibold">920</td><td class="text-end"><span class="gm-badge red">72</span></td><td class="text-end"><span class="gm-badge red">%7.8</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'giris': `
+<div class="guide-mockup">
+  <div style="background:#0f1621;padding:32px 0;display:flex;justify-content:center;">
+    <div style="background:#1a2035;border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:32px 36px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#1976d2,#0d47a1);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;color:#fff;"><i class="fas fa-leaf"></i></div>
+        <div style="color:#fff;font-size:16px;font-weight:700;">FSC Takip ERP</div>
+        <div style="color:rgba(255,255,255,.4);font-size:11px;margin-top:2px;">Kraft Kağıt İzlenebilirlik Sistemi</div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="color:rgba(255,255,255,.6);font-size:11px;display:block;margin-bottom:4px;">Kullanıcı Kodu</label>
+        <div style="display:flex;border:1px solid rgba(255,255,255,.12);border-radius:8px;overflow:hidden;background:rgba(255,255,255,.05);">
+          <div style="width:36px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.3);border-right:1px solid rgba(255,255,255,.08);font-size:12px;"><i class="fas fa-user"></i></div>
+          <div style="padding:8px 12px;color:rgba(255,255,255,.7);font-size:13px;">admin</div>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="color:rgba(255,255,255,.6);font-size:11px;display:block;margin-bottom:4px;">Şifre</label>
+        <div style="display:flex;border:1px solid rgba(255,255,255,.12);border-radius:8px;overflow:hidden;background:rgba(255,255,255,.05);">
+          <div style="width:36px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.3);border-right:1px solid rgba(255,255,255,.08);font-size:12px;"><i class="fas fa-lock"></i></div>
+          <div style="padding:8px 12px;color:rgba(255,255,255,.7);font-size:13px;">••••••••</div>
+        </div>
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="color:rgba(255,255,255,.6);font-size:11px;display:block;margin-bottom:4px;">Şirket Veritabanı</label>
+        <div style="display:flex;border:1px solid rgba(255,255,255,.12);border-radius:8px;overflow:hidden;background:rgba(255,255,255,.05);">
+          <div style="width:36px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.3);border-right:1px solid rgba(255,255,255,.08);font-size:12px;"><i class="fas fa-database"></i></div>
+          <div style="padding:8px 12px;color:rgba(255,255,255,.7);font-size:13px;flex:1;">FscErpDb</div>
+          <div style="padding:8px 12px;color:rgba(255,255,255,.3);font-size:11px;"><i class="fas fa-chevron-down"></i></div>
+        </div>
+      </div>
+      <button style="width:100%;padding:11px;border:none;border-radius:8px;background:linear-gradient(135deg,#1976d2,#0d47a1);color:#fff;font-size:13.5px;font-weight:700;cursor:default;box-shadow:0 4px 14px rgba(25,118,210,.4);display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fas fa-sign-in-alt"></i> GİRİŞ YAP</button>
+    </div>
+  </div>
+</div>`,
+
+        'dashboard': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Dashboard</span>
+    <span class="gm-spacer"></span>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;gap:8px;color:#856404;">
+      <i class="fas fa-exclamation-triangle"></i>
+      <strong>FSC Uyarısı:</strong> SEGEZHA GROUP sertifikası 45 gün sonra sona eriyor (30.06.2026)
+    </div>
+    <div class="gm-stats" style="grid-template-columns:repeat(4,1fr);">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-boxes"></i></div><div><div class="gm-stat-val">47</div><div class="gm-stat-lbl">Toplam Lot</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-weight-hanging"></i></div><div><div class="gm-stat-val">128.900</div><div class="gm-stat-lbl">Kalan Hammadde (kg)</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-industry"></i></div><div><div class="gm-stat-val">5</div><div class="gm-stat-lbl">Aktif İş Emri</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon purple"><i class="fas fa-truck"></i></div><div><div class="gm-stat-val">12</div><div class="gm-stat-lbl">Aktif Tedarikçi</div></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+        <div class="gm-info-header"><i class="fas fa-truck-loading me-2"></i>Son Hammadde Girişleri</div>
+        <table class="gm-table"><thead><tr><th>LOT NO</th><th>TEDARİKÇİ</th><th>KG</th></tr></thead>
+        <tbody>
+          <tr><td><a class="gm-link">L2026-047</a></td><td>BOSNA HERSEK</td><td>3.730</td></tr>
+          <tr><td><a class="gm-link">L2026-046</a></td><td>SEGEZHA GROUP</td><td>6.150</td></tr>
+          <tr><td><a class="gm-link">L2026-045</a></td><td>OYKA KAGIT</td><td>4.920</td></tr>
+        </tbody></table>
+      </div>
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+        <div class="gm-info-header"><i class="fas fa-industry me-2"></i>Aktif İş Emirleri</div>
+        <table class="gm-table"><thead><tr><th>İŞ EMRİ</th><th>ÜRÜN</th><th>DURUM</th></tr></thead>
+        <tbody>
+          <tr><td><a class="gm-link">IE2026-023</a></td><td style="font-size:11px;">KRAFT ÇUVALI 50KG</td><td><span class="gm-badge amber">Üretimde</span></td></tr>
+          <tr><td><a class="gm-link">IE2026-021</a></td><td style="font-size:11px;">KRAFT ÇUVALI 25KG</td><td><span class="gm-badge gray">Taslak</span></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+        'menu': `
+<div class="guide-mockup">
+  <div style="background:#f0f2f5;padding:16px;display:flex;gap:16px;align-items:flex-start;">
+    <div style="width:200px;background:#1a2744;border-radius:10px;overflow:hidden;flex-shrink:0;box-shadow:0 4px 16px rgba(0,0,0,.25);">
+      <div style="background:rgba(0,0,0,.15);padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.08);">
+        <div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#1976d2,#0d47a1);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0;"><i class="fas fa-leaf"></i></div>
+        <div><div style="color:#fff;font-size:12px;font-weight:700;">FSC Takip ERP</div><div style="color:rgba(255,255,255,.4);font-size:9.5px;">Kraft Kağıt Takip</div></div>
+      </div>
+      <div style="padding:6px 0;font-size:12px;">
+        <div style="padding:3px 12px;font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Genel</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.9);display:flex;align-items:center;gap:8px;background:rgba(25,118,210,.22);border-left:3px solid #1976d2;"><i class="fas fa-tachometer-alt" style="width:14px;text-align:center;color:#60a5fa;"></i> Dashboard</div>
+        <div style="padding:3px 12px;font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">FSC İşlemleri</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;"><i class="fas fa-truck-loading" style="width:14px;text-align:center;"></i> Hammadde Girişi</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;"><i class="fas fa-industry" style="width:14px;text-align:center;"></i> İş Emirleri</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;"><i class="fas fa-burn" style="width:14px;text-align:center;"></i> Fire Raporu</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;"><i class="fas fa-shipping-fast" style="width:14px;text-align:center;"></i> Satış / Sevkiyat</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;"><i class="fas fa-warehouse" style="width:14px;text-align:center;"></i> Stok Durumu</div>
+        <div style="padding:3px 12px;font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Ticari</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;"><i class="fas fa-user-tie" style="width:14px;text-align:center;"></i> Müşteriler</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;"><i class="fas fa-truck" style="width:14px;text-align:center;"></i> Tedarikçiler</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;"><i class="fas fa-box-open" style="width:14px;text-align:center;"></i> Ürünler</div>
+        <div style="padding:3px 12px;font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">FSC Raporlar</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;"><i class="fas fa-link" style="width:14px;text-align:center;"></i> Chain of Custody</div>
+        <div style="padding:3px 12px;font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Sistem</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;"><i class="fas fa-cog" style="width:14px;text-align:center;"></i> Tanımlamalar</div>
+        <div style="padding:7px 14px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;"><i class="fas fa-book-open" style="width:14px;text-align:center;"></i> Kullanım Kılavuzu</div>
+      </div>
+      <div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:8px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#1976d2,#0d47a1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">Ö</div>
+        <div><div style="color:#fff;font-size:11px;font-weight:600;">Özay Göktaş</div><div style="color:rgba(255,255,255,.4);font-size:9.5px;">Admin</div></div>
+      </div>
+    </div>
+    <div style="flex:1;background:#fff;border-radius:10px;padding:16px;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+      <p style="font-size:12.5px;color:#374151;margin:0 0 10px;"><strong>Genişletilmiş görünüm</strong> (varsayılan) — tüm menü etiketleri görünür.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="background:#1a2744;color:#fff;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;"><i class="fas fa-bars"></i> Hamburgere tıkla</div>
+        <i class="fas fa-arrow-right" style="align-self:center;color:#6b7280;"></i>
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:6px;font-size:11.5px;background:#fff;">
+          <div style="width:36px;height:36px;background:#1a2744;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-tachometer-alt" style="color:#60a5fa;font-size:13px;"></i></div>
+          <span style="color:#6b7280;font-size:11px;">Daraltılmış — sadece ikonlar</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+        'tedarikciler': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni Tedarikçi</button>
+    <span class="gm-title">Tedarikçiler</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-filter"></i> Filtrele</button>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(4,1fr);">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-truck"></i></div><div><div class="gm-stat-val">14</div><div class="gm-stat-lbl">Toplam Tedarikçi</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-certificate"></i></div><div><div class="gm-stat-val">10</div><div class="gm-stat-lbl">FSC Aktif</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-exclamation-triangle"></i></div><div><div class="gm-stat-val">2</div><div class="gm-stat-lbl">Sertifika Uyarısı</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon red"><i class="fas fa-times-circle"></i></div><div><div class="gm-stat-val">2</div><div class="gm-stat-lbl">Pasif</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>KOD</th><th>TEDARİKÇİ ADI</th><th>ÜLKE</th><th>FSC LİSANS KODU</th><th>FSC TİPİ</th><th>GEÇERLİLİK</th><th>DURUM</th><th>İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted">TED-001</td><td><strong>BOSNA HERSEK LTD</strong></td><td>BİH</td><td style="font-size:11px;">NC-COC-123456</td><td><span class="gm-badge blue">FSC-100%</span></td><td class="gm-muted">31.12.2026</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn" title="Durumu Değiştir"><i class="fas fa-sync-alt"></i></button></td></tr>
+          <tr><td class="gm-muted">TED-002</td><td><strong>SEGEZHA GROUP</strong><i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-left:6px;font-size:10px;" title="FSC süresi dolmak üzere"></i></td><td>RUS</td><td style="font-size:11px;">SCS-COC-789012</td><td><span class="gm-badge blue">FSC-MIX</span></td><td style="color:#f59e0b;font-weight:600;">30.06.2026</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+          <tr><td class="gm-muted">TED-003</td><td><strong>OYKA KAGIT A.Ş.</strong></td><td>TUR</td><td style="font-size:11px;">RA-COC-345678</td><td><span class="gm-badge blue">FSC-100%</span></td><td class="gm-muted">15.03.2027</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+          <tr style="opacity:.6;"><td class="gm-muted">TED-004</td><td><strong>NORDIC PAPER AB</strong></td><td>SWE</td><td style="font-size:11px;">—</td><td><span class="gm-badge gray">—</span></td><td class="gm-muted">—</td><td><span class="gm-badge amber">Pasif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'musteriler': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni Müşteri</button>
+    <span class="gm-title">Müşteriler</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-filter"></i> Filtrele</button>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(4,1fr);">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-user-tie"></i></div><div><div class="gm-stat-val">28</div><div class="gm-stat-lbl">Toplam Müşteri</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-certificate"></i></div><div><div class="gm-stat-val">19</div><div class="gm-stat-lbl">FSC Sertifikalı</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-check-circle"></i></div><div><div class="gm-stat-val">24</div><div class="gm-stat-lbl">Aktif</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon red"><i class="fas fa-times-circle"></i></div><div><div class="gm-stat-val">4</div><div class="gm-stat-lbl">Pasif</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>KOD</th><th>MÜŞTERİ ADI</th><th>VERGİ NO</th><th>FSC LİSANS NO</th><th>FSC TİPİ</th><th>GEÇERLİLİK</th><th>DURUM</th><th>İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted">MHS-001</td><td><strong>ABC AMBALAJ A.Ş.</strong></td><td style="font-size:11px;">1234567890</td><td style="font-size:11px;">NC-CW-654321</td><td><span class="gm-badge green">FSC-100%</span></td><td class="gm-muted">30.11.2026</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+          <tr><td class="gm-muted">MHS-002</td><td><strong>XYZ GIDA SAN. LTD.</strong></td><td style="font-size:11px;">9876543210</td><td style="font-size:11px;">—</td><td><span class="gm-badge gray">Standart</span></td><td class="gm-muted">—</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+          <tr><td class="gm-muted">MHS-003</td><td><strong>TARKIM ZİRAİ A.Ş.</strong></td><td style="font-size:11px;">1122334455</td><td style="font-size:11px;">RA-CW-112233</td><td><span class="gm-badge green">FSC-MIX</span></td><td class="gm-muted">28.02.2027</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'urunler': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni Ürün</button>
+    <span class="gm-title">Ürünler</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-filter"></i> Filtrele</button>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(4,1fr);">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-box-open"></i></div><div><div class="gm-stat-val">34</div><div class="gm-stat-lbl">Toplam Ürün</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="gm-stat-val">28</div><div class="gm-stat-lbl">Aktif</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-layer-group"></i></div><div><div class="gm-stat-val">5</div><div class="gm-stat-lbl">Ürün Grubu</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon purple"><i class="fas fa-certificate"></i></div><div><div class="gm-stat-val">21</div><div class="gm-stat-lbl">FSC Ürünü</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>KOD</th><th>ÜRÜN ADI</th><th>GRUP</th><th>KAĞIT TİPİ</th><th>GRAMAJ</th><th>EN</th><th>TORBA TİPİ</th><th>FSC</th><th>DURUM</th><th>İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted" style="font-size:11px;">PRD-001</td><td><strong style="font-size:12px;">KRAFT ÇUVALI 50KG</strong></td><td style="font-size:11px;">Kraft Torba</td><td style="font-size:11px;">KRAFT BROWN</td><td class="gm-muted">80g</td><td class="gm-muted">1080mm</td><td style="font-size:11px;">V Kesim</td><td><span class="gm-badge green" style="font-size:9.5px;">FSC-MIX</span></td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+          <tr><td class="gm-muted" style="font-size:11px;">PRD-002</td><td><strong style="font-size:12px;">VENTIL TORBA 25KG</strong></td><td style="font-size:11px;">Ventil Torba</td><td style="font-size:11px;">KRAFT BROWN</td><td class="gm-muted">90g</td><td class="gm-muted">1040mm</td><td style="font-size:11px;">Kare Dip</td><td><span class="gm-badge green" style="font-size:9.5px;">FSC-100%</span></td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+          <tr><td class="gm-muted" style="font-size:11px;">PRD-003</td><td><strong style="font-size:12px;">KRAFT ÇUVALI 25KG</strong></td><td style="font-size:11px;">Kraft Torba</td><td style="font-size:11px;">KRAFT BROWN</td><td class="gm-muted">70g</td><td class="gm-muted">920mm</td><td style="font-size:11px;">V Kesim</td><td><span class="gm-badge green" style="font-size:9.5px;">FSC-MIX</span></td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'coc': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">FSC Chain of Custody Raporu</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(3,1fr);">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-list"></i></div><div><div class="gm-stat-val">48</div><div class="gm-stat-lbl">Toplam Kalem</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-check-double"></i></div><div><div class="gm-stat-val">45</div><div class="gm-stat-lbl">Zincir Tam</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon red"><i class="fas fa-unlink"></i></div><div><div class="gm-stat-val">3</div><div class="gm-stat-lbl">Zincir Eksik</div></div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <input class="gm-input" type="date" value="2026-05-01" style="flex:1;min-width:110px;" />
+      <input class="gm-input" type="date" value="2026-05-17" style="flex:1;min-width:110px;" />
+      <select class="gm-input" style="flex:2;"><option>— Müşteri —</option></select>
+      <select class="gm-input" style="flex:2;"><option>— Ürün —</option></select>
+      <button class="gm-btn-primary" style="padding:4px 12px;font-size:11.5px;"><i class="fas fa-filter"></i> Filtrele</button>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>DURUM</th><th>SEVKİYAT</th><th>SİPARİŞ NO</th><th>MÜŞTERİ</th><th>ÜRÜN</th><th>MİKTAR</th><th>İŞ EMRİ</th><th>FSC LOT</th><th>TEDARİKÇİ</th></tr></thead>
+        <tbody>
+          <tr><td><span class="gm-badge green" style="font-size:10px;"><i class="fas fa-check-circle"></i> Tam</span></td><td class="gm-muted">17.05.2026</td><td style="font-size:11.5px;font-weight:600;">SIP2026-047</td><td style="font-size:11px;">CEMENT FACTORY A.Ş.</td><td style="font-size:11.5px;"><strong>KRAFT ÇUVALI 50KG</strong></td><td>5.000 Adet</td><td><span style="color:#1d4ed8;font-size:11px;font-weight:600;">IE2026-012</span></td><td><span class="gm-badge" style="background:#dbeafe;color:#1e40af;font-size:9.5px;">L2026-008</span></td><td style="font-size:11px;">ÖRNEK KAĞIT A.Ş.<br><span class="gm-muted" style="font-size:9.5px;">FSC-C123456</span></td></tr>
+          <tr><td><span class="gm-badge green" style="font-size:10px;"><i class="fas fa-check-circle"></i> Tam</span></td><td class="gm-muted">15.05.2026</td><td style="font-size:11.5px;font-weight:600;">SIP2026-046</td><td style="font-size:11px;">ÖRNEK TARIM LTD.<br><span class="gm-badge green" style="font-size:9px;">FSC-LIC-001</span></td><td style="font-size:11.5px;"><strong>VENTIL TORBA 25KG</strong></td><td>7.500 Adet</td><td><span style="color:#1d4ed8;font-size:11px;font-weight:600;">IE2026-011</span></td><td><span class="gm-badge" style="background:#dbeafe;color:#1e40af;font-size:9.5px;">L2026-007</span></td><td style="font-size:11px;">ÖRNEK KAĞIT A.Ş.<br><span class="gm-muted" style="font-size:9.5px;">FSC-C123456</span></td></tr>
+          <tr style="background:#fffbeb;"><td><span class="gm-badge" style="background:#fee2e2;color:#991b1b;font-size:10px;"><i class="fas fa-exclamation-circle"></i> Eksik</span></td><td class="gm-muted">14.05.2026</td><td style="font-size:11.5px;font-weight:600;">SIP2026-045</td><td style="font-size:11px;">KRAFT TEKSTİL A.Ş.</td><td style="font-size:11.5px;"><strong>KRAFT ÇUVALI 25KG</strong></td><td>2.500 Adet</td><td><span class="gm-muted" style="font-size:11px;">— Yok</span></td><td><span class="gm-muted">—</span></td><td class="gm-muted">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="border-top:1px solid #e5e7eb;padding:8px 14px;display:flex;align-items:center;gap:12px;font-size:11.5px;color:#6b7280;">
+      <span>48 kalem — FSC Zincir Tamamlanma: <strong style="color:#16a34a;">%93.75</strong></span>
+      <div style="background:#e5e7eb;border-radius:4px;height:6px;flex:1;max-width:200px;overflow:hidden;"><div style="background:#16a34a;height:100%;width:93.75%"></div></div>
+    </div>
+  </div>
+</div>`,
+
+        'lot-takip': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Lot Takip Raporu</span>
+    <span class="gm-spacer"></span>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 12px;margin-bottom:12px;display:flex;gap:8px;align-items:center;">
+      <select class="gm-input" style="flex:1;"><option>L2026-008 — ÖRNEK KAĞIT A.Ş. (10.05.2026)</option></select>
+      <button class="gm-btn-primary" style="padding:4px 12px;font-size:11.5px;"><i class="fas fa-search"></i> Takip Et</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="gm-info-card">
+        <div class="gm-info-header"><i class="fas fa-layer-group me-2"></i>Lot Bilgileri</div>
+        <div class="gm-info-row"><span>Lot No</span><span style="font-weight:600;">L2026-008</span></div>
+        <div class="gm-info-row"><span>Tedarikçi</span><span>ÖRNEK KAĞIT A.Ş.</span></div>
+        <div class="gm-info-row"><span>Tedarikçi FSC</span><span><span class="gm-badge green" style="font-size:9.5px;">FSC-C123456</span></span></div>
+        <div class="gm-info-row"><span>FSC Tipi</span><span><span class="gm-badge" style="background:#dbeafe;color:#1e40af;font-size:9.5px;">FSC-MIX</span></span></div>
+        <div class="gm-info-row"><span>Geliş Tarihi</span><span>10.05.2026</span></div>
+      </div>
+      <div class="gm-info-card">
+        <div class="gm-info-header" style="background:linear-gradient(135deg,#166534,#14532d);"><i class="fas fa-sitemap me-2"></i>FSC Zinciri</div>
+        <div style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;">
+          <div style="background:#f0fdf4;border-radius:6px;padding:6px 10px;font-size:11px;display:flex;align-items:center;gap:6px;"><span style="background:#16a34a;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;">1</span><span><strong>Tedarikçi:</strong> ÖRNEK KAĞIT A.Ş.</span></div>
+          <div style="text-align:center;color:#9ca3af;font-size:10px;">↓</div>
+          <div style="background:#eff6ff;border-radius:6px;padding:6px 10px;font-size:11px;display:flex;align-items:center;gap:6px;"><span style="background:#1d4ed8;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;">2</span><span><strong>Lot:</strong> L2026-008 (4 seri)</span></div>
+          <div style="text-align:center;color:#9ca3af;font-size:10px;">↓</div>
+          <div style="background:#fefce8;border-radius:6px;padding:6px 10px;font-size:11px;display:flex;align-items:center;gap:6px;"><span style="background:#ca8a04;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;">3</span><span><strong>Üretim:</strong> 2 iş emri</span></div>
+          <div style="text-align:center;color:#9ca3af;font-size:10px;">↓</div>
+          <div style="background:#fdf4ff;border-radius:6px;padding:6px 10px;font-size:11px;display:flex;align-items:center;gap:6px;"><span style="background:#7c3aed;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;">4</span><span><strong>Satış:</strong> 6 kalem, 3 sipariş</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table" style="font-size:11px;">
+        <thead><tr><th>SERİ NO</th><th style="text-align:right;">BAŞLANGIÇ (kg)</th><th style="text-align:right;">KALAN (kg)</th><th style="text-align:right;">TÜKETİM (kg)</th><th>İŞ EMİRLERİ</th><th>DURUM</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600;">S2026-008-01</td><td style="text-align:right;">2.500,0</td><td style="text-align:right;">0,0</td><td style="text-align:right;color:#dc2626;">2.500,0</td><td><span class="gm-badge" style="background:#dbeafe;color:#1e40af;font-size:9.5px;">IE2026-011</span></td><td><span class="gm-badge" style="background:#f3f4f6;color:#374151;font-size:9.5px;">Tükendi</span></td></tr>
+          <tr><td style="font-weight:600;">S2026-008-02</td><td style="text-align:right;">2.500,0</td><td style="text-align:right;">800,0</td><td style="text-align:right;color:#dc2626;">1.700,0</td><td><span class="gm-badge" style="background:#dbeafe;color:#1e40af;font-size:9.5px;">IE2026-012</span></td><td><span class="gm-badge" style="background:#fef9c3;color:#854d0e;font-size:9.5px;">Azalıyor (%68)</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'tedarikci-fsc': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Tedarikçi FSC Sertifika Durumu</span>
+    <span class="gm-spacer"></span>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(3,1fr);">
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-shield-alt"></i></div><div><div class="gm-stat-val">5</div><div class="gm-stat-lbl">Geçerli Sertifika</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-exclamation-triangle"></i></div><div><div class="gm-stat-val">1</div><div class="gm-stat-lbl">30 Gün İçinde Bitiyor</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon red"><i class="fas fa-times-circle"></i></div><div><div class="gm-stat-val">1</div><div class="gm-stat-lbl">Süresi Geçmiş</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>TEDARİKÇİ KODU</th><th>TEDARİKÇİ ADI</th><th>FSC KODU</th><th>SON GEÇERLİLİK</th><th>KALAN GÜN</th><th>DURUM</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted">TED-001</td><td><strong>ÖRNEK KAĞIT A.Ş.</strong></td><td><span class="gm-badge" style="background:#dbeafe;color:#1e40af;font-size:10px;">FSC-C123456</span></td><td>31.12.2026</td><td>228 gün</td><td><span class="gm-badge green">Geçerli</span></td></tr>
+          <tr style="background:#fffbeb;"><td class="gm-muted">TED-002</td><td><strong>KRAFT HAMMADDE LTD.</strong></td><td><span class="gm-badge" style="background:#dbeafe;color:#1e40af;font-size:10px;">FSC-C789012</span></td><td>05.06.2026</td><td style="color:#dc2626;font-weight:600;">19 gün</td><td><span class="gm-badge" style="background:#fef3c7;color:#92400e;">Yakında Bitiyor</span></td></tr>
+          <tr style="background:#fef2f2;"><td class="gm-muted">TED-003</td><td><strong>ESKİ TEDARİKÇİ A.Ş.</strong></td><td><span class="gm-badge" style="background:#dbeafe;color:#1e40af;font-size:10px;">FSC-C000001</span></td><td>01.01.2026</td><td style="color:#dc2626;font-weight:600;">Süresi Geçti</td><td><span class="gm-badge" style="background:#fee2e2;color:#991b1b;">Geçersiz</span></td></tr>
+          <tr><td class="gm-muted">TED-004</td><td><strong>SELÜLOZ SAN. A.Ş.</strong></td><td><span class="gm-badge" style="background:#dbeafe;color:#1e40af;font-size:10px;">FSC-C345678</span></td><td>30.06.2027</td><td>408 gün</td><td><span class="gm-badge green">Geçerli</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'stok': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary" style="background:linear-gradient(135deg,#0369a1,#0284c7);"><i class="fas fa-exchange-alt"></i> Depo Transferi</button>
+    <span class="gm-title">Stok Durumu</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(5,1fr);">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-boxes"></i></div><div><div class="gm-stat-val">12</div><div class="gm-stat-lbl">Ürün Çeşidi</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="gm-stat-val">9</div><div class="gm-stat-lbl">Stokta Var</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon red"><i class="fas fa-exclamation-triangle"></i></div><div><div class="gm-stat-val">3</div><div class="gm-stat-lbl">Stok Yok</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-arrow-down"></i></div><div><div class="gm-stat-val">142.500</div><div class="gm-stat-lbl">Toplam Giriş</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon purple"><i class="fas fa-arrow-up"></i></div><div><div class="gm-stat-val">98.200</div><div class="gm-stat-lbl">Toplam Çıkış</div></div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;gap:8px;align-items:center;">
+      <select class="gm-input" style="flex:1;"><option>— Ürün Grubu —</option></select>
+      <select class="gm-input" style="flex:2;"><option>— Ürün —</option></select>
+      <button class="gm-btn-primary" style="padding:4px 12px;font-size:11.5px;"><i class="fas fa-filter"></i> Filtrele</button>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>KOD</th><th>ÜRÜN ADI</th><th>GRUP</th><th style="text-align:right;">GİRİŞ</th><th style="text-align:right;">ÇIKIŞ</th><th style="text-align:right;">NET STOK</th><th>BİRİM</th><th>SON HAREKET</th><th>DURUM</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted" style="font-size:11px;">PRD-001</td><td><strong style="font-size:12px;">KRAFT ÇUVALI 50KG</strong></td><td style="font-size:11px;">Kraft Torba</td><td style="text-align:right;color:#16a34a;font-weight:600;">45.000</td><td style="text-align:right;color:#dc2626;font-weight:600;">28.500</td><td style="text-align:right;font-weight:700;">16.500</td><td class="gm-muted">Adet</td><td class="gm-muted">17.05.2026</td><td><span class="gm-badge green">Var</span></td></tr>
+          <tr><td class="gm-muted" style="font-size:11px;">PRD-002</td><td><strong style="font-size:12px;">VENTIL TORBA 25KG</strong></td><td style="font-size:11px;">Ventil Torba</td><td style="text-align:right;color:#16a34a;font-weight:600;">30.000</td><td style="text-align:right;color:#dc2626;font-weight:600;">22.000</td><td style="text-align:right;font-weight:700;">8.000</td><td class="gm-muted">Adet</td><td class="gm-muted">15.05.2026</td><td><span class="gm-badge green">Var</span></td></tr>
+          <tr><td class="gm-muted" style="font-size:11px;">PRD-005</td><td><strong style="font-size:12px;">KRAFT TORBA 10KG</strong></td><td style="font-size:11px;">Kraft Torba</td><td style="text-align:right;color:#16a34a;font-weight:600;">10.000</td><td style="text-align:right;color:#dc2626;font-weight:600;">10.000</td><td style="text-align:right;font-weight:700;color:#dc2626;">0</td><td class="gm-muted">Adet</td><td class="gm-muted">10.05.2026</td><td><span class="gm-badge" style="background:#fee2e2;color:#991b1b;">Yok</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'stok-hareketleri': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Stok Hareketleri</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <select class="gm-input" style="flex:2;min-width:120px;"><option>— Ürün —</option></select>
+      <select class="gm-input" style="flex:1;min-width:120px;"><option>— Hareket Tipi —</option></select>
+      <input class="gm-input" type="date" value="2026-05-01" style="flex:1;min-width:110px;" />
+      <input class="gm-input" type="date" value="2026-05-17" style="flex:1;min-width:110px;" />
+      <button class="gm-btn-primary" style="padding:4px 12px;font-size:11.5px;"><i class="fas fa-filter"></i> Filtrele</button>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>TARİH</th><th>BELGE NO</th><th>TİP</th><th>ÜRÜN</th><th style="text-align:right;">MİKTAR</th><th>BİRİM</th><th>MÜŞTERİ / AÇIKLAMA</th><th>İŞ EMRİ</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted">17.05.2026</td><td style="font-size:11.5px;font-weight:600;">SIP2026-047</td><td><span class="gm-badge" style="background:#fee2e2;color:#991b1b;">Satış</span></td><td style="font-size:11.5px;"><strong>KRAFT ÇUVALI 50KG</strong></td><td style="text-align:right;color:#dc2626;font-weight:600;">−5.000</td><td class="gm-muted">Adet</td><td style="font-size:11px;">CEMENT FACTORY A.Ş.</td><td><a style="color:#1d4ed8;font-size:11px;cursor:default;"><i class="fas fa-link"></i> IE-012</a></td></tr>
+          <tr><td class="gm-muted">15.05.2026</td><td style="font-size:11.5px;font-weight:600;">IE2026-012</td><td><span class="gm-badge" style="background:#dbeafe;color:#1e40af;">Üretim</span></td><td style="font-size:11.5px;"><strong>KRAFT ÇUVALI 50KG</strong></td><td style="text-align:right;color:#16a34a;font-weight:600;">+20.000</td><td class="gm-muted">Adet</td><td style="font-size:11px;">Üretimden depoya giriş</td><td><a style="color:#1d4ed8;font-size:11px;cursor:default;"><i class="fas fa-link"></i> IE-012</a></td></tr>
+          <tr><td class="gm-muted">10.05.2026</td><td style="font-size:11.5px;font-weight:600;">L2026-008</td><td><span class="gm-badge" style="background:#e0f2fe;color:#0369a1;">Satın Alma</span></td><td style="font-size:11.5px;"><strong>KRAFT KAĞIT 80GR</strong></td><td style="text-align:right;color:#16a34a;font-weight:600;">+50.000</td><td class="gm-muted">Kg</td><td style="font-size:11px;">ÖRNEK KAĞIT A.Ş.</td><td><span class="gm-muted">—</span></td></tr>
+          <tr><td class="gm-muted">08.05.2026</td><td style="font-size:11.5px;font-weight:600;">TRF2026-003</td><td><span class="gm-badge" style="background:#fef9c3;color:#854d0e;">Transfer</span></td><td style="font-size:11.5px;"><strong>VENTIL TORBA 25KG</strong></td><td style="text-align:right;font-weight:600;">2.500</td><td class="gm-muted">Adet</td><td style="font-size:11px;">Dep-01 → Dep-02</td><td><span class="gm-muted">—</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="border-top:1px solid #e5e7eb;padding:8px 14px;display:flex;justify-content:space-between;font-size:11.5px;color:#6b7280;">
+      <span>4 kayıt</span>
+      <span>Toplam Giriş: <strong style="color:#16a34a;">70.000</strong> &nbsp;|&nbsp; Toplam Çıkış: <strong style="color:#dc2626;">5.000</strong></span>
+    </div>
+  </div>
+</div>`,
+
+        'satis': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni Sipariş</button>
+    <span class="gm-title">Satış Siparişleri</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(4,1fr);">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-file-invoice"></i></div><div><div class="gm-stat-val">47</div><div class="gm-stat-lbl">Toplam Sipariş</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-clock"></i></div><div><div class="gm-stat-val">12</div><div class="gm-stat-lbl">Bekleyen</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-truck"></i></div><div><div class="gm-stat-val">31</div><div class="gm-stat-lbl">Teslim Edildi</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon purple"><i class="fas fa-lira-sign"></i></div><div><div class="gm-stat-val">1.24M ₺</div><div class="gm-stat-lbl">Toplam Tutar</div></div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <select class="gm-input" style="flex:1;min-width:120px;"><option>— Müşteri —</option></select>
+      <input class="gm-input" type="date" value="2026-05-01" style="flex:1;min-width:110px;" />
+      <input class="gm-input" type="date" value="2026-05-17" style="flex:1;min-width:110px;" />
+      <select class="gm-input" style="flex:1;min-width:100px;"><option>— Durum —</option></select>
+      <button class="gm-btn-primary" style="padding:4px 12px;font-size:11.5px;"><i class="fas fa-search"></i> Ara</button>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>#</th><th>SİPARİŞ NO</th><th>MÜŞTERİ</th><th>TARİH</th><th>TUTAR</th><th>KALEMLer</th><th>DURUM</th><th>İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted">47</td><td><a style="color:#1d4ed8;font-size:11.5px;font-weight:600;cursor:default;">SIP2026-047</a></td><td style="font-size:11.5px;">CEMENT FACTORY A.Ş.</td><td class="gm-muted">17.05.2026</td><td style="font-size:11.5px;font-weight:600;">48.500,00 ₺</td><td class="gm-muted" style="text-align:center;">3</td><td><span class="gm-badge" style="background:#fef3c7;color:#92400e;">Taslak</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          <tr><td class="gm-muted">46</td><td><a style="color:#1d4ed8;font-size:11.5px;font-weight:600;cursor:default;">SIP2026-046</a></td><td style="font-size:11.5px;">ÖRNEK TARIM LTD.</td><td class="gm-muted">15.05.2026</td><td style="font-size:11.5px;font-weight:600;">72.000,00 ₺</td><td class="gm-muted" style="text-align:center;">5</td><td><span class="gm-badge green">Teslim Edildi</span></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button></td></tr>
+          <tr><td class="gm-muted">45</td><td><a style="color:#1d4ed8;font-size:11.5px;font-weight:600;cursor:default;">SIP2026-045</a></td><td style="font-size:11.5px;"><span class="gm-badge green" style="font-size:9px;margin-right:4px;">FSC</span>KRAFT TEKSTİL A.Ş.</td><td class="gm-muted">14.05.2026</td><td style="font-size:11.5px;font-weight:600;">31.200,00 ₺</td><td class="gm-muted" style="text-align:center;">2</td><td><span class="gm-badge green">Teslim Edildi</span></td><td><button class="gm-icon-btn"><i class="fas fa-eye"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'satis-detail': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <a style="color:#9ca3af;font-size:11.5px;cursor:default;margin-right:4px;">Satış Siparişleri</a>
+    <span style="color:#9ca3af;font-size:11px;">›</span>
+    <span class="gm-title" style="font-size:13px;margin-left:6px;">SIP2026-047 Detayı</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-primary" style="background:linear-gradient(135deg,#16a34a,#15803d);"><i class="fas fa-truck"></i> Sevk Et</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body" style="display:grid;grid-template-columns:280px 1fr;gap:14px;">
+    <div>
+      <div class="gm-info-card" style="margin-bottom:10px;">
+        <div class="gm-info-header"><i class="fas fa-info-circle me-2"></i>Sipariş Bilgileri</div>
+        <div class="gm-info-row"><span>Sipariş No</span><span style="font-weight:600;font-size:11.5px;">SIP2026-047</span></div>
+        <div class="gm-info-row"><span>Müşteri</span><span style="font-size:11px;">CEMENT FACTORY A.Ş.</span></div>
+        <div class="gm-info-row"><span>Sipariş Tarihi</span><span>17.05.2026</span></div>
+        <div class="gm-info-row"><span>Durum</span><span class="gm-badge" style="background:#fef3c7;color:#92400e;font-size:10px;">Taslak</span></div>
+        <div class="gm-info-row"><span>Döviz</span><span>TRY</span></div>
+      </div>
+      <div class="gm-info-card" style="margin-bottom:10px;">
+        <div class="gm-info-header"><i class="fas fa-chart-bar me-2"></i>Özet</div>
+        <div class="gm-info-row"><span>Kalem Sayısı</span><span style="font-weight:600;">3</span></div>
+        <div class="gm-info-row"><span>Toplam Adet</span><span style="font-weight:600;">15.000</span></div>
+        <div class="gm-info-row"><span>Toplam Tutar</span><span style="font-weight:700;color:#1d4ed8;">48.500,00 ₺</span></div>
+      </div>
+      <div class="gm-info-card">
+        <div class="gm-info-header" style="background:linear-gradient(135deg,#166534,#14532d);"><i class="fas fa-link me-2"></i>FSC CoC Durumu</div>
+        <div style="padding:10px 14px;font-size:11px;color:#166534;background:#f0fdf4;display:flex;align-items:center;gap:6px;"><i class="fas fa-check-circle"></i> 2/3 kalem iş emrine bağlı — FSC zinciri aktif</div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12.5px;font-weight:600;color:#111827;">Sipariş Kalemleri</span>
+        <button class="gm-btn-primary" style="padding:4px 10px;font-size:11px;"><i class="fas fa-plus"></i> Kalem Ekle</button>
+      </div>
+      <div class="gm-table-wrap">
+        <table class="gm-table">
+          <thead><tr><th>#</th><th>ÜRÜN</th><th>İŞ EMRİ</th><th>MİKTAR</th><th>BİRİM FİYAT</th><th>TUTAR</th><th>İŞLEM</th></tr></thead>
+          <tbody>
+            <tr><td class="gm-muted">1</td><td style="font-size:11.5px;"><strong>KRAFT ÇUVALI 50KG</strong></td><td><span class="gm-badge green" style="font-size:9px;">🏆 IE-2026-012</span></td><td>5.000</td><td class="gm-muted">3,20 ₺</td><td style="font-weight:600;">16.000,00 ₺</td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+            <tr><td class="gm-muted">2</td><td style="font-size:11.5px;"><strong>VENTIL TORBA 25KG</strong></td><td><span class="gm-badge green" style="font-size:9px;">🏆 IE-2026-011</span></td><td>7.500</td><td class="gm-muted">2,90 ₺</td><td style="font-weight:600;">21.750,00 ₺</td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+            <tr><td class="gm-muted">3</td><td style="font-size:11.5px;"><strong>KRAFT ÇUVALI 25KG</strong></td><td><span class="gm-muted" style="font-size:10px;">—</span></td><td>2.500</td><td class="gm-muted">4,30 ₺</td><td style="font-weight:600;">10.750,00 ₺</td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          </tbody>
+          <tfoot><tr style="background:#f8faff;"><td colspan="5" style="text-align:right;font-size:12px;font-weight:600;padding:8px 14px;">Toplam</td><td style="font-weight:700;font-size:13px;color:#1d4ed8;padding:8px 10px;">48.500,00 ₺</td><td></td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+        'tanimlamalar': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <span class="gm-title">Sistem Tanımlamaları</span>
+    <span class="gm-spacer"></span>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+      <a style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:default;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:16px;color:#1d4ed8;"><i class="fas fa-shopping-bag"></i></div>
+        <div style="font-size:12px;font-weight:600;color:#111827;text-align:center;">Torba Tipleri</div>
+        <div style="font-size:10.5px;color:#6b7280;text-align:center;">Kare Dip, V Kesim...</div>
+      </a>
+      <a style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:default;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:16px;color:#166534;"><i class="fas fa-layer-group"></i></div>
+        <div style="font-size:12px;font-weight:600;color:#111827;text-align:center;">Ürün Grupları</div>
+        <div style="font-size:10.5px;color:#6b7280;text-align:center;">Kod aralıkları</div>
+      </a>
+      <a style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:default;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-size:16px;color:#5b21b6;"><i class="fas fa-scroll"></i></div>
+        <div style="font-size:12px;font-weight:600;color:#111827;text-align:center;">Kağıt Tipleri</div>
+        <div style="font-size:10.5px;color:#6b7280;text-align:center;">Kraft, White...</div>
+      </a>
+      <a style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:default;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:16px;color:#92400e;"><i class="fas fa-palette"></i></div>
+        <div style="font-size:12px;font-weight:600;color:#111827;text-align:center;">Kağıt Renkleri</div>
+        <div style="font-size:10.5px;color:#6b7280;text-align:center;">Brown, White...</div>
+      </a>
+      <a style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:default;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:16px;color:#991b1b;"><i class="fas fa-weight"></i></div>
+        <div style="font-size:12px;font-weight:600;color:#111827;text-align:center;">Gramajlar</div>
+        <div style="font-size:10.5px;color:#6b7280;text-align:center;">70, 80, 90 g/m²</div>
+      </a>
+      <a style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:default;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:16px;color:#3730a3;"><i class="fas fa-ruler-horizontal"></i></div>
+        <div style="font-size:12px;font-weight:600;color:#111827;text-align:center;">Kağıt Enleri</div>
+        <div style="font-size:10.5px;color:#6b7280;text-align:center;">1040, 1080 mm</div>
+      </a>
+      <a style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:default;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:16px;color:#166534;"><i class="fas fa-certificate"></i></div>
+        <div style="font-size:12px;font-weight:600;color:#111827;text-align:center;">FSC Tipleri</div>
+        <div style="font-size:10.5px;color:#6b7280;text-align:center;">FSC-100%, FSC-MIX</div>
+      </a>
+      <a style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:default;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:16px;color:#374151;"><i class="fas fa-cogs"></i></div>
+        <div style="font-size:12px;font-weight:600;color:#111827;text-align:center;">Makineler</div>
+        <div style="font-size:10.5px;color:#6b7280;text-align:center;">MAKİNE-1, MAKİNE-2</div>
+      </a>
+    </div>
+    <div style="margin-top:12px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+      <div class="gm-info-header" style="font-size:11.5px;"><i class="fas fa-info-circle me-2"></i>Örnek: Torba Tipleri listesi</div>
+      <table class="gm-table" style="font-size:11.5px;">
+        <thead><tr><th>KOD</th><th>TANIM</th><th>DURUM</th><th>İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td class="gm-muted">TT-001</td><td>V Kesim</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+          <tr><td class="gm-muted">TT-002</td><td>Kare Dip</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+          <tr><td class="gm-muted">TT-003</td><td>Körüklü Kare Dip</td><td><span class="gm-badge green">Aktif</span></td><td><button class="gm-icon-btn"><i class="fas fa-pen"></i></button> <button class="gm-icon-btn"><i class="fas fa-sync-alt"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'depolar': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni Depo Ekle</button>
+    <span class="gm-title">Depo Tanımlamaları</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-filter"></i> Filtrele</button>
+    <button class="gm-btn-excel"><i class="fas fa-file-excel"></i> Excel</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(3,1fr); margin-bottom:10px;">
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-warehouse"></i></div><div><div class="gm-stat-val">3</div><div class="gm-stat-lbl">Toplam Depo</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-check-circle"></i></div><div><div class="gm-stat-val">3</div><div class="gm-stat-lbl">Aktif</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-pause-circle"></i></div><div><div class="gm-stat-val">0</div><div class="gm-stat-lbl">Pasif</div></div></div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>KOD</th><th>DEPO ADI</th><th style="text-align:center;">DURUM</th><th style="text-align:center;">İŞLEMLER</th></tr></thead>
+        <tbody>
+          <tr><td><code style="color:#1d4ed8;font-weight:600;font-size:11px;">DEP-01</code></td><td><strong>Hammadde Deposu</strong></td><td style="text-align:center;"><span class="gm-badge green">Aktif</span></td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-pause"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          <tr><td><code style="color:#1d4ed8;font-weight:600;font-size:11px;">DEP-02</code></td><td><strong>Mamul Deposu</strong></td><td style="text-align:center;"><span class="gm-badge green">Aktif</span></td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-pause"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          <tr><td><code style="color:#1d4ed8;font-weight:600;font-size:11px;">DEP-03</code></td><td><strong>Sevkiyat Bekleme Deposu</strong></td><td style="text-align:center;"><span class="gm-badge green">Aktif</span></td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-pause"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'recete': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Bileşen Ekle</button>
+    <span class="gm-title">Reçete — Kraft Çuvalı 50Kg</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-arrow-left"></i> Ürünler</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+      <div style="width:40px;height:40px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-box" style="color:#1d4ed8;"></i></div>
+      <div><div style="font-weight:600;font-size:13px;">KRAFT ÇUVALI 50KG</div><div style="font-size:11px;color:#6b7280;"><code>MM-001</code> · Mamul Ürün · Birim: Adet</div></div>
+      <div style="margin-left:auto;display:flex;gap:16px;text-align:center;">
+        <div><div style="font-weight:700;font-size:18px;color:#1d4ed8;">1</div><div style="font-size:10px;color:#6b7280;">Bileşen</div></div>
+        <div><div style="font-weight:700;font-size:18px;color:#16a34a;">1</div><div style="font-size:10px;color:#6b7280;">Aktif</div></div>
+      </div>
+    </div>
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>BİLEŞEN ÜRÜN</th><th>KOD</th><th>GRUP</th><th style="text-align:right;">STD MİKTAR</th><th>BİRİM</th><th style="text-align:center;">DURUM</th><th style="text-align:center;">İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Kraft Kağıt 80gr Bobin</strong></td><td><code style="font-size:10px;">HM-001</code></td><td style="color:#6b7280;font-size:11px;">Hammadde</td><td style="text-align:right;font-weight:600;">0,082</td><td style="color:#6b7280;">kg</td><td style="text-align:center;"><span class="gm-badge green">Aktif</span></td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-pause"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:#6b7280;padding:8px 10px;background:#fafafa;border-top:1px solid #e5e7eb;">
+      <i class="fas fa-info-circle me-1" style="color:#1d4ed8;"></i>
+      Pasif bileşenler <strong>Reçeteden Yükle</strong> ile otomatik uygulamaya dahil edilmez.
+    </div>
+  </div>
+</div>`,
+
+        'etl': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-file-upload"></i> Excel Aktarımı</button>
+    <span class="gm-title">ERP Entegrasyonu</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-plug"></i> Bağlantılar</button>
+    <button class="gm-btn-secondary"><i class="fas fa-history"></i> Geçmiş</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-stats" style="grid-template-columns:repeat(4,1fr); margin-bottom:12px;">
+      <div class="gm-stat"><div class="gm-stat-icon blue"><i class="fas fa-plug"></i></div><div><div class="gm-stat-val">2</div><div class="gm-stat-lbl">Bağlantı Profili</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="gm-stat-val">2</div><div class="gm-stat-lbl">Aktif</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon amber"><i class="fas fa-exchange-alt"></i></div><div><div class="gm-stat-val">5</div><div class="gm-stat-lbl">Toplam Aktarım</div></div></div>
+      <div class="gm-stat"><div class="gm-stat-icon green"><i class="fas fa-thumbs-up"></i></div><div><div class="gm-stat-val">4</div><div class="gm-stat-lbl">Başarılı</div></div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+      <div style="padding:10px 14px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-history" style="color:#1d4ed8;font-size:12px;"></i>
+        <span style="font-weight:600;font-size:12px;">Son Aktarımlar</span>
+      </div>
+      <table class="gm-table" style="font-size:11.5px;">
+        <thead><tr><th>TÜR</th><th>KAYNAK</th><th>TOPLAM</th><th>EKLENDİ</th><th>GÜNCELLENDİ</th><th>HATA</th><th>DURUM</th><th>TARİH</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Ürün Aktarımı</strong></td><td class="gm-muted">Manuel Excel</td><td>25</td><td class="gm-muted" style="color:#16a34a;">20</td><td class="gm-muted" style="color:#1d4ed8;">5</td><td class="gm-muted">0</td><td><span class="gm-badge green">Tamamlandı</span></td><td class="gm-muted">15.05.2026</td></tr>
+          <tr><td><strong>Tedarikçi Aktarımı</strong></td><td class="gm-muted">Logo ERP</td><td>12</td><td class="gm-muted" style="color:#16a34a;">10</td><td class="gm-muted" style="color:#1d4ed8;">2</td><td class="gm-muted">0</td><td><span class="gm-badge green">Tamamlandı</span></td><td class="gm-muted">10.05.2026</td></tr>
+          <tr><td><strong>Müşteri Aktarımı</strong></td><td class="gm-muted">Manuel Excel</td><td>8</td><td class="gm-muted" style="color:#16a34a;">7</td><td class="gm-muted" style="color:#1d4ed8;">0</td><td class="gm-muted" style="color:#ef4444;">1</td><td><span class="gm-badge amber">Kısmi</span></td><td class="gm-muted">08.05.2026</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+        'imha': `
+<div class="guide-mockup">
+  <div class="gm-topbar">
+    <span class="gm-hamburger"><i class="fas fa-bars"></i></span>
+    <button class="gm-btn-primary"><i class="fas fa-plus"></i> Yeni İmha Kaydı</button>
+    <span class="gm-title">İmha Kayıtları</span>
+    <span class="gm-spacer"></span>
+    <button class="gm-btn-secondary"><i class="fas fa-arrow-left"></i> Fire Raporu</button>
+    <span class="gm-user"><i class="fas fa-user-circle"></i> Özay Göktaş</span>
+  </div>
+  <div class="gm-body">
+    <div class="gm-table-wrap">
+      <table class="gm-table">
+        <thead><tr><th>İMHA KODU</th><th>KATEGORİ</th><th>AÇIKLAMA</th><th>İŞ EMRİ</th><th style="text-align:right;">MİKTAR</th><th>BİRİM</th><th>TARİH</th><th style="text-align:center;">İŞLEM</th></tr></thead>
+        <tbody>
+          <tr><td><code style="font-size:10px;color:#1d4ed8;">ATK2026-001</code></td><td><span class="gm-badge amber">Kesim Artığı</span></td><td style="font-size:11px;">Kenar kesim artıkları</td><td style="font-size:11px;color:#6b7280;">IE2026-001</td><td style="text-align:right;font-weight:600;">85,00</td><td style="color:#6b7280;">kg</td><td style="font-size:11px;">25.02.2026</td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          <tr><td><code style="font-size:10px;color:#1d4ed8;">ATK2026-002</code></td><td><span class="gm-badge amber">Baskı Artığı</span></td><td style="font-size:11px;">Baskı hataları</td><td style="font-size:11px;color:#6b7280;">IE2026-001</td><td style="text-align:right;font-weight:600;">40,00</td><td style="color:#6b7280;">kg</td><td style="font-size:11px;">25.02.2026</td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+          <tr><td><code style="font-size:10px;color:#1d4ed8;">ATK2026-003</code></td><td><span class="gm-badge amber">Makine Hatası</span></td><td style="font-size:11px;">Kalibrasyon firesi</td><td style="font-size:11px;color:#6b7280;">IE2026-002</td><td style="text-align:right;font-weight:600;">75,00</td><td style="color:#6b7280;">kg</td><td style="font-size:11px;">12.03.2026</td><td style="text-align:center;"><button class="gm-icon-btn"><i class="fas fa-edit"></i></button> <button class="gm-icon-btn"><i class="fas fa-trash"></i></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`
+
+    };
+
+    // Her bölüm başlığından sonra mockup'ı enjekte et
+    Object.entries(mockups).forEach(([id, html]) => {
+        const heading = document.getElementById(id);
+        if (!heading) return;
+        // code bloklarını (ASCII art) mockup ile değiştir
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html;
+        // İlk <pre> bloğunu bul ve mockup ile değiştir — bulamazsa başlığın hemen altına ekle
+        let inserted = false;
+        let next = heading.nextElementSibling;
+        while (next) {
+            if (next.tagName === 'PRE' || (next.tagName === 'DIV' && next.querySelector('pre'))) {
+                next.replaceWith(wrapper);
+                inserted = true;
+                break;
+            }
+            if (next.tagName === 'H2' || next.tagName === 'H3') break;
+            next = next.nextElementSibling;
+        }
+        if (!inserted) heading.insertAdjacentElement('afterend', wrapper);
+    });
+
+    // TOC active state on scroll
+    const tocLinks = document.querySelectorAll('.toc-item[href]');
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                tocLinks.forEach(l => l.classList.remove('active'));
+                const link = document.querySelector(`.toc-item[href="#${e.target.id}"]`);
+                if (link) link.classList.add('active');
+            }
+        });
+    }, { rootMargin: '-20% 0% -70% 0%', threshold: 0 });
+
+    document.querySelectorAll('.md-body h2[id]').forEach(el => observer.observe(el));
+
+    // Scroll to section
+    function scrollTo(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    // Hash navigation on load
+    if (window.location.hash) {
+        setTimeout(() => {
+            const id = window.location.hash.substring(1);
+            scrollTo(id);
+        }, 300);
+    }
+</script>
+}

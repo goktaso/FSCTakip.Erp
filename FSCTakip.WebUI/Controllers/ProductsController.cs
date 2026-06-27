@@ -1,4 +1,4 @@
-using FSCTakip.Core.Entities;
+﻿using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -6,29 +6,49 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace FSC_ERP.Controllers
+namespace FSCTakip.WebUI.Controllers
 {
     public class ProductsController : BaseController
     {
         // Hata veren satırı bununla değiştir:
         public ProductsController(FSCTakip.DataAccess.Data.AppDbContext context) : base(context) { }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int[]? supplierIds, int[]? productGroupIds, string? search)
         {
             await PopulateDropdowns(ViewData);
-            var products = await _context.Products
+
+            var query = _context.Products
                 .Include(p => p.ProductGroup)
-                .Include(p => p.Supplier) // YENİ: Tedarikçi ilişkisi eklendi
+                .Include(p => p.Supplier)
                 .Include(p => p.FscType)
                 .Include(p => p.PaperType)
                 .Include(p => p.PaperColor)
                 .Include(p => p.PaperWeight)
                 .Include(p => p.PaperWidth)
-                .OrderBy(p => p.ProductCode)
-                .ToListAsync();
+                .AsQueryable();
+
+            if (supplierIds != null && supplierIds.Length > 0)
+                query = query.Where(p => p.SupplierId.HasValue && supplierIds.Contains(p.SupplierId.Value));
+            if (productGroupIds != null && productGroupIds.Length > 0)
+                query = query.Where(p => p.ProductGroupId.HasValue && productGroupIds.Contains(p.ProductGroupId.Value));
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                query = query.Where(p =>
+                    p.ProductCode.Contains(s) ||
+                    p.ProductName.Contains(s) ||
+                    (p.ExternalCode != null && p.ExternalCode.Contains(s)));
+            }
+
+            ViewBag.SupplierIds     = supplierIds     ?? Array.Empty<int>();
+            ViewBag.ProductGroupIds = productGroupIds ?? Array.Empty<int>();
+            ViewBag.Search          = search;
+
+            var products = await query.OrderBy(p => p.ProductCode).ToListAsync();
             return View(products);
         }
 
@@ -104,6 +124,7 @@ namespace FSC_ERP.Controllers
                 }
 
                 model.ProductCode = newCode;
+                model.ExternalCode = string.IsNullOrWhiteSpace(model.ExternalCode) ? null : model.ExternalCode.Trim().ToUpperInvariant();
                 model.SupplierId = model.SupplierId; // Tedarikçi ataması
                 model.Unit = model.Unit ?? "ADET";
                 model.CreatedDate = DateTime.Now;
@@ -125,6 +146,7 @@ namespace FSC_ERP.Controllers
                     existing.PaperColorId = model.PaperColorId;
                     existing.PaperWeightId = model.PaperWeightId;
                     existing.PaperWidthId = model.PaperWidthId;
+                    existing.ExternalCode = string.IsNullOrWhiteSpace(model.ExternalCode) ? existing.ExternalCode : model.ExternalCode.Trim().ToUpperInvariant();
                     existing.UpdatedDate = DateTime.Now;
                     existing.UpdatedBy = "SYSTEM";
                 }
@@ -166,26 +188,220 @@ namespace FSC_ERP.Controllers
             viewData["PaperWidths"] = new SelectList(widths.Select(x => new { Id = x.Id, Text = $"{x.Value} {x.Unit}" }), "Id", "Text");
         }
 
-        public async Task<IActionResult> ExportIndex()
+        public async Task<IActionResult> ExportIndex(int[]? supplierIds, int[]? productGroupIds, string? search)
         {
-            var data = await _context.Products
+            var query = _context.Products
                 .Include(p => p.ProductGroup)
-                .Include(p => p.Supplier) // Excel'e tedarikçi eklendi
+                .Include(p => p.Supplier)
+                .Include(p => p.FscType)
                 .Include(p => p.PaperWeight)
                 .Include(p => p.PaperWidth)
-                .OrderBy(p => p.ProductCode)
+                .AsQueryable();
+
+            if (supplierIds != null && supplierIds.Length > 0)
+                query = query.Where(p => p.SupplierId.HasValue && supplierIds.Contains(p.SupplierId.Value));
+            if (productGroupIds != null && productGroupIds.Length > 0)
+                query = query.Where(p => p.ProductGroupId.HasValue && productGroupIds.Contains(p.ProductGroupId.Value));
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                query = query.Where(p =>
+                    p.ProductCode.Contains(s) ||
+                    p.ProductName.Contains(s) ||
+                    (p.ExternalCode != null && p.ExternalCode.Contains(s)));
+            }
+
+            var data = await query.OrderBy(p => p.ProductCode)
                 .Select(p => new {
-                    p.ProductCode,
-                    p.ProductName,
-                    Tedarikci = p.Supplier.Name ?? "-",
-                    Grup = p.ProductGroup.GroupName,
-                    p.Unit,
-                    Gramaj = p.PaperWeight != null ? $"{p.PaperWeight.Value} {p.PaperWeight.Unit}" : "-",
-                    En = p.PaperWidth != null ? $"{p.PaperWidth.Value} {p.PaperWidth.Unit}" : "-",
-                    Durum = p.IsActive ? "AKTİF" : "PASİF"
+                    DahiliKod   = p.ProductCode,
+                    HariciKod   = p.ExternalCode ?? "",
+                    UrunAdi     = p.ProductName,
+                    Tedarikci   = p.Supplier != null ? p.Supplier.Name : "-",
+                    Grup        = p.ProductGroup != null ? p.ProductGroup.GroupName : "-",
+                    FscTipi     = p.FscType != null ? p.FscType.Name : "-",
+                    Birim       = p.Unit,
+                    Gramaj      = p.PaperWeight != null ? $"{p.PaperWeight.Value} {p.PaperWeight.Unit}" : "-",
+                    En          = p.PaperWidth  != null ? $"{p.PaperWidth.Value} {p.PaperWidth.Unit}"   : "-",
+                    Durum       = p.IsActive ? "AKTİF" : "PASİF"
                 }).ToListAsync();
 
             return ExportToExcel(data, "UrunListesi");
+        }
+
+        // ─── Ürün Reçetesi (BOM) ─────────────────────────────────────────────
+
+        // GET /Products/Recipe/{id}
+        public async Task<IActionResult> Recipe(int id)
+        {
+            var product = await _context.Products
+                .Include(p => p.ProductGroup)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (product == null) return NotFound();
+
+            var lines = await _context.ProductRecipes
+                .Include(r => r.ChildProduct).ThenInclude(c => c.ProductGroup)
+                .Where(r => r.ParentProductId == id)
+                .OrderBy(r => r.ChildProduct.ProductName)
+                .ToListAsync();
+
+            // Bileşen olarak eklenebilecek ürünler (kendisi hariç)
+            ViewBag.AvailableProducts = await _context.Products
+                .Where(p => p.IsActive && p.Id != id)
+                .OrderBy(p => p.ProductName)
+                .ToListAsync();
+
+            ViewData["Title"] = $"Reçete — {product.ProductName}";
+            ViewBag.Product = product;
+            return View(lines);
+        }
+
+        // POST /Products/SaveRecipeLine
+        [HttpPost]
+        public async Task<IActionResult> SaveRecipeLine(ProductRecipe model)
+        {
+            try
+            {
+                // Ondalık güvenli parse (TR/EN uyumlu)
+                var rawQty = (Request.Form["StandardQuantity"].ToString() ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(rawQty))
+                    return Json(new { success = false, message = "Standart miktar zorunludur." });
+
+                decimal parsedQty;
+                var tr = new CultureInfo("tr-TR");
+                var en = CultureInfo.InvariantCulture;
+
+                // 1) Doğrudan parse dene (tr / invariant)
+                if (!decimal.TryParse(rawQty, NumberStyles.Number, tr, out parsedQty) &&
+                    !decimal.TryParse(rawQty, NumberStyles.Number, en, out parsedQty))
+                {
+                    // 2) Fallback normalize: son ayırıcıyı ondalık kabul et
+                    var s = rawQty.Replace(" ", "");
+                    var lastComma = s.LastIndexOf(',');
+                    var lastDot = s.LastIndexOf('.');
+                    var sepIndex = Math.Max(lastComma, lastDot);
+
+                    if (sepIndex >= 0)
+                    {
+                        var intPart = s[..sepIndex].Replace(".", "").Replace(",", "");
+                        var fracPart = s[(sepIndex + 1)..].Replace(".", "").Replace(",", "");
+                        s = $"{intPart}.{fracPart}";
+                    }
+                    else
+                    {
+                        s = s.Replace(".", "").Replace(",", "");
+                    }
+
+                    if (!decimal.TryParse(s, NumberStyles.Number, en, out parsedQty))
+                        return Json(new { success = false, message = "Standart miktar formatı geçersiz." });
+                }
+
+                if (parsedQty <= 0)
+                    return Json(new { success = false, message = "Standart miktar sıfırdan büyük olmalıdır." });
+
+                // Model binding sapmalarını engelle
+                model.StandardQuantity = parsedQty;
+
+                if (model.Id == 0)
+                {
+                    var exists = await _context.ProductRecipes.AnyAsync(r =>
+                        r.ParentProductId == model.ParentProductId &&
+                        r.ChildProductId == model.ChildProductId);
+                    if (exists)
+                        return Json(new { success = false, message = "Bu bileşen zaten reçetede mevcut." });
+
+                    model.IsActive = true;
+                    model.BilesenYeri = string.IsNullOrWhiteSpace(model.BilesenYeri) ? null : model.BilesenYeri.Trim();
+                    model.CreatedDate = DateTime.Now;
+                    model.CreatedBy = User.Identity?.Name ?? "System";
+                    _context.ProductRecipes.Add(model);
+                }
+                else
+                {
+                    var existing = await _context.ProductRecipes.FindAsync(model.Id);
+                    if (existing == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+
+                    existing.ChildProductId = model.ChildProductId;
+                    existing.StandardQuantity = parsedQty;
+                    existing.Unit = model.Unit;
+                    existing.BilesenYeri = string.IsNullOrWhiteSpace(model.BilesenYeri) ? null : model.BilesenYeri.Trim();
+                    existing.UpdatedDate = DateTime.Now;
+                    existing.UpdatedBy = User.Identity?.Name ?? "System";
+                }
+
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Reçete satırı kaydedildi." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // GET /Products/GetRecipeLine
+        [HttpGet]
+        public async Task<IActionResult> GetRecipeLine(int id)
+        {
+            var item = await _context.ProductRecipes.FindAsync(id);
+            if (item == null) return Json(new { success = false });
+            return Json(new { success = true, data = new {
+                item.Id, item.ParentProductId, item.ChildProductId,
+                item.StandardQuantity, item.Unit, item.IsActive,
+                item.BilesenYeri
+            }});
+        }
+
+        // POST /Products/DeleteRecipeLine
+        [HttpPost]
+        public async Task<IActionResult> DeleteRecipeLine(int id)
+        {
+            var item = await _context.ProductRecipes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            try
+            {
+                _context.ProductRecipes.Remove(item);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Bu reçete satırı kullanıldığı için silinemez." });
+            }
+        }
+
+        // POST /Products/ToggleRecipeLine
+        [HttpPost]
+        public async Task<IActionResult> ToggleRecipeLine(int id)
+        {
+            var item = await _context.ProductRecipes.FindAsync(id);
+            if (item == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
+            item.IsActive    = !item.IsActive;
+            item.UpdatedDate = DateTime.Now;
+            item.UpdatedBy   = User.Identity?.Name ?? "System";
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, isActive = item.IsActive });
+        }
+
+        // GET /Products/GetRecipeForWorkOrder/{productId}  — üretim sayfasından çağrılır
+        [HttpGet]
+        public async Task<IActionResult> GetRecipeForWorkOrder(int productId)
+        {
+            var lines = await _context.ProductRecipes
+                .Include(r => r.ChildProduct)
+                .Where(r => r.ParentProductId == productId && r.IsActive)
+                .OrderBy(r => r.ChildProduct.ProductName)
+                .Select(r => new {
+                    r.Id,
+                    r.ChildProductId,
+                    childProductName = r.ChildProduct.ProductName,
+                    childProductCode = r.ChildProduct.ProductCode,
+                    r.StandardQuantity,
+                    r.Unit,
+                    r.BilesenYeri    // ← Mamülde kullanım yeri (Gövde, Sap vb.)
+                })
+                .ToListAsync();
+
+            return Json(new { success = true, lines });
         }
     }
 }

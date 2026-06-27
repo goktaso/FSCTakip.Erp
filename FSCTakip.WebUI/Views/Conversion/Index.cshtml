@@ -1,0 +1,763 @@
+@using FSCTakip.WebUI.Controllers
+@{
+    ViewData["Title"] = "Yarı Mamül Dönüşüm";
+    var sources = ViewBag.SourceSerials as List<ConvSourceVM> ?? new List<ConvSourceVM>();
+    var targets = ViewBag.TargetProducts as List<ConvTargetVM> ?? new List<ConvTargetVM>();
+    var recent  = ViewBag.Recent as List<ConvRecentVM> ?? new List<ConvRecentVM>();
+}
+
+@section TopbarActions {
+    <a href="/Purchase/Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-scroll me-1"></i> Hammadde Girişi
+    </a>
+    <a href="/Stock/RawMaterial" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-warehouse me-1"></i> Stok
+    </a>
+}
+
+<div class="row g-3">
+    <!-- Dönüşüm formu -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white border-0 pt-3 pb-0">
+                <h6 class="fw-semibold mb-0"><i class="fas fa-recycle text-success me-2"></i>Ham / YM → Yarı Mamül Dönüşümü</h6>
+                <div class="text-muted" style="font-size:12px;">1xxxx ham kağıt veya 24xxx YM bobinini 23xxx baskılı yarı mamüle çevirir.</div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Kaynak Bobin (Ham / YM) <span class="text-danger">*</span></label>
+
+                    <!-- 4 Kademeli Filtre — Excel Advanced Filter tarzı -->
+                    <div class="d-flex gap-2 flex-wrap mb-2" id="srcFilters">
+
+                        <!-- 1. Stok Kodu -->
+                        <div style="display:flex;flex-direction:column;flex:1;min-width:130px;">
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">STOK KODU</label>
+                            <div class="mcd" id="mcd-f-kod" data-placeholder="— Tümü —">
+                                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-f-kod')">
+                                    <span class="mcd-lbl">— Tümü —</span>
+                                    <i class="fas fa-angle-down mcd-arrow"></i>
+                                </button>
+                                <div class="mcd-panel" id="mcd-f-kod-panel" style="display:none;min-width:220px;">
+                                    <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Kod ara..." oninput="mcdSearch(this)"></div>
+                                    <div class="mcd-items" id="mcd-f-kod-items" style="max-height:220px;"></div>
+                                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Stok Adı -->
+                        <div style="display:flex;flex-direction:column;flex:2;min-width:180px;">
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">STOK ADI</label>
+                            <div class="mcd" id="mcd-f-ad" data-placeholder="— Tümü —">
+                                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-f-ad')">
+                                    <span class="mcd-lbl">— Tümü —</span>
+                                    <i class="fas fa-angle-down mcd-arrow"></i>
+                                </button>
+                                <div class="mcd-panel" id="mcd-f-ad-panel" style="display:none;min-width:280px;">
+                                    <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Ad ara..." oninput="mcdSearch(this)"></div>
+                                    <div class="mcd-items" id="mcd-f-ad-items" style="max-height:220px;"></div>
+                                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Parti / Lot No -->
+                        <div style="display:flex;flex-direction:column;flex:1;min-width:130px;">
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">PARTİ / LOT NO</label>
+                            <div class="mcd" id="mcd-f-parti" data-placeholder="— Tümü —">
+                                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-f-parti')">
+                                    <span class="mcd-lbl">— Tümü —</span>
+                                    <i class="fas fa-angle-down mcd-arrow"></i>
+                                </button>
+                                <div class="mcd-panel" id="mcd-f-parti-panel" style="display:none;min-width:200px;">
+                                    <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Parti no ara..." oninput="mcdSearch(this)"></div>
+                                    <div class="mcd-items" id="mcd-f-parti-items" style="max-height:220px;"></div>
+                                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Seri No (Bobin) -->
+                        <div style="display:flex;flex-direction:column;flex:1;min-width:130px;">
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">SERİ NO (BOBİN)</label>
+                            <div class="mcd" id="mcd-f-seri" data-placeholder="— Tümü —">
+                                <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-f-seri')">
+                                    <span class="mcd-lbl">— Tümü —</span>
+                                    <i class="fas fa-angle-down mcd-arrow"></i>
+                                </button>
+                                <div class="mcd-panel" id="mcd-f-seri-panel" style="display:none;min-width:200px;">
+                                    <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Seri no ara..." oninput="mcdSearch(this)"></div>
+                                    <div class="mcd-items" id="mcd-f-seri-items" style="max-height:220px;"></div>
+                                    <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Temizle -->
+                        <div style="display:flex;flex-direction:column;justify-content:flex-end;">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="srcFilterClear()" style="font-size:11px;margin-bottom:1px;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Seçilen bobin göstergesi -->
+                    <div id="srcSelected" class="d-flex align-items-center gap-2 px-3 py-2 rounded mb-2"
+                         style="display:none!important;background:rgba(25,118,210,.08);border:1px solid rgba(25,118,210,.25);font-size:12.5px;">
+                        <i class="fas fa-check-circle text-primary"></i>
+                        <span id="srcSelectedLabel" class="fw-semibold text-primary">—</span>
+                        <span id="srcSelectedKalan" class="text-muted ms-1"></span>
+                        <button type="button" class="ms-auto btn btn-sm" onclick="srcFilterClear()" style="font-size:11px;padding:2px 8px;">
+                            <i class="fas fa-times me-1"></i>Değiştir
+                        </button>
+                    </div>
+
+                    <!-- Gizli select — onSourceChange() için (JS uyumluluğu) -->
+                    <select id="sourceSerialId" style="display:none;" onchange="onSourceChange()">
+                        <option value="">—</option>
+                        @foreach (var s in sources)
+                        {
+                            <option value="@s.Id"
+                                    data-kalan="@s.CurrentWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                    data-fsc="@s.FscType">
+                                @s.UrunAd · @s.SerialNo
+                            </option>
+                        }
+                    </select>
+                    <div id="srcInfo" class="form-text" style="display:none;font-size:11.5px;">
+                        <i class="fas fa-shield-alt text-success me-1"></i>FSC tipi <strong id="srcFsc"></strong> hedefe devredilecek (CoC). Kalan: <strong id="srcKalan"></strong> kg
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Hedef Yarı Mamül (BB) <span class="text-danger">*</span></label>
+                    <!-- MCD panel -->
+                    <div class="mcd" id="mcd-tgt-prod" data-placeholder="— Hedef seçin —" style="width:100%;">
+                        <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-tgt-prod')">
+                            <span class="mcd-lbl">— Hedef seçin —</span>
+                            <i class="fas fa-angle-down mcd-arrow"></i>
+                        </button>
+                        <div class="mcd-panel" id="mcd-tgt-prod-panel" style="display:none;width:100%;min-width:400px;max-width:100%;">
+                            <div class="mcd-search-row">
+                                <input type="text" class="mcd-search" placeholder="Kod / ad ile ara (örn: 23357)..." oninput="mcdSearch(this)">
+                            </div>
+                            <div class="mcd-items" style="max-height:260px;">
+                                @foreach (var t in targets)
+                                {
+                                    <label class="mcd-row" onclick="tgtProdSelect(@t.Id, '@t.Ad.Replace("'", "\\'")' ,'@t.Kod'); return false;" style="white-space:normal;">
+                                        <input type="radio" name="_tgtRb" value="@t.Id" class="mcd-rb" style="flex-shrink:0;">
+                                        <span class="mcd-sub" style="flex-shrink:0;">@t.Kod</span>
+                                        @if (!string.IsNullOrEmpty(t.ExtKod)) { <span class="mcd-ext" style="flex-shrink:0;">@t.ExtKod</span> }
+                                        <span class="mcd-name" style="white-space:normal;overflow:visible;text-overflow:unset;max-width:none;">@t.Ad</span>
+                                    </label>
+                                }
+                            </div>
+                            <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                        </div>
+                    </div>
+                    <!-- Gizli select — convertNow() için -->
+                    <select id="targetProductId" style="display:none;">
+                        @foreach (var t in targets)
+                        {
+                            <option value="@t.Id">@t.Kod — @t.Ad</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Tüketilen Ham (kg) <span class="text-danger">*</span></label>
+                        <input type="number" id="consumedKg" class="form-control" step="0.01" min="0" placeholder="0,00" oninput="onConsumedChange()">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Üretilen YM (kg) <span class="text-danger">*</span></label>
+                        <input type="number" id="producedKg" class="form-control" step="0.01" min="0" placeholder="0,00" oninput="calcFire()">
+                        <div class="form-text" style="font-size:11px;">Genelde tüketilen ile aynı (1:1). Fire varsa azaltın.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded" style="background:#f8fafc;border:1px solid #e5e7eb;">
+                    <span class="text-muted" style="font-size:12.5px;"><i class="fas fa-burn text-warning me-1"></i>Fire (otomatik)</span>
+                    <span class="fw-semibold" id="fireOut" style="color:#92400e;">0,00 kg · %0</span>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Dönüşüm Tarihi</label>
+                        <input type="date" id="convDate" class="form-control">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Not</label>
+                        <input type="text" id="convNotes" class="form-control" placeholder="Opsiyonel...">
+                    </div>
+                </div>
+
+                <button class="btn btn-success w-100 py-2 fw-semibold" onclick="convertNow()">
+                    <i class="fas fa-recycle me-1"></i> DÖNÜŞTÜR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Son dönüşümler -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white border-0 pt-3 pb-2 d-flex align-items-center gap-2">
+                <h6 class="fw-semibold mb-0"><i class="fas fa-history text-primary me-2"></i>Son Dönüşümler</h6>
+                <span class="badge ms-1" style="background:#dbeafe;color:#1d4ed8;" id="recentCount">@recent.Count kayıt</span>
+                <span class="badge ms-1" id="recentFilterBadge" style="display:none;background:#fef3c7;color:#92400e;font-size:10px;">
+                    <i class="fas fa-filter me-1"></i>Filtre Aktif
+                </span>
+                <button class="btn btn-sm ms-auto" id="recentFilterToggle"
+                        onclick="toggleRecentFilter()"
+                        style="font-size:11px;padding:3px 10px;background:rgba(25,118,210,.08);color:#1976d2;border:1px solid rgba(25,118,210,.2);">
+                    <i class="fas fa-filter me-1"></i>Filtrele
+                </button>
+            </div>
+
+            <!-- Filtre Bandı — MCD Checkbox Paneller -->
+            <div id="recentFilterPanel" style="display:none;padding:10px 14px 8px;background:#f8fafc;border-bottom:1px solid #e5e7eb;">
+                <div class="d-flex flex-wrap gap-2 align-items-end">
+
+                    <!-- Kaynak Ürün MCD -->
+                    <div style="display:flex;flex-direction:column;min-width:160px;">
+                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">KAYNAK ÜRÜN</label>
+                        <div class="mcd" id="mcd-rf-kaynak" data-placeholder="— Tümü —">
+                            <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-rf-kaynak')">
+                                <span class="mcd-lbl">— Tümü —</span>
+                                <i class="fas fa-angle-down mcd-arrow"></i>
+                            </button>
+                            <div class="mcd-panel" id="mcd-rf-kaynak-panel" style="display:none;">
+                                <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)"></div>
+                                <label class="mcd-row mcd-header">
+                                    <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-rf-kaynak');applyRecentFilter()">
+                                    <span>Tümünü Seç</span>
+                                </label>
+                                <div class="mcd-items" style="max-height:220px;">
+                                    @foreach (var k in recent.Select(r => new { r.KaynakAd, r.KaynakKod }).DistinctBy(x => x.KaynakAd).OrderBy(x => x.KaynakAd))
+                                    {
+                                        <label class="mcd-row">
+                                            <input type="checkbox" class="mcd-cb rf-kaynak-cb" value="@k.KaynakAd.ToLower()"
+                                                   onchange="mcdUpdate('mcd-rf-kaynak');applyRecentFilter()">
+                                            @if (!string.IsNullOrEmpty(k.KaynakKod)) { <span class="mcd-ext">@k.KaynakKod</span> }
+                                            <span class="mcd-name" title="@k.KaynakAd">@k.KaynakAd</span>
+                                        </label>
+                                    }
+                                </div>
+                                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hedef YM MCD -->
+                    <div style="display:flex;flex-direction:column;min-width:160px;">
+                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">HEDEF YM</label>
+                        <div class="mcd" id="mcd-rf-hedef" data-placeholder="— Tümü —">
+                            <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-rf-hedef')">
+                                <span class="mcd-lbl">— Tümü —</span>
+                                <i class="fas fa-angle-down mcd-arrow"></i>
+                            </button>
+                            <div class="mcd-panel" id="mcd-rf-hedef-panel" style="display:none;">
+                                <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)"></div>
+                                <label class="mcd-row mcd-header">
+                                    <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-rf-hedef');applyRecentFilter()">
+                                    <span>Tümünü Seç</span>
+                                </label>
+                                <div class="mcd-items" style="max-height:220px;">
+                                    @foreach (var h in recent.Select(r => r.Hedef).Distinct().OrderBy(x => x))
+                                    {
+                                        <label class="mcd-row">
+                                            <input type="checkbox" class="mcd-cb rf-hedef-cb" value="@h.ToLower()"
+                                                   onchange="mcdUpdate('mcd-rf-hedef');applyRecentFilter()">
+                                            <span class="mcd-name" title="@h">@h</span>
+                                        </label>
+                                    }
+                                </div>
+                                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FSC Tipi MCD -->
+                    <div style="display:flex;flex-direction:column;min-width:130px;">
+                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">FSC TİPİ</label>
+                        <div class="mcd" id="mcd-rf-fsc" data-placeholder="— Tümü —">
+                            <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-rf-fsc')">
+                                <span class="mcd-lbl">— Tümü —</span>
+                                <i class="fas fa-angle-down mcd-arrow"></i>
+                            </button>
+                            <div class="mcd-panel" id="mcd-rf-fsc-panel" style="display:none;">
+                                <div class="mcd-items" style="max-height:160px;">
+                                    @foreach (var f in recent.Select(r => r.FscType).Distinct().OrderBy(x => x))
+                                    {
+                                        <label class="mcd-row">
+                                            <input type="checkbox" class="mcd-cb rf-fsc-cb" value="@f.ToLower()"
+                                                   onchange="mcdUpdate('mcd-rf-fsc');applyRecentFilter()">
+                                            <span class="mcd-name">@f</span>
+                                        </label>
+                                    }
+                                </div>
+                                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tarih -->
+                    <div style="display:flex;flex-direction:column;min-width:110px;">
+                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">TARİH</label>
+                        <input type="date" id="rfTarih" class="form-control form-control-sm" oninput="applyRecentFilter()">
+                    </div>
+
+                    <button type="button" class="btn btn-outline-secondary btn-sm align-self-end"
+                            onclick="clearRecentFilter()" style="font-size:11px;">
+                        <i class="fas fa-times me-1"></i>Temizle
+                    </button>
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0" id="recentTable" style="font-size:12.5px;">
+                        <thead style="background:#f8fafc;">
+                            <tr>
+                                <th class="ps-3">Tarih</th><th>Parti</th><th>Kaynak (Ham/YM)</th><th>Hedef YM</th>
+                                <th>FSC</th><th class="text-end">Üretilen</th><th class="text-end">Fire</th><th class="text-end pe-3">Kalan</th>
+                                <th class="text-center" style="width:70px;position:sticky;right:0;background:#fff;">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @if (!recent.Any())
+                        {
+                            <tr>
+                                <td colspan="9">
+                                    <div style="text-align:center;padding:36px 20px;">
+                                        <div style="width:56px;height:56px;border-radius:16px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+                                            <i class="fas fa-recycle" style="font-size:24px;color:#16a34a;"></i>
+                                        </div>
+                                        <div style="font-size:14px;font-weight:600;color:#374151;margin-bottom:4px;">Henüz dönüşüm kaydı yok</div>
+                                        <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;">Ham veya yarı mamül bobini seçerek ilk dönüşümü başlatın.</div>
+                                        <button type="button" class="btn btn-success btn-sm"
+                                                onclick="document.getElementById('sourceSerialId').closest('.card').scrollIntoView({behavior:'smooth'})">
+                                            <i class="fas fa-plus me-1"></i>İlk Dönüşümü Başlat
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var r in recent)
+                        {
+                            var filterText = $"{r.KaynakKod} {r.KaynakAd} {r.KaynakSerial} {r.Hedef} {r.Parti} {r.FscType} {r.Tarih:dd.MM.yyyy}".ToLower();
+                            <tr class="recent-row"
+                                data-filter="@filterText"
+                                data-kaynak="@($"{r.KaynakKod} {r.KaynakAd} {r.KaynakSerial}".ToLower())"
+                                data-hedef="@r.Hedef.ToLower()"
+                                data-parti="@r.Parti.ToLower()"
+                                data-fsc="@r.FscType.ToLower()"
+                                data-tarih="@r.Tarih.ToString("yyyy-MM-dd")">
+                                <td class="ps-3">@r.Tarih.ToString("dd.MM.yyyy")</td>
+                                <td><span class="badge bg-light text-dark">@r.Parti</span></td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(r.KaynakKod))
+                                    {
+                                        <span class="badge" style="background:#eef2ff;color:#3730a3;font-weight:500;">@r.KaynakKod</span>
+                                    }
+                                    <span>@r.KaynakAd</span>
+                                    <div class="text-muted" style="font-size:10.5px;">@r.KaynakSerial</div>
+                                </td>
+                                <td>@r.Hedef</td>
+                                <td><span class="badge" style="background:#dcfce7;color:#166534;">@r.FscType</span></td>
+                                <td class="text-end">@r.Kg.ToString("N2") kg</td>
+                                <td class="text-end @(r.Fire > 0 ? "text-warning fw-semibold" : "text-muted")">@r.Fire.ToString("N2") kg</td>
+                                <td class="text-end pe-3 fw-semibold">@r.Kalan.ToString("N2") kg</td>
+                                <td class="text-center" style="position:sticky;right:0;background:#fff;white-space:nowrap;">
+                                    <button class="btn btn-sm" title="Düzenle"
+                                            onclick="convEdit(@r.SerialId, '@r.Parti', '@r.Tarih.ToString("yyyy-MM-dd")', @r.Fire.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                            style="padding:2px 7px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:5px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm ms-1" title="Sil"
+                                            onclick="convDelete(@r.SerialId, '@r.Parti')"
+                                            style="padding:2px 7px;background:#fff5f5;color:#dc2626;border:1px solid #fecaca;border-radius:5px;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                <div id="recentEmptyMsg" style="display:none;text-align:center;padding:20px;color:#9ca3af;font-size:13px;">
+                    <i class="fas fa-search me-1"></i> Filtreye uyan dönüşüm bulunamadı.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+if(!window._mcdReady){window._mcdReady=true;
+window.mcdOpen=function(id){var p=document.getElementById(id+'-panel');var o=p&&p.style.display!=='none';document.querySelectorAll('.mcd-panel').forEach(function(x){x.style.display='none'});if(!o&&p){p.style.display='flex';mcdUpdate(id)}};
+window.mcdSearch=function(el){var t=el.value.toLowerCase();el.closest('.mcd-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(t)?'':'none'});var panel=el.closest('.mcd-panel');var items=panel.querySelectorAll('.mcd-items .mcd-row');var visible=Array.from(items).some(function(r){return r.style.display!=='none'});var empty=panel.querySelector('.mcd-empty');if(empty)empty.style.display=visible?'none':'block'};
+window.mcdToggleAll=function(cb,id){document.getElementById(id+'-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){if(r.style.display!=='none'){var c=r.querySelector('.mcd-cb');if(c)c.checked=cb.checked}});mcdUpdate(id)};
+window.mcdUpdate=function(id){var p=document.getElementById(id+'-panel');var c=document.getElementById(id);if(!p||!c)return;var n=p.querySelectorAll('.mcd-cb:checked').length;var l=c.querySelector('.mcd-lbl');if(l)l.textContent=n===0?(c.dataset.placeholder||'— Seçiniz —'):n+' seçildi';var a=p.querySelector('.mcd-all-cb');var v=p.querySelectorAll('.mcd-row:not(.mcd-header):not([style*="none"]) .mcd-cb').length;if(a&&v>0)a.checked=(n>=v)};
+document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'})});}
+</script>
+<style>
+.mcd{position:relative}.mcd-btn{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:#fff;border:1px solid #d1d5db;color:#111;padding:5px 10px;border-radius:6px;font-size:13px}.mcd-btn:hover{border-color:#1976d2}.mcd-panel{position:absolute;top:calc(100% + 4px);left:0;min-width:300px;width:100%;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:1050;display:flex;flex-direction:column;overflow:hidden}.mcd-search-row{padding:8px 10px;border-bottom:1px solid #f1f5f9}.mcd-search{width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:5px 10px;font-size:12.5px;outline:none}.mcd-items{overflow-y:auto}.mcd-row{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:12.5px;user-select:none}.mcd-row:hover{background:#eff6ff}.mcd-name{flex:1;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mcd-sub{font-size:10.5px;color:#374151;background:#f3f4f6;padding:1px 5px;border-radius:4px;white-space:nowrap}.mcd-ext{font-size:10.5px;color:#3730a3;background:#eef2ff;padding:1px 5px;border-radius:4px;white-space:nowrap}.mcd-arrow{color:#6b7280;font-size:11px}.mcd-empty{padding:8px 12px;font-size:12px;color:#9ca3af;text-align:center}
+</style>
+<script>
+document.getElementById('convDate').value = new Date().toISOString().slice(0,10);
+
+// ── Son Dönüşümler Filtresi ───────────────────────────────────────
+function toggleRecentFilter() {
+    var p = document.getElementById('recentFilterPanel');
+    p.style.display = p.style.display === 'none' ? '' : 'none';
+    document.getElementById('recentFilterToggle').style.background =
+        p.style.display !== 'none' ? 'rgba(25,118,210,.18)' : 'rgba(25,118,210,.08)';
+}
+
+function getChecked(cls) {
+    return [...document.querySelectorAll('.' + cls + ':checked')].map(cb => cb.value);
+}
+
+function applyRecentFilter() {
+    var selKaynak = getChecked('rf-kaynak-cb');
+    var selHedef  = getChecked('rf-hedef-cb');
+    var selFsc    = getChecked('rf-fsc-cb');
+    var tarih     = (document.getElementById('rfTarih').value || '').trim();
+
+    var rows = document.querySelectorAll('#recentTable tbody tr.recent-row');
+    var visible = 0;
+    rows.forEach(function(tr) {
+        var ok = true;
+        if (selKaynak.length && !selKaynak.some(function(v){ return tr.getAttribute('data-kaynak').includes(v); })) ok = false;
+        if (selHedef.length  && !selHedef.some(function(v){  return tr.getAttribute('data-hedef').includes(v);  })) ok = false;
+        if (selFsc.length    && !selFsc.some(function(v){    return tr.getAttribute('data-fsc').includes(v);    })) ok = false;
+        if (tarih && tr.getAttribute('data-tarih') !== tarih) ok = false;
+        tr.style.display = ok ? '' : 'none';
+        if (ok) visible++;
+    });
+
+    var cnt = document.getElementById('recentCount');
+    if (cnt) cnt.textContent = visible + ' kayıt';
+    var emptyMsg = document.getElementById('recentEmptyMsg');
+    if (emptyMsg) emptyMsg.style.display = (visible === 0 && rows.length > 0) ? '' : 'none';
+    var filterBadge = document.getElementById('recentFilterBadge');
+    var hasFilter = selKaynak.length > 0 || selHedef.length > 0 || selFsc.length > 0 || tarih !== '';
+    if (filterBadge) filterBadge.style.display = hasFilter ? '' : 'none';
+}
+
+function clearRecentFilter() {
+    document.querySelectorAll('.rf-kaynak-cb,.rf-hedef-cb,.rf-fsc-cb').forEach(function(cb){ cb.checked = false; });
+    ['mcd-rf-kaynak','mcd-rf-hedef','mcd-rf-fsc'].forEach(function(id){ mcdUpdate(id); });
+    document.getElementById('rfTarih').value = '';
+    var filterBadge = document.getElementById('recentFilterBadge');
+    if (filterBadge) filterBadge.style.display = 'none';
+    applyRecentFilter();
+}
+
+// Sayfa yüklenince filtre listelerini doldur
+document.addEventListener('DOMContentLoaded', function() { _srcUpdate('kod'); });
+
+// ── Kaynak Bobin: 4 Kademeli Filtre (Excel Advanced Filter) ──────────────
+var SRC_ALL = [
+    @foreach (var s in sources)
+    {
+        @Html.Raw("{")
+        @Html.Raw("id:" + s.Id + ",")
+        @Html.Raw("kod:" + System.Text.Json.JsonSerializer.Serialize(s.UrunIcKod ?? s.UrunKod ?? "") + ",")
+        @Html.Raw("ad:"  + System.Text.Json.JsonSerializer.Serialize(s.UrunAd) + ",")
+        @Html.Raw("parti:" + System.Text.Json.JsonSerializer.Serialize(s.PartiNo ?? "") + ",")
+        @Html.Raw("seri:" + System.Text.Json.JsonSerializer.Serialize(s.SerialNo) + ",")
+        @Html.Raw("kalan:" + s.CurrentWeight.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",")
+        @Html.Raw("fsc:"  + System.Text.Json.JsonSerializer.Serialize(s.FscType) + ",")
+        @Html.Raw("disKod:" + System.Text.Json.JsonSerializer.Serialize(s.UrunKod ?? ""))
+        @Html.Raw("},")
+    }
+];
+
+// Aktif seçimler: null = hepsi
+var _srcSel = { kod: null, ad: null, parti: null, seri: null };
+
+function _srcFiltered() {
+    return SRC_ALL.filter(function(s) {
+        // Stok kodu: iç KOD veya dış kod eşleşmesi
+        if (_srcSel.kod && s.kod !== _srcSel.kod && s.disKod !== _srcSel.kod) return false;
+        if (_srcSel.ad    && s.ad    !== _srcSel.ad)    return false;
+        if (_srcSel.parti && s.parti !== _srcSel.parti) return false;
+        if (_srcSel.seri  && s.seri  !== _srcSel.seri)  return false;
+        return true;
+    });
+}
+
+function _unique(arr, key) {
+    var seen = {};
+    return arr.filter(function(x) {
+        if (seen[x[key]]) return false;
+        seen[x[key]] = true;
+        return x[key] !== '';
+    }).map(function(x) { return x[key]; }).sort();
+}
+
+function _buildItems(containerId, values, field, currentVal, displayFn) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = '';
+    values.forEach(function(v) {
+        var lbl = document.createElement('label');
+        lbl.className = 'mcd-row';
+        lbl.style.whiteSpace = 'normal';
+        var rb = document.createElement('input');
+        rb.type = 'radio';
+        rb.name = '_srcF_' + field;
+        rb.value = v;
+        rb.className = 'mcd-rb';
+        rb.style.flexShrink = '0';
+        if (v === currentVal) rb.checked = true;
+        rb.addEventListener('change', function() {
+            _srcSel[field] = v;
+            _srcUpdate(field);
+            // Stok kodu seçilince → stok adı tekse otomatik doldur
+            if (field === 'kod') {
+                var ads = _unique(_srcFiltered(), 'ad');
+                if (ads.length === 1) {
+                    _srcSel.ad = ads[0];
+                    _srcUpdate('ad');
+                }
+            }
+            // Tek sonuç kaldıysa otomatik seç
+            var f = _srcFiltered();
+            if (f.length === 1) srcFilterConfirm(f[0]);
+        });
+        lbl.appendChild(rb);
+        var sp = document.createElement('span');
+        sp.className = 'mcd-name';
+        sp.style.whiteSpace = 'normal';
+        sp.textContent = displayFn ? displayFn(v) : v;
+        lbl.appendChild(sp);
+        el.appendChild(lbl);
+    });
+    var empty = el.closest('.mcd-panel')?.querySelector('.mcd-empty');
+    if (empty) empty.style.display = values.length === 0 ? '' : 'none';
+}
+
+function _srcUpdate(changedField) {
+    // Aşağıdaki alanları sıfırla (kaskad etkisi)
+    var order = ['kod','ad','parti','seri'];
+    var idx = order.indexOf(changedField);
+    for (var i = idx+1; i < order.length; i++) _srcSel[order[i]] = null;
+
+    var f = _srcFiltered();
+    _buildItems('mcd-f-kod-items', _unique(f,'kod'), 'kod', _srcSel.kod, function(kod) {
+        // Hem iç hem dış kodu göster: "URN-024 · 10191"
+        var item = SRC_ALL.find(function(x){ return x.kod === kod; });
+        if (!item) return kod;
+        var parts = [];
+        if (kod)          parts.push(kod);
+        if (item.disKod && item.disKod !== kod) parts.push(item.disKod);
+        return parts.join(' · ');
+    });
+    _buildItems('mcd-f-ad-items',    _unique(f,'ad'),    'ad',    _srcSel.ad,    null);
+    _buildItems('mcd-f-parti-items', _unique(f,'parti'), 'parti', _srcSel.parti, null);
+    _buildItems('mcd-f-seri-items',  _unique(f,'seri'),  'seri',  _srcSel.seri,
+        function(seri) {
+            var item = f.find(function(x){ return x.seri === seri; });
+            return item ? seri + ' — ' + item.kalan.toLocaleString('tr-TR',{minimumFractionDigits:2}) + ' kg' : seri;
+        });
+    _updateMcdLabel('mcd-f-kod',   _srcSel.kod,   '— Tümü —');
+    _updateMcdLabel('mcd-f-ad',    _srcSel.ad,    '— Tümü —');
+    _updateMcdLabel('mcd-f-parti', _srcSel.parti, '— Tümü —');
+    _updateMcdLabel('mcd-f-seri',  _srcSel.seri,  '— Tümü —');
+}
+
+function _updateMcdLabel(mcdId, val, placeholder) {
+    var lbl = document.querySelector('#'+mcdId+' .mcd-lbl');
+    if (lbl) lbl.textContent = val || placeholder;
+}
+
+function srcFilterConfirm(item) {
+    // Gizli select'i güncelle → onSourceChange tetiklenir
+    var sel = document.getElementById('sourceSerialId');
+    if (sel) { sel.value = item.id; sel.dispatchEvent(new Event('change')); }
+    // Seçilen bobin göstergesini güncelle
+    var selDiv = document.getElementById('srcSelected');
+    if (selDiv) selDiv.style.display = '';
+    var selLbl = document.getElementById('srcSelectedLabel');
+    if (selLbl) selLbl.textContent = item.ad + ' · ' + item.seri;
+    var selKalan = document.getElementById('srcSelectedKalan');
+    if (selKalan) selKalan.textContent = '(kalan: ' + item.kalan.toLocaleString('tr-TR',{minimumFractionDigits:2}) + ' kg)';
+    // Filtre alanını gizle
+    var filters = document.getElementById('srcFilters');
+    if (filters) filters.style.display = 'none';
+    document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
+}
+
+function srcFilterClear() {
+    _srcSel = { kod: null, ad: null, parti: null, seri: null };
+    _srcUpdate('kod');
+    var sel = document.getElementById('sourceSerialId');
+    if (sel) { sel.value = ''; sel.dispatchEvent(new Event('change')); }
+    var selDiv = document.getElementById('srcSelected');
+    if (selDiv) selDiv.style.display = 'none';
+    var filters = document.getElementById('srcFilters');
+    if (filters) filters.style.display = '';
+    document.getElementById('srcInfo').style.display = 'none';
+}
+
+// Eski srcBobinSelect uyumluluğu (gizli select tetiklemek için)
+function srcBobinSelect(id) {
+    var item = SRC_ALL.find(function(s){ return s.id === id; });
+    if (item) srcFilterConfirm(item);
+}
+
+function tgtProdSelect(id, name, kod) {
+    var sel = document.getElementById('targetProductId');
+    if (sel) sel.value = id;
+    var lbl = document.querySelector('#mcd-tgt-prod .mcd-lbl');
+    if (lbl) lbl.textContent = kod + ' — ' + name;
+    var rb = document.querySelector('input[name="_tgtRb"][value="'+id+'"]');
+    if (rb) rb.checked = true;
+    document.querySelectorAll('.mcd-panel').forEach(function(p){ p.style.display='none'; });
+}
+
+function filterSource() { /* MCD kendi aramasını yapıyor — eski fonksiyon korunuyor */ }
+function filterTarget() { /* MCD kendi aramasını yapıyor — eski fonksiyon korunuyor */ }
+
+function onSourceChange() {
+    const opt = document.getElementById('sourceSerialId').selectedOptions[0];
+    const info = document.getElementById('srcInfo');
+    if (!opt || !opt.value) { info.style.display = 'none'; return; }
+    document.getElementById('srcFsc').textContent   = opt.dataset.fsc || '—';
+    document.getElementById('srcKalan').textContent = parseFloat(opt.dataset.kalan || 0).toLocaleString('tr-TR', {minimumFractionDigits:2});
+    info.style.display = '';
+}
+
+// Tüketilen girilince üretilen 1:1 öner (fire varsa kullanıcı düşürür)
+function onConsumedChange() {
+    const c = parseFloat(document.getElementById('consumedKg').value) || 0;
+    const p = document.getElementById('producedKg');
+    if (!p.value || parseFloat(p.value) === 0) p.value = c > 0 ? c.toFixed(2) : '';
+    calcFire();
+}
+
+function filterTarget() {
+    const term = (document.getElementById('targetSearch').value || '').toLowerCase().trim();
+    document.querySelectorAll('#targetProductId option').forEach(o => {
+        o.style.display = (!term || (o.dataset.text || '').includes(term)) ? '' : 'none';
+    });
+}
+
+function calcFire() {
+    const c = parseFloat(document.getElementById('consumedKg').value) || 0;
+    const p = parseFloat(document.getElementById('producedKg').value) || 0;
+    const fire = Math.max(0, c - p);
+    const pct  = c > 0 ? (fire / c * 100) : 0;
+    document.getElementById('fireOut').textContent =
+        `${fire.toLocaleString('tr-TR',{minimumFractionDigits:2})} kg · %${pct.toFixed(1)}`;
+}
+
+async function convertNow() {
+    const sourceSerialId  = document.getElementById('sourceSerialId').value;
+    const targetProductId = document.getElementById('targetProductId').value;
+    const consumedKg      = parseFloat(document.getElementById('consumedKg').value) || 0;
+    const producedKg      = parseFloat(document.getElementById('producedKg').value) || 0;
+
+    if (!sourceSerialId)  { showToast('Kaynak bobin seçin.', 'warning'); return; }
+    if (!targetProductId) { showToast('Hedef yarı mamül seçin.', 'warning'); return; }
+    if (consumedKg <= 0 || producedKg <= 0) { showToast('Tüketilen ve üretilen miktar girin.', 'warning'); return; }
+    if (producedKg > consumedKg) { showToast('Üretilen, tüketileni aşamaz.', 'warning'); return; }
+
+    const tgtText = document.getElementById('targetProductId').selectedOptions[0].textContent.trim();
+    if (!await appConfirm(`${consumedKg.toLocaleString('tr-TR')} kg ham → ${producedKg.toLocaleString('tr-TR')} kg "${tgtText}" üretilsin mi?\nFSC tipi kaynaktan devralınacak.`,
+                          { title: 'Dönüşümü Onayla', icon: 'recycle', confirmText: 'Dönüştür' })) return;
+
+    const fd = new FormData();
+    fd.append('sourceSerialId',  sourceSerialId);
+    fd.append('targetProductId', targetProductId);
+    fd.append('producedKg',      producedKg);
+    fd.append('consumedKg',      consumedKg);
+    fd.append('date',            document.getElementById('convDate').value);
+    fd.append('notes',           document.getElementById('convNotes').value);
+
+    const res = await fetch('/Conversion/Convert', { method: 'POST', body: fd })
+                    .then(r => r.json()).catch(() => ({ success: false, message: 'Sunucu hatası.' }));
+    if (res.success) {
+        showToast(res.message, 'success');
+        setTimeout(() => location.reload(), 1000);
+    } else {
+        showToast(res.message, 'error');
+    }
+}
+
+// ── Dönüşüm Düzenle / Sil ────────────────────────────────────────
+function convEdit(serialId, parti, tarih, fire) {
+    document.getElementById('ceSerialId').value = serialId;
+    document.getElementById('ceParti').textContent = parti;
+    document.getElementById('ceTarih').value = tarih;
+    document.getElementById('ceFire').value  = fire;
+    new bootstrap.Modal(document.getElementById('convEditModal')).show();
+}
+
+async function convEditSave() {
+    const serialId = document.getElementById('ceSerialId').value;
+    const tarih    = document.getElementById('ceTarih').value;
+    const fire     = document.getElementById('ceFire').value;
+    if (!tarih) { showToast('Tarih zorunludur.', 'warning'); return; }
+    const fd = new FormData();
+    fd.append('serialId', serialId);
+    fd.append('tarih', tarih);
+    fd.append('fire', fire || '0');
+    const res = await fetch('/Conversion/UpdateConversion', { method: 'POST', body: fd })
+                    .then(r => r.json()).catch(() => ({ success: false, message: 'Hata.' }));
+    if (res.success) {
+        showToast(res.message, 'success');
+        bootstrap.Modal.getInstance(document.getElementById('convEditModal'))?.hide();
+        setTimeout(() => location.reload(), 800);
+    } else { showToast(res.message, 'error'); }
+}
+
+async function convDelete(serialId, parti) {
+    if (!await appConfirm(`"${parti}" dönüşüm kaydı silinecek ve kaynak bobin miktarı geri yüklenecek. Devam edilsin mi?`,
+                          { danger: true, title: 'Dönüşümü Sil', confirmText: 'Evet, Sil' })) return;
+    const fd = new FormData();
+    fd.append('serialId', serialId);
+    const res = await fetch('/Conversion/DeleteConversion', { method: 'POST', body: fd })
+                    .then(r => r.json()).catch(() => ({ success: false, message: 'Hata.' }));
+    if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 800); }
+    else { showToast(res.message, 'error'); }
+}
+</script>
+
+<!-- Dönüşüm Düzenleme Modalı -->
+<div class="modal fade" id="convEditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <h6 class="modal-title fw-semibold mb-0"><i class="fas fa-edit me-2"></i>Dönüşüm Düzenle — <span id="ceParti" class="text-warning"></span></h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="ceSerialId">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Dönüşüm Tarihi</label>
+                        <input type="date" id="ceTarih" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Fire (kg)</label>
+                        <input type="number" id="ceFire" class="form-control form-control-sm" step="0.01" min="0" placeholder="0">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" onclick="convEditSave()">
+                    <i class="fas fa-save me-1"></i>Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}

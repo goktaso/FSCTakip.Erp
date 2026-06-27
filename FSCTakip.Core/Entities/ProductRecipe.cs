@@ -11,5 +11,11 @@
         public decimal StandardQuantity { get; set; }
         public string Unit { get; set; }
         public bool IsActive { get; set; }
+
+        /// <summary>
+        /// Mamülün hangi bölümünde kullanılır? (ör: Gövde, Sap, Dip Kapak, Etiket, Diğer)
+        /// Tüketim girerken ve BOM analizinde bileşen ayrımı için kullanılır.
+        /// </summary>
+        public string? BilesenYeri { get; set; }
     }
 }

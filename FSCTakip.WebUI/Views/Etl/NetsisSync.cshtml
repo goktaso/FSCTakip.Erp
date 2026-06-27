@@ -1,0 +1,903 @@
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "Netsis Senkronizasyonu";
+    var connections = ViewBag.Connections as List<EtlConnection> ?? new();
+    var recentJobs  = ViewBag.RecentJobs  as List<EtlJob>        ?? new();
+}
+
+@section TopbarActions {
+    <a href="/Etl/Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> ETL Paneli
+    </a>
+    <a href="/Etl/History" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-history me-1"></i> Geçmiş
+    </a>
+}
+
+<style>
+/* ── Sync kart ── */
+.sync-card {
+    border-radius:12px;
+    border:1.5px solid #e5e7eb;
+    background:#fff;
+    transition:border-color .15s, box-shadow .15s;
+    cursor:pointer;
+    user-select:none;
+}
+.sync-card:hover { border-color:#6ee7b7; box-shadow:0 2px 12px rgba(16,185,129,.12); }
+.sync-card .icon-wrap {
+    width:44px;height:44px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+
+/* ── Tehlikeli bölüm ── */
+.danger-zone {
+    border:2px solid #fca5a5;
+    border-radius:12px;
+    background:linear-gradient(135deg,#fff5f5 0%,#fef2f2 100%);
+}
+.danger-zone-header {
+    display:flex;align-items:center;gap:10px;
+    padding:14px 18px;
+    border-bottom:1.5px solid #fca5a5;
+    border-radius:10px 10px 0 0;
+    background:#fef2f2;
+}
+.danger-btn {
+    border:1.5px solid #f87171;
+    background:#fff;
+    border-radius:10px;
+    padding:12px 16px;
+    display:flex;align-items:center;gap:12px;
+    cursor:pointer;
+    transition:background .15s, border-color .15s;
+    text-align:left;width:100%;
+}
+.danger-btn:hover { background:#fef2f2; border-color:#ef4444; }
+.danger-btn .d-icon { width:36px;height:36px;border-radius:8px;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+
+/* ── Durum paneli ── */
+.state-panel { border-radius:12px; border:1.5px solid #e5e7eb; background:#fff; min-height:340px; }
+
+/* ── Stat kutu ── */
+.stat-box { border-radius:10px; padding:16px 10px; text-align:center; }
+.stat-box .num { font-size:36px; font-weight:800; line-height:1; }
+.stat-box .lbl { font-size:11px; color:#9ca3af; margin-top:4px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
+
+/* ── Toast ── */
+#toastWrap { position:fixed; top:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:10px; }
+.fsc-toast {
+    min-width:320px; max-width:420px; padding:16px 20px;
+    border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.18);
+    display:flex; align-items:flex-start; gap:14px;
+    animation:slideIn .25s ease;
+    border-left:5px solid #22c55e;
+    background:#fff;
+}
+.fsc-toast.toast-error  { border-color:#ef4444; }
+.fsc-toast.toast-warn   { border-color:#f59e0b; }
+.fsc-toast.toast-info   { border-color:#3b82f6; }
+.fsc-toast .t-icon { width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px; }
+.fsc-toast.toast-ok    .t-icon { background:#dcfce7; color:#16a34a; }
+.fsc-toast.toast-error .t-icon { background:#fee2e2; color:#dc2626; }
+.fsc-toast.toast-warn  .t-icon { background:#fef9c3; color:#d97706; }
+.fsc-toast.toast-info  .t-icon { background:#dbeafe; color:#2563eb; }
+.fsc-toast .t-title { font-weight:700; font-size:14px; line-height:1.3; }
+.fsc-toast .t-body  { font-size:12.5px; color:#6b7280; margin-top:3px; line-height:1.5; }
+@@keyframes slideIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:none; } }
+@@keyframes slideOut { from { opacity:1; } to { opacity:0; transform:translateX(40px); } }
+
+/* ── Hata kutusu ── */
+.err-panel { border-radius:10px; background:#1e1e2e; padding:16px; max-height:220px; overflow-y:auto; }
+.err-line { display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid #2d2d44;font-size:12px; }
+.err-line:last-child { border:none; }
+.err-num { background:#7f1d1d;color:#fca5a5;border-radius:4px;padding:0 6px;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px; }
+.err-text { color:#fca5a5; }
+
+/* ── Son işler tablo ── */
+.job-row td { vertical-align:middle; }
+</style>
+
+<!-- Toast kapsayıcı -->
+<div id="toastWrap"></div>
+
+<div class="row g-4">
+
+    <!-- ═══════════ SOL PANEL ═══════════ -->
+    <div class="col-md-5 d-flex flex-column gap-4">
+
+        <!-- 1. Bağlantı bilgisi -->
+        <div class="table-card p-4">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px #dcfce7;"></div>
+                <span class="fw-semibold" style="font-size:13px;">Netsis Bağlantısı</span>
+            </div>
+
+            @if (connections.Any())
+            {
+                <label class="form-label small fw-semibold text-muted mb-1">Bağlantı Profili</label>
+                <select id="connectionId" class="form-select form-select-sm">
+                    <option value="">— Varsayılan (appsettings) —</option>
+                    @foreach (var c in connections)
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </select>
+            }
+            else
+            {
+                <input type="hidden" id="connectionId" value="">
+                <div class="d-flex align-items-start gap-2 p-3 rounded" style="background:#f8fafc;border:1px solid #e5e7eb;">
+                    <i class="fas fa-server text-muted mt-1" style="font-size:13px;"></i>
+                    <div style="font-size:12px;">
+                        <div class="fw-semibold mb-1">Varsayılan bağlantı</div>
+                        <code class="text-muted">ARDA\ARDA / ACOREFSC25</code><br>
+                        <a href="/Etl/Connections" class="small text-primary mt-1 d-inline-block">+ Yeni profil ekle</a>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- 2. Senkronizasyon Eylemleri -->
+        <div class="table-card p-4">
+            <div class="fw-semibold mb-1" style="font-size:13px;">
+                <i class="fas fa-sync-alt me-2 text-success"></i>Senkronizasyon
+            </div>
+            <div class="text-muted mb-3" style="font-size:12px;">
+                Netsis'teki kayıtları sisteme ekler veya günceller. Mevcut kayıtlar silinmez.
+            </div>
+
+            <div class="d-flex flex-column gap-2">
+                <!-- Ürünler -->
+                <div class="sync-card p-3 d-flex align-items-center gap-3" onclick="runSync('ProductImport')">
+                    <div class="icon-wrap" style="background:#eff6ff;">
+                        <i class="fas fa-boxes text-primary" style="font-size:18px;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold" style="font-size:13px;">Ürünleri Senkronize Et</div>
+                        <div class="text-muted" style="font-size:11px;">TBLSTSABIT → Ürünler (Grup 10/20/30/40/50)</div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted" style="font-size:11px;"></i>
+                </div>
+
+                <!-- Tedarikçiler -->
+                <div class="sync-card p-3 d-flex align-items-center gap-3" onclick="runSync('SupplierImport')">
+                    <div class="icon-wrap" style="background:#fffbeb;">
+                        <i class="fas fa-truck text-warning" style="font-size:18px;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold" style="font-size:13px;">Tedarikçileri Senkronize Et</div>
+                        <div class="text-muted" style="font-size:11px;">TBLCASABIT (TİP=S) → Tedarikçiler</div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted" style="font-size:11px;"></i>
+                </div>
+
+                <!-- Müşteriler -->
+                <div class="sync-card p-3 d-flex align-items-center gap-3" onclick="runSync('CustomerImport')">
+                    <div class="icon-wrap" style="background:#f0fdf4;">
+                        <i class="fas fa-users text-success" style="font-size:18px;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold" style="font-size:13px;">Müşterileri Senkronize Et</div>
+                        <div class="text-muted" style="font-size:11px;">TBLCASABIT (TİP=A) → Müşteriler</div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted" style="font-size:11px;"></i>
+                </div>
+
+                <!-- Hammadde Girişleri (Lotlar) -->
+                <div class="sync-card p-3 d-flex align-items-center gap-3" style="border-color:#d1fae5;" onclick="openLotPreview()">
+                    <div class="icon-wrap" style="background:#ecfdf5;">
+                        <i class="fas fa-boxes-stacked text-success" style="font-size:18px;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold" style="font-size:13px;">Hammadde Girişlerini Güncelle</div>
+                        <div class="text-muted" style="font-size:11px;">tblseritra (GCKOD=G) → FscLots + FscSerials</div>
+                        <div class="text-muted" style="font-size:10px;margin-top:2px;">Ağırlık hatalarını düzeltir · Eksik lotları ekler</div>
+                    </div>
+                    <span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;">ÖNİZLE</span>
+                </div>
+
+                <!-- Tümü -->
+                <button class="btn btn-dark w-100 mt-1 d-flex align-items-center gap-2 justify-content-center" style="border-radius:10px;padding:12px;" onclick="runAll()">
+                    <i class="fas fa-sync-alt"></i>
+                    <strong>Tümünü Senkronize Et</strong>
+                    <span class="text-white-50 small">(Ürün + Tedarikçi + Müşteri)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. Tehlikeli Bölge -->
+        <div class="danger-zone">
+            <div class="danger-zone-header">
+                <div style="width:32px;height:32px;border-radius:8px;background:#fee2e2;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-skull-crossbones" style="color:#dc2626;font-size:14px;"></i>
+                </div>
+                <div>
+                    <div class="fw-bold text-danger" style="font-size:13px;">Sıfırla &amp; Yeniden Yükle</div>
+                    <div class="text-danger" style="font-size:11px;opacity:.75;">Mevcut tüm kayıtlar kalıcı olarak silinir</div>
+                </div>
+            </div>
+            <div class="p-3 d-flex flex-column gap-2">
+                <button class="danger-btn" onclick="clearAndSync('Suppliers','SupplierImport')">
+                    <div class="d-icon"><i class="fas fa-trash text-danger" style="font-size:14px;"></i></div>
+                    <div>
+                        <div class="fw-semibold" style="font-size:13px;color:#b91c1c;">Tedarikçileri Sil + Netsis'ten Yükle</div>
+                        <div style="font-size:11px;color:#9ca3af;">Sistemdeki tedarikçiler silinir, Netsis'ten sıfırdan çekilir</div>
+                    </div>
+                </button>
+                <button class="danger-btn" onclick="clearAndSync('Customers','CustomerImport')">
+                    <div class="d-icon"><i class="fas fa-trash text-danger" style="font-size:14px;"></i></div>
+                    <div>
+                        <div class="fw-semibold" style="font-size:13px;color:#b91c1c;">Müşterileri Sil + Netsis'ten Yükle</div>
+                        <div style="font-size:11px;color:#9ca3af;">Sistemdeki müşteriler silinir, Netsis'ten sıfırdan çekilir</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. Excel İndirme -->
+        <div class="table-card p-4">
+            <div class="fw-semibold mb-1" style="font-size:13px;">
+                <i class="fas fa-file-excel me-2 text-success"></i>Referans Excel Dosyaları
+            </div>
+            <div class="text-muted mb-3" style="font-size:12px;">
+                ACOREFSC25 veritabanından çıkarılan hazır veri dosyaları — aktarmadan önce gözden geçirin.
+            </div>
+
+            <div class="d-flex flex-column gap-1">
+                <div class="text-uppercase fw-semibold text-muted px-1" style="font-size:10px;letter-spacing:.06em;">FSC Sertifika</div>
+                <a href="/Etl/DownloadNetsisEtl?file=FSC_Kodlari_Sablonu" class="d-flex align-items-center gap-2 p-2 rounded text-decoration-none" style="border:1px solid #e5e7eb;background:#fffbeb;">
+                    <i class="fas fa-certificate text-warning"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold" style="font-size:12px;">FSC Kodu Şablonu</div>
+                        <div class="text-muted" style="font-size:11px;">12 tedarikçi · FSC numarası doldurulacak</div>
+                    </div>
+                    <i class="fas fa-download text-muted" style="font-size:11px;"></i>
+                </a>
+
+                <div class="text-uppercase fw-semibold text-muted px-1 mt-2" style="font-size:10px;letter-spacing:.06em;">Tanım Tabloları</div>
+                <a href="/Etl/DownloadNetsisEtl?file=ETL_Tedarikciler" class="d-flex align-items-center gap-2 p-2 rounded text-decoration-none" style="border:1px solid #e5e7eb;">
+                    <i class="fas fa-truck text-success"></i>
+                    <div class="flex-grow-1"><div class="fw-semibold" style="font-size:12px;">Tedarikçiler</div><div class="text-muted" style="font-size:11px;">12 kayıt (S tipi)</div></div>
+                    <i class="fas fa-download text-muted" style="font-size:11px;"></i>
+                </a>
+                <a href="/Etl/DownloadNetsisEtl?file=ETL_Musteriler" class="d-flex align-items-center gap-2 p-2 rounded text-decoration-none" style="border:1px solid #e5e7eb;">
+                    <i class="fas fa-users text-success"></i>
+                    <div class="flex-grow-1"><div class="fw-semibold" style="font-size:12px;">Müşteriler</div><div class="text-muted" style="font-size:11px;">316 kayıt (ACORE23)</div></div>
+                    <i class="fas fa-download text-muted" style="font-size:11px;"></i>
+                </a>
+
+                <div class="text-uppercase fw-semibold text-muted px-1 mt-2" style="font-size:10px;letter-spacing:.06em;">Hammadde &amp; Satış</div>
+                <a href="/Etl/DownloadNetsisEtl?file=ETL_HammaddeGirisleri" class="d-flex align-items-center gap-2 p-2 rounded text-decoration-none" style="border:1px solid #e5e7eb;">
+                    <i class="fas fa-boxes text-primary"></i>
+                    <div class="flex-grow-1"><div class="fw-semibold" style="font-size:12px;">Hammadde Girişleri</div><div class="text-muted" style="font-size:11px;">160 kayıt / 151 lot (2022-2025)</div></div>
+                    <i class="fas fa-download text-muted" style="font-size:11px;"></i>
+                </a>
+                <a href="/Etl/DownloadNetsisEtl?file=ETL_SatisGirisleri" class="d-flex align-items-center gap-2 p-2 rounded text-decoration-none" style="border:1px solid #e5e7eb;">
+                    <i class="fas fa-shopping-cart text-warning"></i>
+                    <div class="flex-grow-1"><div class="fw-semibold" style="font-size:12px;">Satış Girişleri</div><div class="text-muted" style="font-size:11px;">734 çıkış hareketi</div></div>
+                    <i class="fas fa-download text-muted" style="font-size:11px;"></i>
+                </a>
+                <a href="/Etl/DownloadNetsisEtl?file=ETL_FaturaListesi" class="d-flex align-items-center gap-2 p-2 rounded text-decoration-none" style="border:1px solid #e5e7eb;">
+                    <i class="fas fa-file-invoice text-secondary"></i>
+                    <div class="flex-grow-1"><div class="fw-semibold" style="font-size:12px;">Fatura Listesi</div><div class="text-muted" style="font-size:11px;">206 fatura / irsaliye</div></div>
+                    <i class="fas fa-download text-muted" style="font-size:11px;"></i>
+                </a>
+            </div>
+        </div>
+
+    </div><!-- /sol -->
+
+    <!-- ═══════════ SAĞ PANEL ═══════════ -->
+    <div class="col-md-7 d-flex flex-column gap-4">
+
+        <!-- Durum Alanı -->
+        <div class="state-panel p-0 overflow-hidden">
+
+            <!-- Başlangıç ekranı -->
+            <div id="panelStart" class="p-5 text-center">
+                <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#f0fdf4,#dcfce7);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                    <i class="fas fa-database" style="font-size:34px;color:#16a34a;"></i>
+                </div>
+                <div class="fw-bold mb-2" style="font-size:18px;">Hazır</div>
+                <div class="text-muted mb-4" style="font-size:13.5px;max-width:320px;margin-inline:auto;">
+                    Sol panelden senkronize etmek istediğiniz veri türünü seçin. İşlem birkaç saniye sürer.
+                </div>
+                <div class="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-pill" style="background:#f1f5f9;font-size:12px;">
+                    <span class="fw-semibold text-muted">Kaynak:</span>
+                    <code>ARDA\ARDA / ACOREFSC25</code>
+                </div>
+            </div>
+
+            <!-- Yükleniyor -->
+            <div id="panelLoading" class="p-5 text-center" style="display:none;">
+                <div style="width:80px;height:80px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;position:relative;">
+                    <div class="spinner-border text-success" style="width:60px;height:60px;position:absolute;border-width:3px;"></div>
+                    <i class="fas fa-database text-success" style="font-size:22px;position:relative;z-index:1;"></i>
+                </div>
+                <div class="fw-bold mb-1" id="loadingMsg" style="font-size:17px;">Senkronize ediliyor...</div>
+                <div class="text-muted" style="font-size:13px;">Netsis veritabanından veriler alınıyor. Lütfen bekleyin.</div>
+                <div id="loadingSteps" class="mt-3 d-inline-flex align-items-center gap-2 text-muted" style="font-size:12px;"></div>
+            </div>
+
+            <!-- Başarı -->
+            <div id="panelSuccess" style="display:none;">
+                <div class="px-5 pt-5 pb-3 text-center">
+                    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#dcfce7,#bbf7d0);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                        <i class="fas fa-check-circle" style="font-size:34px;color:#16a34a;"></i>
+                    </div>
+                    <div class="fw-bold text-success mb-1" style="font-size:18px;" id="successTitle">Senkronizasyon Tamamlandı</div>
+                    <div class="text-muted" style="font-size:13px;" id="successSub">Veriler başarıyla aktarıldı.</div>
+                </div>
+                <div class="row g-0 px-4 pb-4 mt-2">
+                    <div class="col-3 px-2">
+                        <div class="stat-box" style="background:#f0fdf4;border:1.5px solid #bbf7d0;">
+                            <div class="num text-success" id="rInserted">0</div>
+                            <div class="lbl">Eklendi</div>
+                        </div>
+                    </div>
+                    <div class="col-3 px-2">
+                        <div class="stat-box" style="background:#eff6ff;border:1.5px solid #bfdbfe;">
+                            <div class="num text-primary" id="rUpdated">0</div>
+                            <div class="lbl">Güncellendi</div>
+                        </div>
+                    </div>
+                    <div class="col-3 px-2">
+                        <div class="stat-box" style="background:#f8fafc;border:1.5px solid #e5e7eb;">
+                            <div class="num text-muted" id="rSkipped">0</div>
+                            <div class="lbl">Atlandı</div>
+                        </div>
+                    </div>
+                    <div class="col-3 px-2">
+                        <div class="stat-box" style="background:#fef2f2;border:1.5px solid #fecaca;">
+                            <div class="num text-danger" id="rErrors">0</div>
+                            <div class="lbl">Hata</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-4 pb-4" id="errorDetails" style="display:none;">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                        <span class="fw-semibold text-danger" style="font-size:13px;">Hata Kayıtları</span>
+                        <span class="badge ms-auto" style="background:#fee2e2;color:#991b1b;" id="errBadge"></span>
+                    </div>
+                    <div class="err-panel" id="errorList"></div>
+                </div>
+                <div class="px-4 pb-4 d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="resetPanel()">
+                        <i class="fas fa-redo me-1"></i>Yeni Senkronizasyon
+                    </button>
+                    <a href="/Etl/History" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-history me-1"></i>Geçmişi Görüntüle
+                    </a>
+                </div>
+            </div>
+
+            <!-- Hata Ekranı (bağlantı/sunucu hatası) -->
+            <div id="panelError" style="display:none;" class="p-5 text-center">
+                <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#fef2f2,#fee2e2);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                    <i class="fas fa-times-circle" style="font-size:34px;color:#dc2626;"></i>
+                </div>
+                <div class="fw-bold text-danger mb-2" style="font-size:18px;">Senkronizasyon Başarısız</div>
+                <div id="errMainMsg" class="text-muted mb-4" style="font-size:13.5px;max-width:380px;margin-inline:auto;"></div>
+                <div id="errTipBox" class="d-inline-flex align-items-start gap-2 px-4 py-3 rounded text-start mb-4" style="background:#fef9c3;border:1px solid #fde68a;max-width:420px;">
+                    <i class="fas fa-lightbulb text-warning mt-1" style="font-size:14px;"></i>
+                    <div id="errTip" style="font-size:12.5px;color:#78350f;line-height:1.6;"></div>
+                </div>
+                <br>
+                <button class="btn btn-outline-danger btn-sm me-2" onclick="resetPanel()">
+                    <i class="fas fa-redo me-1"></i>Tekrar Dene
+                </button>
+                <a href="/Etl/Connections" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-cog me-1"></i>Bağlantı Ayarları
+                </a>
+            </div>
+
+        </div>
+
+        <!-- Son Senkronizasyonlar -->
+        @if (recentJobs.Any())
+        {
+            <div class="table-card">
+                <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                    <i class="fas fa-history text-muted" style="font-size:13px;"></i>
+                    <strong class="small">Son Senkronizasyonlar</strong>
+                    <a href="/Etl/History" class="btn btn-outline-secondary btn-sm ms-auto" style="font-size:11px;padding:3px 10px;">
+                        Tümünü Gör
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>TÜR</th>
+                                <th class="text-center">EKLENDİ</th>
+                                <th class="text-center">GÜNCELLENDİ</th>
+                                <th class="text-center">HATA</th>
+                                <th>DURUM</th>
+                                <th>TARİH</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var j in recentJobs)
+                            {
+                                <tr class="job-row">
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div style="width:28px;height:28px;border-radius:6px;background:@JobIconBg(j.JobType);display:flex;align-items:center;justify-content:center;">
+                                                <i class="@JobIcon(j.JobType)" style="font-size:12px;color:@JobIconColor(j.JobType);"></i>
+                                            </div>
+                                            <strong style="font-size:12px;">@JobTypeLabel(j.JobType)</strong>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (j.InsertedCount > 0) { <span class="fw-bold text-success">+@j.InsertedCount</span> }
+                                        else { <span class="text-muted">—</span> }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (j.UpdatedCount > 0) { <span class="fw-bold text-primary">@j.UpdatedCount</span> }
+                                        else { <span class="text-muted">—</span> }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (j.ErrorCount > 0) { <span class="fw-bold text-danger">@j.ErrorCount</span> }
+                                        else { <span class="text-muted">—</span> }
+                                    </td>
+                                    <td>@StatusBadge(j.Status)</td>
+                                    <td class="text-muted small">@j.StartedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+    </div><!-- /sağ -->
+
+</div>
+
+<!-- Onay Modalı -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:16px;overflow:hidden;">
+            <div class="modal-header border-0 p-4 pb-2">
+                <div class="d-flex align-items-center gap-3">
+                    <div id="confirmIcon" style="width:48px;height:48px;border-radius:12px;background:#fee2e2;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-exclamation-triangle text-danger" style="font-size:20px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" id="confirmTitle">Emin misiniz?</h5>
+                        <div class="text-muted small" id="confirmSub"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body px-4 pt-2 pb-3">
+                <div id="confirmBody" class="text-muted" style="font-size:13.5px;line-height:1.7;"></div>
+                <div id="confirmWarn" class="mt-3 p-3 rounded d-flex align-items-start gap-2" style="background:#fef9c3;border:1px solid #fde68a;display:none!important;">
+                    <i class="fas fa-triangle-exclamation text-warning mt-1"></i>
+                    <span id="confirmWarnText" style="font-size:12px;color:#78350f;"></span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" id="confirmOkBtn" class="btn btn-danger fw-semibold">Evet, Devam Et</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string JobTypeLabel(string t) => t switch {
+        "ProductImport"  => "Ürün",
+        "SupplierImport" => "Tedarikçi",
+        "CustomerImport" => "Müşteri",
+        _ => t
+    };
+    string JobIcon(string t) => t switch {
+        "ProductImport"  => "fas fa-boxes",
+        "SupplierImport" => "fas fa-truck",
+        "CustomerImport" => "fas fa-users",
+        _ => "fas fa-sync"
+    };
+    string JobIconBg(string t) => t switch {
+        "ProductImport"  => "#eff6ff",
+        "SupplierImport" => "#fffbeb",
+        "CustomerImport" => "#f0fdf4",
+        _ => "#f3f4f6"
+    };
+    string JobIconColor(string t) => t switch {
+        "ProductImport"  => "#3b82f6",
+        "SupplierImport" => "#f59e0b",
+        "CustomerImport" => "#16a34a",
+        _ => "#6b7280"
+    };
+    Microsoft.AspNetCore.Html.HtmlString StatusBadge(string s) => new(s switch {
+        "Completed" => "<span class=\"badge badge-success\">Tamamlandı</span>",
+        "Partial"   => "<span class=\"badge badge-warning\">Kısmi Başarı</span>",
+        "Failed"    => "<span class=\"badge\" style=\"background:#fee2e2;color:#991b1b;\">Başarısız</span>",
+        _           => "<span class=\"badge\" style=\"background:#fef9c3;color:#92400e;\">Çalışıyor</span>"
+    });
+}
+
+<!-- ── Hammadde Lot Önizleme Modalı ──────────────────────────── -->
+<div class="modal fade" id="lotPreviewModal" tabindex="-1" aria-labelledby="lotPreviewModalLabel">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header" style="background:#1e3d14;">
+                <h5 class="modal-title text-white fw-semibold" id="lotPreviewModalLabel">
+                    <i class="fas fa-search me-2"></i>Hammadde Girişleri — Netsis Önizleme
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <!-- İstatistik bandı -->
+            <div id="lotPreviewStats"></div>
+            <!-- Tablo -->
+            <div class="modal-body p-0" id="lotPreviewBody" style="min-height:200px;">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x text-muted mb-3"></i>
+                    <div class="text-muted small">Yükleniyor...</div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <div class="text-muted small me-auto">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <span class="badge" style="background:#dcfce7;color:#166534;">Yeni</span> = oluşturulacak &nbsp;
+                    <span class="badge" style="background:#fef9c3;color:#92400e;">Güncelle</span> = ağırlık güncellenecek &nbsp;
+                    <span class="badge" style="background:#fee2e2;color:#b91c1c;">Ürün Yok</span> = atlanacak
+                </div>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-success" id="lotPreviewRunBtn" onclick="runLotImport()" style="display:none;">
+                    <i class="fas fa-play me-2"></i>Aktarımı Başlat
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+// ── Yardımcılar ────────────────────────────────────────────
+const syncLabels = {
+    ProductImport:  { label: 'Ürünler', icon: 'fa-boxes', color: '#3b82f6' },
+    SupplierImport: { label: 'Tedarikçiler', icon: 'fa-truck', color: '#f59e0b' },
+    CustomerImport: { label: 'Müşteriler', icon: 'fa-users', color: '#16a34a' },
+    LotImport:      { label: 'Hammadde Girişleri', icon: 'fa-boxes-stacked', color: '#16a34a' }
+};
+
+// Panel göster/gizle
+function showPanel(id) {
+    ['panelStart','panelLoading','panelSuccess','panelError'].forEach(p =>
+        document.getElementById(p).style.display = p === id ? '' : 'none'
+    );
+}
+
+function showLoading(msg, step) {
+    showPanel('panelLoading');
+    document.getElementById('loadingMsg').textContent = msg;
+    const steps = document.getElementById('loadingSteps');
+    steps.innerHTML = step
+        ? `<i class="fas fa-spinner fa-spin"></i> ${step}`
+        : '';
+}
+
+function resetPanel() { showPanel('panelStart'); }
+
+// ── Toast Bildirimleri ─────────────────────────────────────
+function toast(type, title, body, duration = 5000) {
+    const wrap = document.getElementById('toastWrap');
+    const icons = { ok:'fa-check-circle', error:'fa-times-circle', warn:'fa-exclamation-triangle', info:'fa-info-circle' };
+    const t = document.createElement('div');
+    t.className = `fsc-toast toast-${type === 'ok' ? 'ok' : type}`;
+    t.innerHTML = `
+        <div class="t-icon"><i class="fas ${icons[type] ?? icons.info}"></i></div>
+        <div class="flex-grow-1">
+            <div class="t-title">${title}</div>
+            ${body ? `<div class="t-body">${body}</div>` : ''}
+        </div>
+        <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#9ca3af;padding:0;cursor:pointer;font-size:16px;line-height:1;">&times;</button>
+    `;
+    wrap.appendChild(t);
+    if (duration > 0) setTimeout(() => {
+        t.style.animation = 'slideOut .25s ease forwards';
+        setTimeout(() => t.remove(), 250);
+    }, duration);
+}
+
+// ── Hata Mesaj Üretici ─────────────────────────────────────
+function getErrorTip(msg) {
+    if (!msg) return 'Sunucu yanıt vermedi. Lütfen tekrar deneyin.';
+    const m = msg.toLowerCase();
+    if (m.includes('login failed') || m.includes('password'))
+        return 'Netsis veritabanı kullanıcı adı veya şifresi hatalı. <strong>ETL → Bağlantı Ayarları</strong> sayfasından bilgileri güncelleyin.';
+    if (m.includes('cannot open') || m.includes('network') || m.includes('server was not found'))
+        return 'Netsis sunucusuna ulaşılamıyor. Sunucu adını ve ağ bağlantısını kontrol edin.';
+    if (m.includes('timeout'))
+        return 'Bağlantı zaman aşımına uğradı. Netsis sunucusu meşgul olabilir, birkaç dakika bekleyip tekrar deneyin.';
+    if (m.includes('database') && m.includes('not found'))
+        return 'Belirtilen veritabanı bulunamadı. Bağlantı ayarlarındaki veritabanı adını kontrol edin.';
+    if (m.includes('fk_') || m.includes('foreign key'))
+        return 'Bu kayıtlara bağlı başka veriler mevcut olduğu için silme işlemi yapılamadı. Önce ilişkili kayıtları kaldırın.';
+    return 'Beklenmeyen bir hata oluştu. Hata kodu için sunucu loglarını inceleyebilirsiniz.';
+}
+
+// ── Sonuç Paneli ───────────────────────────────────────────
+function showResult(ins, upd, skp, errCnt, errors, title) {
+    showPanel('panelSuccess');
+    document.getElementById('rInserted').textContent = ins ?? 0;
+    document.getElementById('rUpdated').textContent  = upd ?? 0;
+    document.getElementById('rSkipped').textContent  = skp ?? 0;
+    document.getElementById('rErrors').textContent   = errCnt ?? 0;
+
+    const total = (ins ?? 0) + (upd ?? 0);
+    document.getElementById('successTitle').textContent =
+        title ?? (errCnt > 0 ? 'Senkronizasyon Kısmen Tamamlandı' : 'Senkronizasyon Başarıyla Tamamlandı');
+    document.getElementById('successSub').textContent =
+        `Toplam ${total} kayıt işlendi.${skp > 0 ? ' ' + skp + ' kayıt atlandı.' : ''}`;
+
+    const errDiv  = document.getElementById('errorDetails');
+    const errList = document.getElementById('errorList');
+    if (errors && errors.length > 0) {
+        document.getElementById('errBadge').textContent = errors.length + ' hata';
+        errList.innerHTML = errors.map((e, i) =>
+            `<div class="err-line"><span class="err-num">#${i+1}</span><span class="err-text">${e}</span></div>`
+        ).join('');
+        errDiv.style.display = '';
+    } else {
+        errDiv.style.display = 'none';
+    }
+
+    if (errCnt > 0)
+        toast('warn', 'Kısmi başarı', `${total} kayıt aktarıldı, ${errCnt} hata oluştu.`);
+    else
+        toast('ok', 'Tamamlandı', `${ins ?? 0} eklendi · ${upd ?? 0} güncellendi`);
+}
+
+function showError(msg) {
+    showPanel('panelError');
+    document.getElementById('errMainMsg').textContent = msg || 'Bilinmeyen bir hata oluştu.';
+    document.getElementById('errTip').innerHTML = getErrorTip(msg);
+    document.getElementById('errTipBox').style.display = '';
+    toast('error', 'Senkronizasyon Başarısız', msg?.substring(0, 120) ?? '', 8000);
+}
+
+// ── Senkronizasyon ─────────────────────────────────────────
+async function startSync(type, connId) {
+    const info = syncLabels[type] ?? { label: type };
+    showLoading(`${info.label} senkronize ediliyor...`);
+    try {
+        const fd = new FormData();
+        fd.append('syncType', type);
+        if (connId) fd.append('connectionId', connId);
+
+        const r   = await fetch('/Etl/NetsisExecute', { method: 'POST', body: fd });
+        const res = await r.json();
+
+        if (res.success) showResult(res.inserted, res.updated, res.skipped, res.errorCount, res.errors);
+        else showError(res.message);
+    } catch (e) {
+        showError(e.message?.includes('JSON') || e.message?.includes('token')
+            ? 'Sunucu bir hata sayfası döndürdü (HTML). Uygulama loglarını kontrol edin.'
+            : e.message);
+    }
+}
+
+function runSync(type) {
+    const connId = document.getElementById('connectionId')?.value ?? '';
+    const info   = syncLabels[type] ?? { label: type };
+    openConfirm({
+        title: `${info.label} Senkronize Et`,
+        sub:   'Netsis bağlantısı',
+        body:  `Netsis veritabanından <strong>${info.label.toLowerCase()}</strong> çekilecek. Sistemde zaten olan kayıtlar güncellenecek, yeni olanlar eklenecek. Hiçbir kayıt silinmeyecek.`,
+        okLabel: 'Başlat',
+        okClass: 'btn-success',
+        iconBg: '#dcfce7', iconColor: '#16a34a', iconClass: 'fa-sync-alt',
+        onOk: () => startSync(type, connId)
+    });
+}
+
+async function runAll() {
+    const connId = document.getElementById('connectionId')?.value ?? '';
+    openConfirm({
+        title: 'Tümünü Senkronize Et',
+        sub: 'Ürün + Tedarikçi + Müşteri',
+        body: 'Üç tablo sırasıyla Netsis\'ten çekilecek. Mevcut kayıtlar güncellenecek, yeni olanlar eklenecek. Hiçbir kayıt silinmeyecek.',
+        okLabel: 'Başlat',
+        okClass: 'btn-dark',
+        iconBg: '#f3f4f6', iconColor: '#374151', iconClass: 'fa-sync-alt',
+        onOk: async () => {
+            let totIns = 0, totUpd = 0, totSkp = 0, totErr = 0, allErrors = [];
+            const types = ['ProductImport','SupplierImport','CustomerImport'];
+            const labels = ['Ürünler (1/3)','Tedarikçiler (2/3)','Müşteriler (3/3)'];
+
+            for (let i = 0; i < types.length; i++) {
+                showLoading(labels[i] + ' senkronize ediliyor...', labels[i]);
+                try {
+                    const fd = new FormData();
+                    fd.append('syncType', types[i]);
+                    if (connId) fd.append('connectionId', connId);
+                    const res = await fetch('/Etl/NetsisExecute', { method: 'POST', body: fd }).then(r => r.json());
+                    if (res.success) {
+                        totIns += res.inserted ?? 0; totUpd += res.updated ?? 0;
+                        totSkp += res.skipped ?? 0; totErr += res.errorCount ?? 0;
+                        if (res.errors) allErrors.push(...res.errors);
+                    } else { allErrors.push(`${types[i]}: ${res.message}`); totErr++; }
+                } catch(e) { allErrors.push(`${types[i]}: ${e.message}`); totErr++; }
+            }
+            showResult(totIns, totUpd, totSkp, totErr, allErrors, 'Tam Senkronizasyon Tamamlandı');
+        }
+    });
+}
+
+// ── Temizle + Senkronize ───────────────────────────────────
+function clearAndSync(recordType, syncType) {
+    const isSupp   = recordType === 'Suppliers';
+    const label    = isSupp ? 'tedarikçileri' : 'müşterileri';
+    const labelCap = isSupp ? 'Tedarikçiler' : 'Müşteriler';
+    const connId   = document.getElementById('connectionId')?.value ?? '';
+
+    openConfirm({
+        title:  `${labelCap} Sıfırla + Netsis'ten Yükle`,
+        sub:    '⚠️ Geri alınamaz işlem',
+        body:   `Sistemdeki tüm <strong>${label}</strong> kalıcı olarak silinecek ve Netsis veritabanından sıfırdan yüklenecek.<br><br>Bu işlem geri alınamaz. Devam etmek istiyor musunuz?`,
+        warn:   isSupp
+            ? 'Silinebilmesi için tedarikçilere bağlı hammadde lot kaydı bulunmamalıdır.'
+            : 'Silinebilmesi için müşterilere bağlı satış siparişi bulunmamalıdır.',
+        okLabel: 'Evet, Sil ve Yeniden Yükle',
+        okClass: 'btn-danger',
+        iconBg: '#fee2e2', iconColor: '#dc2626', iconClass: 'fa-skull-crossbones',
+        onOk: async () => {
+            // Adım 1: Sil
+            showLoading(`${labelCap} siliniyor...`, 'Adım 1/2 — Mevcut kayıtlar temizleniyor');
+            try {
+                const cfd = new FormData();
+                cfd.append('recordType', recordType);
+                const cr = await fetch('/Etl/ClearRecords', { method:'POST', body:cfd }).then(r => r.json());
+
+                if (!cr.success) { showError(cr.message); return; }
+
+                toast('info', `${cr.deleted} kayıt silindi`, 'Netsis\'ten yükleniyor...', 4000);
+
+                // Adım 2: Yükle
+                showLoading(`${labelCap} Netsis'ten yükleniyor...`, 'Adım 2/2 — Netsis\'ten çekiliyor');
+                const fd = new FormData();
+                fd.append('syncType', syncType);
+                if (connId) fd.append('connectionId', connId);
+                const res = await fetch('/Etl/NetsisExecute', { method:'POST', body:fd }).then(r => r.json());
+
+                if (res.success)
+                    showResult(res.inserted, res.updated, res.skipped, res.errorCount, res.errors,
+                        `${cr.deleted} silindi → ${res.inserted} yeni kayıt eklendi`);
+                else
+                    showError(res.message);
+            } catch(e) {
+                showError(e.message?.includes('JSON') || e.message?.includes('token')
+                    ? 'Sunucu bir hata sayfası döndürdü (HTML). Uygulama loglarını kontrol edin.'
+                    : e.message);
+            }
+        }
+    });
+}
+
+// ── Onay Modalı ────────────────────────────────────────────
+let _confirmOkFn = null;
+const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+
+function openConfirm({ title, sub, body, warn, okLabel, okClass, iconBg, iconColor, iconClass, onOk }) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmSub').textContent   = sub ?? '';
+    document.getElementById('confirmBody').innerHTML    = body ?? '';
+    document.getElementById('confirmIcon').style.background = iconBg ?? '#fee2e2';
+    document.getElementById('confirmIcon').innerHTML = `<i class="fas ${iconClass ?? 'fa-question'}" style="font-size:20px;color:${iconColor ?? '#dc2626'};"></i>`;
+
+    const warnBox  = document.getElementById('confirmWarn');
+    const warnText = document.getElementById('confirmWarnText');
+    if (warn) { warnText.innerHTML = warn; warnBox.style.display = ''; }
+    else { warnBox.style.display = 'none'; }
+
+    const btn = document.getElementById('confirmOkBtn');
+    btn.textContent = okLabel ?? 'Onayla';
+    btn.className   = `btn ${okClass ?? 'btn-primary'} fw-semibold`;
+
+    _confirmOkFn = onOk;
+    confirmModal.show();
+}
+
+document.getElementById('confirmOkBtn').addEventListener('click', () => {
+    confirmModal.hide();
+    if (_confirmOkFn) _confirmOkFn();
+});
+
+// ── Hammadde Lot Önizleme ──────────────────────────────────
+let lotPreviewModal = null;
+function openLotPreview() {
+    if (!lotPreviewModal) lotPreviewModal = new bootstrap.Modal(document.getElementById('lotPreviewModal'));
+    // Yükleniyor spinner
+    document.getElementById('lotPreviewBody').innerHTML = `
+        <div class="text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x text-muted mb-3"></i>
+            <div class="text-muted small">Netsis'ten veriler çekiliyor...</div>
+        </div>`;
+    document.getElementById('lotPreviewStats').innerHTML = '';
+    document.getElementById('lotPreviewRunBtn').style.display = 'none';
+    lotPreviewModal.show();
+
+    fetch('/Etl/PreviewLotImport')
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success) {
+                document.getElementById('lotPreviewBody').innerHTML =
+                    `<div class="alert alert-danger m-3"><i class="fas fa-times-circle me-2"></i>${res.message}</div>`;
+                return;
+            }
+            // İstatistik bandı
+            document.getElementById('lotPreviewStats').innerHTML = `
+                <div class="d-flex gap-3 px-3 py-2 border-bottom" style="background:#f8fafc;flex-wrap:wrap;">
+                    <div class="stat-box" style="background:#eff6ff;flex:1;min-width:90px;">
+                        <div class="num" style="color:#1d4ed8;">${res.total}</div>
+                        <div class="lbl">Toplam</div>
+                    </div>
+                    <div class="stat-box" style="background:#f0fdf4;flex:1;min-width:90px;">
+                        <div class="num" style="color:#16a34a;">${res.newCount}</div>
+                        <div class="lbl">Yeni Lot</div>
+                    </div>
+                    <div class="stat-box" style="background:#fffbeb;flex:1;min-width:90px;">
+                        <div class="num" style="color:#d97706;">${res.matched}</div>
+                        <div class="lbl">Güncelle</div>
+                    </div>
+                    <div class="stat-box" style="background:#fef2f2;flex:1;min-width:90px;">
+                        <div class="num" style="color:#dc2626;">${res.noProduct}</div>
+                        <div class="lbl">Ürün Yok</div>
+                    </div>
+                </div>`;
+
+            // Tablo
+            const colorOf = d => d === 'Yeni' ? '#dcfce7;color:#166534' : d === 'Güncelle' ? '#fef9c3;color:#92400e' : '#fee2e2;color:#b91c1c';
+            const rows = res.rows.map(r => `
+                <tr>
+                    <td class="fw-semibold small">${r.seriNo}</td>
+                    <td class="small text-muted">${r.stokKodu}</td>
+                    <td class="small" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${r.stokAdi}">${r.stokAdi}</td>
+                    <td class="small text-end">${r.initAgirlik.toLocaleString('tr-TR')} kg</td>
+                    <td class="small">${r.belgeNo || '<span class="text-muted">—</span>'}</td>
+                    <td class="small text-muted">${r.tarih}</td>
+                    <td>${r.isSayim ? '<span class="badge bg-secondary" style="font-size:10px;">Sayım</span>' : ''}</td>
+                    <td><span class="badge" style="background:${colorOf(r.durum)};font-size:10px;">${r.durum}</span></td>
+                </tr>`).join('');
+
+            document.getElementById('lotPreviewBody').innerHTML = `
+                <div class="table-responsive" style="max-height:450px;overflow-y:auto;">
+                    <table class="table table-sm table-hover mb-0" style="font-size:12px;">
+                        <thead class="sticky-top bg-white" style="z-index:1;">
+                            <tr>
+                                <th>Seri No</th><th>Stok Kodu</th><th>Stok Adı</th>
+                                <th class="text-end">Başl. Ağırlık</th><th>Belge No</th>
+                                <th>Tarih</th><th>Tür</th><th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
+            document.getElementById('lotPreviewRunBtn').style.display = '';
+        })
+        .catch(err => {
+            document.getElementById('lotPreviewBody').innerHTML =
+                `<div class="alert alert-danger m-3"><i class="fas fa-times-circle me-2"></i>Bağlantı hatası: ${err.message}</div>`;
+        });
+}
+
+function runLotImport() {
+    const connId = document.getElementById('connectionId')?.value ?? '';
+    lotPreviewModal?.hide();
+    openConfirm({
+        title: 'Hammadde Girişlerini Aktar',
+        sub: 'tblseritra → FscLots + FscSerials',
+        body: 'Netsis\'teki tüm seri girişleri (GCKOD=G, Üretim hariç) FscLot ve FscSerial tablolarına aktarılacak. Mevcut kayıtların <strong>ağırlık bilgileri güncellenecek</strong>, eksik seri kayıtları eklenecek.',
+        warn: 'Mevcut FscSerial ağırlıkları Netsis INIT_MIKTAR ile değiştirilir. Bu işlem geri alınamaz.',
+        okLabel: 'Evet, Aktarımı Başlat',
+        okClass: 'btn-success',
+        iconBg: '#dcfce7', iconColor: '#16a34a', iconClass: 'fa-boxes-stacked',
+        onOk: () => runSync('LotImport')
+    });
+}
+</script>
+}

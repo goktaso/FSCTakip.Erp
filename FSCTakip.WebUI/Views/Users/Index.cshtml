@@ -1,0 +1,250 @@
+@model List<FSCTakip.Core.Entities.AppUser>
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "Kullanıcı Yönetimi";
+    var allGroups = ViewBag.AllGroups as List<PermissionGroup> ?? new();
+}
+
+@section TopbarPrimary {
+    <button class="btn btn-primary btn-sm px-3" onclick="editUser(0)">
+        <i class="fas fa-user-plus me-1"></i> Yeni Kullanıcı
+    </button>
+}
+
+<div class="table-card">
+    <div class="table-responsive">
+        <table class="data-table" id="usersTable">
+            <thead>
+                <tr>
+                    <th>Kullanıcı</th>
+                    <th>Ad Soyad</th>
+                    <th>E-posta</th>
+                    <th>Gruplar</th>
+                    <th class="text-center">Rol</th>
+                    <th class="text-center">Durum</th>
+                    <th class="text-center">Son Giriş</th>
+                    <th class="text-center" style="width:140px">İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    <tr>
+                        <td class="fw-semibold">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                                     style="width:32px;height:32px;font-size:13px;flex-shrink:0;">
+                                    @u.FullName.Substring(0, 1).ToUpper()
+                                </div>
+                                @u.Username
+                            </div>
+                        </td>
+                        <td>@u.FullName</td>
+                        <td class="text-muted small">@u.Email</td>
+                        <td>
+                            @foreach (var ug in u.UserGroups)
+                            {
+                                <span class="badge bg-secondary me-1">@ug.Group?.Name</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            @if (u.IsAdmin)
+                            {
+                                <span class="badge bg-danger"><i class="fas fa-crown me-1"></i>Admin</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-dark border">Kullanıcı</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            @if (u.IsActive)
+                            {
+                                <span class="badge bg-success">Aktif</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Pasif</span>
+                            }
+                        </td>
+                        <td class="text-center small text-muted">
+                            @(u.LastLoginDate.HasValue ? u.LastLoginDate.Value.ToString("dd.MM.yy HH:mm") : "-")
+                        </td>
+                        <td class="text-center">
+                            <a href="/Users/Detail/@u.Id" class="btn btn-sm btn-outline-primary py-0 px-2" title="Yetkiler">
+                                <i class="fas fa-shield-alt"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="editUser(@u.Id)" title="Düzenle">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm @(u.IsActive ? "btn-outline-warning" : "btn-outline-success") py-0 px-2"
+                                    onclick="toggleUser(@u.Id)" title="@(u.IsActive ? "Pasif Yap" : "Aktif Yap")">
+                                <i class="fas fa-@(u.IsActive ? "toggle-off" : "toggle-on")"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">Henüz kullanıcı oluşturulmamış.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- Modal -->
+<div class="modal fade" id="userModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <h5 class="modal-title" id="userModalTitle">Yeni Kullanıcı</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="uId" value="0" />
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Kullanıcı Adı <span class="text-danger">*</span></label>
+                        <input type="text" id="uUsername" class="form-control" placeholder="kullanici.adi" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Ad Soyad <span class="text-danger">*</span></label>
+                        <input type="text" id="uFullName" class="form-control" placeholder="Ad Soyad" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">E-posta</label>
+                        <input type="email" id="uEmail" class="form-control" placeholder="ornek@firma.com" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Şifre <span class="text-danger" id="pwRequired">*</span></label>
+                        <div class="input-group">
+                            <input type="password" id="uPassword" class="form-control" placeholder="En az 6 karakter" />
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePw()">
+                                <i class="fas fa-eye" id="pwEyeIcon"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted" id="pwHint">Düzenlemede boş bırakılırsa şifre değişmez.</small>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Yetki Grupları</label>
+                        <div class="d-flex flex-wrap gap-2" id="groupChecks">
+                            @foreach (var g in allGroups)
+                            {
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input group-cb"
+                                           id="grp_@g.Id" value="@g.Id" />
+                                    <label class="form-check-label" for="grp_@g.Id">@g.Name</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" id="uIsAdmin" class="form-check-input" role="switch" />
+                            <label class="form-check-label fw-semibold text-danger" for="uIsAdmin">
+                                <i class="fas fa-crown me-1"></i>Sistem Yöneticisi (Admin)
+                            </label>
+                        </div>
+                        <small class="text-muted">Admin tüm yetkileri otomatik alır.</small>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" id="uIsActive" class="form-check-input" role="switch" checked />
+                            <label class="form-check-label" for="uIsActive">Aktif</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button class="btn btn-primary" onclick="saveUser()"><i class="fas fa-save me-1"></i>Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function editUser(id) {
+    // Tüm grup checkbox'larını sıfırla
+    document.querySelectorAll('.group-cb').forEach(cb => cb.checked = false);
+    document.getElementById('uPassword').value = '';
+
+    if (id === 0) {
+        document.getElementById('userModalTitle').textContent = 'Yeni Kullanıcı';
+        document.getElementById('uId').value = 0;
+        document.getElementById('uUsername').value = '';
+        document.getElementById('uFullName').value = '';
+        document.getElementById('uEmail').value = '';
+        document.getElementById('uIsAdmin').checked = false;
+        document.getElementById('uIsActive').checked = true;
+        document.getElementById('pwRequired').style.display = '';
+        document.getElementById('pwHint').style.display = 'none';
+        new bootstrap.Modal(document.getElementById('userModal')).show();
+        return;
+    }
+    fetch('/Users/GetUser/' + id)
+        .then(r => r.json()).then(d => {
+            if (!d.success) { showToast('Kullanıcı bulunamadı.', 'error'); return; }
+            document.getElementById('userModalTitle').textContent = 'Kullanıcıyı Düzenle';
+            document.getElementById('uId').value = d.id;
+            document.getElementById('uUsername').value = d.username;
+            document.getElementById('uFullName').value = d.fullName;
+            document.getElementById('uEmail').value = d.email || '';
+            document.getElementById('uIsAdmin').checked = d.isAdmin;
+            document.getElementById('uIsActive').checked = d.isActive;
+            document.getElementById('pwRequired').style.display = 'none';
+            document.getElementById('pwHint').style.display = '';
+            // Grupları işaretle
+            (d.groupIds || []).forEach(gid => {
+                const cb = document.getElementById('grp_' + gid);
+                if (cb) cb.checked = true;
+            });
+            new bootstrap.Modal(document.getElementById('userModal')).show();
+        });
+}
+
+function saveUser() {
+    const id = parseInt(document.getElementById('uId').value);
+    const username = document.getElementById('uUsername').value.trim();
+    const fullName = document.getElementById('uFullName').value.trim();
+    if (!username || !fullName) { showToast('Kullanıcı adı ve ad soyad zorunludur.', 'warning'); return; }
+
+    const fd = new FormData();
+    fd.append('id', id);
+    fd.append('username', username);
+    fd.append('fullName', fullName);
+    fd.append('email', document.getElementById('uEmail').value);
+    fd.append('isAdmin', document.getElementById('uIsAdmin').checked);
+    fd.append('isActive', document.getElementById('uIsActive').checked);
+    const pw = document.getElementById('uPassword').value;
+    if (pw) fd.append('newPassword', pw);
+    document.querySelectorAll('.group-cb:checked').forEach(cb => fd.append('groupIds', cb.value));
+
+    fetch('/Users/Save', { method: 'POST', body: fd })
+        .then(r => r.json()).then(d => {
+            if (d.success) location.reload();
+            else showToast(d.message, 'error');
+        });
+}
+
+function toggleUser(id) {
+    fetch('/Users/ToggleActive', { method: 'POST', body: new URLSearchParams({ id }) })
+        .then(r => r.json()).then(d => { if (d.success) location.reload(); });
+}
+
+function togglePw() {
+    const inp = document.getElementById('uPassword');
+    const ico = document.getElementById('pwEyeIcon');
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        ico.className = 'fas fa-eye-slash';
+    } else {
+        inp.type = 'password';
+        ico.className = 'fas fa-eye';
+    }
+}
+</script>
+}

@@ -1,111 +1,584 @@
-﻿@{
-    ViewData["Title"] = "Ürün Listesi";
+@using FSCTakip.Core.Entities
+@{
+    ViewData["Title"] = "Dashboard";
+    var expSuppliers   = ViewBag.ExpiringSuppliers as List<Supplier>    ?? new();
+    var expCustomers   = ViewBag.ExpiringCustomers as List<Customer>    ?? new();
+    var recentMov      = ViewBag.RecentMovements   as List<StockMovement> ?? new();
+    var lowStock       = ViewBag.LowStockSerials   as List<FscSerial>  ?? new();
+    var activeWOs      = ViewBag.ActiveWorkOrders  as List<WorkOrder>  ?? new();
+    var lockedPeriods  = ViewBag.LockedPeriods     as List<AuditPeriod> ?? new();
+    DateTime today     = ViewBag.Today ?? DateTime.Today;
+    bool hasWarnings   = expSuppliers.Any() || expCustomers.Any();
+    int totalWarnings  = expSuppliers.Count + expCustomers.Count;
+    double thisMonthInputKg = ViewBag.ThisMonthInputKg ?? 0.0;
+    double thisMonthProdKg  = ViewBag.ThisMonthProdKg  ?? 0.0;
 }
 
-<div class="product-container">
-    <div id="filterPanel" class="filter-card" style="display:none;">
-        <div class="row">
-            <div class="col-md-3">
-                <label>Ürün Grubu</label>
-                <select class="form-control" id="groupFilter">
-                    <option value="">Hepsi</option>
-                    <option value="1">1-Hammadde</option>
-                    <option value="6">6-Mamül</option>
-                </select>
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h4 class="page-title"><i class="fas fa-tachometer-alt me-2 text-primary"></i>Dashboard</h4>
+    <div class="d-flex align-items-center gap-2">
+        <span class="text-muted small">@today.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))</span>
+        @if (hasWarnings)
+        {
+            <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">
+                <i class="fas fa-exclamation-triangle me-1"></i>@totalWarnings FSC uyarı
+            </span>
+        }
+    </div>
+</div>
+
+@if (lockedPeriods.Any())
+{
+    <div class="p-3 rounded mb-3 d-flex align-items-center gap-2" style="background:#fef2f2;border:1px solid #fecaca;font-size:12.5px;">
+        <i class="fas fa-lock" style="color:#dc2626;font-size:14px;flex-shrink:0;"></i>
+        <div>
+            <strong style="color:#991b1b;">Kilitli Dönemler:</strong>
+            @foreach (var lp in lockedPeriods)
+            {
+                <span class="badge bg-danger ms-1" style="font-size:11px;">@lp.Year</span>
+                <span class="text-muted ms-1" style="font-size:11px;">(@lp.StartDate.ToString("dd.MM.yy")–@lp.EndDate.ToString("dd.MM.yy"), kilitli: @lp.LockedBy)</span>
+            }
+            <span class="text-muted ms-2" style="font-size:11px;">— Bu dönemlere ait kayıtlar yalnızca admin tarafından değiştirilebilir.</span>
+        </div>
+    </div>
+}
+
+<!-- ── Bu Ay Özeti ─────────────────────────────────────────────────────────────── -->
+<div class="stats-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:12px;">
+    <div class="stat-card" onclick="location.href='/Purchase/Index'" style="cursor:pointer;">
+        <div class="stat-icon blue"><i class="fas fa-weight-hanging"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@(((decimal)thisMonthInputKg).ToString("N0")) kg</div>
+            <div class="stat-label">Bu Ay Hammadde Girişi</div>
+        </div>
+    </div>
+    <div class="stat-card" onclick="location.href='/Production/Index'" style="cursor:pointer;">
+        <div class="stat-icon green"><i class="fas fa-industry"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@(((decimal)thisMonthProdKg).ToString("N0")) kg</div>
+            <div class="stat-label">Bu Ay Üretim Tüketimi</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Üst Stat Kartları ──────────────────────────────────────────────────────── -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
+    <div class="stat-card" onclick="location.href='/Purchase/Index'" style="cursor:pointer;">
+        <div class="stat-icon amber"><i class="fas fa-layer-group"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.TotalLots</div>
+            <div class="stat-label">FSC Lot Girişi</div>
+        </div>
+    </div>
+    <div class="stat-card" onclick="location.href='/Production/Index'" style="cursor:pointer;">
+        <div class="stat-icon @(ViewBag.PendingWorkOrders > 0 ? "amber" : "green")">
+            <i class="fas fa-industry"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.PendingWorkOrders</div>
+            <div class="stat-label">Üretimde</div>
+            <div style="font-size:10px;color:#6b7280;">@ViewBag.CompletedWorkOrders tamamlandı</div>
+        </div>
+    </div>
+    <div class="stat-card" onclick="location.href='/Sales/Index'" style="cursor:pointer;">
+        <div class="stat-icon @(ViewBag.DraftSales > 0 ? "blue" : "green")">
+            <i class="fas fa-file-invoice"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.DraftSales</div>
+            <div class="stat-label">Bekleyen Sipariş</div>
+            <div style="font-size:10px;color:#6b7280;">@ViewBag.DeliveredSales teslim edildi</div>
+        </div>
+    </div>
+    <div class="stat-card" onclick="location.href='/Stock/Index'" style="cursor:pointer;">
+        <div class="stat-icon green"><i class="fas fa-warehouse"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.InStock</div>
+            <div class="stat-label">Stokta Ürün</div>
+            <div style="font-size:10px;color:#6b7280;">@ViewBag.StockItems çeşit takipte</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── FSC Sertifika Uyarı Bandı ─────────────────────────────────────────────── -->
+@if (hasWarnings)
+{
+    <div class="table-card mb-3" style="border-left:4px solid #f59e0b;">
+        <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:#fffbeb;">
+            <i class="fas fa-exclamation-triangle text-warning" style="font-size:16px;"></i>
+            <strong class="small" style="color:#92400e;">FSC Sertifika Uyarıları — @totalWarnings adet</strong>
+            <a href="/Reports/SupplierFsc" class="btn btn-warning btn-sm ms-auto" style="font-size:11px;">
+                <i class="fas fa-certificate me-1"></i>Tüm Sertifikalar
+            </a>
+        </div>
+        <div class="p-3">
+            <div class="row g-2">
+                @foreach (var s in expSuppliers)
+                {
+                    var days = (int)(s.FscExpiryDate!.Value - today).TotalDays;
+                    var danger = days <= 0;
+                    var warning = !danger && days <= 30;
+                    var pct = danger ? 100 : warning ? 70 : 40;
+                    var barColor = danger ? "#dc2626" : warning ? "#f59e0b" : "#eab308";
+                    <div class="col-md-6">
+                        <div style="background:#fff;border:1px solid #fde68a;border-radius:8px;padding:10px;">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span style="font-size:12px;font-weight:600;"><i class="fas fa-truck me-1 text-muted"></i>@s.Name</span>
+                                <span style="font-size:11px;color:@(danger ? "#dc2626" : "#92400e");font-weight:700;">
+                                    @(danger ? "Süresi Geçti!" : $"{days} gün")
+                                </span>
+                            </div>
+                            <div style="font-size:11px;color:#6b7280;margin-bottom:6px;">
+                                @s.FscCode · @s.FscExpiryDate!.Value.ToString("dd.MM.yyyy")
+                            </div>
+                            <div style="background:#f3f4f6;border-radius:4px;height:4px;">
+                                <div style="background:@barColor;height:4px;border-radius:4px;width:@(pct)%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                @foreach (var c in expCustomers)
+                {
+                    var days = (int)(c.FscExpiryDate!.Value - today).TotalDays;
+                    var danger = days <= 0;
+                    var pct = danger ? 100 : days <= 30 ? 70 : 40;
+                    var barColor = danger ? "#dc2626" : days <= 30 ? "#f59e0b" : "#eab308";
+                    <div class="col-md-6">
+                        <div style="background:#fff;border:1px solid #fde68a;border-radius:8px;padding:10px;">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span style="font-size:12px;font-weight:600;"><i class="fas fa-user-tie me-1 text-muted"></i>@c.Name</span>
+                                <span style="font-size:11px;color:@(danger ? "#dc2626" : "#92400e");font-weight:700;">
+                                    @(danger ? "Süresi Geçti!" : $"{days} gün")
+                                </span>
+                            </div>
+                            <div style="font-size:11px;color:#6b7280;margin-bottom:6px;">
+                                @c.FscLicenseCode · @c.FscExpiryDate!.Value.ToString("dd.MM.yyyy")
+                            </div>
+                            <div style="background:#f3f4f6;border-radius:4px;height:4px;">
+                                <div style="background:@barColor;height:4px;border-radius:4px;width:@(pct)%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
-            <div class="col-md-3">
-                <label>FSC Tipi</label>
-                <select class="form-control" id="fscFilter">
-                    <option value="">Hepsi</option>
-                </select>
+        </div>
+    </div>
+}
+
+<!-- ── FSC İş Akışı Hızlı Erişim ─────────────────────────────────────────────── -->
+<div class="row g-2 mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="fas fa-bolt text-warning"></i>
+            <span class="fw-semibold" style="font-size:13px;">Hızlı İşlemler</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/Purchase/Index" class="text-decoration-none">
+            <div class="stat-card" style="border-left:3px solid #1976d2;">
+                <div class="stat-icon blue"><i class="fas fa-truck-loading"></i></div>
+                <div><div class="stat-value" style="font-size:14px;">Hammadde</div><div class="stat-label">Giriş Ekle</div></div>
             </div>
-            <div class="col-md-3">
-                <label>Hızlı Ara</label>
-                <input type="text" class="form-control" placeholder="Kod veya Ad...">
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/Production/Index" class="text-decoration-none">
+            <div class="stat-card" style="border-left:3px solid #16a34a;">
+                <div class="stat-icon green"><i class="fas fa-industry"></i></div>
+                <div><div class="stat-value" style="font-size:14px;">İş Emirleri</div><div class="stat-label">Tüketim Gir</div></div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/Reports/ChainOfCustody" class="text-decoration-none">
+            <div class="stat-card" style="border-left:3px solid #7c3aed;">
+                <div class="stat-icon" style="background:#ede9fe;color:#5b21b6;"><i class="fas fa-link"></i></div>
+                <div><div class="stat-value" style="font-size:14px;">CoC Raporu</div><div class="stat-label">FSC Zinciri</div></div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="/Reports/AuditReport" class="text-decoration-none">
+            <div class="stat-card" style="border-left:3px solid #d97706;">
+                <div class="stat-icon amber"><i class="fas fa-clipboard-check"></i></div>
+                <div><div class="stat-value" style="font-size:14px;">Denetim</div><div class="stat-label">Kütle Dengesi</div></div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- ── Trend Grafiği ──────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-chart-bar text-primary"></i>
+                    <strong class="small">Son 6 Ay — FSC Hammadde &amp; Üretim &amp; Satış Trendi</strong>
+                </div>
+                <a href="/Reports/AuditReport" class="btn btn-outline-success btn-sm" style="font-size:11px;">
+                    <i class="fas fa-clipboard-check me-1"></i>Denetim Raporu
+                </a>
+            </div>
+            <div class="p-3">
+                <canvas id="trendChart" height="80"></canvas>
             </div>
         </div>
     </div>
 
-    <div class="table-responsive shadow-sm rounded bg-white">
-        <table class="table table-hover mb-0">
-            <thead class="thead-light">
-                <tr>
-                    <th>Stok Kodu</th>
-                    <th>Ürün Adı</th>
-                    <th>Grup</th>
-                    <th>Gramaj</th>
-                    <th>Teknik Detay (Bobin/Ölçü)</th>
-                    <th>FSC Tipi</th>
-                    <th class="text-right">İşlemler</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><strong>10001</strong></td>
-                    <td>Esmer Kraft Bobin</td>
-                    <td><span class="badge badge-info">1-Hammadde</span></td>
-                    <td>80 gr</td>
-                    <td><span class="text-primary font-weight-bold">Bobin: 70 cm</span></td>
-                    <td>FSC Mix</td>
-                    <td class="text-right">
-                        <button class="btn btn-sm btn-outline-secondary" title="Düzenle">📝</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>60001</strong></td>
-                    <td>Bakkal Torbası</td>
-                    <td><span class="badge badge-success">6-Mamül</span></td>
-                    <td>80 gr</td>
-                    <td><span class="text-success font-weight-bold">24 x 30 x 12 cm</span></td>
-                    <td><span class="text-danger">FSC-SIZ</span></td>
-                    <td class="text-right">
-                        <button class="btn btn-sm btn-outline-secondary" title="Düzenle">📝</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Sağ: FSC Zinciri + Hızlı Erişim -->
+    <div class="col-lg-4">
+        <!-- FSC Zinciri -->
+        <div class="table-card mb-3">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fas fa-link text-success"></i>
+                <strong class="small">FSC Zinciri Özeti</strong>
+            </div>
+            <div class="p-3">
+                <div class="d-flex align-items-center justify-content-around mb-3">
+                    <div class="text-center">
+                        <div style="font-size:22px;font-weight:700;color:#1d4ed8;">@ViewBag.TotalLots</div>
+                        <div style="font-size:10px;color:#6b7280;">FSC Lot</div>
+                    </div>
+                    <i class="fas fa-arrow-right text-muted" style="font-size:10px;"></i>
+                    <div class="text-center">
+                        <div style="font-size:22px;font-weight:700;color:#7c3aed;">@ViewBag.CompletedWorkOrders</div>
+                        <div style="font-size:10px;color:#6b7280;">Üretim</div>
+                    </div>
+                    <i class="fas fa-arrow-right text-muted" style="font-size:10px;"></i>
+                    <div class="text-center">
+                        <div style="font-size:22px;font-weight:700;color:#16a34a;">@ViewBag.DeliveredSales</div>
+                        <div style="font-size:10px;color:#6b7280;">Teslim</div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                    <a href="/Reports/ChainOfCustody" class="btn btn-success btn-sm" style="font-size:11px;">
+                        <i class="fas fa-link me-1"></i>CoC Raporu
+                    </a>
+                    <a href="/Reports/AuditReport" class="btn btn-outline-success btn-sm" style="font-size:11px;">
+                        <i class="fas fa-clipboard-check me-1"></i>Denetim
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hızlı Erişim -->
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fas fa-bolt text-warning"></i>
+                <strong class="small">Hızlı Erişim</strong>
+            </div>
+            <div class="p-3" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                <a href="/Purchase/Index" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#eff6ff;border-color:#bfdbfe!important;font-size:11px;">
+                        <i class="fas fa-plus-circle" style="color:#1d4ed8;font-size:13px;"></i>
+                        <span>Lot Ekle</span>
+                    </div>
+                </a>
+                <a href="/Production/Index" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#f0fdf4;border-color:#bbf7d0!important;font-size:11px;">
+                        <i class="fas fa-cogs" style="color:#16a34a;font-size:13px;"></i>
+                        <span>İş Emri</span>
+                    </div>
+                </a>
+                <a href="/Sales/Index" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#fdf4ff;border-color:#e9d5ff!important;font-size:11px;">
+                        <i class="fas fa-file-invoice" style="color:#7c3aed;font-size:13px;"></i>
+                        <span>Satış</span>
+                    </div>
+                </a>
+                <a href="/Reports/LotTrace" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#fffbeb;border-color:#fde68a!important;font-size:11px;">
+                        <i class="fas fa-search" style="color:#d97706;font-size:13px;"></i>
+                        <span>Lot Takip</span>
+                    </div>
+                </a>
+                <a href="/Stock/Index" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#f0fdf4;border-color:#bbf7d0!important;font-size:11px;">
+                        <i class="fas fa-warehouse" style="color:#16a34a;font-size:13px;"></i>
+                        <span>Stok</span>
+                    </div>
+                </a>
+                <a href="/Reports/SupplierFsc" class="text-decoration-none">
+                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background:#fef2f2;border-color:#fecaca!important;font-size:11px;">
+                        <i class="fas fa-certificate" style="color:#dc2626;font-size:13px;"></i>
+                        <span>Tedarikçi FSC</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Alt Satır: Hareketler + Aktif İş Emirleri + Düşük Stok ────────────────── -->
+<div class="row g-3">
+    <!-- Son Stok Hareketleri -->
+    <div class="col-lg-5">
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-exchange-alt text-primary"></i>
+                    <strong class="small">Son Stok Hareketleri</strong>
+                </div>
+                <a href="/Stock/Movements" class="btn btn-outline-secondary btn-sm" style="font-size:11px;">Tümü</a>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th>TARİH</th>
+                            <th>TİP</th>
+                            <th>ÜRÜN</th>
+                            <th class="text-end">MİKTAR</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!recentMov.Any())
+                        {
+                            <tr><td colspan="4" class="text-center text-muted py-3">Henüz hareket yok</td></tr>
+                        }
+                        @foreach (var m in recentMov)
+                        {
+                            string tipClass = m.Type switch {
+                                MovementType.PurchaseEntry     => "badge-info",
+                                MovementType.ProductionEntry   => "badge-primary",
+                                MovementType.SalesDispatch     => "badge-danger",
+                                MovementType.WarehouseTransfer => "badge-warning",
+                                _ => "badge-secondary"
+                            };
+                            string tipText = m.Type switch {
+                                MovementType.PurchaseEntry     => "Giriş",
+                                MovementType.ProductionEntry   => "Üretim",
+                                MovementType.SalesDispatch     => "Satış",
+                                MovementType.WarehouseTransfer => "Transfer",
+                                _ => ""
+                            };
+                            bool isIn = m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry;
+                            <tr>
+                                <td class="text-muted">@m.DocumentDate.ToString("dd.MM.yy")</td>
+                                <td><span class="badge @tipClass" style="font-size:10px;">@tipText</span></td>
+                                <td><strong>@(m.Product?.ProductName ?? "—")</strong></td>
+                                <td class="text-end @(isIn ? "text-success" : m.Type == MovementType.SalesDispatch ? "text-danger" : "") fw-semibold">
+                                    @(isIn ? "+" : m.Type == MovementType.SalesDispatch ? "-" : "")@m.Quantity.ToString("N0")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aktif İş Emirleri -->
+    <div class="col-lg-4">
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-industry text-purple" style="color:#7c3aed;"></i>
+                    <strong class="small">Aktif İş Emirleri</strong>
+                    @if (ViewBag.PendingWorkOrders > 0)
+                    {
+                        <span class="badge" style="background:#ede9fe;color:#7c3aed;font-size:10px;">@ViewBag.PendingWorkOrders</span>
+                    }
+                </div>
+                <a href="/Production/Index" class="btn btn-outline-secondary btn-sm" style="font-size:11px;">Tümü</a>
+            </div>
+            <div style="padding:12px;">
+                @if (!activeWOs.Any())
+                {
+                    <div class="text-center text-muted py-3" style="font-size:13px;">
+                        <i class="fas fa-check-circle text-success d-block mb-2" style="font-size:24px;"></i>
+                        Aktif üretim yok
+                    </div>
+                }
+                @foreach (var wo in activeWOs)
+                {
+                    var overdue = wo.PlannedDate < today;
+                    <div style="border:1px solid @(overdue ? "#fecaca" : "#e5e7eb");border-radius:8px;padding:10px;margin-bottom:8px;background:@(overdue ? "#fef2f2" : "#fff");">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span style="font-size:12px;font-weight:600;color:var(--accent);">@wo.WorkOrderNo</span>
+                            @if (overdue)
+                            {
+                                <span style="font-size:10px;color:#dc2626;font-weight:600;"><i class="fas fa-clock me-1"></i>Gecikmiş</span>
+                            }
+                            else
+                            {
+                                <span style="font-size:10px;color:#6b7280;">@wo.PlannedDate.ToString("dd.MM")</span>
+                            }
+                        </div>
+                        <div style="font-size:11px;color:#374151;margin-top:3px;">@(wo.Product?.ProductName ?? "—")</div>
+                        <div style="font-size:10px;color:#6b7280;margin-top:2px;">
+                            <i class="fas fa-cog me-1"></i>@(wo.Machine?.Name ?? "—") · @wo.PlannedQuantity.ToString("N0") adet
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Düşük Stok Uyarısı -->
+    <div class="col-lg-3">
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2" style="@(lowStock.Any() ? "background:#fef2f2;" : "")">
+                <i class="fas fa-exclamation-circle" style="color:@(lowStock.Any() ? "#dc2626" : "#9ca3af");"></i>
+                <strong class="small" style="color:@(lowStock.Any() ? "#991b1b" : "inherit");">
+                    Düşük Stok Bobinleri
+                    @if (lowStock.Any())
+                    {
+                        <span class="badge ms-1" style="background:#fee2e2;color:#dc2626;font-size:10px;">@lowStock.Count</span>
+                    }
+                </strong>
+            </div>
+            <div style="padding:12px;">
+                @if (!lowStock.Any())
+                {
+                    <div class="text-center text-muted py-3" style="font-size:13px;">
+                        <i class="fas fa-check-circle text-success d-block mb-2" style="font-size:24px;"></i>
+                        Kritik stok yok
+                    </div>
+                }
+                @foreach (var s in lowStock)
+                {
+                    var pct = (int)Math.Min(100, (s.CurrentWeight / (s.InitialWeight > 0 ? s.InitialWeight : 1)) * 100);
+                    var barColor = pct < 20 ? "#dc2626" : pct < 40 ? "#f59e0b" : "#16a34a";
+                    <div style="border:1px solid #fecaca;border-radius:8px;padding:8px;margin-bottom:6px;background:#fff;">
+                        <div class="d-flex justify-content-between">
+                            <span style="font-size:11px;font-weight:600;color:var(--accent);">@s.SerialNo</span>
+                            <span style="font-size:11px;color:#dc2626;font-weight:700;">@s.CurrentWeight.ToString("N0") kg</span>
+                        </div>
+                        <div style="font-size:10px;color:#6b7280;margin-top:2px;">@(s.Lot?.Supplier?.Name ?? "—")</div>
+                        <div style="background:#f3f4f6;border-radius:3px;height:3px;margin-top:5px;">
+                            <div style="background:@barColor;height:3px;border-radius:3px;width:@(pct)%;"></div>
+                        </div>
+                    </div>
+                }
+                @if (lowStock.Any())
+                {
+                    <a href="/Purchase/Index" class="btn btn-outline-danger btn-sm w-100 mt-1" style="font-size:11px;">
+                        <i class="fas fa-plus me-1"></i>Yeni Lot Ekle
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alt stat satırı -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-top:16px;">
+    <div class="stat-card" onclick="location.href='/Customers/Index'" style="cursor:pointer;">
+        <div class="stat-icon blue"><i class="fas fa-user-tie"></i></div>
+        <div class="stat-info"><div class="stat-value">@ViewBag.ActiveCustomers</div><div class="stat-label">Aktif Müşteri</div></div>
+    </div>
+    <div class="stat-card" onclick="location.href='/Suppliers/Index'" style="cursor:pointer;">
+        <div class="stat-icon green"><i class="fas fa-truck"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@ViewBag.ActiveSuppliers</div>
+            <div class="stat-label">Aktif Tedarikçi</div>
+            @if (expSuppliers.Any())
+            {
+                <div style="font-size:10px;color:#f59e0b;">⚠ @expSuppliers.Count FSC bitiyor</div>
+            }
+        </div>
+    </div>
+    <div class="stat-card" onclick="location.href='/Products/Index'" style="cursor:pointer;">
+        <div class="stat-icon purple"><i class="fas fa-box-open"></i></div>
+        <div class="stat-info"><div class="stat-value">@ViewBag.ActiveProducts</div><div class="stat-label">Aktif Ürün</div></div>
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        // Layout'taki "Filtrele" butonuna tıklandığında paneli aç/kapat
-        function toggleFilter() {
-            var panel = document.getElementById("filterPanel");
-            if (panel.style.display === "none") {
-                panel.style.display = "block";
-            } else {
-                panel.style.display = "none";
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const months   = @Html.Raw(ViewBag.ChartMonths   ?? "[]");
+    const lotKg    = @Html.Raw(ViewBag.ChartLotKg    ?? "[]");
+    const prodKg   = @Html.Raw(ViewBag.ChartProdKg   ?? "[]");
+    const salesQty = @Html.Raw(ViewBag.ChartSalesQty ?? "[]");
+
+    const ctx = document.getElementById('trendChart');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [
+                {
+                    label: 'Hammadde Girişi (kg)',
+                    data: lotKg,
+                    backgroundColor: 'rgba(30, 61, 20, 0.7)',
+                    borderColor: '#1e3d14',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    order: 2
+                },
+                {
+                    label: 'Üretim Tüketimi (kg)',
+                    data: prodKg,
+                    backgroundColor: 'rgba(124, 58, 237, 0.65)',
+                    borderColor: '#7c3aed',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    order: 3
+                },
+                {
+                    label: 'Satış (adet)',
+                    data: salesQty,
+                    type: 'line',
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#16a34a',
+                    fill: true,
+                    tension: 0.3,
+                    yAxisID: 'y2',
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { font: { size: 11 }, usePointStyle: true, padding: 12 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            const v = ctx.parsed.y.toLocaleString('tr-TR', {maximumFractionDigits: 0});
+                            const suffix = ctx.datasetIndex === 2 ? ' adet' : ' kg';
+                            return ` ${ctx.dataset.label}: ${v}${suffix}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    beginAtZero: true,
+                    ticks: { font: { size: 10 }, callback: v => v.toLocaleString('tr-TR') },
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    title: { display: true, text: 'kg', font: { size: 10 } }
+                },
+                y2: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: true,
+                    ticks: { font: { size: 10 }, callback: v => v.toLocaleString('tr-TR') },
+                    grid: { drawOnChartArea: false },
+                    title: { display: true, text: 'adet', font: { size: 10 } }
+                },
+                x: {
+                    ticks: { font: { size: 10 } },
+                    grid: { display: false }
+                }
             }
         }
-
-        // Layout'taki butonlarla eşleştirme yapıyoruz
-        document.querySelector('.btn-filter').onclick = toggleFilter;
-
-        // Excel ve Yazdır fonksiyonları buraya gelecek
-        function exportToExcel() { alert("Excel'e aktarma işlemi başlatılıyor..."); }
-        function windowPrint() { window.print(); }
-    </script>
+    });
+})();
+</script>
 }
-
-<style>
-    .filter-card {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        border-left: 5px solid #f39c12;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .table thead th {
-        border-top: none;
-        text-transform: uppercase;
-        font-size: 12px;
-        letter-spacing: 0.5px;
-    }
-
-    .badge {
-        padding: 8px 12px;
-    }
-</style>

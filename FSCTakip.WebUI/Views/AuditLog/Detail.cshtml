@@ -1,0 +1,184 @@
+@model FSCTakip.Core.Entities.AuditLog
+@using System.Text.Json
+@{
+    ViewData["Title"] = $"Günlük Detayı #{Model.Id}";
+
+    var (badgeCls, actionLabel) = Model.Action switch {
+        "INSERT" => ("bg-success", "Ekleme"),
+        "UPDATE" => ("bg-warning text-dark", "Güncelleme"),
+        "DELETE" => ("bg-danger", "Silme"),
+        _ => ("bg-secondary", Model.Action)
+    };
+
+    Dictionary<string, JsonElement>? oldDict = null;
+    Dictionary<string, JsonElement>? newDict = null;
+    try { if (Model.OldValues != null) oldDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(Model.OldValues); } catch { }
+    try { if (Model.NewValues != null) newDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(Model.NewValues); } catch { }
+
+    var allKeys = new HashSet<string>();
+    if (oldDict != null) foreach (var k in oldDict.Keys) allKeys.Add(k);
+    if (newDict != null) foreach (var k in newDict.Keys) allKeys.Add(k);
+}
+
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <a href="/AuditLog" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Günlüğe Dön
+        </a>
+        <span class="fw-semibold" style="color:var(--text);font-size:14px;">
+            <i class="fas fa-history me-2 text-primary"></i>Günlük Detayı #@Model.Id
+        </span>
+        <span class="badge @badgeCls ms-1">@actionLabel</span>
+    </div>
+    <div class="d-flex gap-2 ms-auto">
+        <span class="topbar-user"><i class="fas fa-user-circle"></i> @(User.Identity?.Name ?? "Kullanıcı")</span>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Meta bilgiler -->
+    <div class="col-md-4">
+        <div class="table-card h-100">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:#1e293b;border-radius:12px 12px 0 0;">
+                <i class="fas fa-info-circle" style="color:#fff;"></i>
+                <strong style="color:#fff;">İşlem Bilgisi</strong>
+            </div>
+            <div class="p-3">
+                <dl class="row mb-0 small">
+                    <dt class="col-5 text-muted">Günlük ID</dt>
+                    <dd class="col-7 fw-semibold">#@Model.Id</dd>
+
+                    <dt class="col-5 text-muted">Tablo</dt>
+                    <dd class="col-7">
+                        <span class="badge bg-light text-dark border">@Model.TableName</span>
+                    </dd>
+
+                    <dt class="col-5 text-muted">Kayıt ID</dt>
+                    <dd class="col-7">@(Model.RecordId.HasValue ? "#" + Model.RecordId : "—")</dd>
+
+                    <dt class="col-5 text-muted">İşlem</dt>
+                    <dd class="col-7"><span class="badge @badgeCls">@actionLabel</span></dd>
+
+                    <dt class="col-5 text-muted">Kullanıcı</dt>
+                    <dd class="col-7 fw-semibold">
+                        <i class="fas fa-user me-1 text-primary"></i>@(Model.ChangedBy ?? "—")
+                    </dd>
+
+                    <dt class="col-5 text-muted">Tarih / Saat</dt>
+                    <dd class="col-7">@Model.ChangedAt.ToString("dd.MM.yyyy HH:mm:ss")</dd>
+
+                    @if (!string.IsNullOrEmpty(Model.IpAddress))
+                    {
+                        <dt class="col-5 text-muted">IP Adresi</dt>
+                        <dd class="col-7 font-monospace small">@Model.IpAddress</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Değişiklik detayı -->
+    <div class="col-md-8">
+        @if (Model.Action == "UPDATE" && allKeys.Any())
+        {
+            <div class="table-card">
+                <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:#fef9c3;">
+                    <i class="fas fa-exchange-alt" style="color:#b45309;"></i>
+                    <strong style="color:#78350f;">Değişen Alanlar</strong>
+                </div>
+                <div class="">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th style="width:30%">Alan</th>
+                                <th class="text-danger"><i class="fas fa-minus-circle me-1"></i>Eski Değer</th>
+                                <th class="text-success"><i class="fas fa-plus-circle me-1"></i>Yeni Değer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var key in allKeys.OrderBy(k => k))
+                            {
+                                var oldVal = oldDict != null && oldDict.TryGetValue(key, out var ov) ? ov.ToString() : "—";
+                                var newVal = newDict != null && newDict.TryGetValue(key, out var nv) ? nv.ToString() : "—";
+                                var changed = oldVal != newVal;
+                                <tr class="@(changed ? "" : "text-muted")">
+                                    <td class="fw-semibold small">@key</td>
+                                    <td class="@(changed ? "text-danger" : "") small font-monospace">@oldVal</td>
+                                    <td class="@(changed ? "text-success fw-semibold" : "") small font-monospace">@newVal</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else if (Model.Action == "INSERT" && newDict != null)
+        {
+            <div class="table-card">
+                <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:#dcfce7;">
+                    <i class="fas fa-plus-circle" style="color:#15803d;"></i>
+                    <strong style="color:#14532d;">Eklenen Kayıt</strong>
+                </div>
+                <div class="">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-secondary">
+                            <tr><th style="width:35%">Alan</th><th>Değer</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var kv in newDict.OrderBy(k => k.Key))
+                            {
+                                <tr>
+                                    <td class="fw-semibold small">@kv.Key</td>
+                                    <td class="small font-monospace text-success">@kv.Value</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else if (Model.Action == "DELETE" && oldDict != null)
+        {
+            <div class="table-card">
+                <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:#fee2e2;">
+                    <i class="fas fa-trash" style="color:#dc2626;"></i>
+                    <strong style="color:#7f1d1d;">Silinen Kayıt</strong>
+                </div>
+                <div class="">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-secondary">
+                            <tr><th style="width:35%">Alan</th><th>Değer</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var kv in oldDict.OrderBy(k => k.Key))
+                            {
+                                <tr>
+                                    <td class="fw-semibold small">@kv.Key</td>
+                                    <td class="small font-monospace text-danger">@kv.Value</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-card">
+                <div class="p-3 border-bottom"><strong>Ham Veri</strong></div>
+                <div class="p-3">
+                    @if (Model.OldValues != null)
+                    {
+                        <p class="text-danger fw-semibold mb-1">Eski:</p>
+                        <pre class="bg-light p-2 rounded small">@Model.OldValues</pre>
+                    }
+                    @if (Model.NewValues != null)
+                    {
+                        <p class="text-success fw-semibold mb-1">Yeni:</p>
+                        <pre class="bg-light p-2 rounded small">@Model.NewValues</pre>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

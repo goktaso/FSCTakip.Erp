@@ -1,0 +1,211 @@
+@model List<FSCTakip.Core.Entities.EtlConnection>
+@{
+    ViewData["Title"] = "Bağlantı Yönetimi";
+}
+
+@section TopbarPrimary {
+    <button class="btn btn-primary btn-sm px-3" onclick="openModal(0)">
+        <i class="fas fa-plus me-1"></i> Yeni Bağlantı
+    </button>
+}
+@section TopbarActions {
+    <a href="/Etl/Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> ETL Paneli
+    </a>
+}
+
+<!-- Tablo -->
+<div class="table-card">
+    <div class="table-responsive">
+        <table class="data-table" id="mainTable">
+            <thead>
+                <tr>
+                    <th>BAĞLANTI ADI</th>
+                    <th>TİP</th>
+                    <th>AÇIKLAMA</th>
+                    <th>SON SENKRON</th>
+                    <th class="text-center" style="width:90px;">DURUM</th>
+                    <th class="text-center" style="width:110px;">İŞLEMLER</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-5">Henüz bağlantı tanımı yok. Yeni ekleyin.</td></tr>
+                }
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div style="width:32px;height:32px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                    <i class="@TypeIcon(item.Type)" style="color:#1d4ed8;font-size:13px;"></i>
+                                </div>
+                                <strong>@item.Name</strong>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-light border">@item.Type</span></td>
+                        <td class="text-muted small">@(item.Description ?? "—")</td>
+                        <td class="text-muted small">
+                            @if (item.LastSyncAt.HasValue)
+                            {
+                                <span>@item.LastSyncAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
+                                <span class="ms-1 badge @(item.LastSyncStatus == "Completed" ? "badge-success" : "badge-warning")">@item.LastSyncStatus</span>
+                            }
+                            else { <span>—</span> }
+                        </td>
+                        <td class="text-center">
+                            <span id="badge_@item.Id" class="badge @(item.IsActive ? "badge-success" : "badge-warning")">
+                                @(item.IsActive ? "Aktif" : "Pasif")
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-icon btn-outline-primary" title="Düzenle" onclick="openModal(@item.Id)">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-icon @(item.IsActive ? "btn-outline-warning" : "btn-outline-success")"
+                                    id="toggleBtn_@item.Id"
+                                    title="@(item.IsActive ? "Pasife Al" : "Aktife Al")"
+                                    onclick="toggleStatus(@item.Id)">
+                                <i class="fas @(item.IsActive ? "fa-pause" : "fa-play")"></i>
+                            </button>
+                            <button class="btn btn-icon btn-outline-danger" title="Sil" onclick="deleteItem(@item.Id, '@item.Name')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="formModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header dark">
+                <h5 class="modal-title fw-semibold mb-0" id="modalTitle">
+                    <i class="fas fa-plug me-2"></i>Bağlantı
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="itemId">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Bağlantı Adı <span class="text-danger">*</span></label>
+                        <input type="text" id="itemName" class="form-control" placeholder="Logo ERP Bağlantısı">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Tip</label>
+                        <select id="itemType" class="form-select">
+                            <option value="Excel">Excel (Manuel Yükleme)</option>
+                            <option value="Logo">Logo ERP</option>
+                            <option value="Mikro">Mikro ERP</option>
+                            <option value="Netsis">Netsis</option>
+                            <option value="Api">REST API</option>
+                            <option value="SqlServer">SQL Server (Doğrudan)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label small fw-semibold">Açıklama</label>
+                        <input type="text" id="itemDesc" class="form-control" placeholder="İsteğe bağlı açıklama">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label small fw-semibold">Ayarlar <span class="text-muted fw-normal">(JSON — bağlantı parametreleri)</span></label>
+                        <textarea id="itemSettings" class="form-control font-monospace" rows="4"
+                                  placeholder='{"host":"localhost","database":"ERP_DB","user":"sa"}'
+                                  style="font-size:12px;"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" onclick="saveItem()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string TypeIcon(string t) => t switch {
+        "Logo"      => "fas fa-briefcase",
+        "Mikro"     => "fas fa-briefcase",
+        "Netsis"    => "fas fa-briefcase",
+        "Api"       => "fas fa-code",
+        "SqlServer" => "fas fa-database",
+        _           => "fas fa-file-excel"
+    };
+}
+
+@section Scripts {
+<script>
+function openModal(id) {
+    document.getElementById('itemId').value       = id;
+    document.getElementById('itemName').value     = '';
+    document.getElementById('itemType').value     = 'Excel';
+    document.getElementById('itemDesc').value     = '';
+    document.getElementById('itemSettings').value = '';
+    document.getElementById('modalTitle').innerHTML = id === 0
+        ? '<i class="fas fa-plug me-2 text-primary"></i>Yeni Bağlantı'
+        : '<i class="fas fa-edit me-2 text-primary"></i>Bağlantı Düzenle';
+
+    if (id > 0) {
+        fetch(`/Etl/GetConnection?id=${id}`)
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) return;
+                document.getElementById('itemName').value     = res.data.name;
+                document.getElementById('itemType').value     = res.data.type;
+                document.getElementById('itemDesc').value     = res.data.description ?? '';
+                document.getElementById('itemSettings').value = res.data.settings ?? '';
+            });
+    }
+    new bootstrap.Modal(document.getElementById('formModal')).show();
+}
+
+function saveItem() {
+    const fd = new FormData();
+    fd.append('Id',          document.getElementById('itemId').value);
+    fd.append('Name',        document.getElementById('itemName').value.trim());
+    fd.append('Type',        document.getElementById('itemType').value);
+    fd.append('Description', document.getElementById('itemDesc').value.trim());
+    fd.append('Settings',    document.getElementById('itemSettings').value.trim());
+
+    if (!fd.get('Name')) { showToast('Bağlantı adı zorunludur.', 'warning'); return; }
+
+    fetch('/Etl/SaveConnection', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => { if (res.success) location.reload(); else showToast(res.message, 'error'); });
+}
+
+function toggleStatus(id) {
+    fetch(`/Etl/ToggleConnection?id=${id}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success) { showToast(res.message, 'error'); return; }
+            const badge = document.getElementById(`badge_${id}`);
+            const btn   = document.getElementById(`toggleBtn_${id}`);
+            if (res.isActive) {
+                badge.className = 'badge badge-success'; badge.textContent = 'Aktif';
+                btn.className   = 'btn btn-icon btn-outline-warning'; btn.title = 'Pasife Al';
+                btn.innerHTML   = '<i class="fas fa-pause"></i>';
+            } else {
+                badge.className = 'badge badge-warning'; badge.textContent = 'Pasif';
+                btn.className   = 'btn btn-icon btn-outline-success'; btn.title = 'Aktife Al';
+                btn.innerHTML   = '<i class="fas fa-play"></i>';
+            }
+        });
+}
+
+async function deleteItem(id, name) {
+    if (!await appConfirm(`"${name}" bağlantısını silmek istiyor musunuz?`, { danger: true, title: 'Bağlantıyı Sil' })) return;
+    fetch(`/Etl/DeleteConnection?id=${id}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(res => { if (res.success) location.reload(); else showToast(res.message, 'error'); });
+}
+</script>
+}

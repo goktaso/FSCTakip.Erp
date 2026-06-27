@@ -1,0 +1,252 @@
+@model FSCTakip.Core.Entities.AppUser
+@using FSCTakip.Core.Entities
+@using FSCTakip.Business.Services
+@{
+    ViewData["Title"] = $"Kullanıcı Yetkisi — {Model.FullName}";
+    var allModules   = ViewBag.AllModules as List<PermissionModule> ?? new();
+    var allGroups    = ViewBag.AllGroups  as List<PermissionGroup>  ?? new();
+    var effectiveAll = ViewBag.EffectiveAll as Dictionary<string, EffectivePermission>
+                       ?? new Dictionary<string, EffectivePermission>();
+}
+
+@section TopbarActions {
+    <a href="/Users" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Kullanıcılar
+    </a>
+}
+
+<div class="topbar-area mb-3">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fw-semibold" style="color:var(--text);font-size:14px;">
+            <i class="fas fa-user-shield me-2 text-primary"></i>@Model.FullName
+        </span>
+        @if (Model.IsAdmin)
+        {
+            <span class="badge bg-danger"><i class="fas fa-crown me-1"></i>Admin</span>
+        }
+        @if (!Model.IsActive)
+        {
+            <span class="badge bg-warning text-dark">Pasif</span>
+        }
+        <small class="text-muted ms-2">@@@Model.Username</small>
+    </div>
+</div>
+
+@if (Model.IsAdmin)
+{
+    <div class="alert alert-danger d-flex align-items-center">
+        <i class="fas fa-crown fa-lg me-3 text-danger"></i>
+        <div>
+            <strong>Bu kullanıcı Sistem Yöneticisidir.</strong>
+            Admin kullanıcılar tüm modüllere tam erişime sahiptir. Bireysel yetki ayarları uygulanmaz.
+        </div>
+    </div>
+}
+
+<div class="row g-3">
+    <!-- Sol: Yetki Matrisi -->
+    <div class="col-lg-8">
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fas fa-table text-primary"></i>
+                <strong style="font-size:14px;">Etkin Yetki Matrisi</strong>
+                <small class="text-muted ms-2">Grup yetkisi + bireysel override</small>
+            </div>
+            <div class="">
+                <table class="table table-sm table-bordered mb-0">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th style="width:30%">Modül</th>
+                            <th class="text-center small">Gruptan<br/>Oku/Yaz/Sil</th>
+                            <th class="text-center" colspan="3">
+                                <i class="fas fa-user-edit text-primary me-1"></i>Bireysel Override
+                                <div class="small text-muted fw-normal">✓=Zorla Ver &nbsp; ✗=Zorla Engel &nbsp; —=Gruptan Devral</div>
+                            </th>
+                            <th class="text-center small bg-light">Etkin Yetki</th>
+                        </tr>
+                        <tr class="table-light">
+                            <th></th>
+                            <th class="text-center small text-muted">Mevcut</th>
+                            <th class="text-center small"><i class="fas fa-eye text-primary"></i> Oku</th>
+                            <th class="text-center small"><i class="fas fa-pen text-success"></i> Yaz</th>
+                            <th class="text-center small"><i class="fas fa-trash text-danger"></i> Sil</th>
+                            <th class="text-center small">Oku / Yaz / Sil</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in allModules)
+                        {
+                            var eff = effectiveAll.TryGetValue(m.Code, out var ep) ? ep : EffectivePermission.None;
+                            var ovr = Model.PermissionOverrides.FirstOrDefault(o => o.ModuleId == m.Id);
+
+                            // Grup bazlı etkin yetki (override olmadan)
+                            // Sadece gösterim amaçlı — etkin zaten hesaplanmış
+                            bool groupR = false, groupW = false, groupD = false;
+                            foreach (var ug in Model.UserGroups)
+                            {
+                                var gp = ug.Group?.Permissions.FirstOrDefault(p => p.ModuleId == m.Id);
+                                if (gp != null)
+                                {
+                                    groupR |= gp.CanRead;
+                                    groupW |= gp.CanWrite;
+                                    groupD |= gp.CanDelete;
+                                }
+                            }
+
+                            <tr data-module-id="@m.Id" data-module-code="@m.Code">
+                                <td>
+                                    <i class="@m.IconClass me-1 text-secondary"></i>
+                                    <span class="fw-semibold">@m.DisplayName</span>
+                                </td>
+                                <td class="text-center align-middle">
+                                    <small>
+                                        @(groupR ? "<i class='fas fa-check text-success'></i>" : "<i class='fas fa-times text-muted'></i>")
+                                        @(groupW ? "<i class='fas fa-check text-success'></i>" : "<i class='fas fa-times text-muted'></i>")
+                                        @(groupD ? "<i class='fas fa-check text-success'></i>" : "<i class='fas fa-times text-muted'></i>")
+                                    </small>
+                                </td>
+                                <!-- Override: Oku -->
+                                <td class="text-center align-middle">
+                                    <select class="form-select form-select-sm ovr-read" style="width:70px;display:inline-block;"
+                                            onchange="markDirty(@m.Id)">
+                                        @if (ovr?.CanRead == null) { <option value="" selected>—</option> } else { <option value="">—</option> }
+                                        @if (ovr?.CanRead == true) { <option value="true" selected>✓</option> } else { <option value="true">✓</option> }
+                                        @if (ovr?.CanRead == false) { <option value="false" selected>✗</option> } else { <option value="false">✗</option> }
+                                    </select>
+                                </td>
+                                <!-- Override: Yaz -->
+                                <td class="text-center align-middle">
+                                    <select class="form-select form-select-sm ovr-write" style="width:70px;display:inline-block;"
+                                            onchange="markDirty(@m.Id)">
+                                        @if (ovr?.CanWrite == null) { <option value="" selected>—</option> } else { <option value="">—</option> }
+                                        @if (ovr?.CanWrite == true) { <option value="true" selected>✓</option> } else { <option value="true">✓</option> }
+                                        @if (ovr?.CanWrite == false) { <option value="false" selected>✗</option> } else { <option value="false">✗</option> }
+                                    </select>
+                                </td>
+                                <!-- Override: Sil -->
+                                <td class="text-center align-middle">
+                                    <select class="form-select form-select-sm ovr-delete" style="width:70px;display:inline-block;"
+                                            onchange="markDirty(@m.Id)">
+                                        @if (ovr?.CanDelete == null) { <option value="" selected>—</option> } else { <option value="">—</option> }
+                                        @if (ovr?.CanDelete == true) { <option value="true" selected>✓</option> } else { <option value="true">✓</option> }
+                                        @if (ovr?.CanDelete == false) { <option value="false" selected>✗</option> } else { <option value="false">✗</option> }
+                                    </select>
+                                </td>
+                                <!-- Etkin Sonuç -->
+                                <td class="text-center align-middle bg-light">
+                                    @{
+                                        string badge(bool v) => v
+                                            ? "<span class='badge bg-success py-1 px-2'>✓</span>"
+                                            : "<span class='badge bg-light text-muted border py-1 px-2'>✗</span>";
+                                    }
+                                    <span class="eff-read">@Html.Raw(badge(eff.CanRead))</span>
+                                    <span class="eff-write ms-1">@Html.Raw(badge(eff.CanWrite))</span>
+                                    <span class="eff-delete ms-1">@Html.Raw(badge(eff.CanDelete))</span>
+                                    <button class="btn btn-xs btn-link text-primary p-0 ms-2 save-btn d-none"
+                                            onclick="saveOverride(@m.Id, this)" title="Kaydet">
+                                        <i class="fas fa-save"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ: Grup üyeliği + bilgi -->
+    <div class="col-lg-4">
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2" style="background:var(--brand);border-radius:12px 12px 0 0;">
+                <i class="fas fa-layer-group" style="color:#fff;"></i>
+                <strong style="font-size:14px;color:#fff;">Grup Üyelikleri</strong>
+            </div>
+            <div class="">
+                @if (Model.UserGroups.Any())
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var ug in Model.UserGroups)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                                <span><i class="fas fa-users me-2 text-secondary"></i>@ug.Group?.Name</span>
+                                <a href="/Groups/Detail/@ug.GroupId" class="btn btn-xs btn-outline-secondary py-0 px-1 small">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                        Hiçbir gruba atanmamış.
+                    </div>
+                }
+            </div>
+            <div class="p-2 border-top small text-muted">
+                Grup değiştirmek için <a href="/Users">Kullanıcı listesinden</a> düzenleyin.
+            </div>
+        </div>
+
+        <div class="table-card mt-3">
+            <div class="p-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fas fa-info-circle text-primary"></i>
+                <strong style="font-size:13px;">Override Nasıl Çalışır?</strong>
+            </div>
+            <div class="p-3 small">
+                <table class="table table-sm mb-0">
+                    <tr><td><strong>—</strong></td><td>Gruptan devralır</td></tr>
+                    <tr><td class="text-success fw-bold">✓</td><td>Grup ne derse desin <strong>VER</strong></td></tr>
+                    <tr><td class="text-danger fw-bold">✗</td><td>Grup ne derse desin <strong>ENGELLE</strong></td></tr>
+                </table>
+                <hr class="my-2" />
+                <div class="text-muted">
+                    Her satırda değişiklik yaptıktan sonra <i class="fas fa-save text-primary"></i> ikonuna tıklayın.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const userId = @Model.Id;
+
+function markDirty(moduleId) {
+    const row = document.querySelector(`tr[data-module-id='${moduleId}']`);
+    row.querySelector('.save-btn').classList.remove('d-none');
+    row.classList.add('table-warning');
+}
+
+function saveOverride(moduleId, btn) {
+    const row = document.querySelector(`tr[data-module-id='${moduleId}']`);
+    const readVal  = row.querySelector('.ovr-read').value;
+    const writeVal = row.querySelector('.ovr-write').value;
+    const delVal   = row.querySelector('.ovr-delete').value;
+
+    const toNullable = v => v === '' ? null : v === 'true';
+
+    const params = new URLSearchParams({
+        userId,
+        moduleId
+    });
+    if (readVal  !== '') params.append('canRead',   readVal);
+    if (writeVal !== '') params.append('canWrite',  writeVal);
+    if (delVal   !== '') params.append('canDelete', delVal);
+
+    fetch('/Users/SaveOverride', { method: 'POST', body: params })
+        .then(r => r.json()).then(d => {
+            if (d.success) {
+                row.querySelector('.save-btn').classList.add('d-none');
+                row.classList.remove('table-warning');
+                showToast(d.message, 'success');
+            } else {
+                showToast(d.message, 'error');
+            }
+        });
+}
+
+</script>
+}

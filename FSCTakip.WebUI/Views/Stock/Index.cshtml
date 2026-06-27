@@ -1,8 +1,296 @@
+@model List<FSCTakip.WebUI.Controllers.StockSummaryRow>
+@using FSCTakip.Core.Entities
 @{
-    ViewData["Title"] = "Stok Yönetimi";
+    ViewData["Title"] = "Stok Durumu";
+    var groups     = ViewBag.ProductGroups as List<ProductGroup> ?? new();
+    var products   = ViewBag.Products      as List<Product>      ?? new();
+    var warehouses = ViewBag.Warehouses    as List<Warehouse>    ?? new();
+    int? selGroup    = ViewBag.ProductGroupId;
+    var productIds   = ViewBag.ProductIds as int[] ?? Array.Empty<int>();
+    string stockCode = ViewBag.StockCode ?? "";
+    string erpCode   = ViewBag.ErpCode   ?? "";
 }
-<div class="card shadow-sm border-0 p-5 text-center">
-    <i class="fas fa-warehouse fa-4x text-muted mb-3"></i>
-    <h4 class="text-dark">Stok Yönetimi</h4>
-    <p class="text-muted">Bu modül yakında aktif olacaktır.</p>
+
+@section TopbarPrimary {
+    <button class="btn-topbar-add" data-bs-toggle="modal" data-bs-target="#transferModal">
+        <span class="btn-add-icon"><i class="fas fa-exchange-alt"></i></span>
+        Depo Transferi
+    </button>
+}
+
+<!-- Stat Cards -->
+<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-boxes"></i></div>
+        <div class="stat-info"><div class="stat-value">@Model.Count</div><div class="stat-label">Ürün Çeşidi</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info"><div class="stat-value">@ViewBag.InStock</div><div class="stat-label">Stokta Var</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="stat-info"><div class="stat-value">@ViewBag.ZeroStock</div><div class="stat-label">Stok Yok</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fas fa-arrow-down"></i></div>
+        <div class="stat-info"><div class="stat-value">@(((decimal)ViewBag.TotalIn).ToString("N0")) <small style="font-size:13px;">KG</small></div><div class="stat-label">Toplam Giriş</div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-arrow-up"></i></div>
+        <div class="stat-info"><div class="stat-value">@(((decimal)ViewBag.TotalOut).ToString("N0")) <small style="font-size:13px;">KG</small></div><div class="stat-label">Toplam Çıkış</div></div>
+    </div>
 </div>
+
+<!-- Filter -->
+<div class="filter-card">
+    <form method="get" action="/Stock/Index" class="filter-form" style="align-items:flex-end;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;flex-direction:column;min-width:160px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">ÜRÜN GRUBU</label>
+            <select name="productGroupId" class="form-control form-control-sm">
+                <option value="">— Ürün Grubu —</option>
+                @foreach (var g in groups)
+                {
+                    <option value="@g.Id" selected="@(selGroup == g.Id ? "selected" : null)">@g.GroupName</option>
+                }
+            </select>
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:220px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">ÜRÜN</label>
+            <div class="mcd" id="mcd-idx-prod" data-placeholder="— Ürün —">
+            <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-idx-prod')">
+                <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " seçildi" : "— Ürün —")</span>
+                <i class="fas fa-angle-down mcd-arrow"></i>
+            </button>
+            <div class="mcd-panel" id="mcd-idx-prod-panel" style="display:none;">
+                <div class="mcd-search-row">
+                    <input type="text" class="mcd-search" placeholder="Ürün ara..." oninput="mcdSearch(this)">
+                </div>
+                <label class="mcd-row mcd-header">
+                    <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-idx-prod')">
+                    <span>Tümünü Seç / Temizle</span>
+                </label>
+                <div class="mcd-items">
+                    @foreach (var p in products)
+                    {
+                        bool sel = productIds.Contains(p.Id);
+                        <label class="mcd-row">
+                            <input type="checkbox" name="productIds" value="@p.Id" class="mcd-cb"
+                                   onchange="mcdUpdate('mcd-idx-prod')"
+                                   @(sel ? "checked" : "")>
+                            <span class="mcd-name" title="@p.ProductName">@p.ProductName</span>
+                            @if (!string.IsNullOrEmpty(p.ProductCode)) { <span class="mcd-sub">@p.ProductCode</span> }
+                            @if (!string.IsNullOrEmpty(p.ExternalCode)) { <span class="mcd-ext">@p.ExternalCode</span> }
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:130px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">STOK KODU</label>
+            <input type="text" name="stockCode" class="form-control form-control-sm" placeholder="Stok Kodu" value="@stockCode" />
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:130px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px;">ERP KODU</label>
+            <input type="text" name="erpCode" class="form-control form-control-sm" placeholder="ERP Stok Kodu" value="@erpCode" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Filtrele</button>
+        <a href="/Stock/Index" class="btn btn-outline-secondary btn-sm">Temizle</a>
+        <div class="ms-auto">
+            <a href="/Stock/ExportStock" class="btn btn-success btn-sm"><i class="fas fa-file-excel me-1"></i>Excel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ÜRÜN KODU</th>
+                    <th>ERP KODU</th>
+                    <th>ÜRÜN ADI</th>
+                    <th>GRUP</th>
+                    <th class="text-end">GİRİŞ</th>
+                    <th class="text-end">ÇIKIŞ</th>
+                    <th class="text-end">NET STOK</th>
+                    <th>BİRİM</th>
+                    <th>SON HAREKET</th>
+                    <th>DURUM</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="10">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-warehouse"></i></div>
+                            <h6>Henüz stok hareketi yok</h6>
+                            <p>Hammadde girişi ve satış işlemleri gerçekleştikçe stok burada görünür.</p>
+                        </div>
+                    </td></tr>
+                }
+                @foreach (var row in Model)
+                {
+                    var net     = row.NetAdet;
+                    var unit    = (row.Product.Unit ?? "KG").Trim().ToUpper();
+                    var hasConv = unit != "KG" && unit != "";
+                    string statusClass = net > 0 ? "badge-success" : "badge-danger";
+                    string statusText  = net > 0 ? "Var" : "Yok";
+                    <tr>
+                        <td class="text-muted small">@row.Product.ProductCode</td>
+                        <td class="text-muted small">@(row.Product.ExternalCode ?? "—")</td>
+                        <td><strong>@row.Product.ProductName</strong></td>
+                        <td class="small text-muted">@(row.Product.ProductGroup?.GroupName ?? "—")</td>
+                        <td class="text-end text-success fw-semibold">
+                            @row.GirisAdet.ToString("N3") <small class="text-muted fw-normal">KG</small>
+                            @if (hasConv)
+                            {
+                                <br><small class="text-muted">(@unit cinsinden girildi)</small>
+                            }
+                        </td>
+                        <td class="text-end text-danger fw-semibold">@row.CikisAdet.ToString("N3") <small class="text-muted fw-normal">KG</small></td>
+                        <td class="text-end fw-bold @(net <= 0 ? "text-danger" : "")">
+                            @net.ToString("N3") <small class="text-muted fw-normal">KG</small>
+                        </td>
+                        <td class="small text-muted">@(row.LastMovementDate?.ToString("dd.MM.yyyy") ?? "—")</td>
+                        <td><span class="badge @statusClass">@statusText</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Transfer Modal -->
+<div class="modal fade" id="transferModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-exchange-alt me-2"></i>Depo Transferi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Ürün <span class="text-danger">*</span></label>
+                    <select id="tProductId" class="form-control">
+                        <option value="">— Seçiniz —</option>
+                        @foreach (var p in products)
+                        {
+                            <option value="@p.Id">@p.ProductName</option>
+                        }
+                    </select>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Çıkış Deposu</label>
+                        <div class="qa-group">
+                            <select id="tFromWarehouse" class="form-control">
+                                <option value="">— Seçiniz —</option>
+                                @foreach (var w in warehouses)
+                                { <option value="@w.Id">@w.Name</option> }
+                            </select>
+                            <button type="button" class="qa-btn" onclick="openQuickAdd('warehouse','tFromWarehouse')" title="Yeni Depo Ekle"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Giriş Deposu</label>
+                        <div class="qa-group">
+                            <select id="tToWarehouse" class="form-control">
+                                <option value="">— Seçiniz —</option>
+                                @foreach (var w in warehouses)
+                                { <option value="@w.Id">@w.Name</option> }
+                            </select>
+                            <button type="button" class="qa-btn" onclick="openQuickAdd('warehouse','tToWarehouse')" title="Yeni Depo Ekle"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Miktar <span class="text-danger">*</span></label>
+                        <input type="number" id="tQuantity" class="form-control" min="0.001" step="any" placeholder="0" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Birim</label>
+                        <input type="text" id="tUnit" class="form-control" value="Adet" />
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Belge No</label>
+                        <input type="text" id="tDocNo" class="form-control" placeholder="Otomatik" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Tarih <span class="text-danger">*</span></label>
+                        <input type="date" id="tDate" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notlar</label>
+                    <textarea id="tNotes" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="saveTransfer()">
+                    <i class="fas fa-save me-1"></i>Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+.mcd{position:relative}
+.mcd-btn{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:#fff;border:1px solid #d1d5db;color:#111;padding:5px 10px;border-radius:6px;font-size:13px}
+.mcd-btn:hover{border-color:#1976d2}
+.mcd-panel{position:absolute;top:calc(100% + 4px);left:0;min-width:300px;max-width:400px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:1050;display:flex;flex-direction:column;overflow:hidden}
+.mcd-search-row{padding:8px 10px;border-bottom:1px solid #f1f5f9}
+.mcd-search{width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:5px 10px;font-size:12.5px;outline:none}
+.mcd-search:focus{border-color:#1976d2}
+.mcd-header{background:#f8fafc;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12.5px;color:#374151}
+.mcd-items{overflow-y:auto;max-height:260px}
+.mcd-row{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:12.5px;user-select:none}
+.mcd-row:hover{background:#eff6ff}
+.mcd-cb,.mcd-all-cb{cursor:pointer;accent-color:#1976d2;min-width:15px;height:15px}
+.mcd-name{flex:1;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.mcd-sub{font-size:10.5px;color:#374151;background:#f3f4f6;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.mcd-ext{font-size:10.5px;color:#3730a3;background:#eef2ff;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.mcd-arrow{color:#6b7280;font-size:11px}
+</style>
+<script>
+if(!window._mcdReady){window._mcdReady=true;
+window.mcdOpen=function(id){var p=document.getElementById(id+'-panel');var o=p&&p.style.display!=='none';document.querySelectorAll('.mcd-panel').forEach(function(x){x.style.display='none'});if(!o&&p){p.style.display='flex';mcdUpdate(id)}};
+window.mcdSearch=function(el){var t=el.value.toLowerCase();el.closest('.mcd-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(t)?'':'none'})};
+window.mcdToggleAll=function(cb,id){document.getElementById(id+'-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){if(r.style.display!=='none'){var c=r.querySelector('.mcd-cb');if(c)c.checked=cb.checked}});mcdUpdate(id)};
+window.mcdUpdate=function(id){var p=document.getElementById(id+'-panel');var c=document.getElementById(id);if(!p||!c)return;var n=p.querySelectorAll('.mcd-cb:checked').length;var l=c.querySelector('.mcd-lbl');if(l)l.textContent=n===0?(c.dataset.placeholder||'— Seçiniz —'):n+' seçildi';var a=p.querySelector('.mcd-all-cb');var v=p.querySelectorAll('.mcd-row:not(.mcd-header):not([style*="none"]) .mcd-cb').length;if(a&&v>0)a.checked=(n>=v)};
+document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'})});}
+</script>
+<script>
+    async function saveTransfer() {
+        const productId = document.getElementById('tProductId').value;
+        const quantity  = document.getElementById('tQuantity').value;
+        const date      = document.getElementById('tDate').value;
+        if (!productId || !quantity || !date) {
+            alert('Ürün, miktar ve tarih zorunludur.'); return;
+        }
+        const fd = new FormData();
+        fd.append('productId',       productId);
+        fd.append('fromWarehouseId', document.getElementById('tFromWarehouse').value || '0');
+        fd.append('toWarehouseId',   document.getElementById('tToWarehouse').value   || '0');
+        fd.append('quantity',        quantity);
+        fd.append('unit',            document.getElementById('tUnit').value);
+        fd.append('documentNo',      document.getElementById('tDocNo').value);
+        fd.append('documentDate',    date);
+        fd.append('notes',           document.getElementById('tNotes').value);
+
+        const res  = await fetch('/Stock/SaveTransfer', { method: 'POST', body: fd });
+        const json = await res.json();
+        if (json.success) { location.reload(); }
+        else { alert(json.message); }
+    }
+</script>
+}

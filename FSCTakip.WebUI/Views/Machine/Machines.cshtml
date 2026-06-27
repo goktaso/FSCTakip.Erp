@@ -3,22 +3,24 @@
     ViewData["Title"] = "Makine Tanımlamaları";
 }
 
-@* --- ÜST PANEL: Standart Buton Grubu --- *@
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="m-0 font-weight-bold text-secondary"><i class="fas fa-industry mr-2"></i>Makine Listesi</h5>
-    <div>
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn-topbar-add" onclick="openAddModal()">
+            <span class="btn-add-icon"><i class="fas fa-plus"></i></span>
+            Yeni Makine Ekle
+        </button>
+    </div>
+    <div class="d-flex gap-2 ms-auto align-items-center">
         <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
             <i class="fas fa-filter"></i> Filtrele
         </button>
         <button class="btn btn-sm btn-outline-success" onclick="location.href='@Url.Action("ExportMachines", "Machine")'">
             <i class="fas fa-file-excel"></i> Excel
         </button>
-        <button class="btn btn-sm btn-outline-dark" onclick="window.print()">
-            <i class="fas fa-print"></i> Yazdır
-        </button>
-        <button class="btn btn-sm btn-secondary text-white" onclick="openAddModal()">
-            <i class="fas fa-plus"></i> Yeni Makine Ekle
-        </button>
+        <span class="topbar-user">
+            <i class="fas fa-user-circle"></i>
+            @(User.Identity?.Name ?? "Kullanıcı")
+        </span>
     </div>
 </div>
 
@@ -34,8 +36,8 @@
                 <label class="small font-weight-bold text-uppercase">Makine Türü</label>
                 <select class="form-control form-control-sm" id="machineTypeFilter">
                     <option value="">Tümü</option>
-                    <option value="Printing">Matbaa</option>
-                    <option value="Cutting">Kesim</option>
+                    <option value="Printing">Baskı</option>
+                    <option value="Cutting">Torba</option>
                     <option value="Slitting">Dilimleme</option>
                 </select>
             </div>
@@ -49,10 +51,17 @@
 </div>
 
 @* --- TABLO ALANI --- *@
-<div class="card shadow-sm border-0">
+<div class="card shadow-sm border-0 table-card">
+    <div class="table-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-industry text-primary"></i>
+            <span>Makine Listesi</span>
+            <span class="badge badge-blue">@Model.Count() kayıt</span>
+        </div>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="machineTable">
+            <table class="table table-hover align-middle mb-0 data-table" id="machineTable">
                 <thead class="bg-light text-dark text-uppercase small font-weight-bold">
                     <tr>
                         <th style="width: 100px;">Kod</th>
@@ -63,7 +72,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model != null)
+                    @if (Model != null && Model.Any())
                     {
                         foreach (var item in Model)
                         {
@@ -72,7 +81,6 @@
                                 <td><strong class="text-primary">@item.Name</strong></td>
                                 <td><span class="badge badge-light border text-dark">@item.Type</span></td>
 
-                                @* --- ANLIK DURUM SWITCH --- *@
                                 <td class="text-center">
                                     <div class="custom-control custom-switch">
                                         <input type="checkbox" class="custom-control-input" id="status_@item.Id"
@@ -98,6 +106,16 @@
                             </tr>
                         }
                     }
+                    else
+                    {
+                        <tr><td colspan="5">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-industry"></i></div>
+                                <h6>Henüz makine kaydı yok</h6>
+                                <p>+ Yeni Makine Ekle butonunu kullanın.</p>
+                            </div>
+                        </td></tr>
+                    }
                 </tbody>
             </table>
         </div>
@@ -108,9 +126,9 @@
 <div class="modal fade" id="machineModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-secondary text-white">
+            <div class="modal-header dark">
                 <h6 class="modal-title font-weight-bold"><i class="fas fa-industry mr-2"></i>Makine Formu</h6>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form asp-controller="Machine" asp-action="SaveMachine" method="post">
                 <div class="modal-body">
@@ -139,7 +157,7 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light p-2">
-                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Kapat</button>
                     <button type="submit" class="btn btn-secondary btn-sm px-4 text-white">Kaydet</button>
                 </div>
             </form>
@@ -149,7 +167,6 @@
 
 @section Scripts {
     <script>
-        // Tablo Filtreleme (Ad/Kod ve Tür Kombinasyonu)
         function filterTable() {
             var searchTerm = $("#machineSearch").val().toLowerCase();
             var typeFilter = $("#machineTypeFilter").val().toLowerCase();
@@ -164,7 +181,6 @@
             });
         }
 
-        // Anlık Durum Güncelleme
         function toggleMachineStatus(id) {
             $.post('/Machine/ToggleMachineStatus', { id: id }, function (res) {
                 if (res.success) {
@@ -188,7 +204,7 @@
             $('#machineType').val('Printing');
             $('#isActiveSwitch').prop('checked', true);
             $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Makine Ekle');
-            $('#machineModal').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('machineModal')).show();
         }
 
         function editMachine(id, name, code, type, isActive) {
@@ -198,7 +214,7 @@
             $('#machineType').val(type);
             $('#isActiveSwitch').prop('checked', isActive);
             $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Makine Düzenle');
-            $('#machineModal').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('machineModal')).show();
         }
 
         function deleteMachine(id) {

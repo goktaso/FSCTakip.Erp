@@ -1,0 +1,425 @@
+@model List<FSCTakip.Core.Entities.ProductionDetail>
+@{
+    ViewData["Title"] = "Fire Raporu";
+    var byMachine   = ViewBag.ByMachine  as List<WasteGroupRow> ?? new();
+    var byProduct   = ViewBag.ByProduct  as List<WasteGroupRow> ?? new();
+    var monthLabels = ViewBag.MonthlyLabels as List<string>  ?? new();
+    var monthWaste  = ViewBag.MonthlyWaste  as List<decimal> ?? new();
+    var monthRate   = ViewBag.MonthlyRate   as List<decimal> ?? new();
+    var machines    = ViewBag.Machines as List<FSCTakip.Core.Entities.Machine>  ?? new();
+    var products    = ViewBag.Products as List<FSCTakip.Core.Entities.Product>  ?? new();
+    var productIds  = ViewBag.ProductIds as int[] ?? Array.Empty<int>();
+    int? selMachineId = ViewBag.MachineId as int?;
+    var machineLabel = machines.FirstOrDefault(m => m.Id == selMachineId)?.Name ?? "— Tümü —";
+
+    var toplamFire    = Model.Sum(d => d.WasteWeight);
+    var toplamTuketim = Model.Sum(d => d.ConsumedWeight);
+    var fireOran      = toplamTuketim > 0 ? toplamFire / toplamTuketim * 100 : 0;
+
+    string RateClass(decimal r) => r < 3 ? "badge-success" : r < 6 ? "badge-warning" : "badge-danger";
+    string RateColor(decimal r) => r < 3 ? "#16a34a" : r < 6 ? "#d97706" : "#dc2626";
+    string IconClass(decimal r) => r < 3 ? "green" : r < 6 ? "amber" : "red";
+}
+
+@section TopbarPrimary {
+    <a href="/Production/WasteManagement" class="btn btn-warning btn-sm px-3">
+        <i class="fas fa-trash-alt me-1"></i> İmha Kayıtları
+    </a>
+}
+@section TopbarActions {
+    <button class="btn btn-outline-secondary btn-sm" onclick="$('#filterPanel').slideToggle()">
+        <i class="fas fa-filter me-1"></i> Filtrele
+    </button>
+    <a href="/Production/ExportWasteReport?startDate=@ViewBag.StartDate&endDate=@ViewBag.EndDate&machineId=@ViewBag.MachineId@foreach (var id in productIds) { <text>&productIds=@id</text> }"
+       class="btn btn-outline-success btn-sm">
+        <i class="fas fa-file-excel me-1"></i> Excel
+    </a>
+}
+
+<!-- Filtre -->
+<div id="filterPanel" class="filter-panel" style="display:none;">
+    <form method="get" action="/Production/WasteReport">
+        <div class="d-flex align-items-end gap-2 flex-wrap">
+            <div>
+                <label class="form-label small fw-semibold mb-1">Başlangıç</label>
+                <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control form-control-sm" style="width:140px;">
+            </div>
+            <div>
+                <label class="form-label small fw-semibold mb-1">Bitiş</label>
+                <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control form-control-sm" style="width:140px;">
+            </div>
+            <div style="display:flex;flex-direction:column;min-width:160px;">
+                <label class="form-label small fw-semibold mb-1">Makine</label>
+                <div class="mcd" id="mcd-wr-mac" data-placeholder="— Tümü —">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-wr-mac')">
+                        <span class="mcd-lbl">@machineLabel</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-wr-mac-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Makine ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <div class="mcd-items">
+                            <label class="mcd-row">
+                                <input type="radio" name="machineId" value="" class="mcd-rb"
+                                       onchange="mcdSingleSelect('mcd-wr-mac','','— Tümü —')"
+                                       checked="@(selMachineId == null ? "checked" : null)">
+                                <span class="mcd-name">— Tümü —</span>
+                            </label>
+                            @foreach (var m in machines)
+                            {
+                                <label class="mcd-row">
+                                    <input type="radio" name="machineId" value="@m.Id" class="mcd-rb"
+                                           onchange="mcdSingleSelect('mcd-wr-mac','@m.Id','@m.Name')"
+                                           checked="@(selMachineId == m.Id ? "checked" : null)">
+                                    <span class="mcd-name">@m.Name</span>
+                                </label>
+                            }
+                        </div>
+                        <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;flex-direction:column;min-width:160px;">
+                <label class="form-label small fw-semibold mb-1">Ürün</label>
+                <div class="mcd" id="mcd-waste-prod" data-placeholder="— Tümü —">
+                    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-waste-prod')">
+                        <span class="mcd-lbl">@(productIds.Length > 0 ? productIds.Length + " seçildi" : "— Tümü —")</span>
+                        <i class="fas fa-angle-down mcd-arrow"></i>
+                    </button>
+                    <div class="mcd-panel" id="mcd-waste-prod-panel" style="display:none;">
+                        <div class="mcd-search-row">
+                            <input type="text" class="mcd-search" placeholder="Ürün ara..." oninput="mcdSearch(this)">
+                        </div>
+                        <label class="mcd-row mcd-header">
+                            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-waste-prod')">
+                            <span>Tümünü Seç / Temizle</span>
+                        </label>
+                        <div class="mcd-items">
+                            @foreach (var p in products)
+                            {
+                                bool sel = productIds.Contains(p.Id);
+                                <label class="mcd-row">
+                                    <input type="checkbox" name="productIds" value="@p.Id" class="mcd-cb"
+                                           onchange="mcdUpdate('mcd-waste-prod')"
+                                           checked="@(sel ? "checked" : null)">
+                                    <span class="mcd-name" title="@p.ProductName">@p.ProductName</span>
+                                    @if (!string.IsNullOrEmpty(p.ProductCode))  { <span class="mcd-sub">@p.ProductCode</span> }
+                                    @if (!string.IsNullOrEmpty(p.ExternalCode)) { <span class="mcd-ext">@p.ExternalCode</span> }
+                                </label>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 align-self-end">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-search me-1"></i> Sorgula
+                </button>
+                <a href="/Production/WasteReport" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-times"></i>
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Özet Stat Kartları -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:16px;">
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-burn"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@toplamFire.ToString("N1")</div>
+            <div class="stat-label">Toplam Fire (kg)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-weight-hanging"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@toplamTuketim.ToString("N1")</div>
+            <div class="stat-label">Toplam Tüketim (kg)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon @IconClass(fireOran)"><i class="fas fa-percent"></i></div>
+        <div class="stat-info">
+            <div class="stat-value" style="color:@RateColor(fireOran);">%@fireOran.ToString("N2")</div>
+            <div class="stat-label">Ortalama Fire Oranı</div>
+            <div style="font-size:10px;color:#6b7280;">Hedef: %3 altı</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber"><i class="fas fa-list-alt"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">@Model.Count</div>
+            <div class="stat-label">Üretim Kaydı</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tab Navigasyonu -->
+<ul class="nav nav-tabs mb-0" style="border-bottom:none; gap:4px;">
+    <li class="nav-item">
+        <button class="nav-link active" id="tab-detay" onclick="showTab('detay')">
+            <i class="fas fa-list me-1"></i> Detay
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" id="tab-makine" onclick="showTab('makine')">
+            <i class="fas fa-cogs me-1"></i> Makine Analizi
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" id="tab-urun" onclick="showTab('urun')">
+            <i class="fas fa-box me-1"></i> Ürün Analizi
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" id="tab-trend" onclick="showTab('trend')">
+            <i class="fas fa-chart-bar me-1"></i> Aylık Trend
+        </button>
+    </li>
+</ul>
+
+<!-- TAB: Detay -->
+<div id="pane-detay" class="table-card" style="border-radius:0 8px 8px 8px;">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>TARİH</th>
+                    <th>İŞ EMRİ</th>
+                    <th>ÜRÜN</th>
+                    <th>SERİ / LOT</th>
+                    <th>TEDARİKÇİ</th>
+                    <th>MAKİNE</th>
+                    <th class="text-end">TÜKETİM (kg)</th>
+                    <th class="text-end">FİRE (kg)</th>
+                    <th class="text-end">FİRE %</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="9" class="text-center text-muted py-4">
+                        <i class="fas fa-check-circle text-success me-2"></i>Bu dönemde fire kaydı yok.
+                    </td></tr>
+                }
+                @foreach (var d in Model)
+                {
+                    var fr = d.ConsumedWeight > 0 ? d.WasteWeight / d.ConsumedWeight * 100 : 0;
+                    <tr>
+                        <td class="text-muted">@d.ProductionDate.ToString("dd.MM.yy")</td>
+                        <td>
+                            <a href="/Production/Detail/@d.WorkOrderId" class="fw-semibold" style="color:#1d4ed8;">
+                                @d.WorkOrder?.WorkOrderNo
+                            </a>
+                        </td>
+                        <td style="font-size:12px;">@d.WorkOrder?.Product?.ProductName</td>
+                        <td>
+                            <div class="fw-semibold" style="font-size:12px;">@d.FscSerial?.SerialNo</div>
+                            <div class="text-muted" style="font-size:11px;">@d.FscSerial?.Lot?.PartiNo</div>
+                        </td>
+                        <td class="text-muted" style="font-size:12px;">@d.FscSerial?.Lot?.Supplier?.Name</td>
+                        <td class="text-muted" style="font-size:12px;">@d.Machine?.Name</td>
+                        <td class="text-end fw-semibold">@d.ConsumedWeight.ToString("N2")</td>
+                        <td class="text-end">
+                            <span class="badge badge-danger">@d.WasteWeight.ToString("N2")</span>
+                        </td>
+                        <td class="text-end">
+                            <span class="badge @RateClass(fr)">%@fr.ToString("N1")</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.Any())
+            {
+                <tfoot>
+                    <tr style="background:#f9fafb; font-weight:600; font-size:12px;">
+                        <td colspan="6" class="text-end text-muted">TOPLAM</td>
+                        <td class="text-end">@toplamTuketim.ToString("N2")</td>
+                        <td class="text-end"><span class="badge badge-danger">@toplamFire.ToString("N2")</span></td>
+                        <td class="text-end"><span class="badge @RateClass(fireOran)">%@fireOran.ToString("N1")</span></td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+</div>
+
+<!-- TAB: Makine Analizi -->
+<div id="pane-makine" class="table-card" style="display:none; border-radius:0 8px 8px 8px;">
+    <div class="p-3 border-bottom d-flex align-items-center gap-2">
+        <i class="fas fa-cogs text-primary"></i>
+        <strong class="small">Makine Bazlı Fire Analizi</strong>
+        <span class="text-muted small ms-auto">En yüksek fire oranına göre sıralı</span>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>MAKİNE</th>
+                    <th class="text-end">KAYIT</th>
+                    <th class="text-end">TÜKETİM (kg)</th>
+                    <th class="text-end">FİRE (kg)</th>
+                    <th class="text-end" style="width:220px;">FİRE ORANI</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!byMachine.Any())
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-4">Veri yok.</td></tr>
+                }
+                @foreach (var row in byMachine)
+                {
+                    var barPct = (int)Math.Min(row.WasteRate * 10, 100);
+                    <tr>
+                        <td><strong>@row.Label</strong></td>
+                        <td class="text-end text-muted">@row.RecordCount</td>
+                        <td class="text-end fw-semibold">@row.TotalConsumed.ToString("N1")</td>
+                        <td class="text-end">
+                            <span class="badge badge-danger">@row.TotalWaste.ToString("N1")</span>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex align-items-center gap-2 justify-content-end">
+                                <div style="width:80px; height:8px; background:#f3f4f6; border-radius:4px; overflow:hidden;">
+                                    <div style="width:@barPct%; height:100%; background:@RateColor(row.WasteRate); border-radius:4px;"></div>
+                                </div>
+                                <span class="badge @RateClass(row.WasteRate)">%@row.WasteRate.ToString("N1")</span>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="p-3 border-top" style="font-size:12px; color:#6b7280; display:flex; gap:16px;">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px;margin-right:4px;"></span>%0–3 Normal</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#d97706;border-radius:2px;margin-right:4px;"></span>%3–6 Dikkat</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#dc2626;border-radius:2px;margin-right:4px;"></span>%6+ Kritik</span>
+    </div>
+</div>
+
+<!-- TAB: Ürün Analizi -->
+<div id="pane-urun" class="table-card" style="display:none; border-radius:0 8px 8px 8px;">
+    <div class="p-3 border-bottom d-flex align-items-center gap-2">
+        <i class="fas fa-box text-primary"></i>
+        <strong class="small">Ürün Bazlı Fire Analizi</strong>
+        <span class="text-muted small ms-auto">En yüksek fire oranına göre sıralı</span>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ÜRÜN</th>
+                    <th class="text-end">ÜRETİM KAYDI</th>
+                    <th class="text-end">TÜKETİM (kg)</th>
+                    <th class="text-end">FİRE (kg)</th>
+                    <th class="text-end" style="width:220px;">FİRE ORANI</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!byProduct.Any())
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-4">Veri yok.</td></tr>
+                }
+                @foreach (var row in byProduct)
+                {
+                    var barPct = (int)Math.Min(row.WasteRate * 10, 100);
+                    <tr>
+                        <td><strong>@row.Label</strong></td>
+                        <td class="text-end text-muted">@row.RecordCount</td>
+                        <td class="text-end fw-semibold">@row.TotalConsumed.ToString("N1")</td>
+                        <td class="text-end">
+                            <span class="badge badge-danger">@row.TotalWaste.ToString("N1")</span>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex align-items-center gap-2 justify-content-end">
+                                <div style="width:80px; height:8px; background:#f3f4f6; border-radius:4px; overflow:hidden;">
+                                    <div style="width:@barPct%; height:100%; background:@RateColor(row.WasteRate); border-radius:4px;"></div>
+                                </div>
+                                <span class="badge @RateClass(row.WasteRate)">%@row.WasteRate.ToString("N1")</span>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="p-3 border-top" style="font-size:12px; color:#6b7280; display:flex; gap:16px;">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px;margin-right:4px;"></span>%0–3 Normal</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#d97706;border-radius:2px;margin-right:4px;"></span>%3–6 Dikkat</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#dc2626;border-radius:2px;margin-right:4px;"></span>%6+ Kritik</span>
+    </div>
+</div>
+
+<!-- TAB: Aylık Trend -->
+<div id="pane-trend" class="table-card p-4" style="display:none; border-radius:0 8px 8px 8px;">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="fas fa-chart-bar text-primary"></i>
+        <strong class="small">Aylık Fire Trendi (Son 6 Ay)</strong>
+    </div>
+    @if (!monthLabels.Any())
+    {
+        <div class="text-center text-muted py-4">Yeterli veri yok.</div>
+    }
+    else
+    {
+        var maxW = monthWaste.Any() ? (double)monthWaste.Max() : 1;
+        <div style="display:flex; gap:16px; align-items:flex-end; height:200px; padding-bottom:8px; border-bottom:2px solid #e5e7eb;">
+            @for (int i = 0; i < monthLabels.Count; i++)
+            {
+                var pct  = maxW > 0 ? (double)monthWaste[i] / maxW * 180 : 0;
+                var rate = monthRate[i];
+                var col  = rate < 3 ? "#16a34a" : rate < 6 ? "#d97706" : "#dc2626";
+                <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <div style="font-size:10px; font-weight:600; color:@col;">%@rate.ToString("N1")</div>
+                    <div style="height:@((int)pct)px; width:100%; background:@col; border-radius:4px 4px 0 0; opacity:.85; min-height:4px;"></div>
+                    <div style="font-size:10px; color:#6b7280;">@monthLabels[i]</div>
+                    <div style="font-size:10px; font-weight:600;">@monthWaste[i].ToString("N0") kg</div>
+                </div>
+            }
+        </div>
+        <div class="mt-3" style="font-size:12px; color:#6b7280; display:flex; gap:16px;">
+            <span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px;margin-right:4px;"></span>%0–3 Hedef bölgesi</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:#d97706;border-radius:2px;margin-right:4px;"></span>%3–6 Dikkat</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:#dc2626;border-radius:2px;margin-right:4px;"></span>%6+ Kritik</span>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<style>
+.mcd{position:relative}
+.mcd-btn{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:#fff;border:1px solid #d1d5db;color:#111;padding:5px 10px;border-radius:6px;font-size:13px}
+.mcd-btn:hover{border-color:#1976d2}
+.mcd-panel{position:absolute;top:calc(100% + 4px);left:0;min-width:300px;max-width:400px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:1050;display:flex;flex-direction:column;overflow:hidden}
+.mcd-search-row{padding:8px 10px;border-bottom:1px solid #f1f5f9}
+.mcd-search{width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:5px 10px;font-size:12.5px;outline:none}
+.mcd-header{background:#f8fafc;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:12.5px;color:#374151}
+.mcd-items{overflow-y:auto;max-height:260px}
+.mcd-row{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:12.5px;user-select:none}
+.mcd-row:hover{background:#eff6ff}
+.mcd-cb,.mcd-all-cb{cursor:pointer;accent-color:#1976d2;min-width:15px;height:15px}
+.mcd-name{flex:1;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.mcd-sub{font-size:10.5px;color:#374151;background:#f3f4f6;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.mcd-ext{font-size:10.5px;color:#3730a3;background:#eef2ff;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.mcd-arrow{color:#6b7280;font-size:11px}
+</style>
+<script>
+if(!window._mcdReady){window._mcdReady=true;
+window.mcdOpen=function(id){var p=document.getElementById(id+'-panel');var o=p&&p.style.display!=='none';document.querySelectorAll('.mcd-panel').forEach(function(x){x.style.display='none'});if(!o&&p){p.style.display='flex';mcdUpdate(id)}};
+window.mcdSearch=function(el){var t=el.value.toLowerCase();el.closest('.mcd-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(t)?'':'none'})};
+window.mcdToggleAll=function(cb,id){document.getElementById(id+'-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(function(r){if(r.style.display!=='none'){var c=r.querySelector('.mcd-cb');if(c)c.checked=cb.checked}});mcdUpdate(id)};
+window.mcdUpdate=function(id){var p=document.getElementById(id+'-panel');var c=document.getElementById(id);if(!p||!c)return;var n=p.querySelectorAll('.mcd-cb:checked').length;var l=c.querySelector('.mcd-lbl');if(l)l.textContent=n===0?(c.dataset.placeholder||'— Seçiniz —'):n+' seçildi';var a=p.querySelector('.mcd-all-cb');var v=p.querySelectorAll('.mcd-row:not(.mcd-header):not([style*="none"]) .mcd-cb').length;if(a&&v>0)a.checked=(n>=v)};
+document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'})});}
+</script>
+<script>
+function showTab(name) {
+    ['detay','makine','urun','trend'].forEach(t => {
+        document.getElementById('pane-' + t).style.display = t === name ? '' : 'none';
+        document.getElementById('tab-'  + t).classList.toggle('active', t === name);
+    });
+}
+</script>
+}

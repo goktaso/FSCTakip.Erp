@@ -1,0 +1,305 @@
+@model IEnumerable<FSCTakip.Core.Entities.AuditPeriod>
+@{
+    ViewData["Title"] = "Denetim Dönemleri";
+}
+
+@section TopbarActions {
+    <button class="btn btn-primary btn-sm px-3" onclick="openNewModal()">
+        <i class="fas fa-plus me-1"></i> Yeni Dönem Ekle
+    </button>
+    <a href="/Reports/AuditReport" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-chart-bar me-1"></i> Denetim Raporu
+    </a>
+}
+
+<!-- Bilgi Kutusu -->
+<div class="p-3 rounded mb-3" style="background:#eff6ff;border:1px solid #bfdbfe;font-size:12.5px;">
+    <i class="fas fa-info-circle me-1" style="color:#1d4ed8;"></i>
+    <strong>Denetim Dönemleri</strong> — Her FSC CoC denetimi belirli bir tarihe kadar olan dönemi kapsar.
+    Bir dönem, önceki denetimin bitiş tarihinin ertesi gününden başlar.
+    <br>
+    <span class="text-muted">Örnek: 2024 dönemi → 17.12.2023 – 22.11.2024 · 2025 dönemi → 23.11.2024 – 12.12.2025</span>
+</div>
+
+<!-- Tablo -->
+<div class="table-card">
+    <div class="p-3 border-bottom d-flex align-items-center gap-2">
+        <span style="width:32px;height:32px;border-radius:8px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-calendar-check" style="color:#1d4ed8;font-size:14px;"></i>
+        </span>
+        <strong style="font-size:14px;">Kayıtlı Denetim Dönemleri</strong>
+        <span class="badge badge-blue ms-1">@Model.Count() dönem</span>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table" id="mainTable">
+            <thead>
+                <tr>
+                    <th style="width:80px;">YIL</th>
+                    <th>BAŞLANGIÇ TARİHİ</th>
+                    <th>BİTİŞ TARİHİ</th>
+                    <th>SÜRE</th>
+                    <th>AÇIKLAMA</th>
+                    <th class="text-center" style="width:80px;">DURUM</th>
+                    <th class="text-center" style="width:120px;">KİLİT</th>
+                    <th class="text-center" style="width:200px;">İŞLEMLER</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="fas fa-calendar-times"></i></div>
+                            <h6>Henüz denetim dönemi tanımlanmamış</h6>
+                            <p>Yukarıdaki <strong>+ Yeni Dönem Ekle</strong> butonu ile ilk dönemi oluşturun.</p>
+                        </div>
+                    </td></tr>
+                }
+                @foreach (var item in Model)
+                {
+                    var gun = (item.EndDate - item.StartDate).Days + 1;
+                    <tr>
+                        <td>
+                            <span class="badge badge-blue px-3" style="font-size:13px;">@item.Year</span>
+                        </td>
+                        <td class="fw-semibold">@item.StartDate.ToString("dd.MM.yyyy")</td>
+                        <td class="fw-semibold">@item.EndDate.ToString("dd.MM.yyyy")</td>
+                        <td class="text-muted small">@gun gün</td>
+                        <td class="text-muted small">@(item.Description ?? "—")</td>
+                        <td class="text-center">
+                            <span id="badge_@item.Id"
+                                  class="badge @(item.IsActive ? "badge-success" : "badge-warning")"
+                                  style="font-size:11px;">
+                                @(item.IsActive ? "Aktif" : "Pasif")
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            @if (item.IsLocked)
+                            {
+                                <div>
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-lock me-1"></i>Kilitli
+                                    </span>
+                                    <div class="text-muted" style="font-size:10px;margin-top:2px;">
+                                        @item.LockedBy · @item.LockedAt?.ToString("dd.MM.yy HH:mm")
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">
+                                    <i class="fas fa-lock-open me-1"></i>Açık
+                                </span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <a href="/Reports/AuditReport?startDate=@item.StartDate.ToString("yyyy-MM-dd")&endDate=@item.EndDate.ToString("yyyy-MM-dd")"
+                               class="btn btn-xs btn-outline-success me-1" title="Bu dönem için rapor aç">
+                                <i class="fas fa-chart-bar"></i>
+                            </a>
+                            @if (!item.IsLocked)
+                            {
+                                <button class="btn btn-xs btn-outline-primary me-1" onclick="editPeriod(@item.Id)" title="Düzenle">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            }
+                            @if (!item.IsLocked)
+                            {
+                                <button class="btn btn-xs btn-danger me-1" onclick="lockPeriod(@item.Id, @item.Year)"
+                                        title="Dönemi Kilitle" style="font-size:11px;">
+                                    <i class="fas fa-lock me-1"></i>Kilitle
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-xs btn-outline-warning me-1" onclick="unlockPeriod(@item.Id, @item.Year)"
+                                        title="Kilidi Kaldır" style="font-size:11px;">
+                                    <i class="fas fa-lock-open me-1"></i>Aç
+                                </button>
+                            }
+                            @if (!item.IsLocked)
+                            {
+                                <button class="btn btn-xs btn-outline-danger" onclick="deletePeriod(@item.Id)" title="Sil">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Dönem Ekleme/Düzenleme Modal -->
+<div class="modal fade" id="periodModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header" style="background:#1e3d14;">
+                <h5 class="modal-title text-white fw-semibold" id="modalTitle">
+                    <i class="fas fa-calendar-plus me-2"></i>Yeni Denetim Dönemi
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="periodId" value="0" />
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Denetim Yılı <span class="text-danger">*</span></label>
+                    <input type="number" id="periodYear" class="form-control"
+                           min="2020" max="2099" value="@DateTime.Now.Year">
+                    <div class="form-text">Etiket yılı — genellikle denetimin yapıldığı yıl</div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">
+                            <i class="fas fa-calendar-minus me-1 text-muted"></i>Dönem Başlangıcı <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" id="periodStartDate" class="form-control">
+                        <div class="form-text">Önceki denetim + 1 gün</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">
+                            <i class="fas fa-calendar-check me-1 text-muted"></i>Dönem Bitişi <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" id="periodEndDate" class="form-control">
+                        <div class="form-text">Mevcut denetim tarihi</div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Açıklama</label>
+                    <input type="text" id="periodDescription" class="form-control" placeholder="Örn: 2025 Yıllık FSC Denetimi">
+                </div>
+
+                <!-- Süre bilgisi -->
+                <div id="durationInfo" class="p-2 rounded text-center" style="background:#f0fdf4;border:1px solid #bbf7d0;display:none;font-size:12.5px;">
+                    <i class="fas fa-clock me-1 text-success"></i>
+                    <span id="durationText"></span>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-primary px-4" onclick="savePeriod()">
+                    <i class="fas fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Tarih değişince süre hesapla
+    ['periodStartDate','periodEndDate'].forEach(id => {
+        document.getElementById(id).addEventListener('change', updateDuration);
+    });
+
+    function updateDuration() {
+        var s = document.getElementById('periodStartDate').value;
+        var e = document.getElementById('periodEndDate').value;
+        var info = document.getElementById('durationInfo');
+        var text = document.getElementById('durationText');
+        if (s && e && s < e) {
+            var days = Math.round((new Date(e) - new Date(s)) / 86400000) + 1;
+            text.textContent = 'Dönem süresi: ' + days + ' gün (' + (days/365).toFixed(1) + ' yıl)';
+            info.style.display = 'block';
+        } else {
+            info.style.display = 'none';
+        }
+    }
+
+    function openNewModal() {
+        document.getElementById('periodId').value = 0;
+        document.getElementById('periodYear').value = new Date().getFullYear();
+        document.getElementById('periodStartDate').value = '';
+        document.getElementById('periodEndDate').value = '';
+        document.getElementById('periodDescription').value = '';
+        document.getElementById('durationInfo').style.display = 'none';
+        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-calendar-plus me-2"></i>Yeni Denetim Dönemi';
+        new bootstrap.Modal(document.getElementById('periodModal')).show();
+    }
+
+    function editPeriod(id) {
+        $.get('/AuditPeriod/GetPeriod/' + id, function(res) {
+            if (res.success) {
+                document.getElementById('periodId').value = res.id;
+                document.getElementById('periodYear').value = res.year;
+                document.getElementById('periodStartDate').value = res.startDate;
+                document.getElementById('periodEndDate').value = res.endDate;
+                document.getElementById('periodDescription').value = res.description || '';
+                document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Dönem Düzenle — ' + res.year;
+                updateDuration();
+                new bootstrap.Modal(document.getElementById('periodModal')).show();
+            }
+        });
+    }
+
+    function savePeriod() {
+        var data = {
+            Id:          document.getElementById('periodId').value,
+            Year:        document.getElementById('periodYear').value,
+            StartDate:   document.getElementById('periodStartDate').value,
+            EndDate:     document.getElementById('periodEndDate').value,
+            Description: document.getElementById('periodDescription').value
+        };
+        if (!data.StartDate || !data.EndDate) {
+            showToast('Başlangıç ve bitiş tarihi zorunludur.', 'error');
+            return;
+        }
+        $.post('/AuditPeriod/Save', data, function(res) {
+            if (res.success) {
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(res.message, 'error');
+            }
+        });
+    }
+
+    function toggleStatus(id) {
+        $.post('/AuditPeriod/ToggleStatus', { id: id }, function(res) {
+            if (res.success) {
+                var badge = document.getElementById('badge_' + id);
+                badge.textContent = res.isActive ? 'Aktif' : 'Pasif';
+                badge.className = 'badge ' + (res.isActive ? 'badge-success' : 'badge-warning');
+                location.reload();
+            }
+        });
+    }
+
+    async function deletePeriod(id) {
+        if (!await appConfirm('Bu denetim dönemi kalıcı olarak silinecek.', { danger: true, title: 'Emin misiniz?' })) return;
+        $.post('/AuditPeriod/Delete', { id: id }, function(res) {
+            if (res.success) {
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 600);
+            } else {
+                showToast(res.message, 'error');
+            }
+        });
+    }
+
+    async function lockPeriod(id, year) {
+        if (!await appConfirm(year + ' dönemini kilitlediğinizde yalnızca admin kullanıcılar bu tarihe ait kayıtları değiştirebilir.', { danger: true, title: year + ' Dönemini Kilitle' })) return;
+        $.post('/AuditPeriod/LockPeriod', { id: id }, function(res) {
+            if (res.success) {
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(res.message, 'error');
+            }
+        });
+    }
+
+    async function unlockPeriod(id, year) {
+        if (!await appConfirm('Kilidi kaldırdığınızda tüm yetkili kullanıcılar bu döneme ait verileri düzenleyebilir.', { title: year + ' Dönem Kilidini Kaldır' })) return;
+        $.post('/AuditPeriod/UnlockPeriod', { id: id }, function(res) {
+            if (res.success) {
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(res.message, 'error');
+            }
+        });
+    }
+</script>
+}
