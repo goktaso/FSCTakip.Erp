@@ -71,6 +71,15 @@ namespace FSCTakip.WebUI.Controllers
                 })
                 .ToDictionaryAsync(x => x.Id, x => x);
 
+            // YM seri basina uretim tuketimi + fire (CurrentWeight'e guvenmiyoruz)
+            var ymSerialIds = recentYm.Select(x => x.Id).ToList();
+            var ymProdMap = await _context.ProductionDetails
+                .Where(d => ymSerialIds.Contains(d.FscSerialId))
+                .GroupBy(d => d.FscSerialId)
+                .Select(g => new { SerialId = g.Key, Consumed = g.Sum(d => d.ConsumedWeight), Fire = g.Sum(d => d.WasteWeight) })
+                .ToListAsync();
+            var ymProdDict = ymProdMap.ToDictionary(x => x.SerialId, x => x);
+
             ViewBag.Recent = recentYm.Select(x => new ConvRecentVM {
                 SerialId     = x.Id,
                 LotId        = x.LotId,
@@ -80,7 +89,10 @@ namespace FSCTakip.WebUI.Controllers
                 HedefKod     = x.HedefKod,
                 FscType      = x.FscType,
                 Kg           = x.InitialWeight,
-                Kalan        = x.CurrentWeight,
+                Kalan        = Math.Max(0m, x.InitialWeight
+                                   - (ymProdDict.ContainsKey(x.Id) ? ymProdDict[x.Id].Consumed : 0m)
+                                   - (ymProdDict.ContainsKey(x.Id) ? ymProdDict[x.Id].Fire    : 0m)
+                                   - (x.ConversionFireKg ?? 0m)),
                 Fire         = x.ConversionFireKg ?? 0m,
                 KaynakSerialId = x.SourceSerialId,
                 KaynakSerial = x.SourceSerialId != null && srcMap.ContainsKey(x.SourceSerialId.Value) ? srcMap[x.SourceSerialId.Value].SerialNo : "—",

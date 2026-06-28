@@ -12,7 +12,14 @@
     string? stockCode  = ViewBag.StockCode as string;
     var filtSupplierIds = ViewBag.SupplierIds as int[] ?? Array.Empty<int>();
     var filtFscTypeIds  = ViewBag.FscTypeIds  as int[] ?? Array.Empty<int>();
-    var productIds     = ViewBag.ProductIds as int[] ?? Array.Empty<int>();
+    var productIds      = ViewBag.ProductIds as int[] ?? Array.Empty<int>();
+    // Dogru uretim tuketim toplami (consumed+fire) ve SM toplami (fire eksik olabilir)
+    decimal totalProdConsumKg   = ViewBag.TotalProdConsumKg   ?? 0m;
+    decimal totalSMProdConsumKg = ViewBag.TotalSMProdConsumKg ?? 0m;
+    decimal salesKg = Model.Where(m => m.Type == MovementType.SalesDispatch).Sum(m => m.Quantity);
+    decimal totalGirisKg = Model.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity);
+    decimal totalCikisKg = salesKg + totalProdConsumKg;
+    decimal netKg = totalGirisKg - totalCikisKg;
 }
 
 <div class="topbar-area">
@@ -187,19 +194,19 @@
                 <div>
                     <span class="text-muted small">Giriş:</span>
                     <strong class="text-success ms-1" id="bandGiris">
-                        @Model.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity).ToString("N0")
+                        @totalGirisKg.ToString("N0")
                     </strong>
                 </div>
                 <div>
                     <span class="text-muted small">Çıkış:</span>
                     <strong class="text-danger ms-1" id="bandCikis">
-                        @Model.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity).ToString("N0")
+                        @totalCikisKg.ToString("N0")
                     </strong>
                 </div>
                 <div>
                     <span class="text-muted small">Net:</span>
                     <strong class="ms-1" id="bandNet">
-                        @((Model.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity) - Model.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity)).ToString("N0"))
+                        @netKg.ToString("N0")
                     </strong>
                 </div>
             </div>
@@ -381,11 +388,11 @@
             <span id="footerCount">@Model.Count kayıt</span>
             <span>
                 Toplam Giriş: <strong class="text-success" id="footerGiris">
-                    @Model.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity).ToString("N0")
+                    @totalGirisKg.ToString("N0")
                 </strong>
                 &nbsp;|&nbsp;
                 Toplam Çıkış: <strong class="text-danger" id="footerCikis">
-                    @Model.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity).ToString("N0")
+                    @totalCikisKg.ToString("N0")
                 </strong>
             </span>
         </div>

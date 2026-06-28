@@ -362,6 +362,21 @@ namespace FSCTakip.WebUI.Controllers
                 .ToDictionaryAsync(o => o.SalesOrderNo, StringComparer.OrdinalIgnoreCase);
             ViewBag.SalesOrderMap = salesOrderMap;
 
+            // Uretim tuketim + fire toplami: ProductionDetails'tan (StockMovements eski kayitlarda fire icermiyor)
+            var movProdIds = movements.Select(m => m.ProductId).Distinct().ToList();
+            var pdMovQuery = _context.ProductionDetails
+                .Include(d => d.FscSerial).ThenInclude(s => s.Lot)
+                .Where(d => d.FscSerial != null && d.FscSerial.Lot.ProductId != null
+                         && movProdIds.Contains(d.FscSerial.Lot.ProductId!.Value));
+            if (startDate.HasValue) pdMovQuery = pdMovQuery.Where(d => d.ProductionDate >= startDate.Value);
+            if (endDate.HasValue)   pdMovQuery = pdMovQuery.Where(d => d.ProductionDate <= endDate.Value.AddDays(1));
+            if (productIds != null && productIds.Length > 0)
+                pdMovQuery = pdMovQuery.Where(d => productIds.Contains(d.FscSerial!.Lot.ProductId!.Value));
+            var totalProdConsumKg = await pdMovQuery.SumAsync(d => d.ConsumedWeight + d.WasteWeight);
+            var totalSMProdConsumKg = movements.Where(m => m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity);
+            ViewBag.TotalProdConsumKg  = totalProdConsumKg;   // dogru toplam (consumed+fire)
+            ViewBag.TotalSMProdConsumKg = totalSMProdConsumKg; // SM'deki toplam (fire eksik olabilir)
+
             ViewBag.Products    = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
             ViewBag.Suppliers   = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
             ViewBag.FscTypes    = await _context.FscTypes.OrderBy(f => f.Name).ToListAsync();
