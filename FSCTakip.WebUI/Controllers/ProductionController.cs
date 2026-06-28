@@ -341,8 +341,8 @@ namespace FSCTakip.WebUI.Controllers
                     return Json(new { success = false, message = "Fire miktarÄ± negatif olamaz." });
                 if (model.ProducedQuantity <= 0)
                     return Json(new { success = false, message = "Ãœretilen adet sÄ±fÄ±rdan bÃ¼yÃ¼k olmalÄ±dÄ±r." });
-                if (model.WasteWeight > model.ConsumedWeight)
-                    return Json(new { success = false, message = "Fire miktarÄ± tÃ¼ketim miktarÄ±nÄ± aÅŸamaz." });
+                // Fire, tuketimden bagimsiz -- ayri kayip kalemi, toplam dusus = consumed + fire
+
 
                 // Tamamlanmis is emrine tuketim kaydedilemez
                 var wo = await _context.WorkOrders.FindAsync(model.WorkOrderId);
@@ -364,11 +364,11 @@ namespace FSCTakip.WebUI.Controllers
 
                 if (model.Id == 0)
                 {
-                    // Yeni kayÄ±t: stok dÃ¼ÅŸ
-                    if (model.ConsumedWeight > serial.CurrentWeight)
-                        return Json(new { success = false, message = $"TÃ¼ketim miktarÄ± ({model.ConsumedWeight:N2} kg) bobinin kalan aÄŸÄ±rlÄ±ÄŸÄ±nÄ± ({serial.CurrentWeight:N2} kg) aÅŸÄ±yor." });
-
-                    serial.CurrentWeight -= model.ConsumedWeight;
+                    // Yeni kayit: stok dusus = tuketilen + fire (ikisi bagimsiz kalem)
+                    var totalDeduction = model.ConsumedWeight + model.WasteWeight;
+                    if (totalDeduction > serial.CurrentWeight)
+                        return Json(new { success = false, message = "Tuketim + fire toplami bobinin kalan agirligini asiyor." });
+                    serial.CurrentWeight -= totalDeduction;
                     _context.ProductionDetails.Add(model);
                 }
                 else
@@ -383,7 +383,7 @@ namespace FSCTakip.WebUI.Controllers
                     oldQty      = existing.ProducedQuantity;
 
                     // Eski tÃ¼ketimi iade et, yenisini dÃ¼ÅŸ
-                    var diff = model.ConsumedWeight - existing.ConsumedWeight;
+                    var diff = (model.ConsumedWeight + model.WasteWeight) - (existing.ConsumedWeight + existing.WasteWeight);
                     if (diff > serial.CurrentWeight)
                         return Json(new { success = false, message = $"GÃ¼ncellenmiÅŸ tÃ¼ketim bobinin kalan aÄŸÄ±rlÄ±ÄŸÄ±nÄ± aÅŸÄ±yor." });
 
@@ -450,7 +450,7 @@ namespace FSCTakip.WebUI.Controllers
                             Type           = MovementType.ProductionConsumption,
                             ErpReferenceId = model.Id,
                             ProductId      = serial.Lot.ProductId.Value,
-                            Quantity       = model.ConsumedWeight,
+                            Quantity       = model.ConsumedWeight + model.WasteWeight,
                             Unit           = "kg",
                             DocumentNo     = wo?.WorkOrderNo ?? "",
                             DocumentDate   = model.ProductionDate,
@@ -462,7 +462,7 @@ namespace FSCTakip.WebUI.Controllers
                     }
                     else
                     {
-                        consMov.Quantity     = model.ConsumedWeight;
+                        consMov.Quantity     = model.ConsumedWeight + model.WasteWeight;
                         consMov.ProductId    = serial.Lot.ProductId.Value;
                         consMov.DocumentDate = model.ProductionDate;
                     }
@@ -525,7 +525,7 @@ namespace FSCTakip.WebUI.Controllers
                     return Json(new { success = false, message = "KayÄ±t bulunamadÄ±." });
 
                 // TÃ¼ketimi iade et
-                detail.FscSerial.CurrentWeight += detail.ConsumedWeight;
+                detail.FscSerial.CurrentWeight += detail.ConsumedWeight + detail.WasteWeight;
 
                 // WorkOrderRecipe toplamlÄ±larÄ±nÄ± gÃ¼ncelle
                 if (detail.WorkOrderRecipeId.HasValue)
