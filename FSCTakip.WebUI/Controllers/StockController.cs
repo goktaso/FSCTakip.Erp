@@ -37,6 +37,15 @@ namespace FSCTakip.WebUI.Controllers
 
             var movements = await mvQuery.ToListAsync();
 
+            // Uretim tuketimi (consumed + fire) urun bazinda — StockMovements.Quantity'ye guvenme (eski kayitlar fire icermiyor)
+            // ProductionDetails uzerinden dogru toplami hesapla
+            var productionConsumptionByProduct = await _context.ProductionDetails
+                .Include(d => d.FscSerial).ThenInclude(s => s.Lot)
+                .Where(d => d.FscSerial != null && d.FscSerial.Lot.ProductId != null)
+                .GroupBy(d => d.FscSerial!.Lot.ProductId!.Value)
+                .Select(g => new { ProductId = g.Key, TotalKg = g.Sum(d => d.ConsumedWeight + d.WasteWeight) })
+                .ToDictionaryAsync(x => x.ProductId, x => x.TotalKg);
+
             // FscLot sayilari (lot/serial count icin)
             var lotQuery = _context.FscLots
                 .Include(l => l.Product)
@@ -62,11 +71,14 @@ namespace FSCTakip.WebUI.Controllers
                     var prod = g.First().Product!;
                     var unit = (prod.Unit ?? "KG").Trim().ToUpperInvariant();
 
-                    // KG bazli net hesap: giris - cikis (QuantityKg varsa onu kullan, yoksa Quantity)
+                    // KG bazli net hesap
                     var inboundKg  = g.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry)
                                       .Sum(m => m.QuantityKg ?? m.Quantity);
-                    var outboundKg = g.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption)
+                    // Satis cikisi StockMovements'tan, uretim tuketimi ProductionDetails'tan (consumed+fire dogru toplam)
+                    var salesOutKg = g.Where(m => m.Type == MovementType.SalesDispatch)
                                       .Sum(m => m.QuantityKg ?? m.Quantity);
+                    var prodConsumKg = productionConsumptionByProduct.TryGetValue(g.Key, out var pc) ? pc : 0m;
+                    var outboundKg = salesOutKg + prodConsumKg;
                     var netKg = inboundKg - outboundKg;
 
                     // Orijinal birimde giriş toplami (sadece MT/ADET gibi durumlar icin)
@@ -149,6 +161,14 @@ namespace FSCTakip.WebUI.Controllers
 
             var movements = await mvQuery.ToListAsync();
 
+            // Uretim tuketimi + fire urun bazinda (eski SM kayitlari fire icermiyor)
+            var adminProdConsByProduct = await _context.ProductionDetails
+                .Include(d => d.FscSerial).ThenInclude(s => s.Lot)
+                .Where(d => d.FscSerial != null && d.FscSerial.Lot.ProductId != null)
+                .GroupBy(d => d.FscSerial!.Lot.ProductId!.Value)
+                .Select(g => new { ProductId = g.Key, TotalKg = g.Sum(d => d.ConsumedWeight + d.WasteWeight) })
+                .ToDictionaryAsync(x => x.ProductId, x => x.TotalKg);
+
             var rows = movements
                 .GroupBy(m => m.ProductId)
                 .Select(g =>
@@ -158,9 +178,11 @@ namespace FSCTakip.WebUI.Controllers
                     bool hasConv = unit != "KG";
 
                     var inOrig  = g.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.Quantity);
-                    var outOrig = g.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity);
+                    var salesOut = g.Where(m => m.Type == MovementType.SalesDispatch).Sum(m => m.Quantity);
+                    var prodConsumKg2 = adminProdConsByProduct.TryGetValue(g.Key, out var pc2) ? pc2 : 0m;
+                    var outOrig = salesOut + prodConsumKg2;
                     var inKg    = g.Where(m => m.Type == MovementType.PurchaseEntry || m.Type == MovementType.ProductionEntry).Sum(m => m.QuantityKg ?? m.Quantity);
-                    var outKg   = g.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.QuantityKg ?? m.Quantity);
+                    var outKg   = g.Where(m => m.Type == MovementType.SalesDispatch).Sum(m => m.QuantityKg ?? m.Quantity) + prodConsumKg2;
 
                     return new AdminStockItem
                     {
@@ -221,6 +243,15 @@ namespace FSCTakip.WebUI.Controllers
                 .Where(m => filteredProductIds.Contains(m.ProductId))
                 .ToListAsync();
 
+            // Uretim tuketimi + fire urun bazinda
+            var indexProdConsByProduct = await _context.ProductionDetails
+                .Include(d => d.FscSerial).ThenInclude(s => s.Lot)
+                .Where(d => d.FscSerial != null && d.FscSerial.Lot.ProductId != null
+                         && filteredProductIds.Contains(d.FscSerial.Lot.ProductId!.Value))
+                .GroupBy(d => d.FscSerial!.Lot.ProductId!.Value)
+                .Select(g => new { ProductId = g.Key, TotalKg = g.Sum(d => d.ConsumedWeight + d.WasteWeight) })
+                .ToDictionaryAsync(x => x.ProductId, x => x.TotalKg);
+
             var grouped = movements
                 .GroupBy(m => m.ProductId)
                 .Select(g => new StockSummaryRow
@@ -228,7 +259,8 @@ namespace FSCTakip.WebUI.Controllers
                     ProductId   = g.Key,
                     Product     = g.First().Product!,
                     GirisAdet   = g.Where(m => m.Type == MovementType.ProductionEntry || m.Type == MovementType.PurchaseEntry).Sum(m => m.Quantity),
-                    CikisAdet   = g.Where(m => m.Type == MovementType.SalesDispatch || m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity),
+                    CikisAdet   = g.Where(m => m.Type == MovementType.SalesDispatch).Sum(m => m.Quantity)
+                                + (indexProdConsByProduct.TryGetValue(g.Key, out var ipc) ? ipc : 0m),
                     TransferAdet = g.Where(m => m.Type == MovementType.WarehouseTransfer).Sum(m => m.Quantity),
                     LastMovementDate = g.Max(m => m.DocumentDate)
                 })
