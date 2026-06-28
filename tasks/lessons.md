@@ -52,6 +52,67 @@ data-plan="@wr.PlannedQuantity.ToString(System.Globalization.CultureInfo.Invaria
 
 **Not:** Mamul (3xxxx) üretimi hâlâ stok hareketi oluşturmuyor (sadece WorkOrder.ActualQuantity); mamul stoğa satış sevkiyatında çıkış olarak girer — tasarım böyle.
 
+## Fire (WasteWeight) stok bakiyesinden bağımsız kalem — tüketim değil (2026-06-29)
+
+**Kural (kesinleşti):** Fire, tüketimin içinde DEĞİLDİR. İkisi bağımsız kayıp kalemdir.
+
+```
+Kalan bakiye = InitialWeight − ConsumedWeight − WasteWeight
+StockMovement.Quantity = ConsumedWeight + WasteWeight
+```
+
+**Uygulanan değişiklikler:**
+
+`ProductionController.SaveDetail`:
+- Yeni kayıt: `serial.CurrentWeight -= consumed + fire`
+- Düzenleme: `diff = (yeni consumed+fire) − (eski consumed+fire)`
+- Silme: `CurrentWeight += consumed + fire` (tam iade)
+- `WasteWeight > ConsumedWeight` validasyonu kaldırıldı (fire bağımsız)
+- `StockMovement.Quantity = consumed + fire`
+
+**Stok sayfalarında hesaplama — DB'ye güvenmeme kuralı:**
+Eski kayıtlarda `StockMovements.Quantity` sadece `ConsumedWeight` içerir (fire eksik) ve `FscSerial.CurrentWeight` fire düşülmeden kaydedilmiş olabilir. Bu yüzden **hiçbir stok sayfası `StockMovements.ProductionConsumption` veya `FscSerial.CurrentWeight`'i doğrudan toplamaz** — bunun yerine `ProductionDetails`'tan yeniden hesaplar:
+
+```csharp
+// Her stok sayfasında uretim tuketim toplami:
+var prodCons = await _context.ProductionDetails
+    .Where(...)
+    .GroupBy(d => d.FscSerial.Lot.ProductId)
+    .Select(g => new { ProductId = g.Key, TotalKg = g.Sum(d => d.ConsumedWeight + d.WasteWeight) })
+    .ToDictionaryAsync(...);
+
+// Kalan (bobin/seri bazinda):
+kalan = serial.InitialWeight
+      - serialConsumed[serial.Id]   // ProductionDetails.ConsumedWeight toplami
+      - serialFire[serial.Id]       // ProductionDetails.WasteWeight toplami
+      - (conversionFireKg ?? 0m);   // Donusum firesi (YM icin)
+
+// Net stok (urun bazinda):
+net = inbound - salesOut - prodCons[productId];  // consumed+fire birlikte
+```
+
+**Uygulanan sayfalar:**
+- `StockController.RawMaterial` → `ViewBag.SerialConsumed` + `ViewBag.SerialFire` + `ViewBag.TotalKg` yeniden hesaplandı
+- `StockController.Summary` → `productionConsumptionByProduct` (PD'dan), `outboundKg = salesOut + prodConsumKg`
+- `StockController.AdminStock` → aynı mantık
+- `StockController.Index` → `indexProdConsByProduct`, `CikisAdet = sales + prodCons`
+- `StockController.Movements` → `ViewBag.TotalProdConsumKg`, band/footer toplamları düzeltildi
+- `ConversionController.Index` → YM KALAN = `InitialWeight - pdConsumed - pdFire - convFire`
+- `RawMaterial.cshtml` → `tuketim`/`fire`/`kalan` değişkenleri, tfoot, data-kalan, data-status
+
+**Veri düzeltme endpoint'leri (bir kez çalıştır):**
+- `POST /Production/RecalcCurrentWeightFire` → `FscSerial.CurrentWeight = InitialWeight - consumed - fire`
+- `POST /Production/RecalcStockMovementsFire` → `StockMovement.Quantity = consumed + fire`
+
+**Kural: Yeni stok sayfası/özellik yazarken ASLA şunu yapma:**
+```csharp
+// YANLIŞ — eski kayitlarda fire eksik
+.Sum(m => m.Type == MovementType.ProductionConsumption ? m.Quantity : 0)
+// YANLIŞ — CurrentWeight fire duşülmemiş olabilir  
+kalan = serial.CurrentWeight
+```
+Her zaman `ProductionDetails.Sum(consumed + fire)` kullan.
+
 ## Tek tip mesaj kutusu standardı (2026-06-14) — §11'e eklenecek
 
 Tüm mesaj/onay kutuları `_Layout.cshtml`'de tanımlı tek bir ARD temalı sistemden çıkar (beyaz kart, ikon halkası, marka mavisi `#1976d2` / tehlike kırmızısı `#dc2626`, 16px köşe, yumuşak animasyon, Enter=onay/Esc=iptal):
