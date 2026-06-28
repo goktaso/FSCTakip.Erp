@@ -223,6 +223,42 @@ namespace FSCTakip.WebUI.Controllers
             return Json(new { success = true, message = $"{updated} iÅŸ emrinin Ã¼retim adedi gÃ¼ncellendi." });
         }
 
+        // POST /Production/RecalcCurrentWeightFire — eski kayitlardaki fire dusulmemis CurrentWeight duzeltme (one-time admin)
+        [HttpPost]
+        public async Task<IActionResult> RecalcCurrentWeightFire()
+        {
+            // Uretimde fire olan tum serillerin CurrentWeight = InitialWeight - SUM(consumed + fire)
+            var details = await _context.ProductionDetails
+                .GroupBy(d => d.FscSerialId)
+                .Select(g => new {
+                    SerialId      = g.Key,
+                    TotalConsumed = g.Sum(d => d.ConsumedWeight),
+                    TotalFire     = g.Sum(d => d.WasteWeight)
+                })
+                .ToListAsync();
+
+            var serialIds = details.Select(d => d.SerialId).ToList();
+            var serials = await _context.FscSerials
+                .Where(s => serialIds.Contains(s.Id))
+                .ToListAsync();
+
+            int updated = 0;
+            foreach (var s in serials)
+            {
+                var det = details.First(d => d.SerialId == s.Id);
+                var correct = s.InitialWeight - det.TotalConsumed - det.TotalFire;
+                if (correct < 0) correct = 0;
+                if (s.CurrentWeight != correct)
+                {
+                    s.CurrentWeight = correct;
+                    updated++;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = $"{updated} bobinin stok bakiyesi fire dusulerek duzeltildi." });
+        }
+
         // GET /Production/Detail/{id}
         public async Task<IActionResult> Detail(int id)
         {
