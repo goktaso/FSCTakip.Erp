@@ -52,8 +52,9 @@ namespace FSCTakip.WebUI.Controllers
                 .Select(s => new {
                     s.Id, LotId = s.LotId,
                     s.Lot.ArrivalDate, s.Lot.PartiNo,
-                    Hedef   = s.Lot.Product != null ? s.Lot.Product.ProductName : "—",
-                    FscType = s.Lot.FscType.Name,
+                    Hedef    = s.Lot.Product != null ? s.Lot.Product.ProductName   : "—",
+                    HedefKod = s.Lot.Product != null ? s.Lot.Product.ExternalCode  : null,
+                    FscType  = s.Lot.FscType.Name,
                     s.InitialWeight, s.CurrentWeight,
                     s.Lot.SourceSerialId, s.Lot.ConversionFireKg
                 })
@@ -76,6 +77,7 @@ namespace FSCTakip.WebUI.Controllers
                 Tarih        = x.ArrivalDate,
                 Parti        = x.PartiNo,
                 Hedef        = x.Hedef,
+                HedefKod     = x.HedefKod,
                 FscType      = x.FscType,
                 Kg           = x.InitialWeight,
                 Kalan        = x.CurrentWeight,
@@ -438,6 +440,7 @@ namespace FSCTakip.WebUI.Controllers
         public DateTime Tarih { get; set; }
         public string Parti { get; set; } = "";
         public string Hedef { get; set; } = "";
+        public string? HedefKod { get; set; }
         public string FscType { get; set; } = "";
         public decimal Kg { get; set; }
         public decimal Kalan { get; set; }

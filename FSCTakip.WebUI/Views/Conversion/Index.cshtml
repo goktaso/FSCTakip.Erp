@@ -269,12 +269,18 @@
                                     <span>Tümünü Seç</span>
                                 </label>
                                 <div class="mcd-items" style="max-height:220px;">
-                                    @foreach (var h in recent.Select(r => r.Hedef).Distinct().OrderBy(x => x))
+                                    @foreach (var hItem in recent.Select(r => new { r.Hedef, r.HedefKod }).DistinctBy(x => x.Hedef).OrderBy(x => x.Hedef))
                                     {
+                                        var hedefVal = $"{hItem.HedefKod} {hItem.Hedef}".ToLower().Trim();
                                         <label class="mcd-row">
-                                            <input type="checkbox" class="mcd-cb rf-hedef-cb" value="@h.ToLower()"
+                                            <input type="checkbox" class="mcd-cb rf-hedef-cb" value="@hedefVal"
+                                                   data-hedef-ad="@hItem.Hedef"
                                                    onchange="mcdUpdate('mcd-rf-hedef');applyRecentFilter()">
-                                            <span class="mcd-name" title="@h">@h</span>
+                                            @if (!string.IsNullOrWhiteSpace(hItem.HedefKod))
+                                            {
+                                                <span class="mcd-ext">@hItem.HedefKod</span>
+                                            }
+                                            <span class="mcd-name" title="@hItem.Hedef">@hItem.Hedef</span>
                                         </label>
                                     }
                                 </div>
@@ -384,7 +390,7 @@
                             <tr class="recent-row"
                                 data-filter="@filterText"
                                 data-kaynak="@($"{r.KaynakKod} {r.KaynakAd} {r.KaynakSerial}".ToLower())"
-                                data-hedef="@r.Hedef.ToLower()"
+                                data-hedef="@($"{r.HedefKod} {r.Hedef}".ToLower().Trim())"
                                 data-parti="@r.Parti.ToLower()"
                                 data-fsc="@r.FscType.ToLower()"
                                 data-tarih="@r.Tarih.ToString("yyyy-MM-dd")">
@@ -495,7 +501,7 @@ function clearRecentFilter() {
 
 function exportRecentExcel() {
     var selParti  = getChecked('rf-parti-cb').map(function(v){ return document.querySelector('.rf-parti-cb[value="' + v + '"]').closest('label').textContent.trim(); });
-    var selHedef  = getChecked('rf-hedef-cb').map(function(v){ return document.querySelector('.rf-hedef-cb[value="' + v + '"]').closest('label').textContent.trim(); });
+    var selHedef  = getChecked('rf-hedef-cb').map(function(v){ var cb = document.querySelector('.rf-hedef-cb[value="' + CSS.escape(v) + '"]'); return cb ? (cb.dataset.hedefAd || v) : v; });
     var selFsc    = getChecked('rf-fsc-cb').map(function(v){ return document.querySelector('.rf-fsc-cb[value="' + v + '"]').closest('label').textContent.trim(); });
     var tarih     = (document.getElementById('rfTarih').value || '').trim();
 
