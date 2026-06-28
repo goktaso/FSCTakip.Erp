@@ -13,6 +13,7 @@
     var filtSupplierIds = ViewBag.SupplierIds as int[] ?? Array.Empty<int>();
     var filtFscTypeIds  = ViewBag.FscTypeIds  as int[] ?? Array.Empty<int>();
     var productIds      = ViewBag.ProductIds as int[] ?? Array.Empty<int>();
+    var fireDetails     = ViewBag.FireDetails as List<FSCTakip.WebUI.Controllers.FireMovementRow> ?? new();
     // Dogru uretim tuketim toplami (consumed+fire) ve SM toplami (fire eksik olabilir)
     decimal totalProdConsumKg   = ViewBag.TotalProdConsumKg   ?? 0m;
     decimal totalSMProdConsumKg = ViewBag.TotalSMProdConsumKg ?? 0m;
@@ -379,10 +380,38 @@
                         </td>
                     </tr>
                 }
+                @foreach (var fr in fireDetails)
+                {
+                    <tr style="background:rgba(234,179,8,.06);"
+                        data-giris="0"
+                        data-cikis="@fr.FireKg.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                        <td class="text-muted">@fr.Date.ToString("dd.MM.yyyy")</td>
+                        <td>
+                            <span class="badge" style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;">Fire</span>
+                        </td>
+                        <td>
+                            <div style="font-size:13px;font-weight:500;">@fr.ProductName</div>
+                            <div style="margin-top:2px;">
+                                @if (!string.IsNullOrEmpty(fr.ProductCode)) {
+                                    <span class="badge" style="background:#f3f4f6;color:#374151;font-size:10px;">@fr.ProductCode</span>
+                                }
+                                @if (!string.IsNullOrEmpty(fr.ExtCode)) {
+                                    <span class="badge ms-1" style="background:#eef2ff;color:#3730a3;font-size:10px;">@fr.ExtCode</span>
+                                }
+                            </div>
+                        </td>
+                        <td class="text-end fw-semibold text-warning">-@fr.FireKg.ToString("N0")</td>
+                        <td>KG</td>
+                        <td><span class="text-muted small">@fr.WorkOrderNo</span></td>
+                        <td class="text-muted small">Fire / Atık — Bobin: @fr.SerialNo</td>
+                        <td>—</td>
+                        <td>—</td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
-    @if (Model.Any())
+    @if (Model.Any() || fireDetails.Any())
     {
         <div class="table-footer d-flex justify-content-between align-items-center px-3 py-2 border-top small text-muted">
             <span id="footerCount">@Model.Count kayıt</span>

@@ -374,8 +374,27 @@ namespace FSCTakip.WebUI.Controllers
                 pdMovQuery = pdMovQuery.Where(d => productIds.Contains(d.FscSerial!.Lot.ProductId!.Value));
             var totalProdConsumKg = await pdMovQuery.SumAsync(d => d.ConsumedWeight + d.WasteWeight);
             var totalSMProdConsumKg = movements.Where(m => m.Type == MovementType.ProductionConsumption).Sum(m => m.Quantity);
-            ViewBag.TotalProdConsumKg  = totalProdConsumKg;   // dogru toplam (consumed+fire)
-            ViewBag.TotalSMProdConsumKg = totalSMProdConsumKg; // SM'deki toplam (fire eksik olabilir)
+            ViewBag.TotalProdConsumKg  = totalProdConsumKg;
+            ViewBag.TotalSMProdConsumKg = totalSMProdConsumKg;
+
+            // Fire satirlari icin: WasteWeight > 0 olan ProductionDetail'lar (viewde ayri satir olarak gosterilecek)
+            var fireDetails = await pdMovQuery
+                .Where(d => d.WasteWeight > 0)
+                .Include(d => d.WorkOrder)
+                .Select(d => new FireMovementRow
+                {
+                    ProductId    = d.FscSerial!.Lot.ProductId!.Value,
+                    ProductName  = d.FscSerial.Lot.Product != null ? d.FscSerial.Lot.Product.ProductName : "—",
+                    ProductCode  = d.FscSerial.Lot.Product != null ? d.FscSerial.Lot.Product.ProductCode : "",
+                    ExtCode      = d.FscSerial.Lot.Product != null ? d.FscSerial.Lot.Product.ExternalCode : null,
+                    FireKg       = d.WasteWeight,
+                    Date         = d.ProductionDate,
+                    WorkOrderNo  = d.WorkOrder != null ? d.WorkOrder.WorkOrderNo : "",
+                    SerialNo     = d.FscSerial.SerialNo
+                })
+                .OrderByDescending(r => r.Date)
+                .ToListAsync();
+            ViewBag.FireDetails = fireDetails;
 
             ViewBag.Products    = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
             ViewBag.Suppliers   = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
@@ -716,5 +735,17 @@ namespace FSCTakip.WebUI.Controllers
         public decimal TransferAdet { get; set; }
         public decimal NetAdet => GirisAdet - CikisAdet;
         public DateTime? LastMovementDate { get; set; }
+    }
+
+    public class FireMovementRow
+    {
+        public int      ProductId   { get; set; }
+        public string   ProductName { get; set; } = "";
+        public string   ProductCode { get; set; } = "";
+        public string?  ExtCode     { get; set; }
+        public decimal  FireKg      { get; set; }
+        public DateTime Date        { get; set; }
+        public string   WorkOrderNo { get; set; } = "";
+        public string   SerialNo    { get; set; } = "";
     }
 }
