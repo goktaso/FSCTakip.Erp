@@ -270,6 +270,101 @@ namespace FSCTakip.WebUI.Controllers
             catch (Exception ex) { return Json(new { success = false, message = ex.Message }); }
         }
 
+        // GET /Conversion/ExportExcel?parti=YM25-001&hedef=...&fsc=...&tarih=yyyy-MM-dd
+        [HttpGet]
+        public async Task<IActionResult> ExportExcel(string[]? parti, string[]? hedef, string[]? fsc, string? tarih)
+        {
+            var query = _context.FscSerials
+                .Include(s => s.Lot).ThenInclude(l => l.Product)
+                .Include(s => s.Lot).ThenInclude(l => l.FscType)
+                .Where(s => s.Lot.PartiNo.StartsWith("YM"))
+                .AsQueryable();
+
+            if (parti?.Length > 0)
+                query = query.Where(s => parti.Contains(s.Lot.PartiNo));
+            if (hedef?.Length > 0)
+                query = query.Where(s => s.Lot.Product != null && hedef.Contains(s.Lot.Product.ProductName));
+            if (fsc?.Length > 0)
+                query = query.Where(s => fsc.Contains(s.Lot.FscType.Name));
+            if (!string.IsNullOrWhiteSpace(tarih) && DateTime.TryParse(tarih, out var t))
+                query = query.Where(s => s.Lot.ArrivalDate.Date == t.Date);
+
+            var recentYm = await query
+                .OrderByDescending(s => s.Id)
+                .Select(s => new {
+                    s.Id, LotId = s.LotId,
+                    s.Lot.ArrivalDate, s.Lot.PartiNo,
+                    Hedef    = s.Lot.Product != null ? s.Lot.Product.ProductName : "—",
+                    FscType  = s.Lot.FscType.Name,
+                    s.InitialWeight, s.CurrentWeight,
+                    s.Lot.SourceSerialId, s.Lot.ConversionFireKg
+                })
+                .ToListAsync();
+
+            var srcIds = recentYm.Where(x => x.SourceSerialId != null).Select(x => x.SourceSerialId!.Value).Distinct().ToList();
+            var srcMap = await _context.FscSerials
+                .Where(s => srcIds.Contains(s.Id))
+                .Include(s => s.Lot).ThenInclude(l => l.Product)
+                .Select(s => new {
+                    s.Id, s.SerialNo,
+                    Kod = s.Lot.Product != null ? s.Lot.Product.ExternalCode : null,
+                    Ad  = s.Lot.Product != null ? s.Lot.Product.ProductName  : null
+                })
+                .ToDictionaryAsync(x => x.Id, x => x);
+
+            var rows = recentYm.Select(x => new {
+                Tarih        = x.ArrivalDate.ToString("dd.MM.yyyy"),
+                Parti        = x.PartiNo,
+                KaynakKod    = x.SourceSerialId != null && srcMap.ContainsKey(x.SourceSerialId.Value) ? srcMap[x.SourceSerialId.Value].Kod ?? "" : "",
+                KaynakAd     = x.SourceSerialId != null && srcMap.ContainsKey(x.SourceSerialId.Value) ? srcMap[x.SourceSerialId.Value].Ad  ?? "—" : "—",
+                KaynakSerial = x.SourceSerialId != null && srcMap.ContainsKey(x.SourceSerialId.Value) ? srcMap[x.SourceSerialId.Value].SerialNo : "—",
+                HedefYm      = x.Hedef,
+                FscType      = x.FscType,
+                UretilenKg   = x.InitialWeight,
+                FireKg       = x.ConversionFireKg ?? 0m,
+                KalanKg      = x.CurrentWeight
+            }).ToList();
+
+            using var wb = new ClosedXML.Excel.XLWorkbook();
+            var ws = wb.Worksheets.Add("YM Dönüşümler");
+
+            string[] headers = ["Tarih", "Parti", "Kaynak Kod", "Kaynak Ürün", "Kaynak Seri No", "Hedef YM", "FSC Tipi", "Üretilen (kg)", "Fire (kg)", "Kalan (kg)"];
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var cell = ws.Cell(1, i + 1);
+                cell.Value = headers[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#1e3d14");
+                cell.Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
+            }
+
+            for (int r = 0; r < rows.Count; r++)
+            {
+                var row = rows[r];
+                int ri = r + 2;
+                ws.Cell(ri, 1).Value  = row.Tarih;
+                ws.Cell(ri, 2).Value  = row.Parti;
+                ws.Cell(ri, 3).Value  = row.KaynakKod;
+                ws.Cell(ri, 4).Value  = row.KaynakAd;
+                ws.Cell(ri, 5).Value  = row.KaynakSerial;
+                ws.Cell(ri, 6).Value  = row.HedefYm;
+                ws.Cell(ri, 7).Value  = row.FscType;
+                ws.Cell(ri, 8).Value  = row.UretilenKg;
+                ws.Cell(ri, 9).Value  = row.FireKg;
+                ws.Cell(ri, 10).Value = row.KalanKg;
+                if (r % 2 == 1)
+                    ws.Row(ri).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#f9fafb");
+            }
+
+            ws.Columns().AdjustToContents();
+
+            using var ms = new System.IO.MemoryStream();
+            wb.SaveAs(ms);
+            ms.Position = 0;
+            var fileName = $"YM_Donusumler_{DateTime.Now:ddMMyyyy}.xlsx";
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
         // POST /Conversion/DeleteConversion — dönüşümü geri al ve sil
         [HttpPost]
         public async Task<IActionResult> DeleteConversion(int serialId)

@@ -214,6 +214,10 @@
                         style="font-size:11px;padding:3px 10px;background:rgba(25,118,210,.08);color:#1976d2;border:1px solid rgba(25,118,210,.2);">
                     <i class="fas fa-filter me-1"></i>Filtrele
                 </button>
+                <button class="btn btn-sm ms-1" onclick="exportRecentExcel()"
+                        style="font-size:11px;padding:3px 10px;background:rgba(22,163,74,.08);color:#166534;border:1px solid rgba(22,163,74,.2);">
+                    <i class="fas fa-file-excel me-1"></i>Excel
+                </button>
             </div>
 
             <!-- Filtre Bandı — MCD Checkbox Paneller -->
@@ -295,6 +299,35 @@
                                             <input type="checkbox" class="mcd-cb rf-fsc-cb" value="@f.ToLower()"
                                                    onchange="mcdUpdate('mcd-rf-fsc');applyRecentFilter()">
                                             <span class="mcd-name">@f</span>
+                                        </label>
+                                    }
+                                </div>
+                                <div class="mcd-empty" style="display:none;">Sonuç yok</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Parti MCD -->
+                    <div style="display:flex;flex-direction:column;min-width:120px;">
+                        <label style="font-size:10.5px;font-weight:600;color:#6b7280;margin-bottom:3px;">PARTİ</label>
+                        <div class="mcd" id="mcd-rf-parti" data-placeholder="— Tümü —">
+                            <button type="button" class="mcd-btn" style="font-size:12px;padding:4px 8px;" onclick="mcdOpen('mcd-rf-parti')">
+                                <span class="mcd-lbl">— Tümü —</span>
+                                <i class="fas fa-angle-down mcd-arrow"></i>
+                            </button>
+                            <div class="mcd-panel" id="mcd-rf-parti-panel" style="display:none;">
+                                <div class="mcd-search-row"><input type="text" class="mcd-search" placeholder="Ara..." oninput="mcdSearch(this)"></div>
+                                <label class="mcd-row mcd-header">
+                                    <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-rf-parti');applyRecentFilter()">
+                                    <span>Tümünü Seç</span>
+                                </label>
+                                <div class="mcd-items" style="max-height:220px;">
+                                    @foreach (var p in recent.Select(r => r.Parti).Distinct().OrderBy(x => x))
+                                    {
+                                        <label class="mcd-row">
+                                            <input type="checkbox" class="mcd-cb rf-parti-cb" value="@p.ToLower()"
+                                                   onchange="mcdUpdate('mcd-rf-parti');applyRecentFilter()">
+                                            <span class="mcd-name">@p</span>
                                         </label>
                                     }
                                 </div>
@@ -426,6 +459,7 @@ function applyRecentFilter() {
     var selKaynak = getChecked('rf-kaynak-cb');
     var selHedef  = getChecked('rf-hedef-cb');
     var selFsc    = getChecked('rf-fsc-cb');
+    var selParti  = getChecked('rf-parti-cb');
     var tarih     = (document.getElementById('rfTarih').value || '').trim();
 
     var rows = document.querySelectorAll('#recentTable tbody tr.recent-row');
@@ -435,6 +469,7 @@ function applyRecentFilter() {
         if (selKaynak.length && !selKaynak.some(function(v){ return tr.getAttribute('data-kaynak').includes(v); })) ok = false;
         if (selHedef.length  && !selHedef.some(function(v){  return tr.getAttribute('data-hedef').includes(v);  })) ok = false;
         if (selFsc.length    && !selFsc.some(function(v){    return tr.getAttribute('data-fsc').includes(v);    })) ok = false;
+        if (selParti.length  && !selParti.some(function(v){  return tr.getAttribute('data-parti').includes(v);  })) ok = false;
         if (tarih && tr.getAttribute('data-tarih') !== tarih) ok = false;
         tr.style.display = ok ? '' : 'none';
         if (ok) visible++;
@@ -445,17 +480,32 @@ function applyRecentFilter() {
     var emptyMsg = document.getElementById('recentEmptyMsg');
     if (emptyMsg) emptyMsg.style.display = (visible === 0 && rows.length > 0) ? '' : 'none';
     var filterBadge = document.getElementById('recentFilterBadge');
-    var hasFilter = selKaynak.length > 0 || selHedef.length > 0 || selFsc.length > 0 || tarih !== '';
+    var hasFilter = selKaynak.length > 0 || selHedef.length > 0 || selFsc.length > 0 || selParti.length > 0 || tarih !== '';
     if (filterBadge) filterBadge.style.display = hasFilter ? '' : 'none';
 }
 
 function clearRecentFilter() {
-    document.querySelectorAll('.rf-kaynak-cb,.rf-hedef-cb,.rf-fsc-cb').forEach(function(cb){ cb.checked = false; });
-    ['mcd-rf-kaynak','mcd-rf-hedef','mcd-rf-fsc'].forEach(function(id){ mcdUpdate(id); });
+    document.querySelectorAll('.rf-kaynak-cb,.rf-hedef-cb,.rf-fsc-cb,.rf-parti-cb').forEach(function(cb){ cb.checked = false; });
+    ['mcd-rf-kaynak','mcd-rf-hedef','mcd-rf-fsc','mcd-rf-parti'].forEach(function(id){ mcdUpdate(id); });
     document.getElementById('rfTarih').value = '';
     var filterBadge = document.getElementById('recentFilterBadge');
     if (filterBadge) filterBadge.style.display = 'none';
     applyRecentFilter();
+}
+
+function exportRecentExcel() {
+    var selParti  = getChecked('rf-parti-cb').map(function(v){ return document.querySelector('.rf-parti-cb[value="' + v + '"]').closest('label').textContent.trim(); });
+    var selHedef  = getChecked('rf-hedef-cb').map(function(v){ return document.querySelector('.rf-hedef-cb[value="' + v + '"]').closest('label').textContent.trim(); });
+    var selFsc    = getChecked('rf-fsc-cb').map(function(v){ return document.querySelector('.rf-fsc-cb[value="' + v + '"]').closest('label').textContent.trim(); });
+    var tarih     = (document.getElementById('rfTarih').value || '').trim();
+
+    var url = '/Conversion/ExportExcel?';
+    var params = [];
+    selParti.forEach(function(v){ params.push('parti=' + encodeURIComponent(v)); });
+    selHedef.forEach(function(v){ params.push('hedef=' + encodeURIComponent(v)); });
+    selFsc.forEach(function(v){   params.push('fsc='   + encodeURIComponent(v)); });
+    if (tarih) params.push('tarih=' + encodeURIComponent(tarih));
+    window.location.href = url + params.join('&');
 }
 
 // Sayfa yüklenince filtre listelerini doldur

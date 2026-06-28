@@ -370,4 +370,4 @@ FSCTakip.WebUI/appsettings.Development.json
 FSCTakip.WebUI/wwwroot/uploads/
 
 # ── Yerel makine ayarları ──
-.claude/settings.local.json
+.claude/settings.local.jsongraphify-out/
