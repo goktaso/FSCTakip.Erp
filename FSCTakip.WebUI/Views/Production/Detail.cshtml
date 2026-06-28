@@ -1350,10 +1350,10 @@ window.openAddDetailFn = function() {
     input.style.borderColor = '';
     document.getElementById('detailRecipeId').value = '';
     highlightRecipeBtn('');
-    document.getElementById('detailDate').value    = new Date().toISOString().split('T')[0];
+    document.getElementById('detailDate').value    = '@Model.PlannedDate.ToString("yyyy-MM-dd")';
     document.getElementById('detailConsumed').value = '';
     const qtyFld = document.getElementById('detailQty');
-    qtyFld.value = '';
+    qtyFld.value = @Model.PlannedQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
     qtyFld._manualEntry = false;
     document.getElementById('qtyAutoHint').style.display = 'none';
     document.getElementById('detailNotes').value    = '';
