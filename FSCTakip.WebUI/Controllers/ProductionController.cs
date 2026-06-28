@@ -259,6 +259,78 @@ namespace FSCTakip.WebUI.Controllers
             return Json(new { success = true, message = $"{updated} bobinin stok bakiyesi fire dusulerek duzeltildi." });
         }
 
+
+        // POST /Production/RecalcStockMovementsFire -- eski StockMovement Quantity = consumed only, guncelle consumed+fire
+        [HttpPost]
+        public async Task<IActionResult> RecalcStockMovementsFire()
+        {
+            var details = await _context.ProductionDetails
+                .Select(d => new { d.Id, d.ConsumedWeight, d.WasteWeight, d.FscSerialId, d.WorkOrderId, d.ProductionDate })
+                .ToListAsync();
+
+            if (!details.Any())
+                return Json(new { success = true, message = "Islenecek uretim kaydi yok." });
+
+            var detailIds = details.Select(d => d.Id).ToList();
+            var movements = await _context.StockMovements
+                .Where(m => m.Type == MovementType.ProductionConsumption
+                         && m.ErpReferenceId != null
+                         && detailIds.Contains(m.ErpReferenceId.Value))
+                .ToListAsync();
+            var movMap = movements.ToDictionary(m => m.ErpReferenceId!.Value);
+
+            var serialIds = details.Select(d => d.FscSerialId).Distinct().ToList();
+            var serialProductMap = await _context.FscSerials
+                .Where(s => serialIds.Contains(s.Id))
+                .Select(s => new { s.Id, s.Lot.ProductId })
+                .ToDictionaryAsync(x => x.Id, x => (int?)x.ProductId);
+
+            var woIds = details.Select(d => d.WorkOrderId).Distinct().ToList();
+            var woNoMap = await _context.WorkOrders
+                .Where(w => woIds.Contains(w.Id))
+                .Select(w => new { w.Id, w.WorkOrderNo })
+                .ToDictionaryAsync(w => w.Id, w => w.WorkOrderNo);
+
+            int updated = 0, created = 0;
+            string user = User.Identity?.Name ?? "System";
+
+            foreach (var d in details)
+            {
+                var correctQty = d.ConsumedWeight + d.WasteWeight;
+                if (movMap.TryGetValue(d.Id, out var sm))
+                {
+                    if (sm.Quantity != correctQty)
+                    {
+                        sm.Quantity = correctQty;
+                        updated++;
+                    }
+                }
+                else
+                {
+                    if (!serialProductMap.TryGetValue(d.FscSerialId, out var prodId) || prodId == null)
+                        continue;
+                    var woNo = woNoMap.TryGetValue(d.WorkOrderId, out var no) ? no : "";
+                    _context.StockMovements.Add(new StockMovement
+                    {
+                        Type           = MovementType.ProductionConsumption,
+                        ErpReferenceId = d.Id,
+                        ProductId      = prodId.Value,
+                        Quantity       = correctQty,
+                        Unit           = "kg",
+                        DocumentNo     = woNo,
+                        DocumentDate   = d.ProductionDate,
+                        WorkOrderId    = d.WorkOrderId,
+                        Description    = "Uretim tuketimi (recalc)",
+                        CreatedBy      = user,
+                        CreatedDate    = DateTime.Now
+                    });
+                    created++;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = updated + " stok hareketi guncellendi, " + created + " eksik hareket olusturuldu." });
+        }
         // GET /Production/Detail/{id}
         public async Task<IActionResult> Detail(int id)
         {
