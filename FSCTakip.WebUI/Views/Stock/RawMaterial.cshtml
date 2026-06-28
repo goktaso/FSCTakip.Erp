@@ -11,7 +11,8 @@
     int totalBobins     = ViewBag.TotalBobins ?? 0;
     int totalLots       = ViewBag.TotalLots   ?? 0;
     var byFscType       = ViewBag.ByFscType   as List<FSCTakip.WebUI.Controllers.FscTypeStockSummary>;
-    var serialFire      = ViewBag.SerialFire  as Dictionary<int, decimal> ?? new Dictionary<int, decimal>();
+    var serialFire      = ViewBag.SerialFire     as Dictionary<int, decimal> ?? new Dictionary<int, decimal>();
+    var serialConsumed  = ViewBag.SerialConsumed as Dictionary<int, decimal> ?? new Dictionary<int, decimal>();
     bool isDefaultFilter = (bool)(ViewBag.IsDefaultFilter ?? false);
     // Seri → türeyen YM lotları
     var ymLotsBySerial = ViewBag.YmLotsBySerial as Dictionary<int, List<FSCTakip.WebUI.Controllers.YmLotInfo>>
@@ -503,10 +504,12 @@
                 }
                 @foreach (var s in Model)
                 {
-                    decimal pct = s.InitialWeight > 0 ? (s.InitialWeight - s.CurrentWeight) / s.InitialWeight * 100 : 0;
-                    decimal tuketim = s.InitialWeight - s.CurrentWeight;
-                    decimal fire = serialFire.TryGetValue(s.Id, out var fv) ? fv : 0m;
-                    string rowClass = s.CurrentWeight <= 0 ? "table-secondary opacity-50" : "";
+                    decimal tuketim = serialConsumed.TryGetValue(s.Id, out var cv) ? cv : 0m;
+                    decimal fire    = serialFire.TryGetValue(s.Id, out var fv) ? fv : 0m;
+                    decimal kalan   = s.InitialWeight - tuketim - fire;
+                    if (kalan < 0) kalan = 0m;
+                    decimal pct = s.InitialWeight > 0 ? (tuketim + fire) / s.InitialWeight * 100 : 0;
+                    string rowClass = kalan <= 0 ? "table-secondary opacity-50" : "";
                     string fscBadge = (s.Lot?.FscType?.Name ?? "").Contains("100") ? "badge-success-soft" :
                                       (s.Lot?.FscType?.Name ?? "").Contains("MIX") ? "badge-info-soft" :
                                       "badge-secondary-soft";
@@ -514,12 +517,12 @@
                         data-giris="@s.InitialWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                         data-tuketim="@tuketim.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                         data-fire="@fire.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                        data-kalan="@s.CurrentWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                        data-kalan="@kalan.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                         data-fsc="@(s.Lot?.FscType?.Name ?? "")"
                         data-supplier="@(s.Lot?.Supplier?.Name ?? "")"
                         data-productid="@(s.Lot?.ProductId?.ToString() ?? "0")"
                         data-lotid="@s.LotId"
-                        data-status="@(s.CurrentWeight <= 0 ? "tukendi" : s.CurrentWeight < s.InitialWeight * 0.1m ? "az-kaldi" : "mevcut")"
+                        data-status="@(kalan <= 0 ? "tukendi" : kalan < s.InitialWeight * 0.1m ? "az-kaldi" : "mevcut")"
                         data-fsctype-full="@(s.Lot?.FscType?.Name ?? "")">
                         <td>
                             <a href="/Purchase/Detail/@s.LotId" class="fw-semibold text-decoration-none">
@@ -569,8 +572,8 @@
                         <td class="text-end" data-val="@s.InitialWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)">@s.InitialWeight.ToString("N1")</td>
                         <td class="text-end @(tuketim > 0 ? "text-danger" : "text-muted")" data-val="@tuketim.ToString(System.Globalization.CultureInfo.InvariantCulture)">@tuketim.ToString("N1")</td>
                         <td class="text-end @(fire > 0 ? "text-warning fw-semibold" : "text-muted")" data-val="@fire.ToString(System.Globalization.CultureInfo.InvariantCulture)">@fire.ToString("N1")</td>
-                        <td class="text-end fw-semibold @(s.CurrentWeight <= 0 ? "text-muted" : "text-success")" data-val="@s.CurrentWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)">
-                            @s.CurrentWeight.ToString("N1")
+                        <td class="text-end fw-semibold @(kalan <= 0 ? "text-muted" : "text-success")" data-val="@kalan.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                            @kalan.ToString("N1")
                         </td>
                         <td style="min-width:90px;">
                             <div class="d-flex align-items-center gap-1">
@@ -582,11 +585,11 @@
                         </td>
                         <td class="text-muted small">@s.Lot?.ArrivalDate.ToString("dd.MM.yyyy")</td>
                         <td>
-                            @if (s.CurrentWeight <= 0)
+                            @if (kalan <= 0)
                             {
                                 <span class="badge badge-secondary-soft">Tükendi</span>
                             }
-                            else if (s.CurrentWeight < s.InitialWeight * 0.1m)
+                            else if (kalan < s.InitialWeight * 0.1m)
                             {
                                 <span class="badge badge-warning-soft">Az Kaldı</span>
                             }
@@ -606,9 +609,9 @@
                             Toplam:
                         </td>
                         <td class="text-end" id="ftGiris">@Model.Sum(s => s.InitialWeight).ToString("N1") kg</td>
-                        <td class="text-end text-danger" id="ftTuketim">@Model.Sum(s => s.InitialWeight - s.CurrentWeight).ToString("N1") kg</td>
+                        <td class="text-end text-danger" id="ftTuketim">@Model.Sum(s => serialConsumed.TryGetValue(s.Id, out var cv2) ? cv2 : 0m).ToString("N1") kg</td>
                         <td class="text-end text-warning" id="ftFire">@Model.Sum(s => serialFire.TryGetValue(s.Id, out var fv2) ? fv2 : 0m).ToString("N1") kg</td>
-                        <td class="text-end text-success" id="ftKalan">@Model.Sum(s => s.CurrentWeight).ToString("N1") kg</td>
+                        <td class="text-end text-success" id="ftKalan">@Model.Sum(s => { var c2 = serialConsumed.TryGetValue(s.Id, out var c3) ? c3 : 0m; var f2 = serialFire.TryGetValue(s.Id, out var f3) ? f3 : 0m; var k = s.InitialWeight - c2 - f2; return k < 0 ? 0m : k; }).ToString("N1") kg</td>
                         <td colspan="3"></td>
                     </tr>
                 </tfoot>

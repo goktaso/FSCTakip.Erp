@@ -476,6 +476,14 @@ namespace FSCTakip.WebUI.Controllers
                 fireDict[kv.Key] = (fireDict.TryGetValue(kv.Key, out var pf) ? pf : 0m) + kv.Value;
             ViewBag.SerialFire = fireDict;
 
+            // Bobin basina tuketim (ProductionDetail.ConsumedWeight toplami)
+            var consumedDict = await _context.ProductionDetails
+                .Where(d => serialIds.Contains(d.FscSerialId))
+                .GroupBy(d => d.FscSerialId)
+                .Select(g => new { SerialId = g.Key, Consumed = g.Sum(x => x.ConsumedWeight) })
+                .ToDictionaryAsync(x => x.SerialId, x => x.Consumed);
+            ViewBag.SerialConsumed = consumedDict;
+
             // Bu serilerden türeyen YM lotları (SourceSerialId → serial.Id)
             var ymRaw = await _context.FscLots
                 .Include(l => l.Product)
@@ -492,8 +500,13 @@ namespace FSCTakip.WebUI.Controllers
                     }).ToList()
                 );
 
-            // Özet kartlar
-            ViewBag.TotalKg      = serials.Sum(s => s.CurrentWeight);
+            // Özet kartlar — KALAN = InitialWeight - consumed - fire (CurrentWeight'e guvenme, eski kayitlar fire dusulmemis olabilir)
+            ViewBag.TotalKg      = serials.Sum(s => {
+                var c = consumedDict.TryGetValue(s.Id, out var cv) ? cv : 0m;
+                var f = fireDict.TryGetValue(s.Id, out var fv) ? fv : 0m;
+                var k = s.InitialWeight - c - f;
+                return k < 0 ? 0m : k;
+            });
             ViewBag.TotalBobins  = serials.Count;
             ViewBag.TotalLots    = serials.Select(s => s.LotId).Distinct().Count();
             ViewBag.ByFscType    = serials
