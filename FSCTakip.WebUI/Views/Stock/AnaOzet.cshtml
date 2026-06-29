@@ -1,0 +1,425 @@
+@model List<FSCTakip.WebUI.Controllers.AnaOzetRow>
+@using System.Globalization
+@{
+    ViewData["Title"] = "Ana Özet";
+    decimal totalGiris   = ViewBag.TotalGiris   ?? 0m;
+    decimal totalTuketim = ViewBag.TotalTuketim ?? 0m;
+    decimal totalFire    = ViewBag.TotalFire    ?? 0m;
+    decimal totalYm      = ViewBag.TotalYm      ?? 0m;
+    decimal totalKalan   = ViewBag.TotalKalan   ?? 0m;
+    var IC = CultureInfo.InvariantCulture;
+    // Export URL — mevcut query string'i taşı
+    var qs = Context.Request.QueryString.Value ?? "";
+}
+
+@section Styles {
+<style>
+.th-wrap { display:flex;align-items:center;gap:4px;white-space:nowrap; }
+.th-sort { cursor:pointer;flex:1; }
+.th-sort:hover { opacity:.85; }
+.th-filter-btn { background:none;border:none;color:rgba(255,255,255,.55);cursor:pointer;padding:1px 4px;border-radius:3px;font-size:10px;flex-shrink:0;line-height:1; }
+.th-filter-btn:hover,.th-filter-btn.active { color:#fbbf24; }
+.col-filter-panel { position:absolute;top:100%;left:0;z-index:9999;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);min-width:210px;max-height:300px;display:none;flex-direction:column;color:#111827; }
+.col-filter-panel.open { display:flex; }
+.cfp-search { padding:6px 8px;border-bottom:1px solid #f0f0f0; }
+.cfp-search input { width:100%;border:1px solid #d1d5db;border-radius:4px;padding:3px 7px;font-size:12px; }
+.cfp-actions { display:flex;gap:4px;padding:4px 8px;border-bottom:1px solid #f0f0f0; }
+.cfp-actions button { flex:1;font-size:11px;padding:2px 0;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;cursor:pointer; }
+.cfp-actions button:hover { background:#e5e7eb; }
+.cfp-items { overflow-y:auto;flex:1; }
+.cfp-item { display:flex;align-items:center;gap:6px;padding:4px 10px;font-size:12px;cursor:pointer; }
+.cfp-item:hover { background:#f0f9ff; }
+.cfp-item input[type=checkbox] { cursor:pointer;flex-shrink:0; }
+.cfp-item .cfp-cnt { margin-left:auto;font-size:10px;color:#9ca3af; }
+.cfp-item.dim { opacity:.35; }
+
+#stickyTotals { position:sticky;top:0;z-index:50;background:#fff;border-bottom:2px solid #e5e7eb;padding:5px 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.07); }
+.st-item { display:flex;align-items:center;gap:4px;font-size:12px; }
+.st-lbl { color:#6b7280; }
+.st-val { font-weight:700;font-size:13px; }
+
+#ozetTable { font-size:12px; }
+#ozetTable thead th { white-space:nowrap;background:#1e3d14;color:#fff;position:sticky;top:0;z-index:10;padding:5px 8px; }
+.kg-cell { text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap; }
+.kalan-pos  { color:#16a34a;font-weight:600; }
+.kalan-zero { color:#9ca3af; }
+.fsc-badge  { font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600; }
+tr.ham-row:hover { background:#f0fdf4 !important; }
+tr.ham-row.is-ym { background:#fffbeb; }
+tr.ham-row.is-ym:hover { background:#fef9c3 !important; }
+tr.ym-row  { background:#fefce8; }
+tr.ym-row:hover { background:#fef9c3 !important; }
+tfoot td { font-weight:700;background:#f0fdf4;border-top:2px solid #16a34a; }
+.ym-indent { padding-left:22px;color:#92400e; }
+.ym-parti  { font-size:11px;color:#6366f1;font-style:italic; }
+</style>
+}
+
+<div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+    <h4 class="mb-0"><i class="fas fa-table-list me-2 text-success"></i>Ana Özet</h4>
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary" id="btnResetFilters" onclick="resetAllFilters()" style="display:none;">
+            <i class="fas fa-times me-1"></i>Filtreleri Temizle
+        </button>
+        <button class="btn btn-sm btn-outline-warning" id="btnYmToggle" onclick="toggleYm()" title="YM dönüşüm satırlarını göster/gizle">
+            <i class="fas fa-recycle me-1"></i>YM Detayı
+        </button>
+        <a href="/Stock/ExportAnaOzet@qs" class="btn btn-sm btn-success">
+            <i class="fas fa-file-excel me-1"></i>Excel
+        </a>
+    </div>
+</div>
+
+@* Sunucu filtresi *@
+<div class="card mb-2 shadow-sm">
+    <div class="card-body py-2">
+        <form method="get" action="/Stock/AnaOzet">
+            <div class="d-flex flex-wrap gap-2 align-items-end">
+                <div style="display:flex;flex-direction:column;min-width:125px;">
+                    <label class="form-label small fw-semibold mb-1">Başlangıç</label>
+                    <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control form-control-sm">
+                </div>
+                <div style="display:flex;flex-direction:column;min-width:125px;">
+                    <label class="form-label small fw-semibold mb-1">Bitiş</label>
+                    <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control form-control-sm">
+                </div>
+                <div style="display:flex;flex-direction:column;min-width:200px;">
+                    <label class="form-label small fw-semibold mb-1">Arama</label>
+                    <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="Parti no, stok kodu, ad...">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm align-self-end"><i class="fas fa-search me-1"></i>Getir</button>
+                <a href="/Stock/AnaOzet" class="btn btn-outline-secondary btn-sm align-self-end"><i class="fas fa-undo me-1"></i>Sıfırla</a>
+                <span id="filterStatus" class="small text-muted align-self-end" style="display:none;"></span>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Sticky Toplam Barı *@
+<div id="stickyTotals">
+    <div class="st-item"><i class="fas fa-list-ol" style="color:#6b7280;font-size:10px;"></i><span class="st-lbl">Kayıt:</span><span class="st-val text-dark" id="st-count">@Model.Count</span></div>
+    <div class="st-item"><i class="fas fa-truck" style="color:#1976d2;font-size:10px;"></i><span class="st-lbl">Giriş:</span><span class="st-val" style="color:#1976d2;" id="st-giris">@totalGiris.ToString("N0") kg</span></div>
+    <div class="st-item"><i class="fas fa-recycle" style="color:#7c3aed;font-size:10px;"></i><span class="st-lbl">YM:</span><span class="st-val" style="color:#7c3aed;" id="st-ym">@totalYm.ToString("N0") kg</span></div>
+    <div class="st-item"><i class="fas fa-industry" style="color:#f59e0b;font-size:10px;"></i><span class="st-lbl">Tüketim:</span><span class="st-val" style="color:#f59e0b;" id="st-tuketim">@totalTuketim.ToString("N0") kg</span></div>
+    <div class="st-item"><i class="fas fa-fire" style="color:#dc2626;font-size:10px;"></i><span class="st-lbl">Fire:</span><span class="st-val" style="color:#dc2626;" id="st-fire">@totalFire.ToString("N0") kg</span></div>
+    <div class="st-item"><i class="fas fa-balance-scale" style="color:#16a34a;font-size:10px;"></i><span class="st-lbl">Kalan:</span><span class="st-val" style="color:#16a34a;" id="st-kalan">@totalKalan.ToString("N0") kg</span></div>
+</div>
+
+<div class="card shadow-sm mt-2">
+<div class="card-body p-0">
+<div style="overflow-x:auto;">
+<table class="table table-sm mb-0" id="ozetTable">
+    <thead>
+        <tr>
+            @{
+                var filtCols = new[] {
+                    new { Key="tarih",    Label="Tarih",     Search=false },
+                    new { Key="parti",    Label="Parti No",  Search=true  },
+                    new { Key="tedarkci", Label="Tedarikçi", Search=true  },
+                    new { Key="fsc",      Label="FSC",       Search=false },
+                    new { Key="prodcode", Label="Stok Kodu", Search=true  },
+                    new { Key="extcode",  Label="Dış Kodu",  Search=true  },
+                    new { Key="prodname", Label="Stok Adı",  Search=true  },
+                };
+            }
+            @foreach (var c in filtCols) {
+            <th style="position:relative;">
+                <div class="th-wrap">
+                    <span class="th-sort" onclick="sortTable('@c.Key')">@c.Label</span>
+                    <button class="th-filter-btn" id="btn-@c.Key" onclick="cfpToggle('@c.Key',event)" title="Filtrele"><i class="fas fa-filter"></i></button>
+                </div>
+                <div class="col-filter-panel" id="cfp-@c.Key">
+                    @if (c.Search) { <div class="cfp-search"><input type="text" placeholder="Ara..." oninput="cfpSearch(this,'@c.Key')"></div> }
+                    <div class="cfp-actions">
+                        <button type="button" onclick="cfpAll('@c.Key')">Tümü</button>
+                        <button type="button" onclick="cfpClear('@c.Key')">Temizle</button>
+                    </div>
+                    <div class="cfp-items" id="cfp-items-@c.Key"></div>
+                </div>
+            </th>
+            }
+            <th><span>Tip</span></th>
+            <th class="kg-cell" onclick="sortTable('giris')"   style="cursor:pointer;">Giriş KG</th>
+            <th class="kg-cell" onclick="sortTable('ym')"      style="cursor:pointer;color:#d97706;">YM Dönüşüm KG</th>
+            <th class="kg-cell" onclick="sortTable('tuketim')" style="cursor:pointer;">Tüketim KG</th>
+            <th class="kg-cell" onclick="sortTable('fire')"    style="cursor:pointer;">Fire KG</th>
+            <th class="kg-cell" onclick="sortTable('kalan')"   style="cursor:pointer;">Kalan KG</th>
+        </tr>
+    </thead>
+    <tbody id="ozetTbody">
+
+        @{ int rowIdx = 0; }
+        @foreach (var row in Model) {
+            var rid = rowIdx++;
+            var kalanClass = row.KalanKg > 0 ? "kalan-pos" : "kalan-zero";
+            <tr class="ham-row @(row.IsYm ? "is-ym" : "")"
+                data-rid="@rid"
+                data-tarih="@row.ArrivalDate.ToString("dd.MM.yyyy")"
+                data-parti="@row.PartiNo"
+                data-tedarkci="@row.Supplier"
+                data-fsc="@row.FscType"
+                data-prodcode="@row.ProductCode"
+                data-extcode="@row.ExternalCode"
+                data-prodname="@row.ProductName"
+                data-giris="@row.GirisKg.ToString(IC)"
+                data-ym="@row.YmKg.ToString(IC)"
+                data-tuketim="@row.TuketimKg.ToString(IC)"
+                data-fire="@row.FireKg.ToString(IC)"
+                data-kalan="@row.KalanKg.ToString(IC)">
+                <td style="white-space:nowrap;">@row.ArrivalDate.ToString("dd.MM.yyyy")</td>
+                <td style="font-weight:600;">
+                    <a href="/Purchase/Detail/@row.LotId" target="_blank" style="color:#1976d2;">@row.PartiNo</a>
+                </td>
+                <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="@row.Supplier">@row.Supplier</td>
+                <td>
+                    @if (!string.IsNullOrEmpty(row.FscType)) {
+                        var fc = row.FscType.ToUpper().Contains("100") ? "#166534" : "#1e40af";
+                        var bg = row.FscType.ToUpper().Contains("100") ? "#dcfce7" : "#dbeafe";
+                        <span class="fsc-badge" style="background:@bg;color:@fc;">@row.FscType</span>
+                    }
+                </td>
+                <td style="font-weight:600;color:#1d4ed8;">@row.ProductCode</td>
+                <td style="color:#6366f1;">@row.ExternalCode</td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="@row.ProductName">@row.ProductName</td>
+                <td>
+                    @if (row.IsYm) {
+                        <span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;">YM Dönüşüm</span>
+                    } else {
+                        <span style="font-size:10px;background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;">Hammadde</span>
+                    }
+                </td>
+                <td class="kg-cell">@row.GirisKg.ToString("N2")</td>
+                <td class="kg-cell" style="color:#7c3aed;">@(row.YmKg > 0 ? row.YmKg.ToString("N2") : "—")</td>
+                <td class="kg-cell" style="color:#f59e0b;">@(row.TuketimKg > 0 ? row.TuketimKg.ToString("N2") : "—")</td>
+                <td class="kg-cell" style="color:#dc2626;">@(row.FireKg > 0 ? row.FireKg.ToString("N2") : "—")</td>
+                <td class="kg-cell @kalanClass">@row.KalanKg.ToString("N2")</td>
+            </tr>
+            @foreach (var ym in row.YmList) {
+                var yk = ym.YmKalan > 0 ? "kalan-pos" : "kalan-zero";
+                <tr class="ym-row"
+                    data-parent="@rid"
+                    data-tarih="@ym.ArrivalDate.ToString("dd.MM.yyyy")"
+                    data-parti="@ym.PartiNo"
+                    data-tedarkci="@row.Supplier"
+                    data-fsc="@row.FscType"
+                    data-prodcode="@ym.ProductCode"
+                    data-extcode="@ym.ExternalCode"
+                    data-prodname="@ym.ProductName"
+                    data-giris="@ym.YmKg.ToString(IC)"
+                    data-tuketim="@ym.YmTuketim.ToString(IC)"
+                    data-fire="@ym.YmFire.ToString(IC)"
+                    data-kalan="@ym.YmKalan.ToString(IC)">
+                    <td style="white-space:nowrap;color:#78350f;">@ym.ArrivalDate.ToString("dd.MM.yyyy")</td>
+                    <td class="ym-indent">
+                        ↳ <a href="/Purchase/Detail/@ym.LotId" target="_blank" class="ym-parti">@ym.PartiNo</a>
+                    </td>
+                    <td style="font-size:11px;color:#78350f;">↑ @row.Supplier</td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(row.FscType)) {
+                            var fc2 = row.FscType.ToUpper().Contains("100") ? "#166534" : "#1e40af";
+                            var bg2 = row.FscType.ToUpper().Contains("100") ? "#dcfce7" : "#dbeafe";
+                            <span class="fsc-badge" style="background:@bg2;color:@fc2;">@row.FscType</span>
+                        }
+                    </td>
+                    <td style="color:#92400e;font-weight:600;">@ym.ProductCode</td>
+                    <td style="color:#a855f7;font-size:11px;">@ym.ExternalCode</td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#78350f;" title="@ym.ProductName">@ym.ProductName</td>
+                    <td><span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;">YM Dönüşüm</span></td>
+                    <td class="kg-cell" style="color:#7c3aed;">@ym.YmKg.ToString("N2")</td>
+                    <td class="kg-cell" style="color:#7c3aed;">—</td>
+                    <td class="kg-cell" style="color:#f59e0b;">@(ym.YmTuketim > 0 ? ym.YmTuketim.ToString("N2") : "—")</td>
+                    <td class="kg-cell" style="color:#dc2626;">@(ym.YmFire > 0 ? ym.YmFire.ToString("N2") : "—")</td>
+                    <td class="kg-cell @yk">@ym.YmKalan.ToString("N2")</td>
+                </tr>
+            }
+        }
+        @if (!Model.Any()) {
+            <tr><td colspan="13" class="text-center text-muted py-4">Kayıt bulunamadı</td></tr>
+        }
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="7" class="text-muted" style="font-size:11px;"><span id="ft-count">@Model.Count</span> kayıt</td>
+            <td></td>
+            <td class="kg-cell" id="ft-giris">@totalGiris.ToString("N2")</td>
+            <td class="kg-cell" style="color:#7c3aed;" id="ft-ym">@totalYm.ToString("N2")</td>
+            <td class="kg-cell" style="color:#f59e0b;" id="ft-tuketim">@totalTuketim.ToString("N2")</td>
+            <td class="kg-cell" style="color:#dc2626;" id="ft-fire">@totalFire.ToString("N2")</td>
+            <td class="kg-cell kalan-pos" id="ft-kalan">@totalKalan.ToString("N2")</td>
+        </tr>
+    </tfoot>
+</table>
+</div></div></div>
+
+@section Scripts {
+<script>
+const _DIMS = ['tarih','parti','tedarkci','fsc','prodcode','extcode','prodname'];
+const _STATE = {};
+_DIMS.forEach(d => _STATE[d] = new Set());
+let _showYm = false;
+
+function toggleYm() {
+    _showYm = !_showYm;
+    const btn = document.getElementById('btnYmToggle');
+    btn.classList.toggle('btn-outline-warning', !_showYm);
+    btn.classList.toggle('btn-warning', _showYm);
+    applyFilters();
+}
+
+function _hamRows() { return [...document.querySelectorAll('#ozetTbody tr.ham-row')]; }
+function _ymRows()  { return [...document.querySelectorAll('#ozetTbody tr.ym-row')];  }
+function _rv(tr,dim){ return tr.dataset[dim] || ''; }
+
+function _hamMatches(tr) {
+    return _DIMS.every(d => {
+        const s = _STATE[d]; if (!s.size) return true;
+        return s.has(_rv(tr,d));
+    });
+}
+function _ymMatches(tr) {
+    return _DIMS.every(d => {
+        const s = _STATE[d]; if (!s.size) return true;
+        // tedarikci ve fsc için ym satırı boş — parent'ın değerine bak
+        const v = _rv(tr,d);
+        if (!v && (d==='tedarkci'||d==='fsc')) return true; // YM satırında bu filtre uygulanmaz
+        return s.has(v);
+    });
+}
+
+// dim hariç, ham satırlar bazında görünür değerler
+function _visibleHamExcept(skipDim) {
+    return _hamRows().filter(tr =>
+        _DIMS.every(d => {
+            if (d===skipDim) return true;
+            const s = _STATE[d]; if (!s.size) return true;
+            return s.has(_rv(tr,d));
+        })
+    );
+}
+
+function _rebuildPanel(dim) {
+    const container = document.getElementById('cfp-items-'+dim);
+    if (!container) return;
+    const searchEl = container.closest('.col-filter-panel')?.querySelector('.cfp-search input');
+    const term = (searchEl?.value||'').toLowerCase();
+    const visHam = _visibleHamExcept(dim);
+    const counts = {};
+    visHam.forEach(tr => { const v=_rv(tr,dim); if(v) counts[v]=(counts[v]||0)+1; });
+
+    const actHam = _hamRows().filter(tr => _hamMatches(tr));
+    const actVals = new Set(actHam.map(tr => _rv(tr,dim)).filter(Boolean));
+
+    const sel = _STATE[dim];
+    let html='';
+    Object.keys(counts).sort((a,b)=>a.localeCompare(b,'tr')).forEach(v=>{
+        if(term && !v.toLowerCase().includes(term)) return;
+        const chk  = sel.has(v)?'checked':'';
+        const dim2 = !actVals.has(v)&&sel.size>0&&!sel.has(v);
+        const safe = v.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        html+=`<label class="cfp-item${dim2?' dim':''}">
+            <input type="checkbox" ${chk} onchange="cfpCheck('${dim}','${safe}',this)">
+            <span>${v||'(Boş)'}</span><span class="cfp-cnt">${counts[v]}</span></label>`;
+    });
+    container.innerHTML = html||'<div class="cfp-item text-muted small">Sonuç yok</div>';
+}
+
+function cfpCheck(dim,val,cb){ if(cb.checked) _STATE[dim].add(val); else _STATE[dim].delete(val); applyFilters(); }
+function cfpAll(dim){
+    const counts={};
+    _visibleHamExcept(dim).forEach(tr=>{const v=_rv(tr,dim);if(v)counts[v]=1;});
+    Object.keys(counts).forEach(v=>_STATE[dim].add(v));
+    applyFilters();
+}
+function cfpClear(dim){
+    _STATE[dim].clear();
+    const si = document.querySelector(`#cfp-${dim} .cfp-search input`);
+    if (si) { si.value = ''; }
+    applyFilters();
+}
+function cfpSearch(input,dim){ _rebuildPanel(dim); }
+
+function cfpToggle(dim,e){
+    e.stopPropagation();
+    const panel=document.getElementById('cfp-'+dim);
+    const open=panel.classList.contains('open');
+    _DIMS.forEach(d=>document.getElementById('cfp-'+d)?.classList.remove('open'));
+    if(!open){ _rebuildPanel(dim); panel.classList.add('open'); setTimeout(()=>panel.querySelector('.cfp-search input')?.focus(),40); }
+}
+document.addEventListener('mousedown',e=>{ if(!e.target.closest('th')) _DIMS.forEach(d=>document.getElementById('cfp-'+d)?.classList.remove('open')); });
+
+function applyFilters(){
+    const hamRows=_hamRows(), ymRows=_ymRows();
+    let count=0,giris=0,ym=0,tuketim=0,fire=0,kalan=0;
+
+    hamRows.forEach(tr=>{
+        const rid=tr.dataset.rid;
+        const showHam=_hamMatches(tr);
+        tr.style.display=showHam?'':'none';
+        if(showHam){ count++; giris+=parseFloat(tr.dataset.giris)||0; ym+=parseFloat(tr.dataset.ym)||0; tuketim+=parseFloat(tr.dataset.tuketim)||0; fire+=parseFloat(tr.dataset.fire)||0; kalan+=parseFloat(tr.dataset.kalan)||0; }
+    });
+    ymRows.forEach(tr=>{
+        if (!_showYm) { tr.style.display='none'; return; }
+        const parentRid=tr.dataset.parent;
+        const parentVisible=hamRows.find(h=>h.dataset.rid===parentRid)?.style.display!=='none';
+        tr.style.display=parentVisible?'':'none';
+    });
+
+    _DIMS.forEach(d=>{ if(!document.getElementById('cfp-'+d)?.classList.contains('open')) _rebuildPanel(d); });
+    _DIMS.forEach(d=>{ if(document.getElementById('cfp-'+d)?.classList.contains('open')) _rebuildPanel(d); });
+
+    const hasAny=_DIMS.some(d=>_STATE[d].size>0);
+    _DIMS.forEach(d=>document.getElementById('btn-'+d)?.classList.toggle('active',_STATE[d].size>0));
+    document.getElementById('btnResetFilters').style.display=hasAny?'':'none';
+
+    const f0=n=>Math.round(n).toLocaleString('tr-TR');
+    const f2=n=>n.toLocaleString('tr-TR',{minimumFractionDigits:2});
+
+    ['st-count','ft-count'].forEach(id=>document.getElementById(id).textContent=count);
+    document.getElementById('st-giris').textContent=f0(giris)+' kg';
+    document.getElementById('st-tuketim').textContent=f0(tuketim)+' kg';
+    document.getElementById('st-fire').textContent=f0(fire)+' kg';
+    document.getElementById('st-kalan').textContent=f0(kalan)+' kg';
+    document.getElementById('ft-giris').textContent=f2(giris);
+    document.getElementById('ft-ym').textContent=f2(ym);
+    document.getElementById('ft-tuketim').textContent=f2(tuketim);
+    document.getElementById('ft-fire').textContent=f2(fire);
+    document.getElementById('ft-kalan').textContent=f2(kalan);
+    // Üst toplam
+
+    const st=document.getElementById('filterStatus');
+    if(hasAny){st.style.display='';st.textContent=`${count}/${hamRows.length} kayıt`;}else st.style.display='none';
+}
+
+function resetAllFilters(){ _DIMS.forEach(d=>_STATE[d].clear()); applyFilters(); }
+
+// Sıralama
+let _sk=null,_sa=true;
+const _skMap={tarih:0,parti:1,tedarkci:2,fsc:3,prodcode:4,extcode:5,prodname:6,giris:8,ym:9,tuketim:10,fire:11,kalan:12};
+function sortTable(key){
+    _sa=(_sk===key)?!_sa:true; _sk=key;
+    const tbody=document.getElementById('ozetTbody');
+    // Grupla: her ham-row + arkasındaki ym-row'lar
+    const hamRows=_hamRows();
+    hamRows.sort((a,b)=>{
+        const numKeys=['giris','tuketim','fire','kalan'];
+        if(numKeys.includes(key)){
+            const av=parseFloat(a.dataset[key])||0, bv=parseFloat(b.dataset[key])||0;
+            return _sa?av-bv:bv-av;
+        }
+        const av=_rv(a,key),bv=_rv(b,key);
+        return _sa?av.localeCompare(bv,'tr'):bv.localeCompare(av,'tr');
+    });
+    hamRows.forEach(ham=>{
+        tbody.appendChild(ham);
+        const rid=ham.dataset.rid;
+        _ymRows().filter(y=>y.dataset.parent===rid).forEach(y=>tbody.appendChild(y));
+    });
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+    _DIMS.forEach(d=>_rebuildPanel(d));
+    // YM satırları varsayılan gizli
+    _ymRows().forEach(tr=>tr.style.display='none');
+});
+</script>
+}

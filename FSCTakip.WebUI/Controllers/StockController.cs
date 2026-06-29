@@ -648,6 +648,334 @@ namespace FSCTakip.WebUI.Controllers
             return ExportToExcel(rows, "HammaddeStogu");
         }
 
+        // GET /Stock/AnaOzet — Parti bazli hammadde ozet tablosu
+        public async Task<IActionResult> AnaOzet(
+            int[]? supplierIds, int[]? fscTypeIds, int[]? productIds, int[]? ymProductIds,
+            string? search, DateTime? startDate, DateTime? endDate)
+        {
+            // 1. Tum hammadde lotlari (SourceSerialId IS NULL = satin alimla giren)
+            var lotQuery = _context.FscLots
+                .Include(l => l.Supplier)
+                .Include(l => l.FscType)
+                .Include(l => l.Product).ThenInclude(p => p!.ProductGroup)
+                .Where(l => l.SourceSerialId == null)
+                .AsQueryable();
+
+            if (startDate.HasValue) lotQuery = lotQuery.Where(l => l.ArrivalDate >= startDate.Value);
+            if (endDate.HasValue)   lotQuery = lotQuery.Where(l => l.ArrivalDate <= endDate.Value.AddDays(1));
+            if (supplierIds?.Length > 0)
+                lotQuery = lotQuery.Where(l => l.SupplierId.HasValue && supplierIds.Contains(l.SupplierId.Value));
+            if (fscTypeIds?.Length > 0)
+                lotQuery = lotQuery.Where(l => fscTypeIds.Contains(l.FscTypeId));
+            if (productIds?.Length > 0)
+                lotQuery = lotQuery.Where(l => l.ProductId.HasValue && productIds.Contains(l.ProductId.Value));
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                lotQuery = lotQuery.Where(l =>
+                    l.PartiNo.Contains(s) ||
+                    (l.Product != null && (l.Product.ProductCode.Contains(s) ||
+                     l.Product.ProductName.Contains(s) ||
+                     (l.Product.ExternalCode != null && l.Product.ExternalCode.Contains(s)))));
+            }
+
+            var lots = await lotQuery.OrderByDescending(l => l.ArrivalDate).ToListAsync();
+            var allLotIds = lots.Select(l => l.Id).ToList();
+
+            // 2. Lot'lara ait serials
+            var allSerials = await _context.FscSerials
+                .Where(s => allLotIds.Contains(s.LotId))
+                .ToListAsync();
+            var serialsByLot = allSerials.GroupBy(s => s.LotId).ToDictionary(g => g.Key, g => g.ToList());
+            var allSerialIds = allSerials.Select(s => s.Id).ToList();
+
+            // 3. Tuketim ve fire (ProductionDetails)
+            var consumedBySerial = await _context.ProductionDetails
+                .Where(d => allSerialIds.Contains(d.FscSerialId))
+                .GroupBy(d => d.FscSerialId)
+                .Select(g => new { SerialId = g.Key, Consumed = g.Sum(x => x.ConsumedWeight), Fire = g.Sum(x => x.WasteWeight) })
+                .ToListAsync();
+            var consumedDict = consumedBySerial.ToDictionary(x => x.SerialId, x => x.Consumed);
+            var fireDict     = consumedBySerial.ToDictionary(x => x.SerialId, x => x.Fire);
+
+            // 4. YM donusum lotlari (SourceSerialId bu lot'larin seriallarindan biri)
+            var ymLots = await _context.FscLots
+                .Include(l => l.Product)
+                .Where(l => l.SourceSerialId != null && allSerialIds.Contains(l.SourceSerialId.Value))
+                .ToListAsync();
+
+            if (ymProductIds?.Length > 0)
+                ymLots = ymLots.Where(l => l.ProductId.HasValue && ymProductIds.Contains(l.ProductId.Value)).ToList();
+
+            var ymLotIds = ymLots.Select(l => l.Id).ToList();
+            var ymSerials = await _context.FscSerials
+                .Where(s => ymLotIds.Contains(s.LotId))
+                .ToListAsync();
+            var ymSerialIds = ymSerials.Select(s => s.Id).ToList();
+            var ymSerialsByLot = ymSerials.GroupBy(s => s.LotId).ToDictionary(g => g.Key, g => g.ToList());
+
+            // YM seriallerinin uretimde tuketim ve fire'i
+            var ymConsumedBySerial = await _context.ProductionDetails
+                .Where(d => ymSerialIds.Contains(d.FscSerialId))
+                .GroupBy(d => d.FscSerialId)
+                .Select(g => new { SerialId = g.Key, Consumed = g.Sum(x => x.ConsumedWeight), Fire = g.Sum(x => x.WasteWeight) })
+                .ToListAsync();
+            var ymConsumedDict = ymConsumedBySerial.ToDictionary(x => x.SerialId, x => x.Consumed);
+            var ymFireDict     = ymConsumedBySerial.ToDictionary(x => x.SerialId, x => x.Fire);
+
+            var ymBySourceSerial = ymLots
+                .GroupBy(l => l.SourceSerialId!.Value)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // 5. Satir olustur
+            var rows = new List<AnaOzetRow>();
+            foreach (var lot in lots)
+            {
+                var serials = serialsByLot.TryGetValue(lot.Id, out var sl) ? sl : new List<FscSerial>();
+
+                decimal girisKg   = serials.Sum(s => s.InitialWeight);
+                decimal tuketimKg = serials.Sum(s => consumedDict.TryGetValue(s.Id, out var c) ? c : 0m);
+                decimal fireKg    = serials.Sum(s => fireDict.TryGetValue(s.Id, out var f) ? f : 0m);
+
+                var ymInfoList = new List<AnaOzetYmInfo>();
+                foreach (var serial in serials)
+                {
+                    if (!ymBySourceSerial.TryGetValue(serial.Id, out var ymList)) continue;
+                    foreach (var ym in ymList)
+                    {
+                        var ymSerList = ymSerialsByLot.TryGetValue(ym.Id, out var ys) ? ys : new List<FscSerial>();
+                        var ymKg      = ymSerList.Sum(s => s.InitialWeight);
+                        var ymTuketim = ymSerList.Sum(s => ymConsumedDict.TryGetValue(s.Id, out var c) ? c : 0m);
+                        var ymFire    = ymSerList.Sum(s => ymFireDict.TryGetValue(s.Id, out var f) ? f : 0m);
+                        var ymKalan   = Math.Max(0m, ymKg - ymTuketim - ymFire);
+                        // Her YM lot ayrı sub-row (gruplama yok)
+                        ymInfoList.Add(new AnaOzetYmInfo {
+                            LotId        = ym.Id,
+                            PartiNo      = ym.PartiNo,
+                            ArrivalDate  = ym.ArrivalDate,
+                            ProductId    = ym.ProductId ?? 0,
+                            ProductCode  = ym.Product?.ProductCode ?? "",
+                            ExternalCode = ym.Product?.ExternalCode ?? "",
+                            ProductName  = ym.Product?.ProductName ?? "",
+                            YmKg         = ymKg,
+                            YmTuketim    = ymTuketim,
+                            YmFire       = ymFire,
+                            YmKalan      = ymKalan,
+                            ConvFireKg   = ym.ConversionFireKg ?? 0m
+                        });
+                    }
+                }
+
+                decimal ymToplam = ymInfoList.Sum(x => x.YmKg);
+                // Kalan = Giriş - YM dönüşüm - direkt tüketim - direkt fire
+                decimal kalanKg  = Math.Max(0m, girisKg - ymToplam - tuketimKg - fireKg);
+
+                rows.Add(new AnaOzetRow {
+                    LotId        = lot.Id,
+                    PartiNo      = lot.PartiNo,
+                    ArrivalDate  = lot.ArrivalDate,
+                    Supplier     = lot.Supplier?.Name ?? "",
+                    FscType      = lot.FscType?.Code ?? "",
+                    ProductId    = lot.ProductId ?? 0,
+                    ProductCode  = lot.Product?.ProductCode ?? "",
+                    ExternalCode = lot.Product?.ExternalCode ?? "",
+                    ProductName  = lot.Product?.ProductName ?? "",
+                    SerialCount  = serials.Count,
+                    GirisKg      = girisKg,
+                    TuketimKg    = tuketimKg,
+                    FireKg       = fireKg,
+                    YmKg         = ymToplam,
+                    KalanKg      = kalanKg,
+                    YmList       = ymInfoList
+                });
+            }
+
+            // ── YM lotlarini bagımsız satır olarak sona ekle ──────────────────
+            // Tum YM lotlari (SourceSerialId IS NOT NULL) — ham filtresinden bagimsiz
+            var allYmLots = await _context.FscLots
+                .Include(l => l.Product).ThenInclude(p => p!.ProductGroup)
+                .Include(l => l.FscType)
+                .Where(l => l.SourceSerialId != null)
+                .OrderBy(l => l.ArrivalDate)
+                .ToListAsync();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s2 = search.Trim();
+                allYmLots = allYmLots.Where(l =>
+                    l.PartiNo.Contains(s2, StringComparison.OrdinalIgnoreCase) ||
+                    (l.Product != null && (
+                        l.Product.ProductCode.Contains(s2, StringComparison.OrdinalIgnoreCase) ||
+                        l.Product.ProductName.Contains(s2, StringComparison.OrdinalIgnoreCase) ||
+                        (l.Product.ExternalCode != null && l.Product.ExternalCode.Contains(s2, StringComparison.OrdinalIgnoreCase)))
+                    )).ToList();
+            }
+            if (startDate.HasValue) allYmLots = allYmLots.Where(l => l.ArrivalDate >= startDate.Value).ToList();
+            if (endDate.HasValue)   allYmLots = allYmLots.Where(l => l.ArrivalDate <= endDate.Value.AddDays(1)).ToList();
+
+            var allYmLotIds     = allYmLots.Select(l => l.Id).ToList();
+            var allYmSerials2   = await _context.FscSerials.Where(s => allYmLotIds.Contains(s.LotId)).ToListAsync();
+            var allYmSerialIds2 = allYmSerials2.Select(s => s.Id).ToList();
+            var ymByLot2        = allYmSerials2.GroupBy(s => s.LotId).ToDictionary(g => g.Key, g => g.ToList());
+            var ymProd2         = await _context.ProductionDetails
+                .Where(d => allYmSerialIds2.Contains(d.FscSerialId))
+                .GroupBy(d => d.FscSerialId)
+                .Select(g => new { SerialId = g.Key, Consumed = g.Sum(x => x.ConsumedWeight), Fire = g.Sum(x => x.WasteWeight) })
+                .ToListAsync();
+            var ymConsumed2 = ymProd2.ToDictionary(x => x.SerialId, x => x.Consumed);
+            var ymFire2     = ymProd2.ToDictionary(x => x.SerialId, x => x.Fire);
+
+            // Ham satırların source serial'larını bul → FSC tipi için
+            var sourceSerialIds = allYmLots.Where(l => l.SourceSerialId.HasValue).Select(l => l.SourceSerialId!.Value).Distinct().ToList();
+            var sourceLotFsc = await _context.FscSerials
+                .Include(s => s.Lot).ThenInclude(l => l.FscType)
+                .Where(s => sourceSerialIds.Contains(s.Id))
+                .ToDictionaryAsync(s => s.Id, s => s.Lot?.FscType?.Code ?? "");
+
+            foreach (var yl in allYmLots)
+            {
+                var ymSers   = ymByLot2.TryGetValue(yl.Id, out var sl2) ? sl2 : new List<FscSerial>();
+                var girisKg  = ymSers.Sum(s => s.InitialWeight);
+                var tuketim2 = ymSers.Sum(s => ymConsumed2.TryGetValue(s.Id, out var c) ? c : 0m);
+                var fire2    = ymSers.Sum(s => ymFire2.TryGetValue(s.Id, out var f) ? f : 0m);
+                var kalan2   = Math.Max(0m, girisKg - tuketim2 - fire2);
+                // FSC tipini kaynak serialden al
+                var fscCode  = yl.SourceSerialId.HasValue && sourceLotFsc.TryGetValue(yl.SourceSerialId.Value, out var fc) ? fc : (yl.FscType?.Code ?? "");
+
+                rows.Add(new AnaOzetRow {
+                    LotId        = yl.Id,
+                    PartiNo      = yl.PartiNo,
+                    ArrivalDate  = yl.ArrivalDate,
+                    Supplier     = "YM Dönüşüm",
+                    FscType      = fscCode,
+                    ProductId    = yl.ProductId ?? 0,
+                    ProductCode  = yl.Product?.ProductCode ?? "",
+                    ExternalCode = yl.Product?.ExternalCode ?? "",
+                    ProductName  = yl.Product?.ProductName ?? "",
+                    SerialCount  = ymSers.Count,
+                    GirisKg      = girisKg,
+                    TuketimKg    = tuketim2,
+                    FireKg       = fire2,
+                    KalanKg      = kalan2,
+                    IsYm         = true,
+                    YmList       = new()
+                });
+            }
+            // ──────────────────────────────────────────────────────────────────
+
+            ViewBag.TotalGiris   = rows.Sum(r => r.GirisKg);
+            ViewBag.TotalTuketim = rows.Sum(r => r.TuketimKg);
+            ViewBag.TotalFire    = rows.Sum(r => r.FireKg);
+            ViewBag.TotalYm      = rows.Sum(r => r.YmKg);
+            ViewBag.TotalKalan   = rows.Sum(r => r.KalanKg);
+
+            ViewBag.Suppliers  = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
+            ViewBag.FscTypes   = await _context.FscTypes.Where(f => f.IsActive).ToListAsync();
+            ViewBag.Products   = await _context.Products.Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
+            ViewBag.YmProducts = await _context.Products
+                .Where(p => p.IsActive && p.ProductGroup != null && p.ProductGroup.GroupName.ToUpper().StartsWith("YARI MA"))
+                .OrderBy(p => p.ProductName).ToListAsync();
+
+            ViewBag.SupplierIds  = supplierIds  ?? Array.Empty<int>();
+            ViewBag.FscTypeIds   = fscTypeIds   ?? Array.Empty<int>();
+            ViewBag.ProductIds   = productIds   ?? Array.Empty<int>();
+            ViewBag.YmProductIds = ymProductIds ?? Array.Empty<int>();
+            ViewBag.Search       = search ?? "";
+            ViewBag.StartDate    = startDate?.ToString("yyyy-MM-dd") ?? "";
+            ViewBag.EndDate      = endDate?.ToString("yyyy-MM-dd") ?? "";
+
+            return View(rows);
+        }
+
+        // GET /Stock/ExportAnaOzet
+        public async Task<IActionResult> ExportAnaOzet(
+            int[]? supplierIds, int[]? fscTypeIds, int[]? productIds, int[]? ymProductIds,
+            string? search, DateTime? startDate, DateTime? endDate)
+        {
+            // AnaOzet ile aynı veri — redirect yerine direkt çağır
+            var result = await AnaOzet(supplierIds, fscTypeIds, productIds, ymProductIds, search, startDate, endDate);
+            var rows = (result as ViewResult)?.Model as List<AnaOzetRow> ?? new();
+
+            using var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("Ana Özet");
+
+            // Başlık satırı
+            var headers = new[] { "Tarih","Parti No","Tedarikçi","FSC","Stok Kodu","Dış Kodu","Stok Adı","Tip",
+                                   "Giriş KG","YM KG","Tüketim KG","Fire KG","Kalan KG" };
+            for (int i = 0; i < headers.Length; i++)
+            {
+                ws.Cell(1, i+1).Value = headers[i];
+                ws.Cell(1, i+1).Style.Font.Bold = true;
+                ws.Cell(1, i+1).Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3d14");
+                ws.Cell(1, i+1).Style.Font.FontColor = XLColor.White;
+            }
+
+            int row = 2;
+            foreach (var r in rows)
+            {
+                // Ham satır
+                ws.Cell(row, 1).Value  = r.ArrivalDate.ToString("dd.MM.yyyy");
+                ws.Cell(row, 2).Value  = r.PartiNo;
+                ws.Cell(row, 3).Value  = r.Supplier;
+                ws.Cell(row, 4).Value  = r.FscType;
+                ws.Cell(row, 5).Value  = r.ProductCode;
+                ws.Cell(row, 6).Value  = r.ExternalCode;
+                ws.Cell(row, 7).Value  = r.ProductName;
+                ws.Cell(row, 8).Value  = "Hammadde";
+                ws.Cell(row, 9).Value  = r.GirisKg;
+                ws.Cell(row, 10).Value = r.YmKg > 0 ? r.YmKg : (decimal?)null;
+                ws.Cell(row, 11).Value = r.TuketimKg > 0 ? r.TuketimKg : (decimal?)null;
+                ws.Cell(row, 12).Value = r.FireKg > 0 ? r.FireKg : (decimal?)null;
+                ws.Cell(row, 13).Value = r.KalanKg;
+                ws.Row(row).Style.Fill.BackgroundColor = XLColor.White;
+                row++;
+
+                // YM sub-satırlar
+                foreach (var ym in r.YmList)
+                {
+                    ws.Cell(row, 1).Value  = ym.ArrivalDate.ToString("dd.MM.yyyy");
+                    ws.Cell(row, 2).Value  = "  ↳ " + ym.PartiNo;
+                    ws.Cell(row, 3).Value  = "";
+                    ws.Cell(row, 4).Value  = "";
+                    ws.Cell(row, 5).Value  = ym.ProductCode;
+                    ws.Cell(row, 6).Value  = ym.ExternalCode;
+                    ws.Cell(row, 7).Value  = ym.ProductName;
+                    ws.Cell(row, 8).Value  = "YM Dönüşüm";
+                    ws.Cell(row, 9).Value  = ym.YmKg;
+                    ws.Cell(row, 10).Value = (decimal?)null;
+                    ws.Cell(row, 11).Value = ym.YmTuketim > 0 ? ym.YmTuketim : (decimal?)null;
+                    ws.Cell(row, 12).Value = ym.YmFire > 0 ? ym.YmFire : (decimal?)null;
+                    ws.Cell(row, 13).Value = ym.YmKalan;
+                    ws.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#fefce8");
+                    ws.Cell(row, 2).Style.Font.Italic = true;
+                    row++;
+                }
+            }
+
+            // Toplam satırı
+            ws.Cell(row, 7).Value = "TOPLAM";
+            ws.Cell(row, 7).Style.Font.Bold = true;
+            ws.Cell(row, 9).FormulaA1  = $"=SUM(I2:I{row-1})";
+            ws.Cell(row, 11).FormulaA1 = $"=SUM(K2:K{row-1})";
+            ws.Cell(row, 12).FormulaA1 = $"=SUM(L2:L{row-1})";
+            ws.Cell(row, 13).FormulaA1 = $"=SUM(M2:M{row-1})";
+            ws.Row(row).Style.Font.Bold = true;
+            ws.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#f0fdf4");
+
+            // Sayı formatı
+            for (int r2 = 2; r2 <= row; r2++)
+                for (int c = 9; c <= 13; c++)
+                    ws.Cell(r2, c).Style.NumberFormat.Format = "#,##0.00";
+
+            ws.Columns().AdjustToContents();
+            ws.Column(7).Width = Math.Min(ws.Column(7).Width, 40);
+
+            using var ms = new System.IO.MemoryStream();
+            wb.SaveAs(ms);
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        $"AnaOzet_{DateTime.Now:yyyyMMdd}.xlsx");
+        }
+
         // GET /Stock/ExportMovements
         public async Task<IActionResult> ExportMovements()
         {
@@ -682,6 +1010,43 @@ namespace FSCTakip.WebUI.Controllers
         public string FscType { get; set; } = "";
         public decimal TotalKg { get; set; }
         public int Count { get; set; }
+    }
+
+    public class AnaOzetRow
+    {
+        public int      LotId        { get; set; }
+        public string   PartiNo      { get; set; } = "";
+        public DateTime ArrivalDate  { get; set; }
+        public string   Supplier     { get; set; } = "";
+        public string   FscType      { get; set; } = "";
+        public int      ProductId    { get; set; }
+        public string   ProductCode  { get; set; } = "";
+        public string   ExternalCode { get; set; } = "";
+        public string   ProductName  { get; set; } = "";
+        public int      SerialCount  { get; set; }
+        public decimal  GirisKg      { get; set; }
+        public decimal  TuketimKg    { get; set; }
+        public decimal  FireKg       { get; set; }
+        public decimal  YmKg         { get; set; }
+        public decimal  KalanKg      { get; set; }
+        public bool     IsYm         { get; set; }  // YM dönüşüm lotu
+        public List<AnaOzetYmInfo> YmList { get; set; } = new();
+    }
+
+    public class AnaOzetYmInfo
+    {
+        public int      LotId        { get; set; }
+        public string   PartiNo      { get; set; } = "";
+        public DateTime ArrivalDate  { get; set; }
+        public int      ProductId    { get; set; }
+        public string   ProductCode  { get; set; } = "";
+        public string   ExternalCode { get; set; } = "";
+        public string   ProductName  { get; set; } = "";
+        public decimal  YmKg         { get; set; }
+        public decimal  YmTuketim    { get; set; }
+        public decimal  YmFire       { get; set; }
+        public decimal  YmKalan      { get; set; }
+        public decimal  ConvFireKg   { get; set; }
     }
 
     public class YmLotInfo

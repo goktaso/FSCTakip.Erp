@@ -984,6 +984,7 @@
         /* QuickAdd modal header color band */
         .qa-modal-header { border-radius: 0; padding: 14px 20px; }
     </style>
+@await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
 
@@ -1066,6 +1067,12 @@
                 <a class="nav-link-item @(ctrl=="Purchase"?"active":"")" href="/Purchase/Index">
                     <span class="nav-icon"><i class="fas fa-truck-loading"></i></span>
                     <span class="nav-label">Hammadde Girişi</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Stock"&&action=="AnaOzet"?"active":"")" href="/Stock/AnaOzet">
+                    <span class="nav-icon"><i class="fas fa-table-list"></i></span>
+                    <span class="nav-label">Ana Özet</span>
                 </a>
             </div>
             <div class="nav-item">

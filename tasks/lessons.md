@@ -1230,3 +1230,23 @@ public int MovementType { get; set; }  // 1,2,3,4,5 değerleri
 **Eklenecek yeni sayfa için:** Sadece `FscMassBalanceService.ComputeAsync` çağır. Sorgu yazmak yasak.
 
 **Uygulandığı:** commit `a88c6cf` (refactor).
+
+## Performans Mimarisi — Ne Zaman Ne Yapılır (2026-06-30)
+
+**Bağlam:** AnaOzet, RawMaterial, Detail sayfaları EF Core Include zinciriyle runtime hesaplıyor.
+Veri şu an küçük (< 3.000 satır) — doğru. Yanlış mimari erkenden kurulursa bakım yükü artar.
+
+**Eşik tabanlı karar ağacı:**
+
+| Eşik | Belirti | Aksiyon |
+|------|---------|---------|
+| Hemen (ŞIMDI) | — | 4 kritik index ekle (bkz. docs/PERFORMANCE_ROADMAP.md) |
+| Lot > 500 VEYA sorgu > 500ms | AnaOzet / RawMaterial yavaşlıyor | SQL View `vw_StockSummary` devreye al |
+| Lot > 2.000 VEYA sorgu > 2s | Dashboard her açılışta gecikmeli | SQL View'i Indexed View'e çevir |
+| Lot > 10.000 VEYA çok kullanıcı | Concurrent request spike | Nightly job → `StockSummaryCache` staging tablo |
+
+**Hazır SQL:** `docs/sql/performance_indexes.sql` + `docs/sql/vw_stock_summary.sql`
+Sıra geldiğinde bu dosyaları SSMS'te çalıştır, EF Core mapping ekle.
+
+**Altın kural:** Önce ölç, sonra optimize et.
+`SET STATISTICS TIME ON` ile sorgu süresini gör. 500ms geçmedikçe dokunma.
