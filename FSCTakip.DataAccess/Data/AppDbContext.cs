@@ -48,6 +48,8 @@ namespace FSCTakip.DataAccess.Data
         public DbSet<WorkOrder>        WorkOrders        { get; set; }
         public DbSet<WorkOrderRecipe>  WorkOrderRecipes  { get; set; }
         public DbSet<ProductionDetail> ProductionDetails { get; set; }
+        public DbSet<ProductionDetailAudit> ProductionDetailAudits { get; set; }
+        public DbSet<ConversionAudit>       ConversionAudits       { get; set; }
         public DbSet<StockMovement>    StockMovements    { get; set; }
         public DbSet<FscLot>           FscLots           { get; set; }
         public DbSet<FscSerial>        FscSerials        { get; set; }

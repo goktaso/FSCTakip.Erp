@@ -653,12 +653,13 @@ namespace FSCTakip.WebUI.Controllers
             int[]? supplierIds, int[]? fscTypeIds, int[]? productIds, int[]? ymProductIds,
             string? search, DateTime? startDate, DateTime? endDate)
         {
-            // 1. Tum hammadde lotlari (SourceSerialId IS NULL = satin alimla giren)
-            var lotQuery = _context.FscLots
-                .Include(l => l.Supplier)
-                .Include(l => l.FscType)
-                .Include(l => l.Product).ThenInclude(p => p!.ProductGroup)
-                .Where(l => l.SourceSerialId == null)
+            // 1. Tum hammadde lotlari — FscMassBalanceService ile ayni filtre (tek kaynak)
+            var lotQuery = FscMassBalanceService.ApplyHamLotGirisFilter(
+                _context.FscLots
+                    .Include(l => l.Supplier)
+                    .Include(l => l.FscType)
+                    .Include(l => l.Product).ThenInclude(p => p!.ProductGroup),
+                _context)
                 .AsQueryable();
 
             if (startDate.HasValue) lotQuery = lotQuery.Where(l => l.ArrivalDate >= startDate.Value);
@@ -863,10 +864,10 @@ namespace FSCTakip.WebUI.Controllers
             }
             // ──────────────────────────────────────────────────────────────────
 
-            ViewBag.TotalGiris   = rows.Sum(r => r.GirisKg);
+            ViewBag.TotalGiris   = rows.Where(r => !r.IsYm).Sum(r => r.GirisKg);  // YM satırları hariç
             ViewBag.TotalTuketim = rows.Sum(r => r.TuketimKg);
             ViewBag.TotalFire    = rows.Sum(r => r.FireKg);
-            ViewBag.TotalYm      = rows.Sum(r => r.YmKg);
+            ViewBag.TotalYm      = rows.Where(r => r.IsYm).Sum(r => r.GirisKg);   // YM lot giriş toplamı
             ViewBag.TotalKalan   = rows.Sum(r => r.KalanKg);
 
             ViewBag.Suppliers  = await _context.Suppliers.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
@@ -913,7 +914,6 @@ namespace FSCTakip.WebUI.Controllers
             int row = 2;
             foreach (var r in rows)
             {
-                // Ham satır
                 ws.Cell(row, 1).Value  = r.ArrivalDate.ToString("dd.MM.yyyy");
                 ws.Cell(row, 2).Value  = r.PartiNo;
                 ws.Cell(row, 3).Value  = r.Supplier;
@@ -921,13 +921,16 @@ namespace FSCTakip.WebUI.Controllers
                 ws.Cell(row, 5).Value  = r.ProductCode;
                 ws.Cell(row, 6).Value  = r.ExternalCode;
                 ws.Cell(row, 7).Value  = r.ProductName;
-                ws.Cell(row, 8).Value  = "Hammadde";
-                ws.Cell(row, 9).Value  = r.GirisKg;
-                ws.Cell(row, 10).Value = r.YmKg > 0 ? r.YmKg : (decimal?)null;
+                ws.Cell(row, 8).Value  = r.IsYm ? "YM Dönüşüm" : "Hammadde";
+                // is-ym: Giriş boş, YM KG = girisKg (pozitif); ham: Giriş = girisKg, YM KG = -ymKg (negatif)
+                ws.Cell(row, 9).Value  = r.IsYm ? (decimal?)null : r.GirisKg;
+                ws.Cell(row, 10).Value = r.IsYm
+                    ? (r.GirisKg > 0 ? (decimal?)r.GirisKg : (decimal?)null)
+                    : (r.YmKg > 0 ? (decimal?)-r.YmKg : (decimal?)null);
                 ws.Cell(row, 11).Value = r.TuketimKg > 0 ? r.TuketimKg : (decimal?)null;
                 ws.Cell(row, 12).Value = r.FireKg > 0 ? r.FireKg : (decimal?)null;
                 ws.Cell(row, 13).Value = r.KalanKg;
-                ws.Row(row).Style.Fill.BackgroundColor = XLColor.White;
+                ws.Row(row).Style.Fill.BackgroundColor = r.IsYm ? XLColor.FromHtml("#fefce8") : XLColor.White;
                 row++;
 
                 // YM sub-satırlar

@@ -219,7 +219,7 @@
                         @if (!string.IsNullOrEmpty(s.DispatchNo) && !string.IsNullOrEmpty(s.DispatchPdfPath))
                         {
                             <button class="doc-num-btn"
-                                    data-pdf-path="/@s.DispatchPdfPath"
+                                    data-pdf-path="/Document/Serve?key=@s.DispatchPdfPath"
                                     data-pdf-title="İrsaliye — @s.DispatchNo"
                                     onclick="showPdfFromBtn(this)"
                                     title="İrsaliyeyi görüntüle">
@@ -232,7 +232,7 @@
                         @if (!string.IsNullOrEmpty(s.InvoiceNo) && !string.IsNullOrEmpty(s.InvoicePdfPath))
                         {
                             <button class="doc-num-btn"
-                                    data-pdf-path="/@s.InvoicePdfPath"
+                                    data-pdf-path="/Document/Serve?key=@s.InvoicePdfPath"
                                     data-pdf-title="Fatura — @s.InvoiceNo"
                                     onclick="showPdfFromBtn(this)"
                                     title="Faturayı görüntüle">
@@ -337,6 +337,10 @@
                             <div class="col-md-4">
                                 <label class="form-label">Fatura No</label>
                                 <input type="text" id="salesInvoiceNo" class="form-control" placeholder="—">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Fatura Tarihi</label>
+                                <input type="date" id="salesInvoiceDate" class="form-control">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Tutar</label>
@@ -469,6 +473,7 @@ function editOrder(id) {
             document.getElementById('salesExternalOrderNo').value    = d.externalOrderNo || '';
             document.getElementById('salesDispatchNo').value         = d.dispatchNo || '';
             document.getElementById('salesInvoiceNo').value     = d.invoiceNo || '';
+            document.getElementById('salesInvoiceDate').value   = d.invoiceDate || '';
             document.getElementById('salesInvoiceAmount').value = d.invoiceAmount || '';
             document.getElementById('salesCurrency').value      = d.currency || 'TRY';
             document.getElementById('salesPlate').value         = d.plateNumber || '';
@@ -498,6 +503,7 @@ function saveOrder() {
         fd.append('externalOrderNo',  document.getElementById('salesExternalOrderNo').value);
         fd.append('dispatchNo',       document.getElementById('salesDispatchNo').value);
         fd.append('invoiceNo',       document.getElementById('salesInvoiceNo').value);
+        fd.append('invoiceDate',     document.getElementById('salesInvoiceDate').value);
         fd.append('invoiceAmount',   document.getElementById('salesInvoiceAmount').value);
         fd.append('currency',        document.getElementById('salesCurrency').value);
         fd.append('plateNumber',     document.getElementById('salesPlate').value);

@@ -18,6 +18,7 @@ namespace FSCTakip.Core.Entities
 
         public DateTime OrderDate { get; set; } = DateTime.Today;
         public DateTime? DispatchDate { get; set; }
+        public DateTime? InvoiceDate { get; set; }
 
         public string? DispatchNo   { get; set; }
         public string? InvoiceNo    { get; set; }

@@ -30,6 +30,9 @@
     <a href="/Production/Index" class="topbar-btn">
         <i class="fas fa-arrow-left"></i> Listeye Dön
     </a>
+    <a href="/Production/PrintForm?ids=@Model.Id" target="_blank" class="topbar-btn">
+        <i class="fas fa-print"></i> İş Emri Formu Yazdır
+    </a>
     @if (Model.Status == WorkOrderStatus.Uretimde || Model.Status == WorkOrderStatus.Taslak)
     {
         <button class="topbar-btn btn-primary-custom" onclick="openAddDetailFn()">
@@ -420,16 +423,27 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                             @if (Model.Status != WorkOrderStatus.Tamamlandi)
                             {
                                 <td class="text-center" style="position:sticky;right:0;background:var(--surface,#1a2035);z-index:1;">
-                                    <div class="d-flex gap-1 justify-content-center">
-                                        <button onclick="editDetail(@d.Id)"
-                                                class="btn btn-sm" style="padding:3px 8px;border-radius:5px;background:#f9fafb;color:#374151;border:1px solid #e5e7eb;">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button onclick="deleteDetail(@d.Id)"
-                                                class="btn btn-sm" style="padding:3px 8px;border-radius:5px;background:#fff5f5;color:#dc2626;border:1px solid #fecaca;">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
+                                    @if ((bool)(ViewBag.IsAdmin ?? false))
+                                    {
+                                        <div class="d-flex gap-1 justify-content-center">
+                                            <button onclick="editDetail(@d.Id)"
+                                                    class="btn btn-sm" style="padding:3px 8px;border-radius:5px;background:#f9fafb;color:#374151;border:1px solid #e5e7eb;"
+                                                    title="Düzenle (admin)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button onclick="deleteDetail(@d.Id)"
+                                                    class="btn btn-sm" style="padding:3px 8px;border-radius:5px;background:#fff5f5;color:#dc2626;border:1px solid #fecaca;"
+                                                    title="Sil (admin)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted" style="font-size:11px;" title="Düzenleme/silme yalnızca admin yetkisiyle yapılabilir.">
+                                            <i class="fas fa-lock"></i>
+                                        </span>
+                                    }
                                 </td>
                             }
                         </tr>
@@ -556,7 +570,7 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
 
 <!-- Tüketim Modal -->
 <div class="modal fade" id="detailModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:70vw;width:70vw;">
         <div class="modal-content">
             <div class="modal-header dark">
                 <div class="d-flex align-items-center gap-2">
@@ -821,6 +835,13 @@ var consumedPct = wr.PlannedQuantity > 0 ? (double)(wrToplamTuketim / wr.Planned
                         <input type="text" id="detailNotes" class="form-control" placeholder="Opsiyonel...">
                     </div>
 
+                    <!-- Düzeltme nedeni: yalnızca mevcut kayıt düzenlenirken görünür/zorunlu -->
+                    <div class="col-12" id="detailReasonWrap" style="display:none;">
+                        <label class="form-label text-danger">Düzeltme Nedeni <span class="text-danger">*</span></label>
+                        <input type="text" id="detailReason" class="form-control" placeholder="Bu kayıt neden düzeltiliyor? (zorunlu)">
+                        <small class="text-muted">FSC denetim kaydı için tutulur.</small>
+                    </div>
+
 <!-- FSC CoC İzleme (collapsible) -->
                     <div class="col-12">
                         <div style="border-top:1px dashed #e5e7eb;padding-top:10px;">
@@ -1066,9 +1087,17 @@ function filterSerials() {
         });
     }
 
+    let emptyMsg = dropdown.querySelector('.searchable-dropdown-empty');
     if (totalVisible === 0) {
-        dropdown.innerHTML = '<div class="searchable-dropdown-empty">' +
-            (term ? '"' + term + '" ile eşleşen bobin yok' : 'Mevcut bobin bulunamadı') + '</div>';
+        if (!emptyMsg) {
+            emptyMsg = document.createElement('div');
+            emptyMsg.className = 'searchable-dropdown-empty';
+            dropdown.appendChild(emptyMsg);
+        }
+        emptyMsg.textContent = term ? '"' + term + '" ile eşleşen bobin yok' : 'Mevcut bobin bulunamadı';
+        emptyMsg.style.display = '';
+    } else if (emptyMsg) {
+        emptyMsg.style.display = 'none';
     }
 }
 
@@ -1357,6 +1386,8 @@ window.openAddDetailFn = function() {
     qtyFld._manualEntry = false;
     document.getElementById('qtyAutoHint').style.display = 'none';
     document.getElementById('detailNotes').value    = '';
+    document.getElementById('detailReason').value   = '';
+    document.getElementById('detailReasonWrap').style.display = 'none';
     document.getElementById('serialInfo').style.display = 'none';
 // Hide dropdown
     const dropdown = document.getElementById('serialDropdown');
@@ -1425,6 +1456,8 @@ function editDetail(id) {
             qtyFldE._manualEntry = true; // düzenleme: mevcut değere dokunma
             document.getElementById('qtyAutoHint').style.display = 'none';
             document.getElementById('detailNotes').value     = d.notes || '';
+            document.getElementById('detailReason').value    = '';
+            document.getElementById('detailReasonWrap').style.display = '';
             document.getElementById('detailModalTitle').textContent = 'Tüketim Kaydını Düzenle';
             // fire: always restore as kg on edit
             _resetFireMode();
@@ -1447,12 +1480,21 @@ function saveDetail() {
         return;
     }
 
+    const id = document.getElementById('detailId').value;
+    if (id) {
+        const reason = document.getElementById('detailReason').value.trim();
+        if (!reason) {
+            showToast('Mevcut kayıt düzenleniyor — düzeltme nedeni zorunludur.', 'warning');
+            document.getElementById('detailReason').focus();
+            return;
+        }
+    }
+
     // ensure hidden waste is up-to-date
     const mode = document.querySelector('input[name="fireMode"]:checked')?.value;
     if (mode === 'pct') calcFireFromPct(); else syncFireKg();
 
     const fd = new FormData();
-    const id = document.getElementById('detailId').value;
     if (id) fd.append('Id', id);
     fd.append('WorkOrderId',      document.getElementById('detailWoId').value);
     fd.append('FscSerialId',      serialVal);
@@ -1462,6 +1504,7 @@ function saveDetail() {
     fd.append('WasteWeight',      document.getElementById('detailWaste').value || '0');
     fd.append('ProducedQuantity', qtyVal);
     fd.append('Notes',            document.getElementById('detailNotes').value);
+    if (id) fd.append('CorrectionReason', document.getElementById('detailReason').value.trim());
     const recipeId = document.getElementById('detailRecipeId').value;
     if (recipeId) fd.append('WorkOrderRecipeId', recipeId);
 
@@ -1515,15 +1558,22 @@ function assignRecipe(detailId, recipeId, label) {
 function deleteDetail(id) {
     Swal.fire({
         title: 'Tüketim Kaydını Sil',
-        text: 'Bu kayıt silinince bobin ağırlığı geri iade edilecek. Devam edilsin mi?',
+        text: 'Bu kayıt silinince bobin ağırlığı geri iade edilecek. Silme nedeni FSC denetim kaydı için zorunludur.',
         icon: 'warning',
+        input: 'text',
+        inputPlaceholder: 'Silme nedeni (zorunlu)',
         showCancelButton: true,
         confirmButtonText: 'Evet, Sil',
         cancelButtonText: 'Vazgeç',
-        confirmButtonColor: '#dc2626'
+        confirmButtonColor: '#dc2626',
+        inputValidator: (value) => {
+            if (!value || !value.trim()) return 'Silme nedeni zorunludur.';
+        }
     }).then(r => {
         if (!r.isConfirmed) return;
-        const fd = new FormData(); fd.append('id', id);
+        const fd = new FormData();
+        fd.append('id', id);
+        fd.append('correctionReason', r.value.trim());
         fetch('/Production/DeleteDetail', { method: 'POST', body: fd })
             .then(r => r.json()).then(res => {
                 if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 800); }

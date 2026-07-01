@@ -100,6 +100,7 @@ namespace FSCTakip.WebUI.Controllers
                 KaynakAd     = x.SourceSerialId != null && srcMap.ContainsKey(x.SourceSerialId.Value) ? srcMap[x.SourceSerialId.Value].Ad : "—"
             }).ToList();
 
+            ViewBag.IsAdmin = IsAdminUser;
             return View();
         }
 
@@ -262,18 +263,38 @@ namespace FSCTakip.WebUI.Controllers
             }});
         }
 
-        // POST /Conversion/UpdateConversion — tarih ve fire güncelle
+        // POST /Conversion/UpdateConversion — tarih ve fire güncelle (yalnızca admin)
         [HttpPost]
-        public async Task<IActionResult> UpdateConversion(int serialId, DateTime tarih, decimal fire, string? notes)
+        public async Task<IActionResult> UpdateConversion(int serialId, DateTime tarih, decimal fire, string? notes, string? correctionReason)
         {
             try
             {
+                if (!IsAdminUser)
+                    return Json(new { success = false, message = "Dönüşüm kayıtlarını yalnızca admin düzeltebilir." });
+                if (string.IsNullOrWhiteSpace(correctionReason))
+                    return Json(new { success = false, message = "Düzeltme nedeni zorunludur." });
+
                 var s = await _context.FscSerials
                     .Include(x => x.Lot)
                     .FirstOrDefaultAsync(x => x.Id == serialId);
                 if (s == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
 
                 var lot = s.Lot;
+
+                _context.ConversionAudits.Add(new ConversionAudit
+                {
+                    SerialId    = s.Id,
+                    PartiNo     = lot.PartiNo,
+                    Action      = "Edit",
+                    Reason      = correctionReason!,
+                    OldTarih    = lot.ArrivalDate,
+                    OldFireKg   = lot.ConversionFireKg ?? 0m,
+                    NewTarih    = tarih,
+                    NewFireKg   = fire >= 0 ? fire : lot.ConversionFireKg,
+                    ChangedBy   = HttpContext.Session.GetString("Username") ?? "Admin",
+                    ChangedDate = DateTime.Now
+                });
+
                 lot.ArrivalDate       = tarih;
                 lot.ConversionFireKg  = fire >= 0 ? fire : lot.ConversionFireKg;
                 if (!string.IsNullOrWhiteSpace(notes)) lot.Notes = notes.Trim();
@@ -379,18 +400,35 @@ namespace FSCTakip.WebUI.Controllers
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
-        // POST /Conversion/DeleteConversion — dönüşümü geri al ve sil
+        // POST /Conversion/DeleteConversion — dönüşümü geri al ve sil (yalnızca admin)
         [HttpPost]
-        public async Task<IActionResult> DeleteConversion(int serialId)
+        public async Task<IActionResult> DeleteConversion(int serialId, string? correctionReason)
         {
             try
             {
+                if (!IsAdminUser)
+                    return Json(new { success = false, message = "Dönüşüm kayıtlarını yalnızca admin silebilir." });
+                if (string.IsNullOrWhiteSpace(correctionReason))
+                    return Json(new { success = false, message = "Silme nedeni zorunludur." });
+
                 var s = await _context.FscSerials
                     .Include(x => x.Lot).ThenInclude(l => l.Serials)
                     .FirstOrDefaultAsync(x => x.Id == serialId);
                 if (s == null) return Json(new { success = false, message = "Kayıt bulunamadı." });
 
                 var lot = s.Lot;
+
+                _context.ConversionAudits.Add(new ConversionAudit
+                {
+                    SerialId    = s.Id,
+                    PartiNo     = lot.PartiNo,
+                    Action      = "Delete",
+                    Reason      = correctionReason!,
+                    OldTarih    = lot.ArrivalDate,
+                    OldFireKg   = lot.ConversionFireKg ?? 0m,
+                    ChangedBy   = HttpContext.Session.GetString("Username") ?? "Admin",
+                    ChangedDate = DateTime.Now
+                });
 
                 // Kaynak bobini geri yükle (dönüşüm öncesi ağırlık)
                 if (lot.SourceSerialId.HasValue)

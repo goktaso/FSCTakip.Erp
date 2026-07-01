@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 3.1 · **Güncelleme:** Haziran 2026  
+> **Versiyon:** 3.3 · **Güncelleme:** Temmuz 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -562,6 +562,16 @@ Mavi gradient **+ Yeni İş Emri** butonu sol üstte, menü hamburgerin hemen ya
 
 > **ℹ️ Not:** Tamamlanmış iş emirlerine yeni tüketim kaydı eklenemez.
 
+### İş Emri Formu Yazdırma / PDF
+
+Her iş emri için, tüketilen hammaddeleri (bobin, tedarikçi, FSC tipi, tüketim/fire kg) gösteren yazdırılabilir form üretilir.
+
+- **Tekil:** İş emri listesinde satırdaki 🖨 ikonuna veya detay sayfasında üstteki **İş Emri Formu Yazdır** butonuna tıklayın — yeni sekmede form açılır.
+- **Toplu:** Listede satır başlarındaki kutucuklarla birden fazla iş emri seçin (başlıktaki kutucuk tümünü seçer), üstteki **Seçilenleri Yazdır (N)** butonuna tıklayın — seçilen tüm formlar aynı sekmede, her biri ayrı sayfada (yazdırmada otomatik sayfa sonu) açılır.
+- Açılan sayfada sağ üstteki **🖨 Yazdır / PDF Kaydet** butonu tarayıcının yazdırma diyaloğunu açar; buradan yazıcıya gönderilebilir veya "PDF olarak kaydet" seçilerek dosya alınabilir.
+
+> **ℹ️ Not:** Formda yalnızca gerçekleşen tüketim kayıtları listelenir (planlanan reçete değil). Henüz tüketim girilmemiş iş emirlerinde bilgilendirme mesajı gösterilir.
+
 ---
 
 ## 12. Üretim Detayı — Hammadde Tüketimi {#uretim-detail}
@@ -727,7 +737,7 @@ Sipariş listesinden sipariş numarasına tıklayarak detay sayfasına ulaşın.
    - **Ürün** *(zorunlu)* — aktif ürünler listelenir
    - **Miktar** ve **Birim Fiyat** *(zorunlu)*
    - **Birim** — Adet (varsayılan), Kg, Ton, Rulo vb.
-   - **İş Emri (FSC CoC)** *(isteğe bağlı)* — tamamlanmış iş emirleri listelenir; seçildiğinde satışın hangi üretimden geldiği izlenebilir olur
+   - **İş Emri (FSC CoC)** *(isteğe bağlı)* — tamamlanmış iş emirleri listelenir; seçildiğinde satışın hangi üretimden geldiği izlenebilir olur. Seçilen iş emrinin yanında **Kalan: N adet** — o iş emrinden daha ne kadar sevk edilebileceği gösterilir.
 3. Kaydet.
 
 > **FSC Zinciri (Chain of Custody):** Bir satış kalemi iş emrine bağlandığında FSC sertifikası gereken müşteri teslimatlarında izlenebilirlik sağlanmış olur. Denetimde bu zinciri kullanın.
@@ -745,7 +755,18 @@ Sipariş hazır olduğunda **Sevk Et** (yeşil buton) ile teslimatı kaydedin:
 - Her kalem için otomatik **Stok Hareketi** (Tür: Satış Sevkiyatı) oluşturulur
 - Tarih, belge no, müşteri ve plaka stok hareketine işlenir
 
+> **⚠️ Stok Yeterlilik Kuralı:** Sistem, bir iş emrinden o ana kadar üretilenden (Gerçek Adet) fazla sevkiyat yapılmasına **asla izin vermez**. Kalemlerden herhangi biri kalan miktarı aşıyorsa tüm sevkiyat reddedilir ve hangi iş emrinde ne kadar aşıldığı mesajla gösterilir — stok hareketi oluşmaz, sipariş Taslak durumda kalır. Negatif stok bakiyesi sistemde hiçbir zaman oluşmaz.
+
 > **Dikkat:** Sevk edilmiş siparişe kalem eklenemez, silinemez ve sipariş silinemez.
+
+### İrsaliye / Fatura Yazdırma
+
+- **İrsaliye:** `/Sales/Print/{id}` — sipariş listesindeki İrsaliye No linkine veya detay sayfasındaki yazdır butonuna tıklayın.
+- **Fatura:** `/Sales/PrintInvoice/{id}` — aynı şekilde Fatura No linkinden erişilir.
+- Açılan sayfada **🖨 Yazdır / PDF Kaydet** butonu tarayıcı yazdırma diyaloğunu açar.
+- Sipariş listesindeki İrsaliye No / Fatura No sütunlarında **yüklenmiş bir PDF varsa** (📄 ikonlu, tıklanabilir) buton, belgeyi önizleme penceresinde açar.
+
+> **ℹ️ Not:** Gerçek ERP'den gelen orijinal irsaliye/fatura PDF'leri sipariş detay sayfasındaki **Belge Yükle** alanından yüklenir; bu, `/Sales/Print` ve `/Sales/PrintInvoice` sayfalarının ürettiği görünümün yerini alır.
 
 ---
 

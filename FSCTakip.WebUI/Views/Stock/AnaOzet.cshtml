@@ -64,7 +64,7 @@ tfoot td { font-weight:700;background:#f0fdf4;border-top:2px solid #16a34a; }
         <button class="btn btn-sm btn-outline-warning" id="btnYmToggle" onclick="toggleYm()" title="YM dönüşüm satırlarını göster/gizle">
             <i class="fas fa-recycle me-1"></i>YM Detayı
         </button>
-        <a href="/Stock/ExportAnaOzet@qs" class="btn btn-sm btn-success">
+        <a href="/Stock/ExportAnaOzet@(qs)" class="btn btn-sm btn-success">
             <i class="fas fa-file-excel me-1"></i>Excel
         </a>
     </div>
@@ -161,8 +161,8 @@ tfoot td { font-weight:700;background:#f0fdf4;border-top:2px solid #16a34a; }
                 data-prodcode="@row.ProductCode"
                 data-extcode="@row.ExternalCode"
                 data-prodname="@row.ProductName"
-                data-giris="@row.GirisKg.ToString(IC)"
-                data-ym="@row.YmKg.ToString(IC)"
+                data-giris="@(row.IsYm ? "0" : row.GirisKg.ToString(IC))"
+                data-ym="@(row.IsYm ? row.GirisKg.ToString(IC) : (-row.YmKg).ToString(IC))"
                 data-tuketim="@row.TuketimKg.ToString(IC)"
                 data-fire="@row.FireKg.ToString(IC)"
                 data-kalan="@row.KalanKg.ToString(IC)">
@@ -188,8 +188,12 @@ tfoot td { font-weight:700;background:#f0fdf4;border-top:2px solid #16a34a; }
                         <span style="font-size:10px;background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;">Hammadde</span>
                     }
                 </td>
-                <td class="kg-cell">@row.GirisKg.ToString("N2")</td>
-                <td class="kg-cell" style="color:#7c3aed;">@(row.YmKg > 0 ? row.YmKg.ToString("N2") : "—")</td>
+                <td class="kg-cell">@(row.IsYm ? (object)"—" : row.GirisKg.ToString("N2"))</td>
+                @if (row.IsYm) {
+                    <td class="kg-cell" style="color:#7c3aed;">@row.GirisKg.ToString("N2")</td>
+                } else {
+                    <td class="kg-cell" style="color:#dc2626;">@(row.YmKg > 0 ? "-" + row.YmKg.ToString("N2") : "—")</td>
+                }
                 <td class="kg-cell" style="color:#f59e0b;">@(row.TuketimKg > 0 ? row.TuketimKg.ToString("N2") : "—")</td>
                 <td class="kg-cell" style="color:#dc2626;">@(row.FireKg > 0 ? row.FireKg.ToString("N2") : "—")</td>
                 <td class="kg-cell @kalanClass">@row.KalanKg.ToString("N2")</td>
@@ -349,13 +353,22 @@ document.addEventListener('mousedown',e=>{ if(!e.target.closest('th')) _DIMS.for
 
 function applyFilters(){
     const hamRows=_hamRows(), ymRows=_ymRows();
-    let count=0,giris=0,ym=0,tuketim=0,fire=0,kalan=0;
+    let count=0,giris=0,ymGiris=0,ymNet=0,tuketim=0,fire=0,kalan=0;
 
     hamRows.forEach(tr=>{
         const rid=tr.dataset.rid;
         const showHam=_hamMatches(tr);
         tr.style.display=showHam?'':'none';
-        if(showHam){ count++; giris+=parseFloat(tr.dataset.giris)||0; ym+=parseFloat(tr.dataset.ym)||0; tuketim+=parseFloat(tr.dataset.tuketim)||0; fire+=parseFloat(tr.dataset.fire)||0; kalan+=parseFloat(tr.dataset.kalan)||0; }
+        if(showHam){
+            count++;
+            giris+=parseFloat(tr.dataset.giris)||0;
+            const ymVal=parseFloat(tr.dataset.ym)||0;
+            ymNet+=ymVal;
+            if(tr.classList.contains('is-ym')) ymGiris+=ymVal; // pozitif: YM lot giriş
+            tuketim+=parseFloat(tr.dataset.tuketim)||0;
+            fire+=parseFloat(tr.dataset.fire)||0;
+            kalan+=parseFloat(tr.dataset.kalan)||0;
+        }
     });
     ymRows.forEach(tr=>{
         if (!_showYm) { tr.style.display='none'; return; }
@@ -376,11 +389,12 @@ function applyFilters(){
 
     ['st-count','ft-count'].forEach(id=>document.getElementById(id).textContent=count);
     document.getElementById('st-giris').textContent=f0(giris)+' kg';
+    document.getElementById('st-ym').textContent=f0(ymGiris)+' kg';
     document.getElementById('st-tuketim').textContent=f0(tuketim)+' kg';
     document.getElementById('st-fire').textContent=f0(fire)+' kg';
     document.getElementById('st-kalan').textContent=f0(kalan)+' kg';
     document.getElementById('ft-giris').textContent=f2(giris);
-    document.getElementById('ft-ym').textContent=f2(ym);
+    document.getElementById('ft-ym').textContent=ymNet!==0 ? f2(ymNet) : '—';
     document.getElementById('ft-tuketim').textContent=f2(tuketim);
     document.getElementById('ft-fire').textContent=f2(fire);
     document.getElementById('ft-kalan').textContent=f2(kalan);
@@ -418,8 +432,8 @@ function sortTable(key){
 
 document.addEventListener('DOMContentLoaded',()=>{
     _DIMS.forEach(d=>_rebuildPanel(d));
-    // YM satırları varsayılan gizli
     _ymRows().forEach(tr=>tr.style.display='none');
+    applyFilters(); // data-* attribute'larından doğru toplamları hesapla
 });
 </script>
 }

@@ -1087,22 +1087,11 @@
                     <span class="nav-label">YM Dönüşüm</span>
                 </a>
             </div>
-            <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Stock"&&action=="Summary"?"active":"")" href="/Stock/Summary">
-                    <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
-                    <span class="nav-label">Stok Özeti</span>
-                </a>
-            </div>
+            @* Geçici gizlendi (2026-06-30): Summary, AdminStock, Index — Ana Özet kapsamında *@
             <div class="nav-item">
                 <a class="nav-link-item @(ctrl=="Stock"&&action=="Movements"?"active":"")" href="/Stock/Movements">
                     <span class="nav-icon"><i class="fas fa-exchange-alt"></i></span>
                     <span class="nav-label">Stok Hareketleri</span>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Stock"&&action=="AdminStock"?"active":"")" href="/Stock/AdminStock">
-                    <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
-                    <span class="nav-label">Tüm Stok (Admin)</span>
                 </a>
             </div>
         </div>
@@ -1976,6 +1965,9 @@ function showToast(msg, type = 'success') {
       .app-confirm-btn.cancel:hover{background:#e5e7eb;}
       .app-confirm-btn.ok{color:#fff;}
       .app-confirm-btn.ok:hover{filter:brightness(1.05);}
+      .app-confirm-input{width:100%;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:9px 12px;
+        background:rgba(255,255,255,.07);color:inherit;font-size:14px;font-family:inherit;margin-top:10px;outline:none;}
+      .app-confirm-input:focus{border-color:#1976d2;box-shadow:0 0 0 3px rgba(25,118,210,.2);}
     `;
     document.head.appendChild(s);
 })();
@@ -2051,6 +2043,12 @@ function appSwalFire(arg, _text, _icon) {
     const okText = o.confirmButtonText || 'Tamam';
     const noText = o.cancelButtonText  || 'İptal';
 
+    const hasInput = !!o.input;
+    const inputHtml = hasInput
+        ? `<input type="text" class="app-confirm-input" placeholder="${esc(o.inputPlaceholder || '')}" autocomplete="off">
+           <div class="app-confirm-validation" style="display:none;color:#dc2626;font-size:12px;margin-top:4px;"></div>`
+        : '';
+
     return new Promise(resolve => {
         const ov = document.createElement('div');
         ov.className = 'app-confirm-overlay';
@@ -2066,29 +2064,42 @@ function appSwalFire(arg, _text, _icon) {
             <div class="app-confirm-icon" style="background:${accent}1a;color:${accent};"><i class="fas fa-${faIcon}"></i></div>
             ${o.title ? `<div class="app-confirm-title">${esc(o.title)}</div>` : ''}
             ${bodyHtml ? `<div class="app-confirm-msg">${bodyHtml}</div>` : ''}
+            ${inputHtml}
             ${actions}
           </div>`;
         document.body.appendChild(ov);
         requestAnimationFrame(() => ov.classList.add('show'));
 
         let timer = null;
-        const close = (confirmed) => {
+        const inputEl = ov.querySelector('.app-confirm-input');
+        const validationEl = ov.querySelector('.app-confirm-validation');
+        if (inputEl) setTimeout(() => inputEl.focus(), 50);
+
+        const close = (confirmed, inputValue) => {
             if (timer) clearTimeout(timer);
             ov.classList.remove('show');
             setTimeout(() => ov.remove(), 180);
             document.removeEventListener('keydown', onKey);
-            resolve({ isConfirmed: confirmed, isDismissed: !confirmed, isDenied: false, value: confirmed });
+            resolve({ isConfirmed: confirmed, isDismissed: !confirmed, isDenied: false, value: confirmed ? (hasInput ? inputValue : confirmed) : undefined });
+        };
+        const tryConfirm = () => {
+            const val = inputEl ? inputEl.value : '';
+            if (o.inputValidator) {
+                const err = o.inputValidator(val);
+                if (err) { validationEl.textContent = err; validationEl.style.display = ''; return; }
+            }
+            close(true, val);
         };
         const onKey = (e) => {
-            if (e.key === 'Escape') close(false);
-            else if (e.key === 'Enter' && hasConfirm) close(true);
+            if (e.key === 'Escape') close(false, '');
+            else if (e.key === 'Enter' && hasConfirm) { if (hasInput) tryConfirm(); else close(true, ''); }
         };
-        ov.querySelector('.ok')?.addEventListener('click', () => close(true));
-        ov.querySelector('.cancel')?.addEventListener('click', () => close(false));
-        ov.addEventListener('mousedown', (e) => { if (e.target === ov) close(false); });
+        ov.querySelector('.ok')?.addEventListener('click', () => hasInput ? tryConfirm() : close(true, ''));
+        ov.querySelector('.cancel')?.addEventListener('click', () => close(false, ''));
+        ov.addEventListener('mousedown', (e) => { if (e.target === ov) close(false, ''); });
         document.addEventListener('keydown', onKey);
-        if (hasConfirm) setTimeout(() => ov.querySelector('.ok')?.focus(), 50);
-        if (o.timer) timer = setTimeout(() => close(false), o.timer);
+        if (hasConfirm && !hasInput) setTimeout(() => ov.querySelector('.ok')?.focus(), 50);
+        if (o.timer) timer = setTimeout(() => close(false, ''), o.timer);
     });
 }
 /* OK-only kısayol: appAlert('mesaj', { icon:'success', title:'...' }) */

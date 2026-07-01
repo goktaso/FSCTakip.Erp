@@ -410,16 +410,25 @@
                                 <td class="text-end @(r.Fire > 0 ? "text-warning fw-semibold" : "text-muted")">@r.Fire.ToString("N2") kg</td>
                                 <td class="text-end pe-3 fw-semibold">@r.Kalan.ToString("N2") kg</td>
                                 <td class="text-center" style="position:sticky;right:0;background:#fff;white-space:nowrap;">
-                                    <button class="btn btn-sm" title="Düzenle"
-                                            onclick="convEdit(@r.SerialId, '@r.Parti', '@r.Tarih.ToString("yyyy-MM-dd")', @r.Fire.ToString(System.Globalization.CultureInfo.InvariantCulture))"
-                                            style="padding:2px 7px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:5px;">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm ms-1" title="Sil"
-                                            onclick="convDelete(@r.SerialId, '@r.Parti')"
-                                            style="padding:2px 7px;background:#fff5f5;color:#dc2626;border:1px solid #fecaca;border-radius:5px;">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    @if ((bool)(ViewBag.IsAdmin ?? false))
+                                    {
+                                        <button class="btn btn-sm" title="Düzenle (admin)"
+                                                onclick="convEdit(@r.SerialId, '@r.Parti', '@r.Tarih.ToString("yyyy-MM-dd")', @r.Fire.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                                style="padding:2px 7px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:5px;">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm ms-1" title="Sil (admin)"
+                                                onclick="convDelete(@r.SerialId, '@r.Parti')"
+                                                style="padding:2px 7px;background:#fff5f5;color:#dc2626;border:1px solid #fecaca;border-radius:5px;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted" style="font-size:11px;" title="Düzenleme/silme yalnızca admin yetkisiyle yapılabilir.">
+                                            <i class="fas fa-lock"></i>
+                                        </span>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -753,6 +762,7 @@ function convEdit(serialId, parti, tarih, fire) {
     document.getElementById('ceParti').textContent = parti;
     document.getElementById('ceTarih').value = tarih;
     document.getElementById('ceFire').value  = fire;
+    document.getElementById('ceReason').value = '';
     new bootstrap.Modal(document.getElementById('convEditModal')).show();
 }
 
@@ -760,11 +770,14 @@ async function convEditSave() {
     const serialId = document.getElementById('ceSerialId').value;
     const tarih    = document.getElementById('ceTarih').value;
     const fire     = document.getElementById('ceFire').value;
-    if (!tarih) { showToast('Tarih zorunludur.', 'warning'); return; }
+    const reason   = document.getElementById('ceReason').value.trim();
+    if (!tarih)  { showToast('Tarih zorunludur.', 'warning'); return; }
+    if (!reason) { showToast('Düzeltme nedeni zorunludur.', 'warning'); document.getElementById('ceReason').focus(); return; }
     const fd = new FormData();
     fd.append('serialId', serialId);
     fd.append('tarih', tarih);
     fd.append('fire', fire || '0');
+    fd.append('correctionReason', reason);
     const res = await fetch('/Conversion/UpdateConversion', { method: 'POST', body: fd })
                     .then(r => r.json()).catch(() => ({ success: false, message: 'Hata.' }));
     if (res.success) {
@@ -775,10 +788,24 @@ async function convEditSave() {
 }
 
 async function convDelete(serialId, parti) {
-    if (!await appConfirm(`"${parti}" dönüşüm kaydı silinecek ve kaynak bobin miktarı geri yüklenecek. Devam edilsin mi?`,
-                          { danger: true, title: 'Dönüşümü Sil', confirmText: 'Evet, Sil' })) return;
+    const result = await Swal.fire({
+        title: 'Dönüşümü Sil',
+        text: `"${parti}" dönüşüm kaydı silinecek ve kaynak bobin miktarı geri yüklenecek. Silme nedeni zorunludur.`,
+        icon: 'warning',
+        input: 'text',
+        inputPlaceholder: 'Silme nedeni (zorunlu)',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Sil',
+        cancelButtonText: 'Vazgeç',
+        confirmButtonColor: '#dc2626',
+        inputValidator: (value) => {
+            if (!value || !value.trim()) return 'Silme nedeni zorunludur.';
+        }
+    });
+    if (!result.isConfirmed) return;
     const fd = new FormData();
     fd.append('serialId', serialId);
+    fd.append('correctionReason', result.value.trim());
     const res = await fetch('/Conversion/DeleteConversion', { method: 'POST', body: fd })
                     .then(r => r.json()).catch(() => ({ success: false, message: 'Hata.' }));
     if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 800); }
@@ -804,6 +831,11 @@ async function convDelete(serialId, parti) {
                     <div class="col-6">
                         <label class="form-label small fw-semibold">Fire (kg)</label>
                         <input type="number" id="ceFire" class="form-control form-control-sm" step="0.01" min="0" placeholder="0">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold text-danger">Düzeltme Nedeni <span class="text-danger">*</span></label>
+                        <input type="text" id="ceReason" class="form-control form-control-sm" placeholder="Bu kayıt neden düzeltiliyor? (zorunlu)">
+                        <small class="text-muted">FSC denetim kaydı için tutulur.</small>
                     </div>
                 </div>
             </div>

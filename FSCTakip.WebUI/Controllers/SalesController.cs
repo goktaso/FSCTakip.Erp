@@ -82,17 +82,43 @@ namespace FSCTakip.WebUI.Controllers
             if (order == null) return NotFound();
 
             ViewBag.Products   = await _context.Products.Include(p => p.ProductGroup).Where(p => p.IsActive).OrderBy(p => p.ProductName).ToListAsync();
-            ViewBag.WorkOrders = await _context.WorkOrders
+            var workOrders = await _context.WorkOrders
                 .Include(w => w.Product)
                 .Where(w => w.Status == WorkOrderStatus.Tamamlandi)
                 .OrderByDescending(w => w.Id)
                 .ToListAsync();
+
+            var dispatchedByWo = await _context.StockMovements
+                .Where(sm => sm.Type == MovementType.SalesDispatch && sm.WorkOrderId != null)
+                .GroupBy(sm => sm.WorkOrderId!.Value)
+                .Select(g => new { WorkOrderId = g.Key, Total = g.Sum(sm => sm.Quantity) })
+                .ToDictionaryAsync(x => x.WorkOrderId, x => x.Total);
+
+            ViewBag.WorkOrders = workOrders;
+            ViewBag.WorkOrderRemaining = workOrders.ToDictionary(
+                w => w.Id,
+                w => w.ActualQuantity - (dispatchedByWo.TryGetValue(w.Id, out var d) ? d : 0m));
 
             return View(order);
         }
 
         // GET /Sales/Print/{id} -- FSC beyanli sevk belgesi
         public async Task<IActionResult> Print(int id)
+        {
+            var order = await _context.SalesOrders
+                .Include(s => s.Customer)
+                .Include(s => s.Lines)
+                    .ThenInclude(l => l.Product).ThenInclude(p => p!.FscType)
+                .Include(s => s.Lines)
+                    .ThenInclude(l => l.WorkOrder)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (order == null) return NotFound();
+            return View(order);
+        }
+
+        // GET /Sales/PrintInvoice/{id} -- satis faturasi
+        public async Task<IActionResult> PrintInvoice(int id)
         {
             var order = await _context.SalesOrders
                 .Include(s => s.Customer)
@@ -120,6 +146,7 @@ namespace FSCTakip.WebUI.Controllers
                     s.Id, s.SalesOrderNo, s.CustomerId,
                     orderDate       = s.OrderDate.ToString("yyyy-MM-dd"),
                     dispatchDate    = s.DispatchDate?.ToString("yyyy-MM-dd"),
+                    invoiceDate     = s.InvoiceDate?.ToString("yyyy-MM-dd"),
                     s.DispatchNo, s.InvoiceNo,
                     s.InvoiceAmount, s.Currency,
                     s.PlateNumber, s.DeliveryAddress,
@@ -136,7 +163,7 @@ namespace FSCTakip.WebUI.Controllers
             DateTime orderDate, string? externalOrderNo, string? dispatchNo, string? invoiceNo,
             decimal? invoiceAmount, string currency,
             string? plateNumber, string? deliveryAddress,
-            SalesOrderStatus status, string? notes)
+            SalesOrderStatus status, string? notes, DateTime? invoiceDate)
         {
             try
             {
@@ -152,6 +179,7 @@ namespace FSCTakip.WebUI.Controllers
                         DispatchNo      = dispatchNo,
                         InvoiceNo       = invoiceNo,
                         InvoiceAmount   = invoiceAmount,
+                        InvoiceDate     = invoiceDate,
                         Currency        = currency,
                         PlateNumber     = plateNumber,
                         DeliveryAddress = deliveryAddress,
@@ -173,6 +201,7 @@ namespace FSCTakip.WebUI.Controllers
                     order.DispatchNo      = dispatchNo;
                     order.InvoiceNo       = invoiceNo;
                     order.InvoiceAmount   = invoiceAmount;
+                    order.InvoiceDate     = invoiceDate;
                     order.Currency        = currency;
                     order.PlateNumber     = plateNumber;
                     order.DeliveryAddress = deliveryAddress;
@@ -319,6 +348,25 @@ namespace FSCTakip.WebUI.Controllers
                 return Json(new { success = false, message = "SipariÅŸte kalem yok, sevk edilemez" });
 
             var actualDate = dispatchDate ?? DateTime.Today;
+
+            // Stok yeterlilik kontrolu: her WorkOrder icin uretilen miktar asilamaz (negatif bakiye engeli)
+            var woGroups = order.Lines.Where(l => l.WorkOrderId.HasValue)
+                                       .GroupBy(l => l.WorkOrderId!.Value);
+            foreach (var grp in woGroups)
+            {
+                var workOrder = await _context.WorkOrders.FindAsync(grp.Key);
+                if (workOrder == null) continue;
+
+                var alreadyDispatched = await _context.StockMovements
+                    .Where(sm => sm.Type == MovementType.SalesDispatch && sm.WorkOrderId == grp.Key)
+                    .SumAsync(sm => sm.Quantity);
+                var requestedNow = grp.Sum(l => l.Quantity);
+                var remaining = workOrder.ActualQuantity - alreadyDispatched;
+
+                if (requestedNow > remaining)
+                    return Json(new { success = false, message = $"{workOrder.WorkOrderNo}: Kalan sevk edilebilir miktar {remaining:N0} adet, istenen {requestedNow:N0} adet. Sevkiyat engellendi (stok yetersiz)." });
+            }
+
             order.DispatchDate = actualDate;
             if (!string.IsNullOrWhiteSpace(dispatchNo))  order.DispatchNo  = dispatchNo;
             if (!string.IsNullOrWhiteSpace(plateNumber)) order.PlateNumber = plateNumber;

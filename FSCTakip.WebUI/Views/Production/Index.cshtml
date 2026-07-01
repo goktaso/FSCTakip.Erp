@@ -25,6 +25,9 @@
     <button class="topbar-btn btn-filter" onclick="toggleFilter()">
         <i class="fas fa-filter"></i> Filtrele
     </button>
+    <button id="btnPrintSelected" class="topbar-btn" disabled onclick="woPrintSelected()">
+        <i class="fas fa-print"></i> Seçilenleri Yazdır (<span id="woSelCount">0</span>)
+    </button>
     <a href="/Production/ExportIndex" class="topbar-btn btn-excel">
         <i class="fas fa-file-excel"></i> Excel
     </a>
@@ -147,6 +150,7 @@
     <table class="data-table">
         <thead>
             <tr>
+                <th style="width:32px;"><input type="checkbox" id="chkAll" onchange="woToggleAll(this)"></th>
                 <th>İŞ EMRİ NO</th>
                 <th>ÜRÜN</th>
                 <th>MAKİNE</th>
@@ -163,7 +167,7 @@
             @if (!Model.Any())
             {
                 <tr>
-                    <td colspan="10">
+                    <td colspan="11">
                         <div class="empty-state">
                             <div class="empty-icon"><i class="fas fa-industry"></i></div>
                             <h6>Henüz iş emri yok</h6>
@@ -186,6 +190,7 @@
                 };
 
                 <tr>
+                    <td><input type="checkbox" class="wo-chk" value="@wo.Id" onchange="woUpdateSelection()"></td>
                     <td>
                         <a href="/Production/Detail/@wo.Id" class="table-link fw-semibold">
                             @wo.WorkOrderNo
@@ -239,6 +244,11 @@
                                class="btn btn-sm" style="padding:4px 9px;border-radius:6px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
                                title="Detay / Tüketim Gir">
                                 <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="/Production/PrintForm?ids=@wo.Id" target="_blank"
+                               class="btn btn-sm" style="padding:4px 9px;border-radius:6px;background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;"
+                               title="İş Emri Formu Yazdır">
+                                <i class="fas fa-print"></i>
                             </a>
                             @if (wo.Status != WorkOrderStatus.Tamamlandi && wo.Status != WorkOrderStatus.Iptal)
                             {
@@ -415,6 +425,22 @@ window.mcdUpdate=function(id){var p=document.getElementById(id+'-panel');var c=d
 document.addEventListener('mousedown',function(e){if(!e.target.closest('.mcd'))document.querySelectorAll('.mcd-panel').forEach(function(p){p.style.display='none'})});}
 </script>
 <script>
+function woToggleAll(cb) {
+    document.querySelectorAll('.wo-chk').forEach(c => c.checked = cb.checked);
+    woUpdateSelection();
+}
+function woUpdateSelection() {
+    var checked = document.querySelectorAll('.wo-chk:checked');
+    document.getElementById('woSelCount').textContent = checked.length;
+    document.getElementById('btnPrintSelected').disabled = checked.length === 0;
+}
+function woPrintSelected() {
+    var ids = Array.from(document.querySelectorAll('.wo-chk:checked')).map(c => c.value);
+    if (ids.length === 0) return;
+    var qs = ids.map(id => 'ids=' + id).join('&');
+    window.open('/Production/PrintForm?' + qs, '_blank');
+}
+
 let _woEditMode = false;
 
 function openNewWorkOrder() {

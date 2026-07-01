@@ -4,6 +4,7 @@
     ViewData["Title"] = $"Sipariş — {Model.SalesOrderNo}";
     var products   = ViewBag.Products   as List<Product>   ?? new();
     var workOrders = ViewBag.WorkOrders as List<WorkOrder> ?? new();
+    var woRemaining = ViewBag.WorkOrderRemaining as Dictionary<int, decimal> ?? new();
 
     var toplamAdet  = Model.Lines.Sum(l => l.Quantity);
     var toplamTutar = Model.Lines.Sum(l => l.Quantity * l.UnitPrice);
@@ -324,13 +325,15 @@
                             İş Emri
                             <span class="text-muted" style="font-size:11px;">(FSC CoC için seçiniz)</span>
                         </label>
-                        <select id="lineWorkOrderId" class="form-select form-select-sm">
+                        <select id="lineWorkOrderId" class="form-select form-select-sm" onchange="onLineWorkOrderChange()">
                             <option value="">— Seçiniz (opsiyonel) —</option>
                             @foreach (var wo in workOrders)
                             {
-                                <option value="@wo.Id">@wo.WorkOrderNo — @wo.Product?.ProductName</option>
+                                var remaining = woRemaining.TryGetValue(wo.Id, out var r) ? r : wo.ActualQuantity;
+                                <option value="@wo.Id" data-remaining="@remaining.ToString(System.Globalization.CultureInfo.InvariantCulture)">@wo.WorkOrderNo — @wo.Product?.ProductName (Kalan: @remaining.ToString("N0"))</option>
                             }
                         </select>
+                        <div id="lineWoRemainingBadge" class="mt-1" style="display:none;font-size:11px;font-weight:600;color:#166534;"></div>
                     </div>
                     <div class="col-4">
                         <label class="form-label">Miktar *</label>
@@ -456,9 +459,26 @@ document.getElementById('lineModal').addEventListener('show.bs.modal', function 
         // Her açılışta "Mamul" filtresine döndür
         document.querySelector('input[name="productFilter"][value="mamul"]').checked = true;
         filterProducts('mamul');
+        onLineWorkOrderChange();
     }
     _lineEditMode = false;
 });
+
+function onLineWorkOrderChange() {
+    const sel = document.getElementById('lineWorkOrderId');
+    const badge = document.getElementById('lineWoRemainingBadge');
+    const qtyInput = document.getElementById('lineQty');
+    const opt = sel.options[sel.selectedIndex];
+    const remaining = opt ? opt.dataset.remaining : null;
+    if (sel.value && remaining !== undefined && remaining !== null) {
+        badge.textContent = 'Kalan sevk edilebilir miktar: ' + Math.round(parseFloat(remaining)).toLocaleString('tr-TR') + ' adet';
+        badge.style.display = 'block';
+        qtyInput.max = remaining;
+    } else {
+        badge.style.display = 'none';
+        qtyInput.removeAttribute('max');
+    }
+}
 
 function editLine(id) {
     _lineEditMode = true;
@@ -477,6 +497,7 @@ function editLine(id) {
             document.getElementById('linePrice').value       = d.unitPrice;
             document.getElementById('lineNotes').value       = d.notes || '';
             document.getElementById('lineModalTitle').innerHTML = '<i class="fas fa-pen me-2"></i>Kalem Düzenle';
+            onLineWorkOrderChange();
             bootstrap.Modal.getOrCreateInstance(document.getElementById('lineModal')).show();
         })
         .catch(() => { _lineEditMode = false; showToast('Bağlantı hatası.', 'error'); });

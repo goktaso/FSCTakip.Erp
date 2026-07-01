@@ -371,3 +371,4 @@ FSCTakip.WebUI/wwwroot/uploads/
 
 # ── Yerel makine ayarları ──
 .claude/settings.local.jsongraphify-out/
+.gstack/

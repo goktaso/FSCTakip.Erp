@@ -4,6 +4,7 @@ using FSCTakip.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FSCTakip.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260630201438_AddProductionDetailAudit")]
+    partial class AddProductionDetailAudit
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -191,53 +194,6 @@ namespace FSCTakip.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("BagTypes");
-                });
-
-            modelBuilder.Entity("FSCTakip.Core.Entities.ConversionAudit", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ChangedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ChangedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal?>("NewFireKg")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("NewTarih")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("OldFireKg")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("OldTarih")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PartiNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("SerialId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ConversionAudits");
                 });
 
             modelBuilder.Entity("FSCTakip.Core.Entities.Customer", b =>
@@ -1381,9 +1337,6 @@ namespace FSCTakip.DataAccess.Migrations
 
                     b.Property<decimal?>("InvoiceAmount")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("InvoiceDate")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("InvoiceNo")
                         .HasColumnType("nvarchar(max)");

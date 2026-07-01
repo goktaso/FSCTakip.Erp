@@ -1,5 +1,58 @@
 # Alınan Dersler — FSC Takip ERP
 
+## WorkOrder.ActualQuantity gün-bazlı toplama hatası (2026-07-02)
+
+**Belirti:** Üretim iş emri, farklı günlerde (fiş 1 günde de 1 haftada da kapansa) parça parça tamamlandığında `WorkOrder.ActualQuantity` ve ilgili `StockMovement` (Tip=ProductionEntry) gerçek üretimin katları olarak şişiyordu (5 iş emrinde tespit edildi: bazıları 2 katı).
+
+**Kök neden:** `ProductionController.CompleteWorkOrder` (~satır 141-150) ve `RecalcAllActualQty` (~satır 211-214) formülü: `GroupBy(ProductionDate.Date).Sum(g => g.Max(ProducedQuantity))` — yani her GÜNÜN max'ını alıp GÜNLERİ TOPLUYORDU. Oysa `ProductionDetail.ProducedQuantity` alanı günlük değil, **iş emrinin o ana kadarki TOPLAM kümülatif üretimini** taşır (bkz. `Views/Production/Detail.cshtml` içindeki zaten doğru olan `toplamUretim` hesaplaması — orada günlere bölmeden tek `Max()` alınıyor). İki kod parçası birbirine ters varsayımla yazılmış — biri "günlük delta" sanıyordu, diğeri "kümülatif toplam" biliyordu.
+
+**Çözüm:** Her iki yerde de formül tek `prodDetails.Max(d => d.ProducedQuantity)` (günlere bölmeden, tüm satırlar arası tek max) olarak düzeltildi. `RecalcAllActualQty` ayrıca artık ilgili `StockMovement` (ProductionEntry) kaydını da aynı doğru değere senkronize ediyor — önceden sadece `ActualQuantity`'yi düzeltiyordu, StockMovement'ı hiç dokunmuyordu, bu da veri kaymasının kalıcı kalmasına yol açıyordu.
+
+**⚠️ Tuzak — düzeltme, gerçek bir farklı veri sorununu ortaya çıkardı:** IE2026-004 (WorkOrderId=12)'de formül düzeltmesi `ActualQuantity`'yi 274.000'den 27.400'e düşürdü (ProductionDetail satırlarındaki gerçek max buydu) — ama bu iş emrinden gerçekte (kullanıcının verdiği `FSC_Fatura.xlsx` kaynaklı gerçek satış kayıtlarına göre) **274.000 adet satılmıştı**. Formül matematiksel olarak doğru çalıştı ama `ProductionDetail` tablosundaki kaynak veri bu bir iş emri için muhtemelen elle girişte 10 kat eksik girilmişti (274.000 yerine 27.400). Düzeltme sonrası bu iş emri **-246.600 negatif bakiyeye düştü** — hemen fark edilip `ActualQuantity`+`StockMovement` gerçek satışla eşleşecek şekilde (274.000) SQL ile geri alındı; `ProductionDetail` satırlarındaki asıl 27.400 değerine dokunulmadı (ayrı, daha dikkatli bir düzeltme gerektirir).
+
+**Ders:** Bir hesaplama formülünü "doğru" formüle çevirmek, altındaki KAYNAK VERİ zaten yanlışsa yeni bir tutarsızlık (hatta negatif bakiye) açığa çıkarabilir. Kod düzeltmesinden sonra MUTLAKA gerçek dünya kanıtıyla (burada: gerçek satış/fatura kayıtları) çapraz kontrol et, sadece "formül artık iç tutarlı" demek yetmez.
+
+## ProductionDetail admin düzeltme + denetim izi (2026-06-30)
+
+**Amaç:** Tüketim kaydı (ProductionDetail) düzeltme/silme işlemini sadece admin yapabilsin, FSC CoC denetimi için neden zorunlu, eksik stokta düzeltmeye izin verme.
+
+**Yapı:**
+- Yeni mevcut auth sistemi kullanıldı: `BaseController.IsAdminUser` (session bazlı), yeni rol sistemi kurulmadı.
+- `ProductionDetailAudit` tablosu (yeni entity + migration `AddProductionDetailAudit`) — kim/ne zaman/neden/eski-yeni değerler.
+- `SaveDetail`: `model.Id > 0` (düzenleme) dalında admin + `correctionReason` zorunlu. Stok yetersizse (`diff > serial.CurrentWeight`) hata mesajı kullanıcıyı YM Dönüşüm sayfasına yönlendirir — yeni validasyon mekanizması kurulmadı, var olan `diff` kontrolü zaten yeterliydi (over-engineering'den kaçınıldı).
+- `DeleteDetail`: aynı admin + reason zorunluluğu, silmeden önce audit kaydı yazılır (silme = stok her zaman geri eklenir, yetersizlik riski yok — ek kontrol gereksiz).
+- UI: `Views/Production/Detail.cshtml` — düzenleme modalında "Düzeltme Nedeni" alanı sadece mevcut kayıt düzenlenirken görünür/zorunlu; silme `Swal.fire({input:'text', inputValidator})` ile neden zorunlu kılındı (native `prompt()`/`confirm()` kullanılmadı, proje SweetAlert2 zaten bu dosyada kurulu).
+- Edit/Sil butonları `ViewBag.IsAdmin` ile gated; admin değilse kilit ikonu gösterilir.
+
+**Build kilidi tuzağı:** `dotnet build` IIS Express + VS debugger DLL'i kilitlerken `MSB3027/MSB3021` hatası verir (gerçek derleme hatası değil). Çözüm: kullanıcıdan debug session'ı durdurmasını iste, sonra tekrar build et.
+
+## İş Emri Formu — Yazdır/PDF (çoklu id print action) (2026-07-01)
+
+**Amaç:** Excel'de elle doldurulan "Torba İş Emri Formu" yerine sistemden otomatik, hammadde tüketimini gösteren yazdırılabilir form; Detail sayfasından tekil, Index'ten checkbox ile toplu yazdırma.
+
+**Yapı:**
+- Yeni PDF kütüphanesi eklenmedi — mevcut desen (`Views/Sales/Print.cshtml`: `Layout = null` + `@media print` + `window.print()`) aynen tekrarlandı. "PDF formatında" isteği tarayıcının "Yazdır → PDF olarak kaydet" seçeneğiyle karşılanıyor.
+- Çoklu iş emri desteği tek action'da: `ProductionController.PrintForm(int[] ids)` — query string `?ids=1&ids=2` (ASP.NET Core native array binding, ekstra parsing gerekmedi). `@model List<WorkOrder>`, view içinde `foreach` ile her iş emri kendi `.print-page` div'inde, CSS `page-break-after: always` (`:last-child` hariç) — tek id de çoklu id de aynı action/view'den geçer, dallanma yok.
+- Hammadde kaynağı: `ProductionDetail.FscSerial.Lot` zinciri (Supplier, FscType, Product) — reçete/planlanan bileşenler DEĞİL, sadece gerçekleşen tüketim (kullanıcı kararı: form "sonuç" belgesi, planlama değil).
+- Index'te toplu seçim: checkbox sütunu + `#chkAll` + JS `woUpdateSelection()` seçili sayıyı sayar, `#btnPrintSelected` disabled/enabled toggle eder — MCD gibi karmaşık komponent gerekmedi, düz checkbox yeterliydi (çoklu kombinasyon filtresi değil, sadece "hangi satırlar seçili" listesi).
+- `window.open()` ile yeni sekmede açılıyor (form ayrı belge, mevcut sayfa navigasyonunu bozmamalı).
+
+**Playwright doğrulama notu:** IIS Express arka planda kapalıyken Playwright `ERR_CONNECTION_REFUSED` verir — sunucunun gerçekten ayakta olduğunu (`F5`/Debug başlatılmış) teyit etmeden test scripti çalıştırma. Login session Playwright'ın kendi browser context'inde ayrı; kullanıcının kendi tarayıcısında giriş yapmış olması yardımcı olmaz, script içinde `/Account/Login` POST ile ayrıca giriş yapılmalı.
+
+## Satış stok yeterlilik kuralı + tarihsel içe aktarım + Fatura print view (2026-07-01)
+
+**Amaç:** Excel'den (FSC_Fatura.xlsx) 16 satır tarihsel sevkiyat verisini SalesOrder/SalesOrderLine olarak sisteme işle, negatif stok bakiyesi asla oluşmasın kuralını mimariye ekle, sevk irsaliyesi + satış faturası için şablon PDF üret.
+
+**Bulgular ve kararlar:**
+- `SalesController.Dispatch()` içinde stok yeterlilik kontrolü hiç yoktu — StockMovement kontrolsüz oluşuyordu. Kontrol Dispatch anına eklendi (SaveLine anına değil): fiziksel stok düşüşü ancak StockMovement oluştuğunda gerçekleşir; taslak siparişte fazla miktar girmek henüz negatif bakiye yaratmaz. Kural: `WorkOrder.ActualQuantity - Sum(StockMovements Type=SalesDispatch WorkOrderId=X) >= istenen miktar`, aksi halde tüm dispatch reddedilir (kısmi kayıt oluşmaz — kontrol döngüden önce, tüm gruplar için).
+- `Sales/Index.cshtml`'de PDF görüntüleme butonları gerçek bir bug içeriyordu: `data-pdf-path="/@s.DispatchPdfPath"` — `/Document/Serve?key=...` yerine ham path kullanıyordu, dosya asla açılmıyordu (`Sales/Detail.cshtml` doğru pattern'i zaten kullanıyordu). Bug bu işin kapsamında düzeltildi çünkü yeni eklenecek PDF'ler görüntülenemeyecekti.
+- PDF üretimi: yeni kütüphane (QuestPDF vb.) eklenmedi. Var olan ARD-markalı print view deseni (`Sales/Print.cshtml`) + Playwright'ın headless Chromium `page.pdf()` yeteneği kullanıldı — `webapp-testing` altyapısı zaten Playwright kullanıyor, ek bağımlılık gerekmedi. `Sales/PrintInvoice.cshtml` (yeni) aynı deseni "Satış Faturası" için tekrarlıyor.
+- **Kritik:** Kullanıcı netleştirdi — gerçek ERP faturaları/irsaliyeleri ileride mevcut `UploadDocument` akışıyla manuel yüklenecek; bu PDF'ler yalnızca alan boş kalmasın diye üretilen **şablon/placeholder**. Bu yüzden PDF üretimi kalıcı bir buton/özellik olarak UI'ya bağlanmadı, sadece bir kereye mahsus import scripti içinde kullanıldı.
+- `SalesOrder.InvoiceDate` alanı yoktu, migration ile eklendi (`AddSalesOrderInvoiceDate`). `SaveOrder`/`GetOrder` ve `Sales/Index.cshtml` sipariş modalı güncellendi.
+- Tarihsel veri import'u EF/controller katmanından değil **doğrudan T-SQL** ile yapıldı (`Invoke-Sqlcmd`) — bire bir tek seferlik, kod tabanına kalıcı script eklemeye gerek yoktu. İçe aktarım öncesi her WorkOrder için toplam miktar `ActualQuantity`'yi aşmıyor mu diye elle doğrulandı (DB'den okunan gerçek veriyle karşılaştırıldı, tam eşit çıktı — sınırda test senaryosu).
+- **Global CSRF tuzağı:** Proje `AutoValidateAntiforgeryTokenAttribute` global filter kullanıyor (`Program.cs`) — Playwright'tan doğrudan `context.request.post()` ile form-encoded istek atmak 400 döner. Çözüm: herhangi bir sayfadan `input[name="__RequestVerificationToken"]` değerini oku, `RequestVerificationToken` header'ı olarak ekle (`_Layout.cshtml`'deki global fetch/jQuery monkey-patch'in yaptığı işi elle taklit et).
+- **Test sırasında bulunan pre-existing veri durumu:** Customer Id=5 (ACORE DIŞ TİCARET) `IsFscActive=False` — Dispatch() FSC kontrolü bu müşteri için her zaman engelliyor (benim yeni stok kontrolümden bağımsız, önceden var olan davranış). Stok guard'ı izole test etmek için geçici test müşterisi oluşturulup silindi. Bu, kullanıcıya ayrıca bildirilecek gerçek veri sorunu — kod değişikliği kapsamı dışında bırakıldı.
+
 ## Razor → JavaScript'e decimal basarken kültür tuzağı (2026-06-14)
 
 **Belirti:** Bir sayfadaki TÜM butonlar çalışmıyor (JS fonksiyonları tanımsız).

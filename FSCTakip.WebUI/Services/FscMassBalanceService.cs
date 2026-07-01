@@ -1,3 +1,4 @@
+using FSCTakip.Core.Entities;
 using FSCTakip.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,6 +47,20 @@ namespace FSCTakip.WebUI.Services
         // Ham+YM+BS kapsam — SQL'e gönderilen sabit liste
         private static readonly string[] ScopeGroups =
             { "HAMMADDE", "YARI MAMUL", "YARI MAMÜL", "BURGU SAP" };
+
+        /// <summary>
+        /// "Gerçek satın alma lotu" filtresi — tüm sayfalarda ortak kural.
+        /// AnaOzet ve FscMassBalance aynı logu sayar; tutarsızlık olmaz.
+        /// </summary>
+        public static IQueryable<FscLot> ApplyHamLotGirisFilter(
+            IQueryable<FscLot> query,
+            AppDbContext context) =>
+            query.Where(l =>
+                l.SourceSerialId == null
+                && !l.PartiNo.StartsWith("YM")
+                && (l.DispatchNo != null
+                    || l.InvoiceNo != null
+                    || context.FscSerials.Any(s => s.LotId == l.Id && s.IsOpeningStock)));
 
         /// <summary>
         /// Tek sorgu çifti (Giriş + Kalan) — tüm FSC Kütle Dengesi değerlerini hesaplar.
