@@ -1413,6 +1413,19 @@ namespace FSCTakip.WebUI.Controllers
                 .OrderByDescending(l => l.ArrivalDate)
                 .ToListAsync();
 
+            // FSC iddialı ama tedarikçisi sertifikasız/pasif lotlar — doğrudan satın alma girişleri
+            // (dönüşümle üretilen YM lotları hariç, onların geçerliliği kaynak hammaddeden miras alınır).
+            // "FSC-NONE" (FSC'siz) tipi zaten iddia taşımadığı için bu kontrolün dışındadır.
+            var uncertifiedFscLots = await _context.FscLots
+                .Include(l => l.Supplier)
+                .Include(l => l.FscType)
+                .Include(l => l.Product)
+                .Where(l => l.SourceSerialId == null &&
+                            l.FscType != null && l.FscType.Code != "FSC-NONE" &&
+                            (l.Supplier == null || !l.Supplier.IsFscActive || string.IsNullOrEmpty(l.Supplier.FscCode)))
+                .OrderByDescending(l => l.ArrivalDate)
+                .ToListAsync();
+
             // Süresi dolmuş tedarikçi FSC sertifikaları (sadece FSC belgeli firmalar)
             var expiredSuppliers = await _context.Suppliers
                 .Where(s => s.IsActive && s.IsFscActive && s.FscExpiryDate != null && s.FscExpiryDate < today)
@@ -1446,13 +1459,14 @@ namespace FSCTakip.WebUI.Controllers
                 .ToListAsync();
 
             ViewBag.MissingDocLots        = missingDocLots;
+            ViewBag.UncertifiedFscLots    = uncertifiedFscLots;
             ViewBag.ExpiredSuppliers      = expiredSuppliers;
             ViewBag.ExpiringSoonSuppliers = expiringSoonSuppliers;
             ViewBag.NoFscSuppliers        = noFscSuppliers;
             ViewBag.ExpiredCustomers      = expiredCustomers;
             ViewBag.ExpiringSoonCustomers = expiringSoonCustomers;
 
-            int criticalCount = expiredSuppliers.Count + expiredCustomers.Count;
+            int criticalCount = expiredSuppliers.Count + expiredCustomers.Count + uncertifiedFscLots.Count;
             int warningCount  = expiringSoonSuppliers.Count + expiringSoonCustomers.Count + noFscSuppliers.Count;
             ViewBag.CriticalCount   = criticalCount;
             ViewBag.WarningCount    = warningCount;
