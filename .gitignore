@@ -370,5 +370,8 @@ FSCTakip.WebUI/appsettings.Development.json
 FSCTakip.WebUI/wwwroot/uploads/
 
 # ── Yerel makine ayarları ──
-.claude/settings.local.jsongraphify-out/
+.claude/settings.local.json
+
+# ── graphify çıktısı (yerel bilgi grafiği + Obsidian vault) — üretilen dosya, repoda tutulmaz ──
+graphify-out/
 .gstack/

@@ -932,6 +932,16 @@ namespace FSCTakip.WebUI.Controllers
                     .ThenInclude(l => l.WorkOrder)
                         .ThenInclude(w => w!.ProductionDetails)
                             .ThenInclude(pd => pd.Machine)
+                // Dönüşümle üretilmiş YM lotlarının doğrudan tedarikçisi olmaz — kaynak
+                // hammadde lotunun tedarikçisi üzerinden izlenebilirlik/FSC geçerliliği kurulur.
+                .Include(o => o.Lines)
+                    .ThenInclude(l => l.WorkOrder)
+                        .ThenInclude(w => w!.ProductionDetails)
+                            .ThenInclude(pd => pd.FscSerial)
+                                .ThenInclude(s => s.Lot)
+                                    .ThenInclude(lot => lot.SourceSerial)
+                                        .ThenInclude(src => src!.Lot)
+                                            .ThenInclude(srcLot => srcLot.Supplier)
                 .FirstOrDefaultAsync(o => o.Id == id);
 
             if (order == null) return NotFound();
@@ -951,17 +961,23 @@ namespace FSCTakip.WebUI.Controllers
                             var lot = g.First().FscSerial?.Lot;
                             if (lot == null) return null;
 
-                            var supplier = lot.Supplier;
-                            var fscValid = supplier != null &&
-                                           supplier.IsFscActive &&
-                                           (supplier.FscExpiryDate == null || supplier.FscExpiryDate >= DateTime.Today);
+                            // Doğrudan tedarikçi yoksa (dönüşümle üretilmiş YM lot), kaynak
+                            // hammadde lotunun tedarikçisine (SourceSerial zinciri) bak.
+                            var directSupplier = lot.Supplier;
+                            var inheritedSupplier = lot.SourceSerial?.Lot?.Supplier;
+                            var effectiveSupplier = directSupplier ?? inheritedSupplier;
+                            var fscValid = effectiveSupplier != null &&
+                                           effectiveSupplier.IsFscActive &&
+                                           (effectiveSupplier.FscExpiryDate == null || effectiveSupplier.FscExpiryDate >= DateTime.Today);
 
                             return new TraceabilityConsumptionGroup
                             {
-                                Lot            = lot,
-                                ConsumedKg     = g.Sum(pd => pd.ConsumedWeight),
-                                WasteKg        = g.Sum(pd => pd.WasteWeight),
-                                SupplierFscValid = fscValid,
+                                Lot               = lot,
+                                ConsumedKg        = g.Sum(pd => pd.ConsumedWeight),
+                                WasteKg           = g.Sum(pd => pd.WasteWeight),
+                                SupplierFscValid  = fscValid,
+                                EffectiveSupplier = effectiveSupplier,
+                                SupplierInherited = directSupplier == null && inheritedSupplier != null,
                                 Serials = g.OrderBy(pd => pd.FscSerial?.SerialNo).Select(pd => new TraceabilitySerialRow
                                 {
                                     Serial         = pd.FscSerial!,
@@ -1770,10 +1786,14 @@ namespace FSCTakip.WebUI.Controllers
 
     public class TraceabilityConsumptionGroup
     {
-        public FscLot  Lot                  { get; set; } = null!;
-        public decimal ConsumedKg           { get; set; }
-        public decimal WasteKg              { get; set; }
-        public bool    SupplierFscValid     { get; set; }
+        public FscLot     Lot                  { get; set; } = null!;
+        public decimal    ConsumedKg           { get; set; }
+        public decimal    WasteKg              { get; set; }
+        public bool       SupplierFscValid     { get; set; }
+        // Doğrudan tedarikçi yoksa (dönüşümle üretilmiş YM lot), izlenebilirlik SourceSerial
+        // zinciri üzerinden kaynak hammadde lotunun tedarikçisine gider.
+        public Supplier?  EffectiveSupplier    { get; set; }
+        public bool       SupplierInherited    { get; set; }
         public List<TraceabilitySerialRow> Serials { get; set; } = new();
     }
 
