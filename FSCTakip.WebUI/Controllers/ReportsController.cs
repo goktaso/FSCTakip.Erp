@@ -1477,6 +1477,83 @@ namespace FSCTakip.WebUI.Controllers
             return View();
         }
 
+        // ── Kritik Uygunsuzluk Popup (giriş başına bir kez) ────────────────────
+        // GET /Reports/CriticalSummary — session'da henüz gösterilmediyse kritik kalemleri döner
+        [HttpGet]
+        public async Task<IActionResult> CriticalSummary()
+        {
+            if (HttpContext.Session.GetString("CriticalPopupShown") == "1")
+                return Json(new { count = 0, alreadyShown = true, items = Array.Empty<object>() });
+
+            var today = DateTime.Today;
+
+            var expiredSuppliers = await _context.Suppliers
+                .Where(s => s.IsActive && s.IsFscActive && s.FscExpiryDate != null && s.FscExpiryDate < today)
+                .OrderBy(s => s.FscExpiryDate)
+                .ToListAsync();
+
+            var expiredCustomers = await _context.Customers
+                .Where(c => c.IsActive && c.IsFscActive && c.FscExpiryDate != null && c.FscExpiryDate < today)
+                .OrderBy(c => c.FscExpiryDate)
+                .ToListAsync();
+
+            var uncertifiedFscLots = await _context.FscLots
+                .Include(l => l.Supplier)
+                .Include(l => l.FscType)
+                .Where(l => l.SourceSerialId == null &&
+                            l.FscType != null && l.FscType.Code != "FSC-NONE" &&
+                            (l.Supplier == null || !l.Supplier.IsFscActive || string.IsNullOrEmpty(l.Supplier.FscCode)))
+                .OrderByDescending(l => l.ArrivalDate)
+                .ToListAsync();
+
+            var items = new List<object>();
+
+            foreach (var s in expiredSuppliers)
+            {
+                int daysAgo = (int)(today - s.FscExpiryDate!.Value).TotalDays;
+                items.Add(new
+                {
+                    type   = "Tedarikçi Sertifikası Süresi Doldu",
+                    title  = s.Name,
+                    detail = $"FSC sertifikası {s.FscExpiryDate.Value:dd.MM.yyyy} tarihinde doldu ({daysAgo} gün önce). Bu tedarikçiden yeni hammadde girişi FSC iddiasıyla kabul edilmemeli."
+                });
+            }
+
+            foreach (var c in expiredCustomers)
+            {
+                int daysAgo = (int)(today - c.FscExpiryDate!.Value).TotalDays;
+                items.Add(new
+                {
+                    type   = "Müşteri Lisansı Süresi Doldu",
+                    title  = c.Name,
+                    detail = $"FSC lisansı {c.FscExpiryDate.Value:dd.MM.yyyy} tarihinde doldu ({daysAgo} gün önce). Bu müşteriye FSC iddialı sevkiyat yapılmadan önce lisans yenilenmeli."
+                });
+            }
+
+            foreach (var l in uncertifiedFscLots)
+            {
+                var reason = l.Supplier == null ? "tedarikçi kaydı yok"
+                           : !l.Supplier.IsFscActive ? "tedarikçi FSC pasif işaretli"
+                           : "tedarikçinin FSC kodu tanımsız";
+                items.Add(new
+                {
+                    type   = "Sertifikasız Tedarikçiden FSC İddialı Hammadde",
+                    title  = $"Parti {l.PartiNo} ({l.FscType!.Code})",
+                    detail = $"{l.ArrivalDate:dd.MM.yyyy} tarihinde {(l.Supplier?.Name ?? "bilinmeyen tedarikçi")}'den \"{l.FscType!.Code}\" iddiasıyla girdi — {reason}. Üretime karışmışsa CoC zinciri doğrulanamaz."
+                });
+            }
+
+            return Json(new { count = items.Count, alreadyShown = false, items });
+        }
+
+        // POST /Reports/AckCriticalPopup — popup kapatıldığında bu oturumda bir daha gösterme
+        [HttpPost]
+        public IActionResult AckCriticalPopup()
+        {
+            HttpContext.Session.SetString("CriticalPopupShown", "1");
+            return Json(new { success = true });
+        }
+
         // GET /Reports/FscConsumption — Yıllık FSC CoC tüketim denetim raporu (mamul → kategori → bileşen)
         public async Task<IActionResult> FscConsumption(DateTime? startDate, DateTime? endDate, int[]? productIds)
         {

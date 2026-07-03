@@ -1557,6 +1557,32 @@
     </div>
 </div>
 
+<!-- ── FSC KRİTİK UYGUNSUZLUK POPUP (girişte bir kez) ──────────────────────── -->
+<div class="modal fade" id="criticalFscModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#fef2f2;border-bottom:2px solid #fca5a5;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-exclamation-triangle" style="color:#dc2626;font-size:18px;"></i>
+                    <h5 class="modal-title fw-bold mb-0" style="color:#991b1b;">
+                        FSC Kritik Uygunsuzluk — <span id="criticalFscCount">0</span> Kalem
+                    </h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="ackCriticalFscPopup()"></button>
+            </div>
+            <div class="modal-body" style="max-height:60vh;overflow-y:auto;">
+                <div id="criticalFscList"></div>
+            </div>
+            <div class="modal-footer">
+                <a href="/Reports/Warnings" class="btn btn-sm" style="background:var(--brand);color:#fff;">
+                    <i class="fas fa-list me-1"></i> Uyarı Paneline Git
+                </a>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" onclick="ackCriticalFscPopup()">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ── GLOBAL QUICK-ADD MODAL ───────────────────────────────────── -->
 <div class="modal fade" id="quickAddModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
@@ -2976,5 +3002,40 @@ async function fetchJson(url, options) {
         return _origFetch.call(this, url, opts);
     };
 })();
-</script></body>
+</script>
+
+<!-- FSC kritik uygunsuzluk popup — girişte bir kez tetiklenir -->
+<script>
+function ackCriticalFscPopup() {
+    fetch('/Reports/AckCriticalPopup', { method: 'POST' }).catch(() => {});
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    var modalEl = document.getElementById('criticalFscModal');
+    if (!modalEl || typeof bootstrap === 'undefined') return;
+
+    fetch('/Reports/CriticalSummary')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+            if (!data || data.alreadyShown || !data.items || data.items.length === 0) return;
+
+            document.getElementById('criticalFscCount').textContent = data.count;
+            var listEl = document.getElementById('criticalFscList');
+            listEl.innerHTML = data.items.map(function (it) {
+                return '<div style="border-left:3px solid #dc2626;background:#fef2f2;border-radius:6px;padding:10px 14px;margin-bottom:10px;">' +
+                    '<div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.03em;">' + it.type + '</div>' +
+                    '<div style="font-weight:600;color:#111827;margin:2px 0 4px;">' + it.title + '</div>' +
+                    '<div style="font-size:13px;color:#4b5563;">' + it.detail + '</div>' +
+                    '</div>';
+            }).join('');
+
+            var modal = new bootstrap.Modal(modalEl);
+            modal.show();
+            // Modal her kapatma yolunda (X, Kapat, backdrop dışına tıklama vb.) onayla
+            modalEl.addEventListener('hidden.bs.modal', ackCriticalFscPopup, { once: true });
+        })
+        .catch(function () {});
+});
+</script>
+</body>
 </html>

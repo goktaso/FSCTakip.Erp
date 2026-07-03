@@ -4,7 +4,7 @@
 **Denetlenen Dönem:** 2025 (17.12.2024 – 25.12.2025) — inceleme sırasında 2024 dönemi (23.12.2023–16.12.2024) karşılaştırma amaçlı ayrıca sorgulandı
 **Denetlenen Kuruluş:** ACORE (FSC Takip ERP)
 **Yöntem:** Canlı sistem denetimi — Baş Denetçi rolündeki talepler, sistemden gerçek zamanlı ekran/veri kanıtıyla cevaplandı
-**Durum:** Devam ediyor — bu kayıt Talep 0–3 arasını kapsar
+**Durum:** ✅ Tamamlandı — Talep 0–3 canlı denetim + bulguların aynı gün içinde kapatılması
 
 ---
 
@@ -109,16 +109,53 @@ Sertifikasız/doğrulanamamış bir tedarikçiden gelen hammadde, "FSC MIX_CREDI
 
 **Düzeltici Faaliyet Önerisi:** Ya bu tedarikçinin gerçek FSC belgesi bulunup sisteme işlenmeli, ya da bu lot ve ondan türeyen tüm üretim/satış kayıtları FSC iddiası olmadan (kontrollü kaynak / FSC'siz) yeniden sınıflandırılmalı. Bu bulgu sertifika sürekliliği kararını doğrudan etkileyebilir.
 
+### ✅ Bulgu 3 — Kapatıldı (Aynı Gün)
+
+Firma, MIMCORD SAU PAPER CORD YARN MANIFACTURER'a ait gerçek ihracat faturasını (A2502025003) ibraz etti. Faturada:
+
+- **FSC Sertifika Kodu:** GFA-COC-007616
+- Bu kod sisteme işlendi, tedarikçi FSC-aktif olarak güncellendi.
+
+**Doğrulama:** Sistem yeniden sorgulandı — bu tedarikçiden gelen lot artık "sertifikasız kaynak" listesinde görünmüyor. Bulgu kapatıldı, kanıt: bu belge + sistem kaydı.
+
 ---
 
-## Bulgu Özeti (Bu Ana Kadar)
+## Ek Bulgular ve Aynı Gün İçinde Yapılan Düzeltmeler
+
+Denetim sırasında sistemin kendisinde 2 ayrı, önceden var olan kod hatası tespit edilip düzeltildi:
+
+### 🔴→✅ Bulgu 4 — Tam İzlenebilirlik Sayfası Yanlış Alarm Veriyordu
+
+`/Reports/Traceability` sayfası, dönüşümle üretilen yarı mamül (YM) lotlarını (doğrudan tedarikçisi olmayan, iç üretim) yanlışlıkla "FSC Sorunlu" / "FSC Zinciri Eksik" olarak işaretliyordu — oysa bu lotların kaynak hammaddesi (`SourceSerial` zinciri) sistemde tam kayıtlıydı. Kod düzeltildi: doğrudan tedarikçi yoksa kaynak hammadde lotunun tedarikçisi üzerinden geçerlilik kuruluyor, arayüzde "(dönüşüm kaynağı)" etiketiyle şeffaf gösteriliyor. SIP2026-001 örneğinde canlı doğrulandı: "FSC Zinciri Eksik" → "FSC Zinciri Tam — CoC Uyumlu".
+
+### 🔴→✅ Bulgu 5 — Uyarı Paneli Sertifikasız Tedarikçiyi Yakalamıyordu
+
+Mevcut uyarı mantığı yalnızca "aktif işaretli ama kodu boş" tedarikçileri yakalıyordu; MIMCORD gibi tamamen "pasif" işaretli tedarikçiler hiç uyarıya girmiyordu — panel "Tüm Sistemler Normal" diyordu ama Bulgu 3'teki Major uygunsuzluk sessizce duruyordu. Yeni bir kontrol eklendi: doğrudan satın alma girişlerinde FSC iddiası taşıyan ama tedarikçisi sertifikasız/pasif olan lotlar artık "Kritik" olarak ayrı bir bölümde listeleniyor.
+
+### 🆕 Yeni Özellik — Kritik Uygunsuzluk Popup'ı
+
+Kullanıcı talebi üzerine: sistemde kritik bir FSC uygunsuzluğu varsa, kullanıcı girişte (her oturumda bir kez) otomatik bir popup ile uyarılıyor — sayfa sayfa gezerken tekrar rahatsız etmiyor, kapatınca o oturumda bir daha çıkmıyor. Uygunsuzluk yoksa popup hiç görünmüyor (canlı test edildi: geçici izole test kaydıyla popup'ın doğru tetiklendiği, sonra verinin temizlendiği doğrulandı). Her kalemde "neden" açıklaması var, "Uyarı Paneline Git" ile tam listeye bağlanıyor.
+
+---
+
+## Gün Sonu Kapanış
+
+### Final Bulgu Tablosu
 
 | # | Bulgu | Sınıf | Durum |
 |---|---|---|---|
-| 1 | Tek kullanıcı, görev ayrılığı yok | Gözlem | Açık |
-| 2 | Geçmiş denetim/CAR kaydı modülü yok | Gözlem | Açık |
-| 3 | MIMCORD (TED-012) sertifikasız tedarikçiden gelen hammadde FSC MIX_CREDIT iddiasıyla üretim ve sevkiyata karışmış | **Major** | **Açık — CAR gerekli** |
+| 1 | Tek kullanıcı, görev ayrılığı yok | Gözlem | Açık — organizasyonel karar gerektirir |
+| 2 | Geçmiş denetim/CAR kaydı modülü yok | Gözlem | Açık — ürün geliştirme kararı |
+| 3 | MIMCORD (TED-012) sertifikasız tedarikçiden gelen hammadde FSC MIX_CREDIT iddiasıyla üretim ve sevkiyata karışmış | Major | ✅ **Kapatıldı** — gerçek FSC kodu (GFA-COC-007616) sisteme işlendi |
+| 4 | Tam İzlenebilirlik sayfası dönüşüm lotlarını yanlış "sorunlu" işaretliyordu | Kod Hatası | ✅ **Kapatıldı** — kaynak koda düzeltme uygulandı, canlı doğrulandı |
+| 5 | Uyarı Paneli, pasif işaretli sertifikasız tedarikçiyi hiç yakalamıyordu | Kod Hatası | ✅ **Kapatıldı** — yeni kritik kontrol eklendi, doğrulandı |
+
+### Sertifika Sürekliliği Tavsiyesi
+
+Bu denetim oturumunda tespit edilen **tek Major uygunsuzluk (Bulgu 3) aynı gün içinde, gerçek belge kanıtıyla kapatıldı.** Sistemin kendi kontrol mekanizmasındaki 2 kod hatası (Bulgu 4, 5) da aynı gün düzeltilip canlı doğrulandı. Kalan 2 madde (1, 2) süreç/organizasyon düzeyinde gözlemlerdir, sertifikayı bloke edecek ağırlıkta değildir.
+
+**Tavsiye: FSC CoC sertifikasının sürekliliği için olumlu görüş — gözlemlerin bir sonraki denetime kadar kapatılması şartıyla.**
 
 ---
 
-*Bu kayıt devam eden bir denetim oturumunun 03.07.2026 tarihli ilk bölümüdür (Talep 0–3). Kalan talepler (4–12) tamamlandığında güncellenmiş/tam sürüm üretilecektir.*
+*Bu kayıt 03.07.2026 tarihli denetim oturumunun tam kaydıdır: canlı denetim (Talep 0–3), tespit edilen tüm bulgular ve aynı gün içinde uygulanan düzeltmeler dahildir.*

@@ -47,6 +47,7 @@ namespace FSCTakip.WebUI.Controllers
             HttpContext.Session.SetString("UserName", user.FullName);
             HttpContext.Session.SetString("Username", user.Username);
             HttpContext.Session.SetString("IsAdmin",  user.IsAdmin ? "1" : "0");
+            HttpContext.Session.Remove("CriticalPopupShown");
 
             // Tüm yetkiler Session'a önbelleğe al (her request'te DB sorgusu yapılmasın)
             var perms = await _permService.GetAllEffectiveAsync(user.Id);
