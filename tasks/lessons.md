@@ -1,5 +1,18 @@
 # Alınan Dersler — FSC Takip ERP
 
+## Sıfır kurulum hiç test edilmemişti — migration/seed zinciri 4 ayrı yerden kırıktı (2026-07-03)
+
+**Bağlam:** Çoklu şirket doğrulama programı (satış öncesi) ilk kez tamamen boş bir DB'ye kurulum denedi. ACORE'un canlı DB'si aylar içinde adım adım evrildiği için şu sınıf hatalar hiç görünmemişti:
+
+1. **Elle yazılmış migration'lar (.Designer.cs olmadan) EF tarafından GÖRÜLMEZ** — `[Migration]` attribute'ü Designer dosyasındadır; onsuz sınıf migration listesine girmez, sıfır DB'de sessizce atlanır. 3 migration böyleydi (AddExternalCodes, RenamePartiNoAddSerialLotNo, FscLotSupplierIdNullable). Belirti: sonraki migration "column does not exist" ile patlar.
+2. **SSMS ile elle eklenen kolon** (StockMovements.QuantityKg) hiçbir migration'da yoktu — canlıda var, sıfır kurulumda yok. **Tespit yöntemi: INFORMATION_SCHEMA üzerinden canlı-vs-sıfır tam şema diff'i** — tek tek hata kovalamaktan çok daha hızlı, kalan TÜM boşlukları tek seferde gösterdi.
+3. **İlk admin kullanıcısını hiçbir şey oluşturmuyordu** — login imkânsızdı. DbSeeder'a, demo-veri guard'ından BAĞIMSIZ bir AppUsers-boşsa-oluştur bloğu eklendi.
+4. **Yama deseni:** eski migration'a dokunma; scaffold'la boş migration üret → dosya adı+attribute'ü doğru kronolojik ID'ye taşı → içine IF NOT EXISTS'li idempotent SQL yaz (canlıda no-op, sıfırda tamamlayıcı). `20260524120001` ve `20260526000003` bu desenle yazıldı.
+
+**Tuzaklar:** (a) C# verbatim string (@"...") içinde SQL yorumu yazarken çift tırnak string'i kapatır — migration derlenmez; (b) `dotnet ef`/`dotnet build` IIS Express Debug kilidine takılıyorsa `--configuration Release` kullan, kullanıcının VS'ini durdurmasına gerek kalmaz; (c) test koşumları için `dotnet publish -o <scratchpad>` + `dotnet FSCTakip.WebUI.dll` (Kestrel) + `ConnectionStrings__DefaultConnection` env var — hem VS'le çakışmaz hem gerçek deployment modunu test eder.
+
+**Kalıcı çıktı:** `tools/regression_suite.py` (7 kontrol, parametrik base-url) — her yeni müşteri kurulumunda koşturulmalı. Uppercase mekanizması kullanıcı adını `ADMİN` yapar; login Turkish collation'da çalışır ama farklı collation'da kırılabilir — kurulum şartına yazıldı.
+
 ## WorkOrder.ActualQuantity gün-bazlı toplama hatası (2026-07-02)
 
 **Belirti:** Üretim iş emri, farklı günlerde (fiş 1 günde de 1 haftada da kapansa) parça parça tamamlandığında `WorkOrder.ActualQuantity` ve ilgili `StockMovement` (Tip=ProductionEntry) gerçek üretimin katları olarak şişiyordu (5 iş emrinde tespit edildi: bazıları 2 katı).

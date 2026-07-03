@@ -11,6 +11,26 @@ namespace FSCTakip.WebUI.Data
             using var scope = services.CreateScope();
             var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+            // ── 0. İlk admin kullanıcısı ─────────────────────────────────────────
+            // Demo-veri guard'ından BAĞIMSIZ: hiç kullanıcı yoksa sisteme giriş imkânsızdır.
+            // Sıfır kurulumda (yeni müşteri) admin/admin123 oluşturulur; ilk girişte şifrenin
+            // değiştirilmesi beklenir (bkz. KULLANIM_KILAVUZU — Kurulum).
+            if (!await ctx.AppUsers.AnyAsync())
+            {
+                ctx.AppUsers.Add(new AppUser
+                {
+                    Username     = "admin",
+                    PasswordHash = Controllers.AccountController.HashPassword("admin123"),
+                    FullName     = "SİSTEM YÖNETİCİSİ",
+                    Email        = "admin@fscerp.local",
+                    IsAdmin      = true,
+                    IsActive     = true,
+                    CreatedBy    = "SISTEM",
+                    CreatedDate  = DateTime.Now
+                });
+                await ctx.SaveChangesAsync();
+            }
+
             // Herhangi bir tabloda seed data varsa tamamen atla
             if (await ctx.Suppliers.AnyAsync()  ||
                 await ctx.BagTypes.AnyAsync()   ||

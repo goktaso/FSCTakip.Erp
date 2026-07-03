@@ -51,6 +51,16 @@
 
 **Sayfa:** `/Account/Login`
 
+### İlk Kurulum (Yeni Firma)
+
+Sistem tamamen boş bir veritabanına kurulduğunda ilk açılışta otomatik olarak:
+- Başlangıç referans verileri (depo, torba tipi, ürün grubu, makine, kağıt tanımları) ve örnek kayıtlar oluşturulur,
+- **`admin` / `admin123`** kullanıcısı (tam yetkili) oluşturulur.
+
+> **⚠️ Güvenlik:** İlk girişten hemen sonra `admin` şifresini değiştirin (sağ üst menü → Şifre Değiştir) ve personel için ayrı kullanıcılar tanımlayın (Sistem Yönetimi → Kullanıcılar).
+
+> **ℹ️ Sunucu şartı:** SQL Server veritabanı **Türkçe collation** (örn. `Turkish_CI_AS`) ile oluşturulmalıdır — kullanıcı adları sistemde büyük harfe çevrilerek saklanır; farklı collation'da giriş eşleşmesi sorun çıkarabilir.
+
 ### Adımlar
 
 1. Tarayıcınızda sistem adresini açın (ör. `http://sunucu:5000`)
