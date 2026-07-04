@@ -454,6 +454,7 @@ namespace FSCTakip.WebUI.Controllers
 
             if (ordered.Count == 0) return NotFound();
 
+            ViewBag.Company = await _context.CompanySettings.FirstOrDefaultAsync();
             return View(ordered);
         }
 

@@ -1,0 +1,110 @@
+@model FSCTakip.Core.Entities.CompanySetting
+@{
+    ViewData["Title"] = "Şirket Bilgileri";
+}
+
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fw-semibold" style="color:var(--text);font-size:14px;">
+            <i class="fas fa-building me-2 text-primary"></i>Şirket Bilgileri (Belge Ünvanı)
+        </span>
+    </div>
+    <div class="d-flex gap-2 ms-auto">
+        <span class="topbar-user"><i class="fas fa-user-circle"></i> @(User.Identity?.Name ?? "Kullanıcı")</span>
+    </div>
+</div>
+
+<div class="alert d-flex align-items-center gap-3 mb-3"
+     style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;">
+    <i class="fas fa-info-circle fa-lg" style="color:#1d4ed8;"></i>
+    <div class="small" style="color:#1e3a8a;">
+        Buradaki bilgiler <strong>dışa dönük belgelerde</strong> (sevk irsaliyesi, satış faturası, iş emri formu)
+        belge sahibi ünvanı olarak basılır. FSC CoC / Lisans kodları belge üzerindeki FSC rozetinde gösterilir —
+        denetimde belgenin firmanıza aidiyetini kanıtlar.
+    </div>
+</div>
+
+<div class="table-card" style="max-width:860px;">
+    <div style="padding:1.5rem;">
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label fw-semibold">Şirket Ünvanı <span class="text-danger">*</span></label>
+                <input type="text" id="csName" class="form-control" value="@Model.CompanyName" maxlength="250"
+                       placeholder="ör. PACKY PACKAGING AMBALAJ SAN. TİC. LTD. ŞTİ.">
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Adres</label>
+                <input type="text" id="csAddress" class="form-control" value="@Model.Address" maxlength="500">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Şehir</label>
+                <input type="text" id="csCity" class="form-control" value="@Model.City" maxlength="100">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Vergi No</label>
+                <input type="text" id="csTaxNumber" class="form-control" value="@Model.TaxNumber" maxlength="50">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Vergi Dairesi</label>
+                <input type="text" id="csTaxOffice" class="form-control" value="@Model.TaxOffice" maxlength="200">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Telefon</label>
+                <input type="text" id="csPhone" class="form-control" value="@Model.Phone" maxlength="50">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">E-Posta</label>
+                <input type="email" id="csEmail" class="form-control" value="@Model.Email" maxlength="200">
+            </div>
+            <div class="col-12"><hr style="border-color:#e5e7eb;"></div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold" style="color:#166534;">
+                    <i class="fas fa-certificate me-1"></i>FSC CoC Sertifika Kodu
+                </label>
+                <input type="text" id="csFscCoc" class="form-control" value="@Model.FscCocCode" maxlength="100"
+                       placeholder="ör. GFA-COC-005968">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold" style="color:#166534;">
+                    <i class="fas fa-award me-1"></i>FSC Lisans Kodu
+                </label>
+                <input type="text" id="csFscLic" class="form-control" value="@Model.FscLicenseCode" maxlength="100"
+                       placeholder="ör. FSC-C172867">
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-4">
+            <button type="button" class="btn btn-primary" id="csSaveBtn" onclick="saveCompany()">
+                <i class="fas fa-save me-1"></i> Kaydet
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function saveCompany() {
+    const name = document.getElementById('csName').value.trim();
+    if (!name) { showToast('Şirket ünvanı zorunludur.', 'warning'); return; }
+
+    const fd = new FormData();
+    fd.append('CompanyName',    name);
+    fd.append('Address',        document.getElementById('csAddress').value);
+    fd.append('City',           document.getElementById('csCity').value);
+    fd.append('TaxNumber',      document.getElementById('csTaxNumber').value);
+    fd.append('TaxOffice',      document.getElementById('csTaxOffice').value);
+    fd.append('Phone',          document.getElementById('csPhone').value);
+    fd.append('Email',          document.getElementById('csEmail').value);
+    fd.append('FscCocCode',     document.getElementById('csFscCoc').value);
+    fd.append('FscLicenseCode', document.getElementById('csFscLic').value);
+
+    const btn = document.getElementById('csSaveBtn');
+    btn.disabled = true;
+    fetch('/Company/Save', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => showToast(res.message, res.success ? 'success' : 'error'))
+        .catch(() => showToast('Bağlantı hatası.', 'error'))
+        .finally(() => btn.disabled = false);
+}
+</script>
+}

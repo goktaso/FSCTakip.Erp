@@ -62,6 +62,10 @@ namespace FSCTakip.DataAccess.Data
         public DbSet<AuditPeriod> AuditPeriods { get; set; }
         #endregion
 
+        #region Şirket Bilgileri (beyaz etiket)
+        public DbSet<CompanySetting> CompanySettings { get; set; }
+        #endregion
+
         #region Kullanıcı & Yetki
         public DbSet<AppUser>                AppUsers                { get; set; }
         public DbSet<PermissionGroup>        PermissionGroups        { get; set; }

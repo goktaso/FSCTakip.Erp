@@ -31,6 +31,21 @@ namespace FSCTakip.WebUI.Data
                 await ctx.SaveChangesAsync();
             }
 
+            // ── 0b. Şirket bilgileri (beyaz etiket) ─────────────────────────────
+            // Belgelerde (irsaliye/fatura/iş emri formu) görünen ünvan. Kurulumda
+            // firma bilgileriyle güncellenir (/Company/Settings). Varsayılan, eski
+            // hardcoded davranışı korur.
+            if (!await ctx.CompanySettings.AnyAsync())
+            {
+                ctx.CompanySettings.Add(new CompanySetting
+                {
+                    CompanyName = "ARD SİSTEM VE DANIŞMANLIK",
+                    CreatedBy   = "SISTEM",
+                    CreatedDate = DateTime.Now
+                });
+                await ctx.SaveChangesAsync();
+            }
+
             // Herhangi bir tabloda seed data varsa tamamen atla
             if (await ctx.Suppliers.AnyAsync()  ||
                 await ctx.BagTypes.AnyAsync()   ||

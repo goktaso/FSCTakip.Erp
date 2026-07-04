@@ -118,6 +118,22 @@ sc create FscErp binPath= "C:\Program Files\dotnet\dotnet.exe C:\FscErp\app\FSCT
 
 ---
 
+## FAZ 3.5 — Lisans Etkinleştirme
+
+Uygulama, RSA-imzalı ve **sunucuya özel** bir lisans dosyası (`license.lic`) olmadan çalışmaz — lisanssız durumda tüm sayfalar Lisans Durumu ekranına yönlenir.
+
+1. Uygulamayı aç → otomatik olarak `http://fsc.packy.local/License/Status` görünür.
+2. Ekrandaki **Sunucu Kimlik Kodu**'nu (16 haneli) not al ve ARD'ye ilet.
+3. ARD, bu koda kesilmiş `license.lic` dosyasını üretip gönderir *(ARD içi: `python tools/license_gen.py --private-key <özel-anahtar> --licensed-to "<Firma Ünvanı>" --machine <kod> [--valid-until YYYY-AA-GG]`)*.
+4. Status sayfasındaki **Lisans Dosyasını Yükle** alanından dosyayı yükle — sistem imzayı doğrular, geçersiz/başka sunucuya ait dosyayı reddeder.
+5. Sayfa "Lisans Geçerli" durumuna döner; lisans sahibi ve geçerlilik tarihi görünür.
+
+> **Notlar:** Süreli lisanslarda bitişe 30 gün kala sistem girişte otomatik uyarı gösterir. Sunucu değişiminde (donanım yenileme, VM taşıma) kimlik kodu değişir — ARD'den yeni lisans istenir (bakım sözleşmesi kapsamında ücretsiz).
+
+✅ `/License/Status` "Lisans Geçerli" gösteriyor · lisans dosyasının bir kopyası müşteri IT arşivine kaydedildi.
+
+---
+
 ## FAZ 4 — Veritabanı Şeması ve İlk Açılış
 
 1. SSMS'te `migration.sql`'i `FscErpDb` üzerinde çalıştır (idempotent — hata alırsa tamamı durur, ARD'ye bildirilir).
@@ -145,6 +161,7 @@ sc create FscErp binPath= "C:\Program Files\dotnet\dotnet.exe C:\FscErp\app\FSCT
 
 Sıra önemlidir (bağımlılıklar):
 
+0. **Şirket Bilgileri (beyaz etiket)** — Tanımlamalar → Şirket Bilgileri (`/Company/Settings`, yalnız admin): firmanın tam ünvanı, adresi, vergi bilgileri ve **kendi FSC CoC + Lisans kodları** girilir. Bu bilgiler sevk irsaliyesi, satış faturası ve iş emri formunun başlığında **belge sahibi ünvanı** olarak basılır — girilmezse belgeler varsayılan ARD ünvanıyla çıkar. *(Denetçi, belgedeki ünvan ve FSC kodlarının denetlenen firmaya ait olmasını bekler — bu adım atlanamaz.)*
 1. **FSC Tipleri** (Tanımlamalar → FSC Tipleri): tam liste girilir — `FSC 100%`, `FSC MIX Credit`, `FSC MIX %70`, `FSC Recycled 100%`, **`FSC'siz (FSC-NONE)`**. *(FSC'siz tipi zorunludur: sertifikasız hammadde girişlerinin iddiasız işaretlenmesi denetim gereğidir.)*
 2. **Ürün Grupları**: müşterinin kod aralıklarına göre (Canias stok kod yapısıyla uyumlu seçilirse ETL eşleşmesi kolaylaşır).
 3. **Depolar, Makineler, Torba Tipleri, Kağıt tanımları** (tip/renk/gramaj/en).

@@ -375,3 +375,7 @@ FSCTakip.WebUI/wwwroot/uploads/
 # ── graphify çıktısı (yerel bilgi grafiği + Obsidian vault) — üretilen dosya, repoda tutulmaz ──
 graphify-out/
 .gstack/
+
+# ── Lisans dosyaları — her kurulum kendi lisansını taşır, repoya girmez ──
+license.lic
+*.lic

@@ -1,5 +1,12 @@
 # Alınan Dersler — FSC Takip ERP
 
+## Beyaz etiket + çevrimdışı lisans kilidi (2026-07-04)
+
+- **Beyaz etiket:** `CompanySetting` (tek satır tablo) → 3 print view'de belge ünvanı + firmanın kendi FSC CoC/Lisans kodları. Ürün markası (login/sidebar ARD) bilinçli sabit; yalnız **dışa dönük belgeler** müşteri ünvanı taşır. Seed varsayılanı eski hardcoded değer — ACORE görünümü değişmedi (canlı doğrulandı).
+- **Lisans:** RSA-2048 imzalı `license.lic` (base64(payload).base64(imza)), makine bağlama = SHA256(Windows MachineGuid)[:16]. Özel anahtar repo DIŞI (`Desktop/ARD_Lisans/` — kasaya taşınmalı!), genel anahtar `LicenseService`'e gömülü. Global `LicenseFilter` SessionAuthFilter'dan ÖNCE kayıtlı; `LicenseController` [AllowAnonymous] — müşteri lisanssızken parmak izini görmeli. Upload kaydetmeden ÖNCE doğrular (bozuk dosya geçerli lisansı ezemez) + `[IgnoreAntiforgeryToken]` (Layout'suz sayfada token yok; güvenlik RSA imzada).
+- **Tuzak — ContentRootPath:** lisans dosyası ContentRoot'ta aranır; VS/IIS Express'te bu **proje kökü değil `FSCTakip.WebUI/` klasörüdür** — dev lisansı iki yere de kopyalandı (`license.lic` + `FSCTakip.WebUI/license.lic`, ikisi de gitignored `*.lic`). Publish'te sorun yok (kök = publish klasörü).
+- Üretici: `tools/license_gen.py` (repoda, özel anahtar YOLU parametre). Test: 4 birim test — gerçek dev lisansıyla imza matematiği; bozuk imza/yanlış makine reddi canlıda da doğrulandı.
+
 ## Sıfır kurulum hiç test edilmemişti — migration/seed zinciri 4 ayrı yerden kırıktı (2026-07-03)
 
 **Bağlam:** Çoklu şirket doğrulama programı (satış öncesi) ilk kez tamamen boş bir DB'ye kurulum denedi. ACORE'un canlı DB'si aylar içinde adım adım evrildiği için şu sınıf hatalar hiç görünmemişti:

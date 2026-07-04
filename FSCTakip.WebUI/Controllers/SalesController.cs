@@ -114,6 +114,7 @@ namespace FSCTakip.WebUI.Controllers
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (order == null) return NotFound();
+            ViewBag.Company = await _context.CompanySettings.FirstOrDefaultAsync();
             return View(order);
         }
 
@@ -129,6 +130,7 @@ namespace FSCTakip.WebUI.Controllers
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (order == null) return NotFound();
+            ViewBag.Company = await _context.CompanySettings.FirstOrDefaultAsync();
             return View(order);
         }
 

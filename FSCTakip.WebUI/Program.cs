@@ -22,6 +22,7 @@ builder.Host.UseSerilog();
 // 1. Gerekli Servisleri Ekle
 var mvcBuilder = builder.Services.AddControllersWithViews(options =>
 {
+    options.Filters.Add<LicenseFilter>();      // lisans kontrolü — auth'tan da önce
     options.Filters.Add<SessionAuthFilter>();
     options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
     // Decimal form alanlarını kültürden bağımsız bağla (tr-TR'de "6000.00" → 60000000 bug'ı)
@@ -48,6 +49,7 @@ builder.Services.AddSession(options =>
 builder.Services.AddScoped<PermissionService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+builder.Services.AddSingleton<ILicenseService, LicenseService>();
 builder.Services.AddHostedService<EtlBackgroundService>();
 
 // DbContext kayd�

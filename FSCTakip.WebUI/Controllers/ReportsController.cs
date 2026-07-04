@@ -8,7 +8,11 @@ namespace FSCTakip.WebUI.Controllers
 {
     public class ReportsController : BaseController
     {
-        public ReportsController(AppDbContext context) : base(context) { }
+        private readonly FSCTakip.WebUI.Services.ILicenseService? _license;
+        public ReportsController(AppDbContext context, FSCTakip.WebUI.Services.ILicenseService? license = null) : base(context)
+        {
+            _license = license;
+        }
 
         // ── 1. FSC Chain of Custody Raporu ─────────────────────────────────────
         // Her satış sevkiyatını tedarikçiye kadar izler.
@@ -1541,6 +1545,22 @@ namespace FSCTakip.WebUI.Controllers
                     title  = $"Parti {l.PartiNo} ({l.FscType!.Code})",
                     detail = $"{l.ArrivalDate:dd.MM.yyyy} tarihinde {(l.Supplier?.Name ?? "bilinmeyen tedarikçi")}'den \"{l.FscType!.Code}\" iddiasıyla girdi — {reason}. Üretime karışmışsa CoC zinciri doğrulanamaz."
                 });
+            }
+
+            // Uygulama lisansı 30 gün içinde doluyorsa uyar (süresiz lisansta ValidUntil null'dır)
+            var lic = _license?.Current;
+            if (lic?.ValidUntil != null)
+            {
+                var daysLeft = (int)(lic.ValidUntil.Value.Date - today).TotalDays;
+                if (daysLeft >= 0 && daysLeft <= 30)
+                {
+                    items.Add(new
+                    {
+                        type   = "Uygulama Lisansı Yakında Doluyor",
+                        title  = lic.LicensedTo ?? "FSC Takip ERP",
+                        detail = $"Lisans {lic.ValidUntil.Value:dd.MM.yyyy} tarihinde dolacak ({daysLeft} gün kaldı). Yenileme için ARD Sistem ve Danışmanlık ile iletişime geçin — süre dolduğunda sistem erişime kapanır."
+                    });
+                }
             }
 
             return Json(new { count = items.Count, alreadyShown = false, items });

@@ -1,7 +1,10 @@
 @model FSCTakip.Core.Entities.SalesOrder
+@using FSCTakip.Core.Entities
 @{
     Layout = null;
     var today = DateTime.Now;
+    var company = ViewBag.Company as CompanySetting;
+    var companyName = string.IsNullOrWhiteSpace(company?.CompanyName) ? "ARD SİSTEM VE DANIŞMANLIK" : company!.CompanyName;
 }
 <!DOCTYPE html>
 <html lang="tr">
@@ -53,9 +56,16 @@ tr:nth-child(even) td { background: #f5f8ff; }
 <!-- BAŞLIK -->
 <div class="header">
   <div>
-    <div class="company-name">ARD SİSTEM VE DANIŞMANLIK</div>
+    <div class="company-name">@companyName</div>
     <div class="doc-title">FSC Sevk Belgesi</div>
     <div class="fsc-badge">FSC® CoC Belgeli Sevkiyat</div>
+    @if (!string.IsNullOrWhiteSpace(company?.FscCocCode) || !string.IsNullOrWhiteSpace(company?.FscLicenseCode))
+    {
+      <div style="font-size:8pt;color:#1b5e20;margin-top:3px;">
+        @if (!string.IsNullOrWhiteSpace(company?.FscCocCode)) { <span>FSC CoC: <strong>@company!.FscCocCode</strong></span> }
+        @if (!string.IsNullOrWhiteSpace(company?.FscLicenseCode)) { <span> · Lisans: <strong>@company!.FscLicenseCode</strong></span> }
+      </div>
+    }
   </div>
   <div class="doc-meta">
     <div><strong>Belge No:</strong> @Model.SalesOrderNo</div>
@@ -155,7 +165,7 @@ tr:nth-child(even) td { background: #f5f8ff; }
 
 <!-- ALT BİLGİ -->
 <div class="footer">
-  <div>© @today.Year ARD Sistem ve Danışmanlık · FSC Takip ERP</div>
+  <div>© @today.Year @companyName · FSC Takip ERP</div>
   <div>Bu belge elektronik ortamda üretilmiştir. @today.ToString("dd.MM.yyyy HH:mm")</div>
 </div>
 
