@@ -15,6 +15,7 @@ Müşteriden yazılı olarak toplanacaklar:
 | # | Bilgi | Neden |
 |---|---|---|
 | 0.1 | Sunucu var mı / temin edilecek mi, mevcutsa özellikleri | Faz 1 kararı |
+| 0.1b | **Mevcut bir SQL Server var mı** (başka bir uygulama/ERP için)? Varsa sürümü/instance adı | Faz 2A/2B kararı — varsa sıfırdan kurulum gerekmez |
 | 0.2 | Ağ yapısı: sunucuya hangi istemciler, hangi VLAN'dan erişecek; DNS var mı | Erişim adresi (`http://fsc.xyz.local` gibi) |
 | 0.3 | Canias'tan Excel export alabilen bir yetkili/IT sorumlusu kim | Faz 7 veri aktarımı |
 | 0.4 | FSC sertifika bilgileri: CoC kodu, lisans kodu, denetim dönemi tarihleri, sertifikasyon kuruluşu | Faz 6 ana veri |
@@ -59,28 +60,45 @@ Müşteriden yazılı olarak toplanacaklar:
 
 ## FAZ 2 — SQL Server Kurulumu
 
+**Önce karar ver:** Müşteride zaten çalışan bir SQL Server var mı (başka bir uygulama/ERP için)? Çoğu kurumsal müşteride vardır — sıfırdan kurulum şart değil.
+
+- **Yok / bilmiyorum →** FAZ 2A'yı uygula (sıfırdan kurulum).
+- **Var (Express/Standard/Enterprise, herhangi bir sürüm) →** FAZ 2B'yi uygula (yalnız yeni veritabanı ekle). Sunucunun **genel/varsayılan collation'ı önemli değil** — bizim veritabanımız kendi collation'ını `CREATE DATABASE` sırasında ayrıca alır, sunucudaki diğer veritabanlarını etkilemez.
+
+### FAZ 2A — Sıfırdan SQL Server Kurulumu
+
 1. SQL Server kurulum medyasını başlat → **New SQL Server stand-alone installation**.
 2. Feature seçimi: yalnız **Database Engine Services** (SSRS/SSAS gerekmez).
 3. Instance: `MSSQLSERVER` (default) veya `FSCERP` adlı named instance.
-4. **⚠️ KRİTİK — Collation:** Server Configuration → Collation sekmesinde **`Turkish_CI_AS`** seçilmelidir. *(Sistem kullanıcı adlarını Türkçe kurallarla büyük harfe çevirerek saklar; farklı collation'da oturum açma eşleşmesi bozulabilir. Bu adım kurulumdan sonra değiştirilemez — atlanırsa SQL yeniden kurulur.)*
+4. **⚠️ KRİTİK — Collation:** Server Configuration → Collation sekmesinde **`Turkish_CI_AS`** seçilmelidir. *(Sistem kullanıcı adlarını Türkçe kurallarla büyük harfe çevirerek saklar; farklı collation'da oturum açma eşleşmesi bozulabilir. Bu adım kurulumdan sonra değiştirilemez — atlanırsa SQL yeniden kurulur.)* Bu adım yalnız FAZ 2A'da (yeni kurulum) geçerlidir — mevcut sunucuya ekleniyorsa FAZ 2B'ye bak, sunucu collation'ını değiştirmene gerek yok.
 5. Authentication: **Windows Authentication** (uygulama aynı sunucudaysa yeterli ve en güvenlisi). Uygulama ayrı sunucuda olacaksa Mixed Mode + güçlü `sa`-dışı SQL login.
 6. Kurulum sonrası:
    - SQL Server Configuration Manager → TCP/IP **Enabled** (yalnız uygulama ayrı sunucudaysa gerekli).
    - Windows Güvenlik Duvarı: 1433 portu **yalnız intranet** (hiçbir koşulda internete açılmaz).
    - `ALTER SERVER CONFIGURATION` gerekmez; varsayılanlar yeterli.
-7. Veritabanını oluştur (SSMS'te):
+7. Devamı için FAZ 2B madde 2-3'ü uygula (veritabanı oluşturma + servis hesabı yetkisi — ortak adımlar).
+
+✅ `SELECT SERVERPROPERTY('Collation')` = `Turkish_CI_AS` (sunucu varsayılanı) · boş `FscErpDb` mevcut · servis hesabı bağlanabiliyor.
+
+### FAZ 2B — Mevcut SQL Server'a Ekleme (paylaşılan/kurumsal sunucu)
+
+1. **Bilgi topla:** Instance adı (`SUNUCU\INSTANCE` veya default), port (1433 mü değişik mi), kimlik doğrulama modu (Windows/Mixed), müşteri DBA'sı var mı — varsa DB oluşturma ve login yetkisini ondan iste (sistemik olarak `sysadmin` ile bağlanmamız gerekmeyebilir, sadece `dbcreator` + hedef DB'de `db_owner` yeterli).
+2. Veritabanını oluştur — **sunucu collation'ından bağımsız**, kendi collation'ımızı açıkça belirtiyoruz:
    ```sql
    CREATE DATABASE FscErpDb COLLATE Turkish_CI_AS;
    ```
-8. Uygulama servis hesabına yetki (IIS AppPool kullanılıyorsa):
+   *(Sunucunun kendisi `SQL_Latin1_General_CP1_CI_AS` veya başka bir collation'da olsa dahi bu sorunsuz çalışır — diğer müşteri veritabanlarını etkilemez.)*
+3. Uygulama servis hesabına yetki (IIS AppPool kullanılıyorsa):
    ```sql
    CREATE LOGIN [IIS APPPOOL\FscErpAppPool] FROM WINDOWS;
    USE FscErpDb;
    CREATE USER [IIS APPPOOL\FscErpAppPool] FOR LOGIN [IIS APPPOOL\FscErpAppPool];
    ALTER ROLE db_owner ADD MEMBER [IIS APPPOOL\FscErpAppPool];
    ```
+4. **appsettings.json bağlantı dizesi** instance adına göre ayarlanır — named instance ise `Server=SUNUCUADI\INSTANCE`, default instance ise `Server=SUNUCUADI` (uygulama SQL ile aynı makinede değilse `localhost` yerine gerçek sunucu adı/IP'si yazılır).
+5. **Paylaşılan sunucu notu:** Diğer uygulamaların performansını etkilememek için resource governor/iş yükü konusunda DBA ile konuş; SQL Server Agent job'ları (yedekleme planı, Faz 9) mevcut bakım pencerelerine çakışmayacak şekilde planlanır.
 
-✅ `SELECT SERVERPROPERTY('Collation')` = `Turkish_CI_AS` · boş `FscErpDb` mevcut · servis hesabı bağlanabiliyor.
+✅ `FscErpDb` mevcut sunucuda oluşturuldu · `SELECT DATABASEPROPERTYEX('FscErpDb','Collation')` = `Turkish_CI_AS` (sunucu geneli farklı olsa da DB özelinde doğru) · servis hesabı bağlanabiliyor · diğer müşteri veritabanları etkilenmedi.
 
 ---
 
