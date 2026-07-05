@@ -1323,3 +1323,25 @@ Sıra geldiğinde bu dosyaları SSMS'te çalıştır, EF Core mapping ekle.
 
 **Altın kural:** Önce ölç, sonra optimize et.
 `SET STATISTICS TIME ON` ile sorgu süresini gör. 500ms geçmedikçe dokunma.
+
+## Kritik Gizli Bug — SaveChangesAsync Tüm String'leri Körü Körüne Büyütüyordu (2026-07-05)
+
+**Sorun:** `AppDbContext.SaveChangesAsync()` override'ı, kaydedilen HER entity'nin HER string alanını istisnasız `ToUpper(trCulture)` ile büyütüyordu. `AppUser.PasswordHash` da dahildi.
+
+**Neden fark edilmedi:** DB collation `Turkish_CI_AS` (case-insensitive) olduğu için SQL tarafındaki karşılaştırmalar (`u.PasswordHash == hash` login sorgusu) çalışmaya devam ediyordu — login hiç bozulmadı. Ama `ChangePassword` action'ındaki C# tarafı karşılaştırma (`user.PasswordHash != HashPassword(currentPassword)`) case-sensitive olduğundan sessizce başarısız oluyordu. Sadece "gerçek kullanıcı gerçek sırayla" (giriş yap → sonra şifre değiştir) test edilince ortaya çıktı — dress rehearsal / gerçek kurulum testi olmadan asla yakalanamazdı.
+
+**Çözüm:** `_skipUppercaseProps` HashSet eklendi (`PasswordHash`, `Email`, `InvoicePdfPath`, `DispatchPdfPath`, `LogoPath`, `FilePath`). Mevcut bozulmuş kayıtlar geri döndürülebilir: `UPDATE AppUsers SET PasswordHash = LOWER(PasswordHash);` (hex hash için güvenli, veri kaybı yok).
+
+**Kural:** Yeni bir entity'ye hash/token/path/base64/teknik-string alanı eklerken `_skipUppercaseProps`'a ekle. "Görünüşte çalışıyor" (login) ≠ "gerçekten doğru" — case-insensitive collation bug'ları maskeleyebilir, C# tarafı karşılaştırmalar açığa çıkarır.
+
+**Ders:** Otomatik kod incelemesi (agent review) genelde "bu PR'da ne değişti" bakar; global interceptor'lar gibi yıllar önce yazılmış, o an dokunulmayan kodları taramaz. Bu tür sessiz bug'lar ancak gerçek uçtan uca kullanım senaryosuyla (dress rehearsal) yakalanır.
+
+## Kurulum Provası — Ek Dersler (2026-07-05, oğlun PC'si dress rehearsal)
+
+- **Windows Firewall:** IIS site "Tümü Atanmamış" IP'ye bağlı olsa bile, Windows Firewall'da o port için inbound kural yoksa ağdaki başka makineler erişemez (localhost/RDP-aynı-makine testi bunu YAKALAMAZ). Kural: `New-NetFirewallRule -DisplayName "..." -Direction Inbound -Protocol TCP -LocalPort <port> -Action Allow`. Runbook'a kalıcı madde olarak eklendi.
+- **Tarayıcı adres çubuğu:** Kullanıcılar bare IP yazınca (`192.168.0.55`) tarayıcı otomatik `https://` (443) dener, `ERR_SSL_PROTOCOL_ERROR` verir. Port + şema açıkça yazılmalı: `http://<ip>:<port>`. Kullanım kılavuzuna not düşülmeli.
+- **IIS named instance (SQLEXPRESS):** appsettings.json'da `Server=localhost` YETMEZ, `Server=localhost\SQLEXPRESS` gerekir (named instance). appsettings.json'da JSON escape: tek backslash geçersiz, `\\SQLEXPRESS` (çift) yazılmalı.
+- **IIS APPPOOL SQL login:** Yeni bir IIS sitesi ilk kurulduğunda `IIS APPPOOL\<SiteAdi>` için SQL Server'da login+user+db_owner YOKTUR — SQL Error 4060 ("Cannot open database") verir. Runbook'a migration sonrası zorunlu adım: `CREATE LOGIN [IIS APPPOOL\<Site>] FROM WINDOWS; USE <Db>; CREATE USER [IIS APPPOOL\<Site>] FOR LOGIN [IIS APPPOOL\<Site>]; ALTER ROLE db_owner ADD MEMBER [IIS APPPOOL\<Site>];`
+- **Hosting Bundle + IIS sırası:** IIS sonradan etkinleştirilirse, .NET Hosting Bundle kurulumunun **Onar (Repair)** ile tekrar çalıştırılması gerekir (aksi halde ASP.NET Core IIS modülü kayıt olmaz, HTTP 500.30 verir).
+- **stdout log:** 500.30 hatasında `web.config`'te `stdoutLogEnabled="true"` yapıp `logs\` klasörü oluşturmadan gerçek hata görünmez.
+- **Güncelleme dağıtımı (canlıya patch):** `dotnet publish` çıktısından appsettings.json/license.lic HARİÇ her şey kopyalanır (üzerine yaz), sonra app pool restart. RDP üzerinden büyük dosya (zip) taşımak için: normal RDP panosu (Ctrl+C/Ctrl+V) dosya kopyalamayı destekler — küçük metin dosyaları için de aynı pano yeterli, ekstra araç gerekmez.

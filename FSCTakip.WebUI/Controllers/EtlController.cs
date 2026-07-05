@@ -708,8 +708,8 @@ namespace FSCTakip.WebUI.Controllers
                 cmd.CommandTimeout = 60;
                 using var rdr = await cmd.ExecuteReaderAsync();
 
-                var allProducts = await _context.Products.Where(p => p.ExternalCode != null).ToDictionaryAsync(p => p.ExternalCode!);
-                var allSerials  = await _context.FscSerials.Select(s => s.SerialNo).ToListAsync();
+                var allProducts = await _context.Products.Where(p => p.ExternalCode != null).ToDictionaryAsync(p => p.ExternalCode!, StringComparer.OrdinalIgnoreCase);
+                var allSerials  = new HashSet<string>(await _context.FscSerials.Select(s => s.SerialNo).ToListAsync(), StringComparer.OrdinalIgnoreCase);
 
                 var preview = new List<object>();
                 int total = 0, matched = 0, newCount = 0, noProduct = 0;
@@ -910,8 +910,8 @@ namespace FSCTakip.WebUI.Controllers
                     var group   = groups.FirstOrDefault(g => g.GroupName.Equals(grupAdi, StringComparison.OrdinalIgnoreCase));
 
                     // Öncelik: ExternalCode eşleşmesi → ardından eski ProductCode eşleşmesi (geçiş dönemi)
-                    var existing = allProducts.FirstOrDefault(p => p.ExternalCode == r.Kod)
-                                ?? allProducts.FirstOrDefault(p => p.ProductCode   == r.Kod);
+                    var existing = allProducts.FirstOrDefault(p => string.Equals(p.ExternalCode, r.Kod, StringComparison.OrdinalIgnoreCase))
+                                ?? allProducts.FirstOrDefault(p => string.Equals(p.ProductCode, r.Kod, StringComparison.OrdinalIgnoreCase));
 
                     if (existing == null)
                     {
@@ -1001,8 +1001,8 @@ namespace FSCTakip.WebUI.Controllers
                 try
                 {
                     // Öncelik: ExternalCode eşleşmesi → ardından isim eşleşmesi (geçiş dönemi)
-                    var existing = allSuppliers.FirstOrDefault(s => !string.IsNullOrWhiteSpace(r.Kod) && s.ExternalCode == r.Kod)
-                                ?? allSuppliers.FirstOrDefault(s => s.Name == r.Isim);
+                    var existing = allSuppliers.FirstOrDefault(s => !string.IsNullOrWhiteSpace(r.Kod) && string.Equals(s.ExternalCode, r.Kod, StringComparison.OrdinalIgnoreCase))
+                                ?? allSuppliers.FirstOrDefault(s => string.Equals(s.Name, r.Isim, StringComparison.OrdinalIgnoreCase));
 
                     var email = NormalizeEmail(r.Mail);
                     // Telefon: GSM yoksa Tel, ikisi de varsa GSM'i seç (daha güncel)
@@ -1106,8 +1106,8 @@ namespace FSCTakip.WebUI.Controllers
                 try
                 {
                     // Öncelik: ExternalCode eşleşmesi → ardından isim eşleşmesi (geçiş dönemi)
-                    var existing = allCustomers.FirstOrDefault(c => !string.IsNullOrWhiteSpace(r.Kod) && c.ExternalCode == r.Kod)
-                                ?? allCustomers.FirstOrDefault(c => c.Name == r.Isim);
+                    var existing = allCustomers.FirstOrDefault(c => !string.IsNullOrWhiteSpace(r.Kod) && string.Equals(c.ExternalCode, r.Kod, StringComparison.OrdinalIgnoreCase))
+                                ?? allCustomers.FirstOrDefault(c => string.Equals(c.Name, r.Isim, StringComparison.OrdinalIgnoreCase));
 
                     var email = NormalizeEmail(r.Mail);
                     var phone = !string.IsNullOrWhiteSpace(r.Gsm) ? r.Gsm : r.Tel;
@@ -1233,7 +1233,7 @@ namespace FSCTakip.WebUI.Controllers
                 try
                 {
                     // ── 1. Ürün eşleştir ─────────────────────────────────────
-                    var product = allProducts.FirstOrDefault(p => p.ExternalCode == r.StokKodu);
+                    var product = allProducts.FirstOrDefault(p => string.Equals(p.ExternalCode, r.StokKodu, StringComparison.OrdinalIgnoreCase));
                     if (product == null)
                     {
                         errors.Add($"{r.SeriNo}: Ürün bulunamadı (STOK_KODU={r.StokKodu})");
@@ -1242,8 +1242,8 @@ namespace FSCTakip.WebUI.Controllers
                     }
 
                     // ── 2. FscLot — PartiNo + ProductId ile eşleştir ────────
-                    var existingLot = allLots.FirstOrDefault(l => l.PartiNo == r.SeriNo && l.ProductId == product.Id)
-                                  ?? allLots.FirstOrDefault(l => l.PartiNo == r.SeriNo);
+                    var existingLot = allLots.FirstOrDefault(l => string.Equals(l.PartiNo, r.SeriNo, StringComparison.OrdinalIgnoreCase) && l.ProductId == product.Id)
+                                  ?? allLots.FirstOrDefault(l => string.Equals(l.PartiNo, r.SeriNo, StringComparison.OrdinalIgnoreCase));
 
                     FscLot lot;
                     bool   lotCreated = false;
@@ -1286,7 +1286,7 @@ namespace FSCTakip.WebUI.Controllers
                     // ÖNEMLI: Fallback (sadece SerialNo eşleşmesi) kaldırıldı.
                     // SerialNo başka bir lotta da bulunabilir; LotId olmadan eşleştirmek
                     // seriali yanlış lota taşır.
-                    var existingSerial = allSerials.FirstOrDefault(s => s.SerialNo == r.SeriNo && s.LotId == lot.Id);
+                    var existingSerial = allSerials.FirstOrDefault(s => string.Equals(s.SerialNo, r.SeriNo, StringComparison.OrdinalIgnoreCase) && s.LotId == lot.Id);
 
                     FscSerial serial;
                     if (existingSerial == null)
@@ -1565,7 +1565,7 @@ namespace FSCTakip.WebUI.Controllers
                         var fisNo        = ColVal(firstRow, "FisNo");
                         var tarih        = ColDate(firstRow, "Tarih");
 
-                        var product  = products.FirstOrDefault(p => p.ProductCode == stokKodu);
+                        var product  = products.FirstOrDefault(p => string.Equals(p.ProductCode, stokKodu, StringComparison.OrdinalIgnoreCase));
                         var supplier = suppliers.FirstOrDefault(s =>
                             s.Name.Equals(tedarikciAdi, StringComparison.OrdinalIgnoreCase) ||
                             (tedarikciAdi.Length > 3 && s.Name.Contains(tedarikciAdi.Substring(0, Math.Min(6, tedarikciAdi.Length)), StringComparison.OrdinalIgnoreCase)));
@@ -1725,9 +1725,9 @@ namespace FSCTakip.WebUI.Controllers
                     // Eşleştirme önceliği: HariciKod → DahiliKod → (yeni kayıt)
                     Product? existing = null;
                     if (!string.IsNullOrWhiteSpace(hariciKod))
-                        existing = allProducts.FirstOrDefault(p => p.ExternalCode == hariciKod);
+                        existing = allProducts.FirstOrDefault(p => string.Equals(p.ExternalCode, hariciKod, StringComparison.OrdinalIgnoreCase));
                     if (existing == null && !string.IsNullOrWhiteSpace(dahiliKod))
-                        existing = allProducts.FirstOrDefault(p => p.ProductCode == dahiliKod);
+                        existing = allProducts.FirstOrDefault(p => string.Equals(p.ProductCode, dahiliKod, StringComparison.OrdinalIgnoreCase));
 
                     if (existing == null)
                     {
@@ -1813,9 +1813,9 @@ namespace FSCTakip.WebUI.Controllers
                     // Eşleştirme önceliği: HariciKod → DahiliKod → (yeni kayıt)
                     Supplier? existing = null;
                     if (!string.IsNullOrWhiteSpace(hariciKod))
-                        existing = allSuppliers.FirstOrDefault(s => s.ExternalCode == hariciKod);
+                        existing = allSuppliers.FirstOrDefault(s => string.Equals(s.ExternalCode, hariciKod, StringComparison.OrdinalIgnoreCase));
                     if (existing == null && !string.IsNullOrWhiteSpace(dahiliKod))
-                        existing = allSuppliers.FirstOrDefault(s => s.SupplierCode == dahiliKod);
+                        existing = allSuppliers.FirstOrDefault(s => string.Equals(s.SupplierCode, dahiliKod, StringComparison.OrdinalIgnoreCase));
 
                     var normalEmail = NormalizeEmail(email);
                     phone = new string(phone.Where(char.IsDigit).ToArray());
@@ -1911,9 +1911,9 @@ namespace FSCTakip.WebUI.Controllers
                     // Eşleştirme önceliği: HariciKod → DahiliKod → (yeni kayıt)
                     Customer? existing = null;
                     if (!string.IsNullOrWhiteSpace(hariciKod))
-                        existing = allCustomers.FirstOrDefault(c => c.ExternalCode == hariciKod);
+                        existing = allCustomers.FirstOrDefault(c => string.Equals(c.ExternalCode, hariciKod, StringComparison.OrdinalIgnoreCase));
                     if (existing == null && !string.IsNullOrWhiteSpace(dahiliKod))
-                        existing = allCustomers.FirstOrDefault(c => c.CustomerCode == dahiliKod);
+                        existing = allCustomers.FirstOrDefault(c => string.Equals(c.CustomerCode, dahiliKod, StringComparison.OrdinalIgnoreCase));
 
                     var normalEmail = NormalizeEmail(email);
                     phone = new string(phone.Where(char.IsDigit).ToArray());
@@ -1992,8 +1992,8 @@ namespace FSCTakip.WebUI.Controllers
                     var tarih        = ParseDate(firstRow.Cell(9));
                     var plaka        = firstRow.Cell(10).GetString().Trim();
 
-                    var supplier = suppliers.FirstOrDefault(s => s.SupplierCode == supplierCode || s.Name.Equals(supplierCode, StringComparison.OrdinalIgnoreCase));
-                    var product  = products.FirstOrDefault(p => p.ProductCode == productCode);
+                    var supplier = suppliers.FirstOrDefault(s => string.Equals(s.SupplierCode, supplierCode, StringComparison.OrdinalIgnoreCase) || s.Name.Equals(supplierCode, StringComparison.OrdinalIgnoreCase));
+                    var product  = products.FirstOrDefault(p => string.Equals(p.ProductCode, productCode, StringComparison.OrdinalIgnoreCase));
                     var fscType  = fscTypes.FirstOrDefault(f =>
                         f.Name.Contains(fscTypeName, StringComparison.OrdinalIgnoreCase) ||
                         fscTypeName.Contains(f.Code, StringComparison.OrdinalIgnoreCase) ||
@@ -2107,7 +2107,7 @@ namespace FSCTakip.WebUI.Controllers
                     var machine = machines.FirstOrDefault(m =>
                         m.Code.Equals(makineName, StringComparison.OrdinalIgnoreCase) ||
                         m.Name.Equals(makineName, StringComparison.OrdinalIgnoreCase));
-                    var mamul = products.FirstOrDefault(p => p.ProductCode == mamulKodu);
+                    var mamul = products.FirstOrDefault(p => string.Equals(p.ProductCode, mamulKodu, StringComparison.OrdinalIgnoreCase));
 
                     if (mamul == null) { errors.Add($"Satır {firstIdx+2} (Üretim {uretimNo}): Mamul ürün bulunamadı — '{mamulKodu}'"); skp += group.Count(); continue; }
 
@@ -2235,7 +2235,7 @@ namespace FSCTakip.WebUI.Controllers
                     var fatNo       = firstRow.Cell(8).GetString().Trim();
 
                     var customer = customers.FirstOrDefault(c =>
-                        c.CustomerCode == musteriKodu ||
+                        string.Equals(c.CustomerCode, musteriKodu, StringComparison.OrdinalIgnoreCase) ||
                         c.Name.Equals(musteriKodu, StringComparison.OrdinalIgnoreCase));
 
                     if (customer == null) { errors.Add($"Satır {firstIdx+2} (Satış {satisNo}): Müşteri bulunamadı — '{musteriKodu}'"); skp += group.Count(); continue; }
@@ -2276,7 +2276,7 @@ namespace FSCTakip.WebUI.Controllers
 
                             if (string.IsNullOrWhiteSpace(urunKodu) || miktar <= 0) { skp++; continue; }
 
-                            var product = products.FirstOrDefault(p => p.ProductCode == urunKodu);
+                            var product = products.FirstOrDefault(p => string.Equals(p.ProductCode, urunKodu, StringComparison.OrdinalIgnoreCase));
                             if (product == null) { errors.Add($"Satır {rowNum}: Ürün bulunamadı — '{urunKodu}'"); skp++; continue; }
 
                             var lineExists = await _context.SalesOrderLines

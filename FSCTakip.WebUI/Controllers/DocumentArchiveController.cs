@@ -3,6 +3,7 @@ using FSCTakip.DataAccess.Data;
 using FSCTakip.WebUI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace FSCTakip.WebUI.Controllers
 {
@@ -53,11 +54,13 @@ namespace FSCTakip.WebUI.Controllers
                     return Json(new { success = false, message = "Belge başlığı zorunludur." });
 
                 var ext  = Path.GetExtension(file.FileName).ToLowerInvariant();
-                var safe = Path.GetFileNameWithoutExtension(file.FileName)
+                var baseName = Path.GetFileNameWithoutExtension(file.FileName)
                                .Replace(" ", "_")
                                .Replace("ı","i").Replace("ş","s").Replace("ğ","g")
-                               .Replace("ü","u").Replace("ö","o").Replace("ç","c")
-                               + "_" + DateTime.Now.ToString("yyyyMMddHHmm") + ext;
+                               .Replace("ü","u").Replace("ö","o").Replace("ç","c");
+                foreach (var c in Path.GetInvalidFileNameChars().Concat(new[] { '.', '/', '\\' }))
+                    baseName = baseName.Replace(c, '_');
+                var safe = baseName + "_" + DateTime.Now.ToString("yyyyMMddHHmm") + ext;
 
                 var catFolder = category.ToString().ToLower();
                 var relDir    = Path.Combine("uploads", "archive", catFolder);
@@ -90,6 +93,25 @@ namespace FSCTakip.WebUI.Controllers
             catch (Exception ex) { return Json(new { success = false, message = ex.Message }); }
         }
 
+        /// <summary>
+        /// DB'de saklanan göreli belge yolunu wwwroot altındaki mutlak yola çevirir ve
+        /// path traversal'a karşı doğrular (yalnızca wwwroot altı izinlidir).
+        /// </summary>
+        private bool TryResolveDocPath(string relPath, out string absPath)
+        {
+            absPath = string.Empty;
+            if (string.IsNullOrWhiteSpace(relPath)) return false;
+
+            var combined = Path.Combine(_env.WebRootPath, relPath.Replace("/", "\\"));
+            var fullPath = Path.GetFullPath(combined);
+            var allowedRoot = Path.GetFullPath(_env.WebRootPath);
+            if (!fullPath.StartsWith(allowedRoot, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            absPath = fullPath;
+            return true;
+        }
+
         // GET /DocumentArchive/Serve/{id}
         [HttpGet]
         public async Task<IActionResult> Serve(int id)
@@ -97,7 +119,7 @@ namespace FSCTakip.WebUI.Controllers
             var doc = await _context.FscDocuments.FindAsync(id);
             if (doc == null) return NotFound();
 
-            var abs = Path.Combine(_env.WebRootPath, doc.FilePath.Replace("/", "\\"));
+            if (!TryResolveDocPath(doc.FilePath, out var abs)) return NotFound("Geçersiz belge yolu.");
             if (!System.IO.File.Exists(abs)) return NotFound("Dosya bulunamadı.");
 
             var mime = doc.FileExtension switch
@@ -129,8 +151,8 @@ namespace FSCTakip.WebUI.Controllers
 
             try
             {
-                var abs = Path.Combine(_env.WebRootPath, doc.FilePath.Replace("/", "\\"));
-                if (System.IO.File.Exists(abs)) System.IO.File.Delete(abs);
+                if (TryResolveDocPath(doc.FilePath, out var abs) && System.IO.File.Exists(abs))
+                    System.IO.File.Delete(abs);
                 _context.FscDocuments.Remove(doc);
                 await _context.SaveChangesAsync();
                 return Json(new { success = true, message = "Belge silindi." });

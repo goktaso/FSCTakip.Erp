@@ -22,6 +22,15 @@ namespace FSCTakip.DataAccess.Data
             "PasswordHash"
         };
 
+        // Türkçe büyük harf dönüşümünden hariç tutulan alanlar: hash/yol/e-posta gibi
+        // teknik değerler büyük harfe çevrilirse kullanılamaz hale gelir
+        // (ör. PasswordHash büyütülünce case-sensitive C# karşılaştırmaları kırılır).
+        private static readonly HashSet<string> _skipUppercaseProps = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "PasswordHash", "Email", "InvoicePdfPath", "DispatchPdfPath", "LogoPath", "FilePath",
+            "FileExtension", "FileName", "Username"
+        };
+
         public AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor? http = null)
             : base(options)
         {
@@ -119,6 +128,9 @@ namespace FSCTakip.DataAccess.Data
                         propEntry.CurrentValue = string.Empty;
                         continue;
                     }
+
+                    if (_skipUppercaseProps.Contains(prop.Name))
+                        continue;
 
                     if (propEntry.CurrentValue is string val && !string.IsNullOrEmpty(val))
                         propEntry.CurrentValue = val.ToUpper(trCulture);

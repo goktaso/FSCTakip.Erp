@@ -94,19 +94,33 @@ Müşteriden yazılı olarak toplanacaklar:
 - Sürüm etiketi (git tag) ve SHA256 özet listesi
 
 ### 3.2 IIS ile kurulum (önerilen)
-1. Windows Features → IIS + **ASP.NET Core Hosting Bundle** kur, `iisreset`.
+1. **Önce IIS'i etkinleştir** (Windows Özellikleri → World Wide Web Hizmetleri + Web Yönetim Araçları), **sonra** .NET Hosting Bundle'ı kur. Sıra ters olduysa (Hosting Bundle IIS'ten önce kurulduysa) Hosting Bundle yükleyicisini **Onar (Repair)** ile tekrar çalıştır — aksi halde ASP.NET Core IIS modülü kayıt olmaz, ilk açılışta HTTP 500.30 verir.
 2. Uygulama dosyalarını `C:\inetpub\FscErp\app` altına kopyala.
 3. IIS Manager → Application Pool: `FscErpAppPool`, .NET CLR = **No Managed Code**, Start Mode = AlwaysRunning.
-4. Site: `FSC-ERP`, fiziksel yol `C:\inetpub\FscErp\app`, binding `http :80` (host: `fsc.packy.local` — müşteri DNS'ine A kaydı ekletilir).
+4. Site: `FSC-ERP`, fiziksel yol `C:\inetpub\FscErp\app`, binding `http :80` (host: `fsc.packy.local` — müşteri DNS'ine A kaydı ekletilir). **Port 80 doluysa** (başka bir web sunucusu/panel çakışıyorsa) alternatif port seç (ör. 8080) — ama bu durumda kullanıcılara adres çubuğuna portu da yazmaları gerektiği açıkça bildirilmeli (`http://fsc.packy.local:8080`), aksi halde kullanıcı yalnız `fsc.packy.local` yazar ve tarayıcı varsayılan olarak HTTPS/443 dener, `ERR_SSL_PROTOCOL_ERROR` alır.
 5. **HTTPS (intranet):** müşteri iç CA'sı varsa oradan sertifika; yoksa self-signed + istemcilere GPO ile güven dağıtımı, veya intranette HTTP kabulü müşteri IT politikasına yazılır.
-6. `appsettings.json` oluştur (example'dan kopya) — yalnız şu alanlar düzenlenir:
+6. **Windows Firewall — ZORUNLU:** IIS site'ın IP'ye bağlı olması (Tümü Atanmamış) tek başına yetmez; Windows Firewall'da site portu için gelen (inbound) kural olmadıkça sunucunun KENDİSİ dışında hiçbir istemci bağlanamaz (sunucudan/RDP'den test "çalışıyor" görünse bile ağdaki diğer PC'lerden erişilemez). Yönetici PowerShell:
+   ```powershell
+   New-NetFirewallRule -DisplayName "FSC ERP HTTP" -Direction Inbound -Protocol TCP -LocalPort 80 -Action Allow
+   ```
+   (Port 8080 kullanıldıysa `-LocalPort 8080`.) Kural eklendikten sonra **başka bir bilgisayardan** (sunucunun kendisinden değil) `http://<sunucu-ip>:<port>` ile test et — asıl doğrulama budur.
+7. `appsettings.json` oluştur (example'dan kopya) — yalnız şu alanlar düzenlenir:
    ```json
    "ConnectionStrings": {
      "DefaultConnection": "Server=localhost;Database=FscErpDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
    },
    "FileStorage": { "Root": "D:\\FscErpData\\uploads" }
    ```
-7. `D:\FscErpData\uploads` klasörünü oluştur, AppPool hesabına **Modify** yetkisi ver. *(Belge arşivi — irsaliye/fatura PDF'leri — uygulama klasörünün DIŞINDA tutulur ki sürüm güncellemesi dosyaları ezmesin.)*
+   **SQL Server named instance kullanıldıysa** (ör. Express kurulumunda varsayılan `SQLEXPRESS`), `Server=localhost` YETMEZ — `Server=localhost\\SQLEXPRESS` yazılmalı (JSON'da tek ters slash geçersizdir, **çift** `\\\\SQLEXPRESS` gerekir).
+8. `D:\FscErpData\uploads` klasörünü oluştur, AppPool hesabına **Modify** yetkisi ver. *(Belge arşivi — irsaliye/fatura PDF'leri — uygulama klasörünün DIŞINDA tutulur ki sürüm güncellemesi dosyaları ezmesin.)*
+9. **SQL login — ZORUNLU (migration'dan sonra, ilk açılıştan önce):** Yeni bir IIS App Pool'un SQL Server'da varsayılan olarak hiçbir erişimi yoktur; aksi halde "Cannot open database" (SQL Error 4060) alınır. SSMS'te çalıştır:
+   ```sql
+   CREATE LOGIN [IIS APPPOOL\FscErpAppPool] FROM WINDOWS;
+   USE FscErpDb;
+   CREATE USER [IIS APPPOOL\FscErpAppPool] FOR LOGIN [IIS APPPOOL\FscErpAppPool];
+   ALTER ROLE db_owner ADD MEMBER [IIS APPPOOL\FscErpAppPool];
+   ```
+   (App Pool adı farklıysa `FscErpAppPool` yerine onu yaz.)
 
 ### 3.3 Alternatif: Kestrel + Windows Service (IIS istenmiyorsa)
 ```
@@ -131,6 +145,23 @@ Uygulama, RSA-imzalı ve **sunucuya özel** bir lisans dosyası (`license.lic`) 
 > **Notlar:** Süreli lisanslarda bitişe 30 gün kala sistem girişte otomatik uyarı gösterir. Sunucu değişiminde (donanım yenileme, VM taşıma) kimlik kodu değişir — ARD'den yeni lisans istenir (bakım sözleşmesi kapsamında ücretsiz).
 
 ✅ `/License/Status` "Lisans Geçerli" gösteriyor · lisans dosyasının bir kopyası müşteri IT arşivine kaydedildi.
+
+---
+
+## FAZ 3.6 — Güncelleme Dağıtımı (Kurulum Sonrası Patch/Sürüm Yükseltme)
+
+Müşteriye kurulum bittikten sonra yeni bir sürüm (bugfix/özellik) çıktığında uygulanacak prosedür:
+
+1. ARD tarafında: `dotnet publish -c Release -o publish_update` ile yeni sürüm derlenir.
+2. Paket **appsettings.json ve license.lic HARİÇ** her şeyi içerir (bu iki dosya müşteriye özel, publish çıktısında olmamalı/ezilmemeli). Zip'lenip müşteriye iletilir.
+3. Müşteri sunucusunda: IIS Manager → Uygulama Havuzu → **Durdur**.
+4. Zip'i geçici bir klasöre aç, içeriğini uygulama klasörünün üzerine kopyala — **appsettings.json çakışmasında "Atla/Bu dosyayı kopyalama" seç**, geri kalan her dosyada "Üzerine yaz".
+5. IIS Manager → Uygulama Havuzu → **Başlat**.
+6. Siteyi aç, temel bir sayfa gezinip hatasız açıldığını doğrula (500.30 çıkarsa `app\logs\stdout_*.log` dosyasına bak — bkz. EK A).
+
+> `license.lic` publish çıktısında hiçbir zaman yer almaz (paket script'i bunu garanti eder) — güncelleme müşterinin lisansını etkilemez.
+
+✅ Yeni sürüm ayakta · appsettings.json/license.lic değişmedi · temel gezinme testi geçti.
 
 ---
 
@@ -250,7 +281,11 @@ Her dosyada **Önizleme** adımı kullanılır; hata satırları (eşleşmeyen s
 | Belirti | İlk kontrol |
 |---|---|
 | Site açılmıyor (502/503) | App Pool durumu; Hosting Bundle kurulu mu; Event Log → uygulama hatası |
+| **HTTP 500.30 "app failed to start"** | `web.config`'te `stdoutLogEnabled="true"` yap + `app\logs\` klasörü oluştur, siteyi tekrar tetikle, en yeni `stdout_*.log` dosyasına bak. Sık nedenler: (a) SQL login yok → "Cannot open database" (bkz. Faz 3.2 madde 9), (b) Hosting Bundle IIS'ten önce kurulmuş → Hosting Bundle'ı **Onar** ile tekrar çalıştır |
+| Sunucudan açılıyor ama başka bilgisayardan açılmıyor | Windows Firewall'da site portu için inbound kural var mı (bkz. Faz 3.2 madde 6) — bu senaryoda "localhost'ta çalışıyor" testi YANILTICIDIR |
+| Kullanıcı `ERR_SSL_PROTOCOL_ERROR` alıyor | Adres çubuğuna port yazmamış / `http://` şemasını atlamış — tarayıcı varsayılan 443/HTTPS deniyor. Tam adresi (`http://sunucu:port`) kullanım kılavuzuna ekle |
 | Login "kullanıcı bulunamadı" | DB collation `Turkish_CI_AS` mi (`SELECT SERVERPROPERTY('Collation')`) |
+| Şifre değiştirme "mevcut şifre hatalı" (login doğru şifreyle çalışıyor olsa bile) | `AppUser.PasswordHash` bozulmuş olabilir (eski sürüm bug'ı, `SaveChangesAsync` uppercase). Düzeltme: `UPDATE AppUsers SET PasswordHash = LOWER(PasswordHash);` (güvenli, veri kaybı yok) — 2026-07-05 sonrası derlemelerde bug giderildi |
 | ETL "Ürün bulunamadı" | Ürün kartında Dış Kod (Canias stok kodu) girilmiş mi |
 | PDF belge açılmıyor | `FileStorage:Root` yolu ve AppPool yazma yetkisi |
 | Sayfalar yavaşladı (2.000+ lot) | ARD'ye bildir — performans yol haritası (index/SQL View aşaması) devreye alınır |

@@ -285,7 +285,9 @@
             padding: 5px 10px; border-radius: 8px;
             border: 1px solid var(--border);
             background: #fafafa;
+            cursor: pointer; user-select: none;
         }
+        .topbar-user:hover { background: var(--accent-light); }
         .topbar-user .user-avatar {
             width: 28px; height: 28px; border-radius: 50%;
             background: linear-gradient(135deg, #1976d2, #0d47a1);
@@ -1473,12 +1475,24 @@
             </button>
 
             <!-- Kullanıcı bilgisi -->
-            <div class="topbar-user">
-                <div class="user-avatar">Ö</div>
-                <div class="d-none d-md-block">
-                    <div class="user-name">Özay Göktaş</div>
-                    <div class="user-role">Admin / Yönetici</div>
+            @{
+                var topbarUserName = Context.Session.GetString("UserName") ?? "?";
+                var topbarIsAdmin  = Context.Session.GetString("IsAdmin") == "1";
+                var topbarAvatar   = topbarUserName.Length > 0 ? topbarUserName[0].ToString().ToUpper() : "?";
+            }
+            <div class="dropdown">
+                <div class="topbar-user" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Hesap menüsü">
+                    <div class="user-avatar">@topbarAvatar</div>
+                    <div class="d-none d-md-block">
+                        <div class="user-name">@topbarUserName</div>
+                        <div class="user-role">@(topbarIsAdmin ? "Admin / Yönetici" : "Kullanıcı")</div>
+                    </div>
                 </div>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/Account/ChangePassword"><i class="fas fa-key me-2"></i>Şifre Değiştir</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="/Account/Logout"><i class="fas fa-power-off me-2"></i>Çıkış Yap</a></li>
+                </ul>
             </div>
 
             <!-- Çıkış -->
