@@ -7,9 +7,10 @@ import os
 import ssl
 
 import edge_tts
+import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from moviepy import (AudioFileClip, CompositeAudioClip, CompositeVideoClip,
-                     ImageClip, concatenate_videoclips, vfx)
+                     ImageClip, VideoClip, concatenate_videoclips, vfx)
 
 try:
     ssl._create_default_https_context = ssl._create_unverified_context
@@ -27,6 +28,9 @@ BRAND = (25, 118, 210)     # --brand #1976d2
 FONT_B = "C:/Windows/Fonts/segoeuib.ttf"
 FONT_R = "C:/Windows/Fonts/segoeui.ttf"
 VOICE = "tr-TR-AhmetNeural"
+SCROLL_SPEED = 420  # px/sn üst sınır (titreme önleme)
+SCROLL_HOLD = 0.6   # başta bekleme
+SCROLL_TAIL = 0.8   # sonda bekleme
 MUSIC = os.path.join(BASE, "kurumsal_fon_muzigi.mp3")  # varsa %15 sesle eklenir
 
 BRAND_LINE = "FSCTakip.Erp · ARD Sistem Danışmanlık"
@@ -253,28 +257,56 @@ def build_scene(sc, dur, tmp_i):
         # Ken Burns: %100 -> %105 yumuşak zoom, merkez sabit
         zoomed = base.resized(lambda t: 1.0 + 0.05 * (t / dur))
         clip = CompositeVideoClip([zoomed.with_position("center")], size=(W, H)).with_duration(dur)
-    else:  # scroll — uzun sayfayı yukarı kaydır
+    else:  # scroll — uzun sayfayı tam sayı piksel adımlarıyla kaydır (titreme yok)
         img = Image.open(os.path.join(IMG, sc["img"])).convert("RGB")
         scale = W / img.width
         img = img.resize((W, int(img.height * scale)), Image.LANCZOS)
-        p = os.path.join(BASE, f"_scroll_{tmp_i}.png")
-        img.save(p)
+        arr = np.array(img)
         total = img.height - H
-        tail = 0.8  # sonda bekleme
-        long_clip = ImageClip(p).with_duration(dur).with_position(
-            lambda t: (0, -total * min(1.0, max(0.0, (t - 0.6) / max(0.1, dur - 0.6 - tail)))))
+        scroll_t = max(0.1, dur - SCROLL_HOLD - SCROLL_TAIL)
+
+        def prog(u, e=0.12):
+            """Trapez hız profili: kısa hızlanma/yavaşlama, ortada sabit hız."""
+            v = 1.0 / (1.0 - e)
+            if u <= 0:
+                return 0.0
+            if u >= 1:
+                return 1.0
+            if u < e:
+                return v * u * u / (2 * e)
+            if u > 1 - e:
+                w = 1 - u
+                return 1 - v * w * w / (2 * e)
+            return v * (u - e / 2)
+
+        def frame(t):
+            u = (t - SCROLL_HOLD) / scroll_t
+            y = int(round(total * prog(u)))
+            return arr[y:y + H]
+
+        scroll_clip = VideoClip(frame, duration=dur)
         cap = caption_bar(sc["caption"])
         cp = os.path.join(BASE, f"_cap_{tmp_i}.png")
         cap.save(cp)
         cap_clip = ImageClip(cp).with_duration(dur).with_position((0, H - 110))
-        clip = CompositeVideoClip([long_clip, cap_clip], size=(W, H)).with_duration(dur)
+        clip = CompositeVideoClip([scroll_clip, cap_clip], size=(W, H)).with_duration(dur)
     return clip.with_effects([vfx.FadeIn(0.4), vfx.FadeOut(0.4)])
+
+
+def scroll_min_dur(sc):
+    """Scroll sahnesi için hız sınırına göre asgari süre."""
+    img = Image.open(os.path.join(IMG, sc["img"]))
+    total = int(img.height * (W / img.width)) - H
+    return total / SCROLL_SPEED + SCROLL_HOLD + SCROLL_TAIL
 
 
 def main():
     per_scene = asyncio.run(tts_all())
     pad = 1.4  # ses bitince nefes payı
     scene_durs = [max(sum(d + pz for _, d, pz in infos) + pad, 4.0) for infos in per_scene]
+    for i, sc in enumerate(SCENES):
+        if sc["kind"] == "scroll":
+            scene_durs[i] = max(scene_durs[i], scroll_min_dur(sc))
 
     clips, audio_clips, t = [], [], 0.0
     for i, sc in enumerate(SCENES):

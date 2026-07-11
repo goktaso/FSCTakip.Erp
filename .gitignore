@@ -379,3 +379,8 @@ graphify-out/
 # ── Lisans dosyaları — her kurulum kendi lisansını taşır, repoya girmez ──
 license.lic
 *.lic
+
+# Buyuk medya dosyalari repoya girmesin
+FSC-Tanitim*.mp4
+FSC-Tanitim*.mp3
+docs/*.mp4
