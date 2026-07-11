@@ -45,19 +45,27 @@ SEGMENTS = [
     ]),
 ]
 
+# Uzun (birlesik) video icin son segment varyanti: slogan yerine gecis koprusu
+GECIS_SON = dict(start=28.0, parts=[
+    dict(t="Uygulamadan canlı ekranlarla, tek bakışta tüm FSC panonuz karşınızda.",
+         rate="+10%", pause=0.35),
+    dict(t="Peki tüm bunlar nasıl mı yönetiliyor? Gelin, uygulamanın içine birlikte bakalım.",
+         rate="-2%", pitch="-2Hz"),
+])
 
-async def gen():
+
+async def gen(segments, tag=""):
     clips = []
     prev_end = 0.0
-    for i, seg in enumerate(SEGMENTS):
+    for i, seg in enumerate(segments):
         off = max(seg["start"], prev_end + 0.3)
         seg_start = off
         for j, p in enumerate(seg["parts"]):
-            fn = os.path.join(BASE, f"old_{i}_{j}.mp3")
+            fn = os.path.join(BASE, f"old_{tag}{i}_{j}.mp3")
             await edge_tts.Communicate(p["t"], VOICE, rate=p.get("rate", "+0%"),
                                        pitch=p.get("pitch", "+0Hz")).save(fn)
             # edge-tts'in bas/son sessizligini kirp
-            tr = os.path.join(BASE, f"old_{i}_{j}_trim.wav")
+            tr = os.path.join(BASE, f"old_{tag}{i}_{j}_trim.wav")
             subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", fn, "-af",
                             "silenceremove=start_periods=1:start_threshold=-45dB,"
                             "areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse",
@@ -72,16 +80,21 @@ async def gen():
     return clips
 
 
-def main():
-    clips = asyncio.run(gen())
+def build_variant(segments, tag, out_name):
+    clips = asyncio.run(gen(segments, tag))
     mix = CompositeAudioClip(clips).with_duration(DUR)
-    wav = os.path.join(BASE, "old_voice.wav")
+    wav = os.path.join(BASE, f"old_voice_{tag}.wav")
     mix.write_audiofile(wav, fps=44100)
-    out = os.path.join(BASE, "FSC-Tanitim_Final_yeni.mp4")
+    out = os.path.join(BASE, out_name)
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", SRC, "-i", wav,
                     "-map", "0:v", "-map", "1:a", "-c:v", "copy",
                     "-c:a", "aac", "-b:a", "192k", "-shortest", out], check=True)
     print("OK", out)
+
+
+def main():
+    build_variant(SEGMENTS, "s", "FSC-Tanitim_Final_yeni.mp4")           # kisa: slogan bitisli
+    build_variant(SEGMENTS[:4] + [GECIS_SON], "g", "FSC-Tanitim_Final_gecis.mp4")  # uzun: gecis
 
 
 if __name__ == "__main__":
