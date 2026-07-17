@@ -1,3 +1,4 @@
+@inject FSCTakip.WebUI.Services.ICompanyBrandingService Branding
 @{
     Layout = null;
     ViewData["Title"] = "Giriş Yap";
@@ -62,6 +63,15 @@
         .login-logo .company-sub {
             font-size: 12px; color: rgba(255,255,255,.45);
             text-transform: uppercase; letter-spacing: .1em; margin-top: 4px;
+        }
+        /* Firma logosu yokken ünvan metni ana marka olur */
+        .login-logo .company-name.brand-primary {
+            font-size: 26px; margin-top: 8px;
+        }
+        /* ARD ürün kredisi — küçük, müşteri markasının önüne geçmez */
+        .login-logo .dev-credit {
+            font-size: 10.5px; color: rgba(255,255,255,.35);
+            margin-top: 14px; letter-spacing: .04em;
         }
 
         /* Card */
@@ -198,9 +208,18 @@
 <div class="login-wrapper">
 
     <div class="login-logo">
-        <img src="~/images/ard_logo.png" alt="ARD Sistem ve Danışmanlık" class="company-logo" />
-        <div class="company-name">ARD SİSTEM VE DANIŞMANLIK</div>
+        @if (Branding.HasLogo)
+        {
+            <img src="/Company/Logo" alt="@Branding.CompanyName" class="company-logo" />
+            <div class="company-name">@Branding.CompanyName</div>
+        }
+        else
+        {
+            @* Logo yoksa firma ünvanı ana marka olarak öne çıkar (ARD logosu basılmaz) *@
+            <div class="company-name brand-primary">@Branding.CompanyName</div>
+        }
         <div class="company-sub">FSC Takip ERP · Kraft Kağıt İzlenebilirlik Sistemi</div>
+        <div class="dev-credit">ARD Sistem ve Danışmanlık tarafından geliştirilmiştir</div>
     </div>
 
     <div class="login-card">
@@ -258,7 +277,7 @@
     </div>
 
     <div class="login-footer">
-        &copy; @DateTime.Now.Year ARD Sistem ve Danışmanlık. Tüm hakları saklıdır.
+        &copy; @DateTime.Now.Year @Branding.CompanyName. Tüm hakları saklıdır.
     </div>
 
 </div>

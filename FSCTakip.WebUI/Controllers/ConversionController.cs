@@ -159,6 +159,10 @@ namespace FSCTakip.WebUI.Controllers
                     CreatedDate = DateTime.Now
                 };
                 _context.FscLots.Add(lot);
+
+                // Dönüşüm çok adımlı (lot + bobin + 2 stok hareketi + fire): tek transaction'da
+                // atomik olmalı; kısmi hata orphan lot bırakmasın (bütünlük denetimi 2026-07-17).
+                using var tx = await _context.Database.BeginTransactionAsync();
                 await _context.SaveChangesAsync();
 
                 // 3) Hedef bobin
@@ -226,6 +230,7 @@ namespace FSCTakip.WebUI.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+                await tx.CommitAsync();
 
                 return Json(new
                 {
@@ -235,9 +240,14 @@ namespace FSCTakip.WebUI.Controllers
                     kalanKaynak = source.CurrentWeight
                 });
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Json(new { success = false, message = "Kaynak bobin siz işlem yaparken başka bir kullanıcı tarafından güncellendi. Lütfen sayfayı yenileyip tekrar deneyin." });
+            }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = ex.Message });
+                Serilog.Log.Error(ex, "Convert hatası (sourceSerialId={Src}, targetProductId={Tgt})", sourceSerialId, targetProductId);
+                return Json(new { success = false, message = "Dönüşüm kaydedilirken bir hata oluştu. Lütfen tekrar deneyin." });
             }
         }
 

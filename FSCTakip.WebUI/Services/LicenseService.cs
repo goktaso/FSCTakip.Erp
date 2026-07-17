@@ -1,11 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Data.SqlClient;
 using Microsoft.Win32;
 
 namespace FSCTakip.WebUI.Services
 {
-    public enum LicenseState { Valid, Missing, Invalid, Expired, MachineMismatch }
+    public enum LicenseState { Valid, Missing, Invalid, Expired, MachineMismatch, Trial }
 
     public class LicenseInfo
     {
@@ -15,6 +16,12 @@ namespace FSCTakip.WebUI.Services
         public string?      LicenseId   { get; init; }
         public string       MachineKey  { get; init; } = "";
         public string?      Error       { get; init; }
+
+        /// <summary>Yalnız Trial durumunda dolu — kalan gün sayısı.</summary>
+        public int?         TrialDaysLeft { get; init; }
+
+        /// <summary>Sistem kullanılabilir mi? Lisanslı veya deneme süresi içinde.</summary>
+        public bool IsUsable => State is LicenseState.Valid or LicenseState.Trial;
     }
 
     /// <summary>
@@ -42,10 +49,17 @@ awIDAQAB
 -----END PUBLIC KEY-----";
 
         private readonly string _licensePath;
+        private readonly string? _connectionString;
+        private readonly int _trialDays;
         private readonly object _lock = new();
         private LicenseInfo? _cached;
         private DateTime _cachedAt;
         private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(1);
+
+        /// <summary>Deneme başlangıcının dosya tarafındaki kaydı — kurulum scripti de buraya yazar.</summary>
+        private static string InitMarkerPath => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "ArdFscErp", ".init");
 
         public LicenseService(IConfiguration cfg, IWebHostEnvironment env)
         {
@@ -53,6 +67,8 @@ awIDAQAB
             _licensePath = string.IsNullOrWhiteSpace(configured)
                 ? Path.Combine(env.ContentRootPath, "license.lic")
                 : configured;
+            _connectionString = cfg.GetConnectionString("DefaultConnection");
+            _trialDays = cfg.GetValue("License:TrialDays", 30);
         }
 
         public LicenseInfo Current
@@ -96,8 +112,12 @@ awIDAQAB
         private LicenseInfo Evaluate()
         {
             var machineKey = GetMachineKey();
+
+            // Lisans dosyası hiç yoksa deneme süresi işler. Dosya VARSA (bozuk/süresi dolmuş/
+            // başka makineye ait olsa bile) karar verilmiş sayılır — denemeye geri düşülmez,
+            // aksi halde süresi dolmuş lisansı silmek 30 gün daha kazandırırdı.
             if (!File.Exists(_licensePath))
-                return new LicenseInfo { State = LicenseState.Missing, MachineKey = machineKey };
+                return EvaluateTrial(machineKey);
 
             try
             {
@@ -107,6 +127,104 @@ awIDAQAB
             catch (Exception ex)
             {
                 return new LicenseInfo { State = LicenseState.Invalid, MachineKey = machineKey, Error = ex.Message };
+            }
+        }
+
+        private LicenseInfo EvaluateTrial(string machineKey) =>
+            EvaluateTrialCore(GetTrialStartUtc(), DateTime.UtcNow, _trialDays, machineKey);
+
+        /// <summary>Test edilebilir çekirdek: deneme başlangıcı + şimdi + süre ile durum döndürür.</summary>
+        public static LicenseInfo EvaluateTrialCore(DateTime startUtc, DateTime nowUtc, int trialDays, string machineKey)
+        {
+            var endsOn = startUtc.Date.AddDays(trialDays);
+            var left   = (int)(endsOn - nowUtc.Date).TotalDays;
+
+            // İleri tarihli başlangıç (saat oynatılmış / DB başka zaman diliminde) denemeyi
+            // uzatmamalı — kalan gün süreyi asla aşamaz.
+            if (left > trialDays) left = trialDays;
+
+            if (left <= 0)
+                return new LicenseInfo
+                {
+                    State      = LicenseState.Missing,
+                    MachineKey = machineKey,
+                    ValidUntil = endsOn,
+                    Error      = $"{trialDays} günlük deneme süresi {endsOn:dd.MM.yyyy} tarihinde doldu."
+                };
+
+            return new LicenseInfo
+            {
+                State         = LicenseState.Trial,
+                MachineKey    = machineKey,
+                ValidUntil    = endsOn,
+                TrialDaysLeft = left
+            };
+        }
+
+        /// <summary>
+        /// Deneme başlangıcı: ProgramData işaret dosyası ile veritabanının oluşturulma tarihinin
+        /// ERKEN olanı. İkisi birden yok edilmeden deneme sıfırlanamaz — ve veritabanını silmek
+        /// müşterinin tüm ERP verisini yok etmesi demektir. Tam koruma değil, bilinçli sınır.
+        /// </summary>
+        private DateTime GetTrialStartUtc()
+        {
+            var candidates = new List<DateTime>();
+
+            var marker = ReadOrCreateInitMarker();
+            if (marker.HasValue) candidates.Add(marker.Value);
+
+            var dbCreated = ReadDatabaseCreatedUtc();
+            if (dbCreated.HasValue) candidates.Add(dbCreated.Value);
+
+            // Her iki kaynak da okunamıyorsa denemeyi başlatmış say. Fail-open bilinçli:
+            // geçici bir disk/DB arızasının çalışan kurulumu kilitlemesi, denemenin
+            // uzamasından daha ağır bir hatadır.
+            return candidates.Count > 0 ? candidates.Min() : DateTime.UtcNow;
+        }
+
+        private static DateTime? ReadOrCreateInitMarker()
+        {
+            try
+            {
+                if (File.Exists(InitMarkerPath))
+                {
+                    var text = File.ReadAllText(InitMarkerPath).Trim();
+                    if (DateTime.TryParse(text, System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.RoundtripKind, out var parsed))
+                        return parsed.ToUniversalTime();
+                    return null; // dosya var ama bozuk — üzerine yazma, DB tarihine bırak
+                }
+
+                var now = DateTime.UtcNow;
+                Directory.CreateDirectory(Path.GetDirectoryName(InitMarkerPath)!);
+                File.WriteAllText(InitMarkerPath, now.ToString("o"));
+                File.SetAttributes(InitMarkerPath, FileAttributes.Hidden);
+                return now;
+            }
+            catch
+            {
+                return null; // yazma yetkisi yoksa DB tarihi tek kaynak kalır
+            }
+        }
+
+        private DateTime? ReadDatabaseCreatedUtc()
+        {
+            if (string.IsNullOrWhiteSpace(_connectionString)) return null;
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT create_date FROM sys.databases WHERE name = DB_NAME()";
+                cmd.CommandTimeout = 5;
+                var value = cmd.ExecuteScalar();
+                if (value is DateTime local)
+                    return DateTime.SpecifyKind(local, DateTimeKind.Local).ToUniversalTime();
+                return null;
+            }
+            catch
+            {
+                return null; // DB erişilemiyorsa işaret dosyası tek kaynak kalır
             }
         }
 

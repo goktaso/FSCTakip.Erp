@@ -105,7 +105,8 @@
                                 bool sel = ViewBag.CustomerId?.ToString() == c.Id.ToString();
                                 <label class="mcd-row">
                                     <input type="radio" name="customerId" value="@c.Id" class="mcd-cb"
-                                           onchange="mcdUpdateSingle('mcd-sales-cust',@Html.Raw("'" + c.Name.Replace("'","\'") + "'"))"
+                                           data-name="@c.Name"
+                                           onchange="mcdUpdateSingle('mcd-sales-cust', this.dataset.name)"
                                            @(sel ? "checked" : "")>
                                     <span class="mcd-text">@c.Name</span>
                                 </label>

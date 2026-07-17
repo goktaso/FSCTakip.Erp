@@ -19,6 +19,60 @@ namespace FSCTakip.WebUI.Controllers
         private readonly IConfiguration _cfg;
         public EtlController(AppDbContext context, IConfiguration cfg) : base(context) { _cfg = cfg; }
 
+        private const string PasswordMask = "********";
+
+        // Tüm ETL modülü admin-only: ERP bağlantı kimlik bilgileri (düz metin DB parolası),
+        // toplu veri silme ve içe aktarma buradan yönetiliyor. Düşük yetkili kullanıcı
+        // erişmemeli (güvenlik denetimi 2026-07-17, bulgu #2).
+        public override void OnActionExecuting(Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context)
+        {
+            if (!IsAdminUser)
+            {
+                var isPost = HttpContext.Request.Method == "POST";
+                var isAjax = HttpContext.Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+                context.Result = (isPost || isAjax)
+                    ? new JsonResult(new { success = false, message = "Bu işlem yalnızca admin kullanıcılar tarafından yapılabilir." }) { StatusCode = 403 }
+                    : View("~/Views/Shared/AccessDenied.cshtml");
+                return;
+            }
+            base.OnActionExecuting(context);
+        }
+
+        /// <summary>Bağlantı ayarlarındaki parolayı istemciye dönmeden önce maskeler.</summary>
+        private static string? MaskPassword(string? settingsJson)
+        {
+            if (string.IsNullOrWhiteSpace(settingsJson)) return settingsJson;
+            try
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(settingsJson);
+                if (dict != null && dict.TryGetValue("Password", out var pw) && !string.IsNullOrEmpty(pw))
+                {
+                    dict["Password"] = PasswordMask;
+                    return JsonSerializer.Serialize(dict);
+                }
+                return settingsJson;
+            }
+            catch { return settingsJson; }
+        }
+
+        /// <summary>Kaydederken parola maske/boş geldiyse eskisini korur (maskeli edit güvenliği).</summary>
+        private static string? MergePreservePassword(string? existingJson, string? incomingJson)
+        {
+            try
+            {
+                var incoming = JsonSerializer.Deserialize<Dictionary<string, string>>(incomingJson ?? "");
+                if (incoming == null) return incomingJson;
+                if (incoming.TryGetValue("Password", out var pw) && (pw == PasswordMask || string.IsNullOrEmpty(pw)))
+                {
+                    var existing = JsonSerializer.Deserialize<Dictionary<string, string>>(existingJson ?? "");
+                    incoming["Password"] = existing?.GetValueOrDefault("Password", "") ?? "";
+                    return JsonSerializer.Serialize(incoming);
+                }
+                return incomingJson;
+            }
+            catch { return incomingJson; }
+        }
+
         // ─── Index — Dashboard ────────────────────────────────────────────────
         public async Task<IActionResult> Index()
         {
@@ -49,7 +103,7 @@ namespace FSCTakip.WebUI.Controllers
             var c = await _context.EtlConnections.FindAsync(id);
             if (c == null) return Json(new { success = false });
             return Json(new { success = true, data = new {
-                c.Id, c.Name, c.Type, c.Description, c.Settings, c.IsActive
+                c.Id, c.Name, c.Type, c.Description, Settings = MaskPassword(c.Settings), c.IsActive
             }});
         }
 
@@ -73,7 +127,7 @@ namespace FSCTakip.WebUI.Controllers
                 existing.Name        = model.Name;
                 existing.Type        = model.Type;
                 existing.Description = model.Description;
-                existing.Settings    = model.Settings;
+                existing.Settings    = MergePreservePassword(existing.Settings, model.Settings);
                 existing.UpdatedDate = DateTime.Now;
                 existing.UpdatedBy   = "SYSTEM";
             }

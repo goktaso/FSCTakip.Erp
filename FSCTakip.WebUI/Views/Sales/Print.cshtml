@@ -56,6 +56,10 @@ tr:nth-child(even) td { background: #f5f8ff; }
 <!-- BAŞLIK -->
 <div class="header">
   <div>
+    @if (!string.IsNullOrWhiteSpace(company?.LogoPath))
+    {
+      <img src="/Company/Logo" alt="@companyName" style="max-height:52px;max-width:220px;object-fit:contain;margin-bottom:6px;" />
+    }
     <div class="company-name">@companyName</div>
     <div class="doc-title">FSC Sevk Belgesi</div>
     <div class="fsc-badge">FSC® CoC Belgeli Sevkiyat</div>

@@ -640,6 +640,10 @@ namespace FSCTakip.WebUI.Controllers
                     }
                 }
 
+                // Tüketim + stok hareketi + fire tek transaction'da: kısmi hata defterleri
+                // (bobin ağırlığı / stok hareketi / fire) tutarsız bırakmasın (bütünlük denetimi 2026-07-17).
+                using var tx = await _context.Database.BeginTransactionAsync();
+
                 await _context.SaveChangesAsync();
 
                 // Stok hareketi: tüketim (çıkış) — tüketilen malzemenin ürünü için. Detay ile ErpReferenceId üzerinden eşlenir.
@@ -707,11 +711,18 @@ namespace FSCTakip.WebUI.Controllers
                     await _context.SaveChangesAsync();
                 }
 
+                await tx.CommitAsync();
+
                 return Json(new { success = true, message = "Tüketim kaydedildi.", kalanKg = serial.CurrentWeight });
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Json(new { success = false, message = "Bu bobin siz işlem yaparken başka bir kullanıcı tarafından güncellendi. Lütfen sayfayı yenileyip tekrar deneyin." });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = ex.Message });
+                Serilog.Log.Error(ex, "SaveConsumption hatası (DetailId={Id}, WorkOrderId={WoId})", model?.Id, model?.WorkOrderId);
+                return Json(new { success = false, message = "Tüketim kaydedilirken bir hata oluştu. Lütfen tekrar deneyin." });
             }
         }
 

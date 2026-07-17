@@ -1547,9 +1547,11 @@ namespace FSCTakip.WebUI.Controllers
                 });
             }
 
-            // Uygulama lisansı 30 gün içinde doluyorsa uyar (süresiz lisansta ValidUntil null'dır)
+            // Uygulama lisansı 30 gün içinde doluyorsa uyar (süresiz lisansta ValidUntil null'dır).
+            // Deneme sürümü hariç: orada ValidUntil hep 30 günün içindedir ve kalan gün zaten
+            // her sayfadaki deneme bandında yazar — burada tekrarlamak çift uyarı olurdu.
             var lic = _license?.Current;
-            if (lic?.ValidUntil != null)
+            if (lic is { State: FSCTakip.WebUI.Services.LicenseState.Valid, ValidUntil: not null })
             {
                 var daysLeft = (int)(lic.ValidUntil.Value.Date - today).TotalDays;
                 if (daysLeft >= 0 && daysLeft <= 30)

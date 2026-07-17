@@ -43,7 +43,14 @@ namespace FSCTakip.WebUI.Filters
                     var returnUrl = context.HttpContext.Request.Path + context.HttpContext.Request.QueryString;
                     context.Result = new RedirectToActionResult("Login", "Account", new { returnUrl });
                 }
+                return;
             }
+
+            // Zorunlu şifre değişimi bekliyorsa (varsayılan admin) başka sayfaya geçilemez.
+            // Account controller yukarıda muaf tutuldu — ChangePassword/Logout erişilebilir kalır,
+            // döngü oluşmaz.
+            if (context.HttpContext.Session.GetString("MustChangePassword") == "1")
+                context.Result = new RedirectToActionResult("ChangePassword", "Account", null);
         }
 
         public void OnActionExecuted(ActionExecutedContext context) { }

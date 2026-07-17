@@ -6,7 +6,13 @@ namespace FSCTakip.WebUI.Data
 {
     public static class DbSeeder
     {
-        public static async Task SeedAsync(IServiceProvider services)
+        /// <param name="includeDemoData">
+        /// true (yalnız geliştirme): örnek tedarikçi/müşteri/lot/iş emri/satış basılır.
+        /// false (müşteri kurulumu, varsayılan): sistem boş gelir — sadece admin, şirket
+        /// kaydı ve evrensel FSC tipleri. Müşteri kendi verisini temiz sayfaya girer.
+        /// Bayrak: appsettings "Seed:DemoData"; kurulum scripti false yazar.
+        /// </param>
+        public static async Task SeedAsync(IServiceProvider services, bool includeDemoData = false)
         {
             using var scope = services.CreateScope();
             var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -19,14 +25,15 @@ namespace FSCTakip.WebUI.Data
             {
                 ctx.AppUsers.Add(new AppUser
                 {
-                    Username     = "admin",
-                    PasswordHash = Controllers.AccountController.HashPassword("admin123"),
-                    FullName     = "SİSTEM YÖNETİCİSİ",
-                    Email        = "admin@fscerp.local",
-                    IsAdmin      = true,
-                    IsActive     = true,
-                    CreatedBy    = "SISTEM",
-                    CreatedDate  = DateTime.Now
+                    Username           = "admin",
+                    PasswordHash       = Controllers.AccountController.HashPassword("admin123"),
+                    FullName           = "SİSTEM YÖNETİCİSİ",
+                    Email              = "admin@fscerp.local",
+                    IsAdmin            = true,
+                    IsActive           = true,
+                    MustChangePassword = true,   // ilk girişte admin123 değiştirilmek zorunda
+                    CreatedBy          = "SISTEM",
+                    CreatedDate        = DateTime.Now
                 });
                 await ctx.SaveChangesAsync();
             }
@@ -46,7 +53,34 @@ namespace FSCTakip.WebUI.Data
                 await ctx.SaveChangesAsync();
             }
 
-            // Herhangi bir tabloda seed data varsa tamamen atla
+            // ── 0c. Evrensel FSC tipleri ────────────────────────────────────────
+            // FSC-100 ve FSC-MIX migration HasData ile zaten gelir. FSC'siz (kapsam dışı)
+            // tipi denetim için ZORUNLUDUR — sertifikasız hammadde girişleri iddiasız
+            // işaretlenmeli (bkz. ThirdPartyKurulum FAZ 6.1). Code alanına bakılarak
+            // eklenir; migration'la çakışmaz, demo bayrağından bağımsızdır.
+            if (!await ctx.FscTypes.AnyAsync(t => t.Code == "NON-FSC"))
+            {
+                // Tam nitelendirme: FSCTakip.WebUI.Models altında namespace'siz bir
+                // FscType kopyası global scope'ta duruyor ve düz "new FscType"i çalıyor.
+                ctx.FscTypes.Add(new FSCTakip.Core.Entities.FscType
+                {
+                    Code        = "NON-FSC",
+                    Name        = "FSC'siz (Kapsam Dışı)",
+                    Description = "Ürün FSC sertifikası kapsamında değildir; FSC logosu basılamaz.",
+                    IsActive    = true,
+                    CreatedBy   = "SISTEM",
+                    CreatedDate = DateTime.Now
+                });
+                await ctx.SaveChangesAsync();
+            }
+
+            // ── Demo veri kapısı ────────────────────────────────────────────────
+            // Müşteri kurulumunda (includeDemoData=false) buradan döner: sistem boş +
+            // admin + şirket kaydı + FSC tipleriyle gelir. Örnek işlem verisi basılmaz.
+            if (!includeDemoData)
+                return;
+
+            // Demo istense bile herhangi bir tabloda veri varsa tekrar basma (idempotent).
             if (await ctx.Suppliers.AnyAsync()  ||
                 await ctx.BagTypes.AnyAsync()   ||
                 await ctx.Warehouses.AnyAsync() ||

@@ -499,6 +499,29 @@ wwwroot/uploads/
 Veritabanında sadece göreli yol saklanır: `uploads/invoices/2026/...pdf`  
 FscLot entity'sinde `InvoicePdfPath` ve `DispatchPdfPath` alanları mevcuttur.
 
+Üretimde bu klasör uygulama dizininin **dışındadır** — `FileStorage:Root` ile yönetilir
+(kurulum `D:\FscErpData\uploads`'a yönlendirir), böylece sürüm güncellemesi belgeleri ezmez.
+
+### ⚠️ "gitignored" ≠ "pakete girmez" — Dağıtım Sızıntısı Kuralı
+
+`.gitignore` yalnız git'i bağlar. **`dotnet publish` onu hiç okumaz** ve `Microsoft.NET.Sdk.Web`
+varsayılan olarak `wwwroot/**` altındaki HER ŞEYİ yayına koyar. Gitignored bir klasör repoda
+görünmediği için gözden kaçar — ama diskte durur ve pakete girer.
+
+2026-07-17'de `wwwroot/uploads/` altındaki 197 dosya (55 MB gerçek müşteri FSC arşivi:
+müşteri listesi, tedarikçi listesi, sözleşmeler) kurulum EXE'sine girmişti. Aynı sınıf
+hata `appsettings.json` ve `license.lic`'te de yaşandı.
+
+**Kural:** müşteriye giden bir artefakt üretirken *içindekileri listele*, tahmin etme.
+Hariç tutma `.csproj`'da yapılır:
+```xml
+<ItemGroup>
+  <Content Remove="wwwroot\uploads\**" />
+  <None Include="wwwroot\uploads\**" CopyToPublishDirectory="Never" />
+</ItemGroup>
+```
+İkinci savunma hattı: `installer/build-installer.ps1` → `Test-NoSecretLeak`.
+
 ## Geliştirme Öncelik Sırası
 
 1. **Faz 1 — İşlem Modülleri** (Kritik)

@@ -54,7 +54,8 @@
                         {
                             <label class="mcd-row">
                                 <input type="radio" name="workOrderId" value="@wo.Value" class="mcd-rb"
-                                       onchange="mcdSingleSelect('mcd-bom-wo','@wo.Value','@Html.Raw(wo.Text.Replace("'", "\\'"))')"
+                                       data-name="@wo.Text"
+                                       onchange="mcdSingleSelect('mcd-bom-wo', this.value, this.dataset.name)"
                                        checked="@(selWoId?.ToString() == wo.Value ? "checked" : null)">
                                 <span class="mcd-name">@wo.Text</span>
                             </label>

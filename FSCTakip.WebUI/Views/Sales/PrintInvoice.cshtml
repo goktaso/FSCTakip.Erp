@@ -56,6 +56,10 @@ tfoot td { font-weight: 700; background: #eef2ff !important; border-top: 2px sol
 <!-- BAŞLIK -->
 <div class="header">
   <div>
+    @if (!string.IsNullOrWhiteSpace(company?.LogoPath))
+    {
+      <img src="/Company/Logo" alt="@companyName" style="max-height:52px;max-width:220px;object-fit:contain;margin-bottom:6px;" />
+    }
     <div class="company-name">@companyName</div>
     <div class="doc-title">Satış Faturası</div>
     <div class="fsc-badge">FSC® CoC Belgeli Satış</div>

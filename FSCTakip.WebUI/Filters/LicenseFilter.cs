@@ -6,8 +6,9 @@ namespace FSCTakip.WebUI.Filters
 {
     /// <summary>
     /// Lisans geçersizse (eksik/bozuk/süresi dolmuş/yanlış makine) tüm istekleri
-    /// /License/Status sayfasına yönlendirir. LicenseController muaftır — müşteri
-    /// makine parmak izini görebilmeli ve yeni lisans dosyası yükleyebilmelidir.
+    /// /License/Status sayfasına yönlendirir. Deneme süresi içindeki kurulum geçerli
+    /// sayılır ve engellenmez. LicenseController muaftır — müşteri makine parmak izini
+    /// görebilmeli ve yeni lisans dosyası yükleyebilmelidir.
     /// SessionAuthFilter'dan ÖNCE koşar (Program.cs kayıt sırası).
     /// </summary>
     public class LicenseFilter : IActionFilter
@@ -22,7 +23,7 @@ namespace FSCTakip.WebUI.Filters
             if (string.Equals(controller, "License", StringComparison.OrdinalIgnoreCase))
                 return;
 
-            if (_license.Current.State != LicenseState.Valid)
+            if (!_license.Current.IsUsable)
                 context.Result = new RedirectToActionResult("Status", "License", null);
         }
 

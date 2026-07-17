@@ -143,7 +143,17 @@ namespace FSCTakip.WebUI.Controllers
             return View();
         }
 
+        // Hata sayfaları giriş/lisans olmadan da açılabilmeli (hata her an oluşabilir).
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
         public IActionResult Error() => View();
+
+        // HTTP durum sayfaları (404/403 vb.) — Program.cs UseStatusCodePagesWithReExecute buraya yönlendirir.
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+        public IActionResult HttpError(int code)
+        {
+            ViewData["StatusCode"] = code;
+            return View("HttpError");
+        }
 
         // ── Bildirim çanı (topbar — tüm sayfalarda) ──────────────────────────
         public async Task<IActionResult> GetNotifications()

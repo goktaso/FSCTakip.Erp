@@ -13,6 +13,13 @@ namespace FSCTakip.Core.Entities
         public string? Email        { get; set; }
         public bool    IsAdmin      { get; set; } = false;
         public bool    IsActive     { get; set; } = true;
+
+        /// <summary>
+        /// true ise kullanıcı giriş yaptıktan sonra şifresini değiştirmeden başka
+        /// sayfaya geçemez. Varsayılan admin (admin/admin123) bu bayrakla oluşturulur;
+        /// müşteri kurulumunda varsayılan parolanın kalıcı kalmasını önler.
+        /// </summary>
+        public bool    MustChangePassword { get; set; } = false;
         public DateTime CreatedDate { get; set; } = DateTime.Now;
         public string  CreatedBy    { get; set; } = "SYSTEM";
         public DateTime? LastLoginDate { get; set; }

@@ -1,5 +1,81 @@
 # Alınan Dersler — FSC Takip ERP
 
+## İndeks
+
+64 kayıt. Oturum başı hook'u **yalnız bu indeksi** enjekte eder — ham dosya
+86 KB ve her prompt'ta taşınması ~22K token/tur eder. İlgili başlığı `Read` +
+`offset/limit` ile oku; dosyayı baştan sona okuma.
+
+| # | Konu | Satır |
+|---|------|-------|
+| 1 | Beyaz etiket + çevrimdışı lisans kilidi (2026-07-04) | 3 |
+| 2 | Sıfır kurulum hiç test edilmemişti — migration/seed zinciri 4 ayrı yerden kırıktı (2026-07-03) | 10 |
+| 3 | WorkOrder.ActualQuantity gün-bazlı toplama hatası (2026-07-02) | 23 |
+| 4 | ProductionDetail admin düzeltme + denetim izi (2026-06-30) | 35 |
+| 5 | İş Emri Formu — Yazdır/PDF (çoklu id print action) (2026-07-01) | 49 |
+| 6 | Satış stok yeterlilik kuralı + tarihsel içe aktarım + Fatura print view (2026-07-01) | 62 |
+| 7 | Razor → JavaScript'e decimal basarken kültür tuzağı (2026-06-14) | 76 |
+| 8 | Belge depolama: yapılandırılabilir kök + ayrı klasör + satış yükleme (2026-06-14) | 97 |
+| 9 | Tüketim stok hareketi (çıkış) eksikti — Stok Durumu/Hareketleri'nde çıkış 0 (2026-06-14) | 112 |
+| 10 | Fire (WasteWeight) stok bakiyesinden bağımsız kalem — tüketim değil (2026-06-29) | 128 |
+| 11 | Tek tip mesaj kutusu standardı (2026-06-14) — §11'e eklenecek | 189 |
+| 12 | Decimal form binding tr-TR'de bozuluyor — "6000.00" → 60000000 (2026-06-14) | 204 |
+| 13 | ViewBag'e anonim tip geçince RuntimeBinderException (2026-06-14) | 214 |
+| 14 | DataTables v2 arama kutusu ID değişti (2026-06-20) | 222 |
+| 15 | draw.dt + stat kartı senkronizasyon pattern'i (2026-06-20) | 239 |
+| 16 | Razor option tag helper — inline ternary yasak (2026-06-20) | 246 |
+| 17 | Grup subtotal duplikasyon — tek mekanizma kuralı (2026-06-20) | 258 |
+| 18 | ExternalCode OR filtresi (2026-06-20) | 262 |
+| 19 | Proaktif test disiplini — build sonrası Playwright zorunlu (2026-06-20) | 273 |
+| 20 | Ürün birimi KG/MT/ADET ile otomatik dönüşüm (2026-06-20) | 284 |
+| 21 | Yarı Mamül Dönüşüm özelliği eklendi (2026-06-14) | 300 |
+| 22 | MCD (Multi-Choice Dropdown) — coklu ürün/stok filtresi (2026-06-21) | 307 |
+| 23 | MCD entegrasyon uyarıları (2026-06-21) | 367 |
+| 24 | MCD + draw.dt kombinasyon (2026-06-21) | 387 |
+| 25 | StockMovement.ProductId nullable → non-nullable (2026-06-21) | 401 |
+| 26 | Stock Summary + Admin Stock sayfaları (2026-06-21) | 414 |
+| 27 | Razor yorum satırında @section direktifi hata vermesi (2026-06-21) | 432 |
+| 28 | MCD (Multi-Choice Dropdown) filtre layout — display:block + flex-column wrapper (2026-06-21) | 449 |
+| 29 | Razor option tag helper — seçili attribute'u dinamik yapabilme (2026-06-21) | 469 |
+| 30 | 5 sayfa MCD uyumluluğu sağlandı (2026-06-21) | 482 |
+| 31 | Razor @foreach { } içinde ilk satırda @{ } kullanilamaz (2026-06-21) | 499 |
+| 32 | 6 sayfa MCD + layout düzeltmeleri tamamlandı (2026-06-21) | 528 |
+| 33 | Products/Index tedarikçi ve ürün grubu MCD filtreleri (2026-06-21) | 539 |
+| 34 | Bağımlı field otomatik doldurma — çoklu filtre dialog pattern (2026-06-21) | 558 |
+| 35 | Varsayılan filtre + "Tüm Kayıtları Göster" toggle (2026-06-21, genişletildi 2026-06-22) | 577 |
+| 36 | ProductRecipe BilesenYeri alanı — mamulde bileşen konumu (2026-06-21) | 604 |
+| 37 | Products/Recipe.cshtml — Coklu bileşen seçimi + dinamik miktar girişi (2026-06-21) | 619 |
+| 38 | Production/Detail tüketim modal — BilesenYeri integrasyon (2026-06-21) | 642 |
+| 39 | Conversion modal'ında stok kodu seçilince stok adı otomatik doldurma (2026-06-21) | 650 |
+| 40 | Çoklu ürün modal pattern — "addModal" → "formModal" ayrımı (2026-06-21) | 670 |
+| 41 | Arama kutusu selector değişimi — data-filter vs data-search (2026-06-21) | 702 |
+| 42 | Tekli modal'da ürün read-only gösterimi (2026-06-21) | 715 |
+| 43 | Production/Detail — Bileşen seçimi dropdown yerine hızlı tiklama butonları (2026-06-21) | 728 |
+| 44 | Production/Detail — Sticky işlem butonu + min-width sutun genislikleri (2026-06-21) | 747 |
+| 45 | Production/Detail — CoC (Chain of Custody) modal otomatik açılış (2026-06-21) | 775 |
+| 46 | Production/Detail — Tüketim tablosuna Bilesen + Kullanim yeri sutunu (2026-06-21) | 795 |
+| 47 | FscLot.SourceSerial navigation property — anonim FK'den typed property'e (2026-06-22) | 817 |
+| 48 | Conversion/Index — Son Dönüşümler filtresi + Düzenle/Sil butonları (2026-06-22) | 841 |
+| 49 | Production/Detail — GroupBy key ve SourceSerial izlenebilirliği (2026-06-22) | 890 |
+| 50 | JavaScript event yönetimi — onclick vs onmousedown preventDefault (2026-06-22) | 950 |
+| 51 | Production/Detail — selectSerial input value gösterimi (2026-06-22) | 987 |
+| 52 | Toplam Fiziksel Stok kartı — Purchase + Stock/RawMaterial (2026-06-22) | 1010 |
+| 53 | FSC Kütle Dengesi Partial (_FscStokOzeti.cshtml) — 4 sayfada ortak kart (2026-06-26) | 1041 |
+| 54 | Stock/RawMaterial action'a varsayılan grup filtresi + ShowAll (2026-06-26) | 1113 |
+| 55 | ViewData vs ViewBag farkı — Partial'lere ViewData aktarımı (2026-06-26) | 1129 |
+| 56 | FSC'siz Türkçe ToUpper() Hata Tespiti ve Düzeltme (2026-06-26) — KRİTİK | 1145 |
+| 57 | FSC Kütle Dengesi Formülü — Giriş/Tüketim/Kalan Kategorisizasyonu (2026-06-26) — SEMANTİK | 1177 |
+| 58 | ToplamFizikselStok ViewBag Fallback Hata (2026-06-26) | 1201 |
+| 59 | FSC Bakiye Kartları Partial — 3 büyük statü kartı (_FscStokOzeti.cshtml) (2026-06-26) | 1228 |
+| 60 | StockMovement.Type vs MovementType — Naming (2026-06-26) | 1269 |
+| 61 | FSC Kütle Dengesi — Merkezi Servis (FscMassBalanceService) (2026-06-27) | 1284 |
+| 62 | Performans Mimarisi — Ne Zaman Ne Yapılır (2026-06-30) | 1307 |
+| 63 | Kritik Gizli Bug — SaveChangesAsync Tüm String'leri Körü Körüne Büyütüyordu (2026-07-05) | 1327 |
+| 64 | Kurulum Provası — Ek Dersler (2026-07-05, oğlun PC'si dress rehearsal) | 1339 |
+| 65 | Tek tık kurulum paketi — FscErpSetup.exe (2026-07-16) | 1426 |
+
+> Yeni ders eklerken bu tabloya da satır ekle (team-protocol → Öğrenimler kapısı).
+
 ## Beyaz etiket + çevrimdışı lisans kilidi (2026-07-04)
 
 - **Beyaz etiket:** `CompanySetting` (tek satır tablo) → 3 print view'de belge ünvanı + firmanın kendi FSC CoC/Lisans kodları. Ürün markası (login/sidebar ARD) bilinçli sabit; yalnız **dışa dönük belgeler** müşteri ünvanı taşır. Seed varsayılanı eski hardcoded değer — ACORE görünümü değişmedi (canlı doğrulandı).
@@ -1345,3 +1421,156 @@ Sıra geldiğinde bu dosyaları SSMS'te çalıştır, EF Core mapping ekle.
 - **Hosting Bundle + IIS sırası:** IIS sonradan etkinleştirilirse, .NET Hosting Bundle kurulumunun **Onar (Repair)** ile tekrar çalıştırılması gerekir (aksi halde ASP.NET Core IIS modülü kayıt olmaz, HTTP 500.30 verir).
 - **stdout log:** 500.30 hatasında `web.config`'te `stdoutLogEnabled="true"` yapıp `logs\` klasörü oluşturmadan gerçek hata görünmez.
 - **Güncelleme dağıtımı (canlıya patch):** `dotnet publish` çıktısından appsettings.json/license.lic HARİÇ her şey kopyalanır (üzerine yaz), sonra app pool restart. RDP üzerinden büyük dosya (zip) taşımak için: normal RDP panosu (Ctrl+C/Ctrl+V) dosya kopyalamayı destekler — küçük metin dosyaları için de aynı pano yeterli, ekstra araç gerekmez.
+
+---
+
+## Tek tık kurulum paketi — FscErpSetup.exe (2026-07-16)
+
+Runbook FAZ 1–4 (~1 gün saha işi) tek EXE'ye indirildi. `installer/` altında üç parça:
+`build-installer.ps1` (ARD makinesinde paket üretir), `FscErpSetup.iss` (Inno sihirbazı),
+`install-engine.ps1` (müşteri sunucusunda asıl iş). Tasarım ilkesi: **karmaşıklık ARD
+tarafında, sahada sıfır sürpriz** — ön koşullar derleme sırasında indirilip doğrulanır,
+müşteri sunucusunun internete çıkması gerekmez.
+
+- **PowerShell 5.1 + Türkçe = UTF-8 BOM ZORUNLU.** BOM'suz kaydedilen `.ps1`'i PS 5.1
+  ANSI sanar; `Sık` → `SÄ±k` olur ve script **parse bile edilemez** ("Missing closing '}'"
+  gibi alakasız hatalar verir, gerçek sebep encoding'dir). Write tool BOM yazmaz — script
+  yazdıktan sonra BOM'u elle ekle:
+  ```powershell
+  $t = [IO.File]::ReadAllText($p, (New-Object Text.UTF8Encoding($false)))
+  [IO.File]::WriteAllText($p, $t, (New-Object Text.UTF8Encoding($true)))
+  ```
+  Doğrulama: `[Parser]::ParseFile($p, [ref]$null, [ref]$errors)` — hata listesi boş olmalı.
+- **`$args` PowerShell'de ayrılmış otomatik değişken** — fonksiyon içinde `$args = @(...)`
+  yazınca parser "Missing argument in parameter list" der. `$setupArgs` gibi adlandır.
+- **Gizli sızıntı: `appsettings.json` gitignored AMA publish'e girer.** Dosya geliştirme
+  makinesinde diskte durur, `dotnet publish` onu çıktıya kopyalar — ARD'nin kendi bağlantı
+  dizesi (`Server=ARDA\ARDA`) müşteri paketine sızar. gitignore bunu engellemez; publish
+  çıktısını ayrıca denetle. `build-installer.ps1` → `Test-NoSecretLeak` bunu yakalayıp
+  siler, `*.lic` veya `*.pem` bulursa derlemeyi durdurur.
+- **Uydurma SHA256 yazma.** Ön koşul hash'i bilinmiyorsa boş bırak ve script'i durdur;
+  tahmini hash doğrulama varmış görüntüsü verip hiçbir şey doğrulamaz. Desen: `Sha256 = ''`
+  → indir, hesapla, ekrana bas, DUR, insan onayıyla sabitle (trust-on-first-use).
+- **Adım sırası keyfi değil, hepsi gerçek hatadan geliyor:**
+  IIS → Hosting Bundle (ters sıra HTTP 500.30) ·
+  AppPool → SQL login (login, AppPool hesabı var olmadan açılamaz) ·
+  CREATE DATABASE (COLLATE Turkish_CI_AS) → Migrate (collation sonradan değiştirilemez;
+  `Migrate()` DB'yi kendi yaratırsa sunucu varsayılan collation'ını alır).
+- **`Get-MachineKey` iki yerde yaşıyor** — PS motoru + C# `LicenseService`. Aynı kodu
+  üretmek ZORUNDA (SHA256(MachineGuid) ilk 16 hex, küçük harf), yoksa kurulum raporundaki
+  kimlik kodu yanlış lisans üretilmesine yol açar. Repodaki dev lisansının makinesiyle
+  (`b6c87ee3c2563e19`) karşılaştırarak doğrulandı.
+- **Robocopy `/MIR` + korunacak dosya:** güncellemede `appsettings.json`/`license.lic`
+  ezilmemeli → `/XF` ile hariç tut. `/MIR` hedefte olup kaynakta olmayanı siler; `logs/`
+  klasörünü `/XD` ile koru. Çıkış kodu 0-7 başarı, **8+ hata** (0 değil!).
+- **`ConvertTo-Json` ters slash'ı kendi kaçırır** — `localhost\FSCERP` otomatik olarak
+  `localhost\FSCERP` yazılır. appsettings.json'ı elle string olarak kurmak yerine
+  PSCustomObject + ConvertTo-Json kullan; named instance escape hatası tarihe karışır.
+  Ama **UTF-8 olarak yaz**: PS 5.1 varsayılanı UTF-16'dır, ASP.NET Core okuyamaz →
+  `[IO.File]::WriteAllText($p, $json, (New-Object Text.UTF8Encoding($false)))`.
+- **Production'da `UseHttpsRedirection` intranet kurulumunda mayın.** IIS'te https binding
+  yokken sessizce no-op'a düşüyor (bu yüzden bugüne dek fark edilmedi), ama müşteri kötü
+  bir sertifikayla binding eklerse runbook'taki `ERR_SSL_PROTOCOL_ERROR` geri gelir.
+  `Security:HttpsRedirection` bayrağına alındı; kurulum `false` yazıyor.
+- **30 gün deneme — sıfırlanmaya karşı iki kaynak:** `C:\ProgramData\ArdFscErp\.init` +
+  veritabanının `create_date`'i, **erken olanı** geçerli. Yeni tablo/migration gerekmedi.
+  DB'yi drop etmek denemeyi sıfırlar ama müşterinin tüm ERP verisini yok eder — pratik
+  caydırıcılık bu. Mutlak koruma değil, bilinçli sınır.
+  Lisans dosyası VARSA (bozuk/süresi dolmuş olsa bile) denemeye geri düşülmez — yoksa
+  süresi dolmuş lisansı silmek 30 gün daha kazandırırdı.
+- **Enum'a değer eklemenin bedeli:** `LicenseState.Trial` → `LicenseFilter` (`!= Valid`
+  yerine `IsUsable`), `Status.cshtml` switch, `_Layout` bandı, `ReportsController`'daki
+  30-gün-kala uyarısı (Trial'da ValidUntil hep dolu → her gün çift uyarı verirdi, `Valid`
+  durumuna kısıtlandı). Çapraz-etki tablosu bunu yakaladı.
+
+### KRİTİK — Müşteri belgeleri pakete sızıyordu (2026-07-17)
+
+İlk ISCC derlemesinin çıktısında görüldü: `wwwroot/uploads/` altındaki **197 dosya /
+55 MB** kurulum EXE'sine giriyordu. Bunlar test verisi değildi — gerçek bir kraft torba
+üreticisinin FSC denetim arşiviydi: müşteri listesi (Harrods, Domino's, Hunkemöller),
+tedarikçi listesi, FSC Agreement'ları, organizasyon şeması, düzeltici faaliyetleri.
+Paket her müşteriye aynı gittiği için, bir firmanın gizli arşivi **rakiplerine** gidecekti.
+
+**Kök neden:** `Microsoft.NET.Sdk.Web` varsayılan olarak `wwwroot/**` altındaki her şeyi
+yayına dahil eder. **`.gitignore`'un publish'e hiçbir etkisi yoktur.** Klasör gitignored
+olduğu için repoda görünmüyordu (`git ls-files` → 0), bu yüzden fark edilmedi — ama
+diskte duruyordu ve `dotnet publish` onu kopyaladı.
+
+**Bu aynı sınıf hatanın ÜÇÜNCÜ tekrarı:**
+1. `appsettings.json` — gitignored, diskte var, publish kopyaladı (ARD bağlantı dizesi)
+2. `license.lic` — gitignored, publish kopyalayabilir
+3. `wwwroot/uploads/` — gitignored, publish kopyaladı (müşteri belgeleri)
+
+**Kural: "gitignored" ≠ "pakete girmez".** İki ayrı mekanizma. Repoda görünmeyen bir şey
+pakette rahatça bulunabilir — ve gözden kaçması tam da bu yüzden kolaydır.
+
+**Çözüm iki katmanlı:**
+- Kök: `.csproj` → `<Content Remove="wwwroot\uploads\**" />` +
+  `<None Include="..." CopyToPublishDirectory="Never" />`
+- Savunma: `build-installer.ps1 / Test-NoSecretLeak` publish çıktısında hâlâ varsa
+  siler ve uyarır (csproj değişirse veya publish önbelleği bayatlarsa yakalar).
+
+**Kanıt:** 830 dosya/135.7 MB → 634 dosya/82 MB, PDF sayısı 197 → **0**.
+
+**Ders:** Paketi ilk kez üretirken **içindekileri listele**. ISCC'nin "Compressing: ..."
+çıktısı bunu bedavaya verdi. Yeni bir dağıtım artefaktı üretirken "ne giriyor?" sorusu
+tahminle değil, dosya listesiyle cevaplanır.
+
+### PowerShell fonksiyonundan native exe çağrısı dönüş değerini kirletir (2026-07-17)
+
+`build-installer.ps1 / Invoke-Compile` son satırda `$exe` (EXE yolu) dönüyordu. Ama
+ISCC çağrısı `& $iscc ...` **redirect edilmeden** yazıldığı için ISCC'nin tüm stdout'u
+(aralarındaki BOŞ satırlar dahil) fonksiyonun **çıktı akışına** karıştı. Sonuç:
+`$exe = Invoke-Compile` tek path yerine `[ISCC çıktı satırları..., path]` DİZİSİ oldu;
+sonraki `Get-FileHash $exe` dizideki ilk boş string'e takıldı →
+"Cannot bind argument to parameter 'Path' because it is an empty string."
+
+Kafa karıştıran taraf: hata `Get-FileHash` satırında (350) patlıyordu ama kök neden
+ISCC çağrısındaydı (329). Elle çalıştırınca ISCC kusursuz derliyordu — çünkü elle
+çağrıda dönüş değeri yakalanmıyordu. Teşhis: `$_.ScriptStackTrace` gerçek satırı verdi
+(InvocationInfo.Line yanıltıcıydı, top-level çağrıyı gösteriyordu).
+
+**Kural:** PowerShell fonksiyonu bir değer döndürecekse, içindeki native exe / cmdlet
+çıktısını **akıştan ayır**: `& $exe args | Out-Host` (veya `| Out-Null`, `2>&1 | ...`).
+Fonksiyonun output stream'ine yalnız `return` edilen değer düşmeli. Aksi halde çağıran
+`$x = Fn` beklenmedik dizi yakalar. Bu, C#'taki tek return'e alışkınlığın PowerShell'de
+bıraktığı klasik tuzak — PS'de "yazılan her şey" dönüş değeridir.
+
+### Güvenlik denetimi (3 paralel Opus uzmanı) + düzeltmeler (2026-07-17)
+
+Müşteriye satış öncesi security-reviewer + database-reviewer + razor-blazor-reviewer paralel
+salt-okunur denetim. FAZ 2 yeni kodu (marka/login/belge/hata sayfaları) TEMİZ çıktı; bulgular
+önceden var olan ERP sorunlarıydı. Düzeltilenler:
+
+- **Parola hash SHA256+sabit salt → PBKDF2** (AccountController). Kullanıcıya özel rastgele tuz,
+  120k iterasyon, format `pbkdf2$iter$salt$hash`. Geriye uyum: `VerifyPassword` eski SHA256'yı da
+  tanır, girişte PBKDF2'ye yükseltir (`IsLegacyHash`). **Kritik: PBKDF2 tuzu kullanıcıya özel
+  olduğu için Login'deki `WHERE PasswordHash == hash` SQL karşılaştırması ÇALIŞMAZ** — kullanıcıyı
+  username ile çekip `VerifyPassword` ile KODDA doğrula.
+- **ETL düz metin DB parolası + yetki boşluğu** — en düşük yetkili kullanıcı `GetConnection` ile
+  Netsis üretim parolasını okuyordu. Çözüm: `OnActionExecuting` override ile tüm EtlController
+  admin-only + `GetConnection`'da parola maskeleme + kaydetmede maske→eski parola koru.
+- **`BaseController.GeneralToggleStatus` yetkisiz + serbest tableName** — reflection ile herhangi
+  Core entity pasifleştirilebiliyordu (orphan endpoint, UI kullanmıyor ama routable). Admin guard
+  + entity whitelist.
+- **XSS: `_Layout` kritik popup `innerHTML`** — tedarikçi/müşteri adından stored XSS. DOM node +
+  `textContent`'e çevrildi. **`SaveChangesAsync` uppercase davranışı XSS savunması DEĞİL** —
+  yapısal HTML enjeksiyonunu durdurmaz.
+- **XSS: `Html.Raw` + inline `onclick` + elle tırnak kaçırma** (Sales/Index, MaterialTrace,
+  BomAnalysis). `.Replace("'","\'")` C#'ta NO-OP (çift ters-slash gerekli). Kök çözüm: veriyi
+  `data-*` attribute'e bas (Razor auto-encode), JS'te `this.dataset.x` oku — inline string
+  interpolasyonu yapma.
+- **DocumentController `[AllowAnonymous]`** — finansal PDF'ler anonim. Kaldırıldı (GUID gizliliği
+  tek savunma yetmez).
+- **Çok adımlı yazmalar transaction'sız** — SaveSerial/SaveConsumption/Convert'te 2-3 ayrı
+  `SaveChangesAsync`; biri patlarsa defterler tutarsız. `BeginTransactionAsync` + `CommitAsync`
+  ile atomik yapıldı. Ham `ex.Message` → `Serilog.Log.Error` + genel kullanıcı mesajı.
+- Session cookie: `SameSite=Lax` + `SecurePolicy=SameAsRequest`.
+
+**Bilinçli ERTELENEN (tek-firma/düşük-eşzamanlılık için kabul; sonraki sürüm):**
+- FscSerial `rowversion` concurrency token — aynı bobini iki kullanıcı AYNI ANDA tüketirse
+  kayıp-güncelleme. Tek firmada düşük olasılık.
+- decimal ölçek (18,2)↔(18,4) hizalama (ağırlık kolonları).
+- Login hız sınırı / hesap kilidi + daha güçlü parola politikası (min 8 yapıldı, karmaşıklık yok).
+- Session-ID yenileme (fixation).
+- Dağınık `ex.Message` (liste/ETL satır hataları) — ETL artık admin-only, düşük risk.

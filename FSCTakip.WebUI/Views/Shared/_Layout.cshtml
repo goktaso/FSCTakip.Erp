@@ -1,3 +1,5 @@
+@inject FSCTakip.WebUI.Services.ILicenseService License
+@inject FSCTakip.WebUI.Services.ICompanyBrandingService Branding
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -279,6 +281,19 @@
 
         .topbar-title { font-size: 15px; font-weight: 600; color: #111827; }
         .topbar-breadcrumb { font-size: 11.5px; color: var(--text-muted); }
+
+        /* Deneme sürümü bandı */
+        .trial-banner {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            margin: 12px 20px -4px; padding: 10px 14px;
+            border-radius: 10px; font-size: 13px;
+            background: #fef3c7; border: 1px solid #fcd34d; color: #92400e;
+        }
+        .trial-banner.urgent { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+        .trial-banner a {
+            margin-left: auto; font-weight: 600; color: inherit;
+            text-decoration: underline; white-space: nowrap;
+        }
 
         .topbar-user {
             display: flex; align-items: center; gap: 8px;
@@ -1019,10 +1034,20 @@
 <aside class="sidebar" id="sidebar">
 
     <a class="sidebar-logo" href="/Home/Index">
-        <div class="logo-icon"><i class="fas fa-leaf"></i></div>
+        @if (Branding.HasLogo)
+        {
+            <div class="logo-icon" style="padding:0;background:transparent;">
+                <img src="/Company/Logo" alt="@Branding.CompanyName"
+                     style="width:34px;height:34px;object-fit:contain;border-radius:6px;" />
+            </div>
+        }
+        else
+        {
+            <div class="logo-icon"><i class="fas fa-leaf"></i></div>
+        }
         <div>
-            <div class="logo-text">FSC Takip ERP</div>
-            <div class="logo-sub">Kraft Kağıt İzlenebilirlik</div>
+            <div class="logo-text">@Branding.CompanyName</div>
+            <div class="logo-sub">FSC Takip · Kraft Kağıt İzlenebilirlik</div>
         </div>
     </a>
 
@@ -1412,6 +1437,10 @@
                 <i class="fas fa-keyboard"></i>
             </button>
         </div>
+        @* ARD ürün kredisi — küçük, müşteri markasının önüne geçmez *@
+        <div style="text-align:center;margin-top:6px;font-size:9px;color:rgba(255,255,255,.22);letter-spacing:.03em;">
+            ARD Sistem ve Danışmanlık tarafından geliştirilmiştir
+        </div>
     </div>
 </aside>
 
@@ -1505,6 +1534,21 @@
 
     <!-- Sayfa yükleme çubuğu -->
     <div id="pageProgressBar" style="position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,#1976d2,#42a5f5);z-index:9999;transition:width .3s ease,opacity .4s ease;opacity:1;pointer-events:none;"></div>
+
+    <!-- Deneme sürümü bandı — lisans dosyası yüklenince kendiliğinden kaybolur -->
+    @if (License.Current.State == FSCTakip.WebUI.Services.LicenseState.Trial)
+    {
+        var daysLeft = License.Current.TrialDaysLeft ?? 0;
+        var urgent   = daysLeft <= 7;
+        <div class="trial-banner @(urgent ? "urgent" : "")">
+            <i class="fas @(urgent ? "fa-triangle-exclamation" : "fa-clock")"></i>
+            <span>
+                <strong>Deneme sürümü</strong> — @daysLeft gün kaldı
+                (@License.Current.ValidUntil?.ToString("dd.MM.yyyy") tarihinde sona erer).
+            </span>
+            <a href="/License/Status">Lisans etkinleştir →</a>
+        </div>
+    }
 
     <!-- PAGE CONTENT -->
     <main class="page-body fade-in">
@@ -3041,13 +3085,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
             document.getElementById('criticalFscCount').textContent = data.count;
             var listEl = document.getElementById('criticalFscList');
-            listEl.innerHTML = data.items.map(function (it) {
-                return '<div style="border-left:3px solid #dc2626;background:#fef2f2;border-radius:6px;padding:10px 14px;margin-bottom:10px;">' +
-                    '<div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.03em;">' + it.type + '</div>' +
-                    '<div style="font-weight:600;color:#111827;margin:2px 0 4px;">' + it.title + '</div>' +
-                    '<div style="font-size:13px;color:#4b5563;">' + it.detail + '</div>' +
-                    '</div>';
-            }).join('');
+            // XSS güvenliği: alanlar (tedarikçi/müşteri adı vb.) kullanıcı girdisi —
+            // innerHTML string birleştirme yerine DOM node + textContent kullan.
+            listEl.innerHTML = '';
+            data.items.forEach(function (it) {
+                var wrap = document.createElement('div');
+                wrap.style.cssText = 'border-left:3px solid #dc2626;background:#fef2f2;border-radius:6px;padding:10px 14px;margin-bottom:10px;';
+                var t = document.createElement('div');
+                t.style.cssText = 'font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.03em;';
+                t.textContent = it.type || '';
+                var ti = document.createElement('div');
+                ti.style.cssText = 'font-weight:600;color:#111827;margin:2px 0 4px;';
+                ti.textContent = it.title || '';
+                var d = document.createElement('div');
+                d.style.cssText = 'font-size:13px;color:#4b5563;';
+                d.textContent = it.detail || '';
+                wrap.appendChild(t); wrap.appendChild(ti); wrap.appendChild(d);
+                listEl.appendChild(wrap);
+            });
 
             var modal = new bootstrap.Modal(modalEl);
             modal.show();

@@ -380,7 +380,20 @@ graphify-out/
 license.lic
 *.lic
 
+# ── Kurulum paketi üretim çıktıları — build-installer.ps1 yeniden üretir ──
+# build/prereq: SQL Express + Hosting Bundle yükleyicileri (~350 MB)
+# dist/: derlenmiş FscErpSetup-*.exe (~600 MB)
+installer/build/
+installer/dist/
+
 # Buyuk medya dosyalari repoya girmesin
 FSC-Tanitim*.mp4
 FSC-Tanitim*.mp3
 docs/*.mp4
+*.m4a
+*.mp4
+*.mp3
+
+# ElevenLabs API anahtari - ASLA commit etme
+elevenlabs_key.txt
+.env

@@ -43,6 +43,10 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromHours(8);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    // Güvenlik: CSRF derinliği için SameSite=Lax; HTTPS'te Secure (intranet HTTP'de
+    // çerezi kırmamak için SameAsRequest — https ise Secure, http ise değil).
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
 // PermissionService ve HttpContextAccessor kaydı
@@ -50,6 +54,7 @@ builder.Services.AddScoped<PermissionService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddSingleton<ILicenseService, LicenseService>();
+builder.Services.AddSingleton<ICompanyBrandingService, CompanyBrandingService>();
 builder.Services.AddHostedService<EtlBackgroundService>();
 
 // DbContext kayd�
@@ -62,10 +67,21 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-    app.UseHttpsRedirection(); // Sadece production'da HTTPS'e yönlendir
+
+    // Intranet kurulumları HTTP üzerinden yayındadır (bkz. ThirdPartyKurulum FAZ 3.2).
+    // Böyle bir sunucuda HTTPS'e yönlendirmek kullanıcıyı ERR_SSL_PROTOCOL_ERROR'a düşürür;
+    // HSTS ise tarayıcıyı https'e kalıcı kilitler. Kurulum scripti bu bayrağı false yazar.
+    if (app.Configuration.GetValue("Security:HttpsRedirection", true))
+    {
+        app.UseHsts();
+        app.UseHttpsRedirection();
+    }
 }
 app.UseStaticFiles();
+
+// 404/403 gibi durum kodlarını kurumsal Türkçe sayfaya yönlendir (statik dosyalardan sonra
+// ki gerçek 404'lar — eksik css/js — bu sayfaya düşmesin).
+app.UseStatusCodePagesWithReExecute("/Home/HttpError/{0}");
 
 // Proxy / CDN içerik dönüşümünü engelle — charset bozulmasını önler
 app.Use(async (ctx, next) =>
@@ -86,7 +102,25 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Demo veri yükle (DB boşsa)
-await DbSeeder.SeedAsync(app.Services);
+// Şema güncelle. DB yoksa Migrate() oluşturur — ancak sunucu varsayılan collation'ıyla;
+// bu yüzden kurulum scripti FscErpDb'yi Turkish_CI_AS ile önceden yaratır (bkz. ThirdPartyKurulum FAZ 2).
+// DBA'sı olan müşteride Database:AutoMigrate=false ile kapatılıp migration.sql yolu kullanılabilir.
+if (app.Configuration.GetValue("Database:AutoMigrate", true))
+{
+    using var scope = app.Services.CreateScope();
+    var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var pending = (await ctx.Database.GetPendingMigrationsAsync()).ToList();
+    if (pending.Count > 0)
+    {
+        Log.Information("Bekleyen {Count} migration uygulanıyor...", pending.Count);
+        await ctx.Database.MigrateAsync();
+        Log.Information("Veritabanı şeması güncellendi.");
+    }
+}
+
+// Referans veri (admin + şirket kaydı + FSC tipleri) her zaman; örnek işlem verisi
+// yalnız Seed:DemoData=true iken (geliştirme). Müşteri kurulumunda kurulum scripti
+// bu bayrağı false yazar → sistem boş gelir, sahte kayıt görünmez.
+await DbSeeder.SeedAsync(app.Services, app.Configuration.GetValue("Seed:DemoData", false));
 
 app.Run();

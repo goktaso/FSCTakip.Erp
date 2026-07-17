@@ -3,9 +3,11 @@
 @{
     Layout = null;
     var isValid = Model.State == LicenseState.Valid;
+    var isTrial = Model.State == LicenseState.Trial;
     var (stateText, stateColor, stateBg) = Model.State switch
     {
         LicenseState.Valid           => ("Lisans Geçerli", "#166534", "#dcfce7"),
+        LicenseState.Trial           => ($"Deneme Sürümü — {Model.TrialDaysLeft} Gün Kaldı", "#92400e", "#fef3c7"),
         LicenseState.Missing         => ("Lisans Dosyası Bulunamadı", "#991b1b", "#fee2e2"),
         LicenseState.Expired         => ("Lisans Süresi Dolmuş", "#991b1b", "#fee2e2"),
         LicenseState.MachineMismatch => ("Lisans Bu Sunucuya Ait Değil", "#991b1b", "#fee2e2"),
@@ -62,11 +64,24 @@ a.back { display:inline-block; margin-top:16px; color:var(--brand); font-size:13
     }
     else
     {
-        <div class="note">
-            Uygulamayı kullanabilmek için geçerli bir lisans dosyası gereklidir.
-            Aşağıdaki <strong>sunucu kimlik kodunu</strong> ARD Sistem ve Danışmanlık'a iletin;
-            size bu sunucuya özel bir <code>license.lic</code> dosyası gönderilecektir.
-        </div>
+        @if (isTrial)
+        {
+            <div class="row"><span class="k">Deneme Bitişi</span><span>@Model.ValidUntil?.ToString("dd.MM.yyyy")</span></div>
+            <div class="note">
+                Sistem deneme süresi boyunca tüm özellikleriyle kullanılabilir; süre dolduğunda
+                erişim kapanır ve <strong>veriler korunur</strong>. Kalıcı lisans için aşağıdaki
+                <strong>sunucu kimlik kodunu</strong> ARD Sistem ve Danışmanlık'a iletin;
+                size bu sunucuya özel bir <code>license.lic</code> dosyası gönderilecektir.
+            </div>
+        }
+        else
+        {
+            <div class="note">
+                Uygulamayı kullanabilmek için geçerli bir lisans dosyası gereklidir.
+                Aşağıdaki <strong>sunucu kimlik kodunu</strong> ARD Sistem ve Danışmanlık'a iletin;
+                size bu sunucuya özel bir <code>license.lic</code> dosyası gönderilecektir.
+            </div>
+        }
         <div class="machine">@Model.MachineKey</div>
         @if (!string.IsNullOrEmpty(Model.Error))
         {
@@ -77,6 +92,10 @@ a.back { display:inline-block; margin-top:16px; color:var(--brand); font-size:13
             <button onclick="uploadLic()">Lisans Dosyasını Yükle</button>
             <div class="msg" id="licMsg"></div>
         </div>
+        @if (isTrial)
+        {
+            <a class="back" href="/">← Uygulamaya dön</a>
+        }
     }
 </div>
 

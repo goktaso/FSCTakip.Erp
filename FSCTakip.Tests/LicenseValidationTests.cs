@@ -53,3 +53,75 @@ public class LicenseValidationTests
         Assert.Equal(LicenseState.Invalid, info.State);
     }
 }
+
+// Deneme sürümü çekirdeği: lisans dosyası hiç yokken 30 gün boyunca sistem açık kalır.
+// Başlangıç tarihi ProgramData işaret dosyası ile DB oluşturma tarihinin erken olanıdır
+// (kaynak seçimi Evaluate tarafında; burada süre matematiği doğrulanır).
+public class TrialLicenseTests
+{
+    private const string Machine = "b6c87ee3c2563e19";
+
+    [Fact]
+    public void YeniKurulum_TrialDoner_30GunKalir()
+    {
+        var now  = new DateTime(2026, 7, 16, 10, 0, 0, DateTimeKind.Utc);
+        var info = LicenseService.EvaluateTrialCore(now, now, 30, Machine);
+
+        Assert.Equal(LicenseState.Trial, info.State);
+        Assert.Equal(30, info.TrialDaysLeft);
+        Assert.True(info.IsUsable);
+        Assert.Equal(new DateTime(2026, 8, 15), info.ValidUntil);
+    }
+
+    [Fact]
+    public void DenemeOrtasi_KalanGunDogruHesaplanir()
+    {
+        var start = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc);
+        var now   = new DateTime(2026, 7, 21, 23, 0, 0, DateTimeKind.Utc);
+        var info  = LicenseService.EvaluateTrialCore(start, now, 30, Machine);
+
+        Assert.Equal(LicenseState.Trial, info.State);
+        Assert.Equal(10, info.TrialDaysLeft);
+    }
+
+    [Fact]
+    public void SonGun_HalaKullanilabilir()
+    {
+        var start = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc);
+        var info  = LicenseService.EvaluateTrialCore(start, new DateTime(2026, 7, 30), 30, Machine);
+
+        Assert.Equal(LicenseState.Trial, info.State);
+        Assert.Equal(1, info.TrialDaysLeft);
+    }
+
+    [Fact]
+    public void SureDolduktanSonra_MissingDoner_SistemKapanir()
+    {
+        var start = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc);
+        var info  = LicenseService.EvaluateTrialCore(start, new DateTime(2026, 7, 31), 30, Machine);
+
+        Assert.Equal(LicenseState.Missing, info.State);
+        Assert.False(info.IsUsable);
+        Assert.Contains("deneme süresi", info.Error);
+    }
+
+    // Sunucu saati geriye alınarak / DB tarihi ileri görünerek deneme uzatılamamalı.
+    [Fact]
+    public void IleriTarihliBaslangic_SureyiUzatmaz()
+    {
+        var now   = new DateTime(2026, 7, 16, 0, 0, 0, DateTimeKind.Utc);
+        var start = now.AddDays(90);
+        var info  = LicenseService.EvaluateTrialCore(start, now, 30, Machine);
+
+        Assert.Equal(30, info.TrialDaysLeft);
+    }
+
+    [Fact]
+    public void MakineKodu_DenemedeDeGorunur()
+    {
+        var now  = new DateTime(2026, 7, 16, 0, 0, 0, DateTimeKind.Utc);
+        var info = LicenseService.EvaluateTrialCore(now, now, 30, Machine);
+
+        Assert.Equal(Machine, info.MachineKey);
+    }
+}

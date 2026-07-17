@@ -21,6 +21,13 @@
         public bool IsOpeningStock { get; set; }
         public string? Notes { get; set; }
 
+        /// <summary>
+        /// Eşzamanlılık damgası (optimistic locking). İki kullanıcı aynı bobini aynı anda
+        /// tüketmeye çalışırsa ikincinin kaydı DbUpdateConcurrencyException ile reddedilir;
+        /// kütle dengesi sessizce bozulmaz. SQL Server tarafından otomatik yönetilir.
+        /// </summary>
+        public byte[]? RowVersion { get; set; }
+
         public virtual FscLot Lot { get; set; } = null!;
         public virtual ICollection<ProductionDetail> ProductionDetails { get; set; } = new List<ProductionDetail>();
     }

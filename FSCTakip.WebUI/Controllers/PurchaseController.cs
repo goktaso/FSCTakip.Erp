@@ -402,6 +402,10 @@ namespace FSCTakip.WebUI.Controllers
                         existing.CurrentWeight = existing.InitialWeight;
                 }
 
+                // Seri ağırlığı + stok hareketi tek transaction'da: biri patlarsa defterler
+                // tutarsız kalmasın (bütünlük denetimi 2026-07-17).
+                using var tx = await _context.Database.BeginTransactionAsync();
+
                 await _context.SaveChangesAsync();
 
                 if (lot.ProductId.HasValue)
@@ -457,14 +461,21 @@ namespace FSCTakip.WebUI.Controllers
                     await _context.SaveChangesAsync();
                 }
 
+                await tx.CommitAsync();
+
                 var unitMsg = convFactor.HasValue
                     ? $"Seri kaydedildi. {enteredQty:N3} {productUnit} -> {weightKg:N4} KG olarak donusturuldu."
                     : "Seri kaydedildi.";
                 return Json(new { success = true, message = unitMsg, convertedKg = weightKg });
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Json(new { success = false, message = "Bu seri siz işlem yaparken başka bir kullanıcı tarafından güncellendi. Lütfen sayfayı yenileyip tekrar deneyin." });
+            }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = ex.Message });
+                Serilog.Log.Error(ex, "SaveSerial hatası (LotId={LotId})", model?.LotId);
+                return Json(new { success = false, message = "Seri kaydedilirken bir hata oluştu. Lütfen tekrar deneyin." });
             }
         }
 

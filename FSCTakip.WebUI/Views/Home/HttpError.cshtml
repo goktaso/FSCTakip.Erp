@@ -1,0 +1,29 @@
+@{
+    var code = ViewData["StatusCode"] as int? ?? 0;
+    var (title, message, icon) = code switch
+    {
+        404 => ("Sayfa bulunamadı",
+                "Aradığınız sayfa taşınmış veya hiç var olmamış olabilir. Adresi kontrol edin.",
+                "fa-map-signs"),
+        403 => ("Erişim engellendi",
+                "Bu sayfayı görüntüleme yetkiniz yok. Yetki için sistem yöneticinize başvurun.",
+                "fa-lock"),
+        _   => ($"Hata {code}",
+                "İsteğiniz işlenemedi. Sayfayı yenileyip tekrar deneyin.",
+                "fa-circle-exclamation")
+    };
+    ViewData["Title"] = title;
+}
+<div class="d-flex flex-column align-items-center justify-content-center" style="min-height:60vh;">
+    <div class="text-center p-5" style="max-width:520px;">
+        <div style="width:80px;height:80px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+            <i class="fas @icon" style="font-size:32px;color:#4f46e5;"></i>
+        </div>
+        <div style="font-size:42px;font-weight:800;color:#c7d2fe;line-height:1;margin-bottom:8px;">@code</div>
+        <h4 class="fw-bold mb-2">@title</h4>
+        <p class="text-muted mb-4">@message</p>
+        <a href="/" class="btn btn-primary">
+            <i class="fas fa-home me-1"></i> Ana Sayfaya Dön
+        </a>
+    </div>
+</div>

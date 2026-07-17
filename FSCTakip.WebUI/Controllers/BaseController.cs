@@ -81,10 +81,29 @@ namespace FSCTakip.WebUI.Controllers
             ViewBag.CanDelete = p.CanDelete;
         }
 
+        // Yalnız bu entity'ler generic toggle ile pasifleştirilebilir. tableName serbest
+        // string olduğundan whitelist ŞART — aksi halde reflection ile herhangi bir Core
+        // entity örneklenip değiştirilebilirdi (güvenlik denetimi 2026-07-17, bulgu #3).
+        private static readonly HashSet<string> ToggleableEntities = new(StringComparer.Ordinal)
+        {
+            "Customer", "Supplier", "Product", "Machine", "Warehouse", "BagType",
+            "ProductGroup", "PaperType", "PaperColor", "PaperWeight", "PaperWidth",
+            "FscType", "ProductGrammage"
+        };
+
         // 1. GENEL AKTİF/PASİF YAPMA METODU
         [HttpPost]
         public async Task<IActionResult> GeneralToggleStatus(string tableName, int id)
         {
+            // Yetki: yalnız admin. Bu endpoint her controller altında routable olduğundan
+            // (BaseController) korumasız bırakılırsa düşük yetkili kullanıcı herhangi bir
+            // kaydı pasifleştirebilirdi.
+            if (!IsAdminUser)
+                return Json(new { success = false, message = "Bu işlem yalnızca admin kullanıcılar tarafından yapılabilir." });
+
+            if (string.IsNullOrWhiteSpace(tableName) || !ToggleableEntities.Contains(tableName))
+                return Json(new { success = false, message = "Geçersiz kayıt tipi." });
+
             try
             {
                 string assemblyName = "FSCTakip.Core";

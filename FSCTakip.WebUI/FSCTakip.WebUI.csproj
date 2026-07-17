@@ -27,4 +27,19 @@
     <ProjectReference Include="..\FSCTakip.DataAccess\FSCTakip.DataAccess.csproj" />
   </ItemGroup>
 
+  <!--
+    Kullanıcı yüklemeleri (irsaliye/fatura PDF, ETL Excel, belge arşivi) ASLA yayına girmez.
+
+    Web SDK varsayılan olarak wwwroot altındaki her şeyi pakete koyar; .gitignore'un
+    buna etkisi yoktur. Bu klasör geliştirme makinesinde gerçek belgelerle dolduğu için
+    dışarıda bırakılmazsa bir müşterinin arşivi diğerine gider.
+
+    Üretimde bu klasör kullanılmaz — belgeler FileStorage:Root ile uygulama dizininin
+    DIŞINDA tutulur (kurulum scripti D:\FscErpData\uploads'a yönlendirir).
+  -->
+  <ItemGroup>
+    <Content Remove="wwwroot\uploads\**" />
+    <None Include="wwwroot\uploads\**" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>

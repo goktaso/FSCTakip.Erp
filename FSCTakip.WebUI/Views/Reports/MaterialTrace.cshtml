@@ -124,7 +124,7 @@
                             @foreach (var p in mamuller)
                             {
                                 bool isSel = mamulId == p.Id;
-                                <label class="mcd-row" onclick="mcdSingleSelect('mcd-mat-mamul', @p.Id, '@Html.Raw(p.ProductName?.Replace("'", "\\'") ?? "")')">
+                                <label class="mcd-row" data-name="@(p.ProductName ?? "")" onclick="mcdSingleSelect('mcd-mat-mamul', @p.Id, this.dataset.name)">
                                     <input type="radio" name="mamulId" value="@p.Id"
                                            @(isSel ? "checked" : "")
                                            style="accent-color:#1976d2;min-width:15px;cursor:pointer;">

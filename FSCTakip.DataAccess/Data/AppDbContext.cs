@@ -385,6 +385,16 @@ namespace FSCTakip.DataAccess.Data
         // ─────────────────────────────────────────────────────────────────────
         //  OnModelCreating
         // ─────────────────────────────────────────────────────────────────────
+        // Tüm decimal'ler varsayılan (18,4): ağırlık/miktar kolonları FscSerial ile aynı
+        // ölçekte olsun (kütle dengesinde 3-4. ondalık yuvarlama birikmesini önler) ve
+        // "no store type specified" sessiz-truncation uyarıları kalksın. Daha yüksek
+        // hassasiyet gereken kolonlar (ProductRecipe.StandardQuantity 18,6,
+        // UnitConversion.Factor 18,7) explicit HasColumnType ile bu varsayılanı ezer.
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        {
+            configurationBuilder.Properties<decimal>().HavePrecision(18, 4);
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -488,6 +498,10 @@ namespace FSCTakip.DataAccess.Data
                 .Property(s => s.CurrentWeight).HasColumnType("decimal(18,4)");
             modelBuilder.Entity<FscSerial>()
                 .Property(s => s.OriginalQuantity).HasColumnType("decimal(18,4)");
+
+            // Eşzamanlılık damgası: aynı bobinde kayıp-güncelleme yarışını engeller
+            modelBuilder.Entity<FscSerial>()
+                .Property(s => s.RowVersion).IsRowVersion();
 
             // M11 -- FscLot.SourceSerialId FK + index: donusum izi icin CoC FK tanimi
             // Navigation property (SourceSerial) ile eslestirildi — anonim HasOne<> yerine

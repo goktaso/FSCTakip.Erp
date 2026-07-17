@@ -7,10 +7,10 @@ namespace FSCTakip.WebUI.Controllers
     /// <summary>
     /// Yüklenmiş belgeleri (irsaliye/fatura PDF vb.) servis eder.
     /// Yapılandırılmış köke göre çözer; wwwroot dışı mutlak yolları da destekler.
-    /// [AllowAnonymous] — iframe/yeni sekme görüntülemede oturum yönlendirmesi olmaması için
-    /// (dosyalar zaten tahmin edilemez GUID adlıdır).
+    /// Oturum ŞART (SessionAuthFilter): finansal belgeler anonim erişime açılmamalı —
+    /// GUID gizliliği tek savunma değildir (güvenlik denetimi 2026-07-17, bulgu #4).
+    /// Girişli kullanıcı iframe/yeni sekmede zaten oturum çerezini taşır.
     /// </summary>
-    [AllowAnonymous]
     public class DocumentController : Controller
     {
         private readonly IFileStorageService _storage;
