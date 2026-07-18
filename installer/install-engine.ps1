@@ -115,13 +115,19 @@ function Invoke-Installer {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Invoke-Sql {
+    # NOT: parametre adı "Db" OLAMAZ — [Parameter(Mandatory)] kullanan her fonksiyon
+    # örtük "advanced function" olur ve PowerShell'in yerleşik ortak parametrelerini
+    # (Verbose/Debug/ErrorAction...) kazanır. -Debug'ın gizli takma adı "-db"dir;
+    # "Db" adlı bir parametre bu takma adla çakışıp HER çağrıda (açıkça -Db verilmese
+    # bile) "parameter alias" hatası fırlatır. Saatlerce "SQL'e bağlanılamıyor" gibi
+    # görünen bug'ın gerçek kök nedeni buydu (VM testi 2026-07-18).
     param(
         [Parameter(Mandatory)] [string] $Instance,
         [Parameter(Mandatory)] [string] $Query,
-        [string] $Db = 'master',
+        [string] $DbName = 'master',
         [int]    $TimeoutSec = 60
     )
-    $cs = "Server=$Instance;Database=$Db;Trusted_Connection=True;TrustServerCertificate=True;Connect Timeout=15"
+    $cs = "Server=$Instance;Database=$DbName;Trusted_Connection=True;TrustServerCertificate=True;Connect Timeout=15"
     $conn = New-Object System.Data.SqlClient.SqlConnection $cs
     try {
         $conn.Open()
@@ -138,8 +144,14 @@ function Test-SqlConnection {
     param([string] $Instance)
     try {
         $null = Invoke-Sql -Instance $Instance -Query 'SELECT 1'
+        $script:LastSqlError = $null
         return $true
     } catch {
+        # Gerçek .NET hatasını sakla — çağıran taraf (retry döngüleri) son denemede
+        # bunu hata mesajına ekler. Önceden bu bilgi tamamen kayboluyordu (true/false'a
+        # indirgeniyordu), bu yüzden servisler "Running" görünse bile asıl sebep hiç
+        # görünmüyordu.
+        $script:LastSqlError = $_.Exception.Message
         return $false
     }
 }
@@ -237,10 +249,21 @@ function Install-SqlExpress {
     )
     Invoke-Installer -Path $installer -Arguments $setupArgs -FriendlyName 'SQL Server Express'
 
+    # Named instance keşfi (sabit port yok) SQL Server Browser servisine (UDP 1434)
+    # bağımlı. Setup.exe /BROWSERSVCSTARTUPTYPE=Automatic ile yalnız başlangıç türünü
+    # ayarlıyor, fiilen başlattığı garanti değil — burada açıkça başlatıp doğruluyoruz.
+    Set-Service -Name SQLBrowser -StartupType Automatic -ErrorAction SilentlyContinue
+    Start-Service -Name SQLBrowser -ErrorAction SilentlyContinue
+
     $instance = 'localhost\FSCERP'
     $deadline = (Get-Date).AddMinutes(2)
     while (-not (Test-SqlConnection -Instance $instance)) {
-        if ((Get-Date) -gt $deadline) { throw "SQL Express kuruldu ancak $instance bağlantısı kurulamadı." }
+        if ((Get-Date) -gt $deadline) {
+            $diag = Get-Service -Name 'SQLBrowser', 'MSSQL$FSCERP' -ErrorAction SilentlyContinue |
+                    ForEach-Object { "$($_.Name)=$($_.Status)" }
+            $diagText = if ($diag) { $diag -join ', ' } else { 'servis durumu okunamadı' }
+            throw "SQL Express kuruldu ancak $instance bağlantısı kurulamadı. Servis durumu: $diagText. Son hata: $script:LastSqlError"
+        }
         Start-Sleep -Seconds 5
     }
     Write-Info "SQL Express hazır: $instance"
@@ -250,8 +273,20 @@ function Install-SqlExpress {
 function Resolve-SqlInstance {
     if ($SqlInstance) {
         Write-Step "Mevcut SQL örneği kullanılıyor: $SqlInstance"
-        if (-not (Test-SqlConnection -Instance $SqlInstance)) {
-            throw "SQL örneğine bağlanılamadı: $SqlInstance. Örnek adını ve Windows kimlik doğrulama yetkinizi denetleyin."
+
+        # Tek seferlik deneme yeterli değil: sunucu yeni açılmışsa servis "Running"
+        # görünse bile motor henüz bağlantı kabul etmiyor olabilir (bkz. Install-SqlExpress
+        # içindeki aynı desen). 60 saniye, 5 saniye aralıkla dene.
+        $deadline = (Get-Date).AddSeconds(60)
+        while (-not (Test-SqlConnection -Instance $SqlInstance)) {
+            if ((Get-Date) -gt $deadline) {
+                $svcName = "MSSQL`$$($SqlInstance.Split('\')[-1])"
+                $diag = Get-Service -Name 'SQLBrowser', $svcName -ErrorAction SilentlyContinue |
+                        ForEach-Object { "$($_.Name)=$($_.Status)" }
+                $diagText = if ($diag) { $diag -join ', ' } else { 'servis bulunamadı (adı yanlış olabilir)' }
+                throw "SQL örneğine bağlanılamadı: $SqlInstance. Örnek adını ve Windows kimlik doğrulama yetkinizi denetleyin. Servis durumu: $diagText. Son hata: $script:LastSqlError"
+            }
+            Start-Sleep -Seconds 5
         }
         return $SqlInstance
     }
@@ -260,6 +295,24 @@ function Resolve-SqlInstance {
     if ($existing.Count -gt 0) {
         Write-Info "Sunucuda SQL örneği bulundu: $($existing -join ', ') — kullanmak için -SqlInstance ile belirtin."
     }
+
+    # FSCERP adında bir örnek zaten kayıtlıysa (ör. önceki yarım kalan bir kurulum
+    # denemesinden) körü körüne yeniden "Install" çağırmadan önce sağlığını kontrol et.
+    if ($existing -contains 'localhost\FSCERP') {
+        if (Test-SqlConnection -Instance 'localhost\FSCERP') {
+            Write-Info 'localhost\FSCERP zaten sağlıklı — yeniden kurulum atlanıyor.'
+            return 'localhost\FSCERP'
+        }
+        Write-Warn 'localhost\FSCERP kayıtlı ama bağlanılamıyor — bozuk/yarım kalıntı olabilir, temizlenip yeniden kurulacak.'
+        $installer = Get-FirstFile -Directory $PrereqPath -Pattern 'SQLEXPR*.exe' -FriendlyName 'SQL Server Express'
+        $uninstallArgs = @('/Q', '/ACTION=Uninstall', '/INSTANCENAME=FSCERP', '/FEATURES=SQLENGINE')
+        try {
+            Invoke-Installer -Path $installer -Arguments $uninstallArgs -FriendlyName 'SQL Server Express (bozuk örnek temizliği)'
+        } catch {
+            Write-Warn "Bozuk örnek temizliği tam başarılı olmadı, yine de yeniden kurulum denenecek: $($_.Exception.Message)"
+        }
+    }
+
     return (Install-SqlExpress)
 }
 
@@ -302,7 +355,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'$login')
     CREATE USER [$login] FOR LOGIN [$login];
 ALTER ROLE db_owner ADD MEMBER [$login];
 "@
-        Invoke-Sql -Instance $Instance -Query $sqlUser -Db $Database | Out-Null
+        Invoke-Sql -Instance $Instance -Query $sqlUser -DbName $Database | Out-Null
         Write-Info "$login → $Database db_owner"
     } catch {
         throw @"
@@ -322,9 +375,11 @@ DBA'nızdan aşağıdakini çalıştırmasını isteyin, sonra kurulumu tekrar b
 function Resolve-DataPath {
     if ($DataPath) { return $DataPath }
     # Belge arşivi uygulama klasörünün DIŞINDA durur ki sürüm güncellemesi ezmesin.
-    # Ayrı veri diski varsa tercih edilir.
-    $d = Get-PSDrive -Name D -PSProvider FileSystem -ErrorAction SilentlyContinue
-    if ($d) { return 'D:\FscErpData' }
+    # Ayrı SABİT veri diski (D:) varsa tercih edilir — ama YALNIZ DriveType=3 (yerel sabit
+    # disk). DVD (5) / removable (2) / network (4) KABUL EDİLMEZ: ISO'dan kurulumda D:
+    # DVD sürücüsü olabilir ve oraya yazmak "Access denied" verir (VM testi 2026-07-18).
+    $dFixed = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='D:' AND DriveType=3" -ErrorAction SilentlyContinue
+    if ($dFixed) { return 'D:\FscErpData' }
     return 'C:\FscErpData'
 }
 
@@ -484,7 +539,13 @@ function Test-SiteResponds {
 
     while ((Get-Date) -lt $deadline) {
         try {
-            $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0 -ErrorAction Stop
+            # NOT: -MaximumRedirection 0 KULLANMA — Windows PowerShell 5.1'in .NET
+            # Framework tabanlı Invoke-WebRequest'i bu değerle "Operation is not valid
+            # due to the current state of the object" fırlatır; sitenin durumuyla
+            # ilgisi yok, salt parametre kombinasyonunun kendi hatası (VM testi
+            # 2026-07-18). Yönlendirmeler serbestçe takip edilsin — login/lisans
+            # sayfasına düşüp 200 dönmesi zaten "site ayakta" demektir.
+            $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 30 -ErrorAction Stop
             Write-Info "Yanıt: HTTP $($r.StatusCode)"
             return
         } catch {
@@ -492,9 +553,9 @@ function Test-SiteResponds {
             try { $resp = $_.Exception.Response } catch { }
             if ($resp) {
                 $code = [int] $resp.StatusCode
-                # 302 beklenen: giriş veya lisans ekranına yönlendirme.
-                if ($code -ge 200 -and $code -lt 400) {
-                    Write-Info "Yanıt: HTTP $code (yönlendirme — normal)"
+                if ($code -ge 200 -and $code -lt 500) {
+                    # 3xx/4xx dahi olsa IIS + uygulama ayaktadır (ör. lisans/login yönlendirmesi).
+                    Write-Info "Yanıt: HTTP $code (site ayakta)"
                     return
                 }
                 $lastErr = "HTTP $code"
@@ -660,11 +721,14 @@ try {
     Install-HostingBundle
     $instance = Resolve-SqlInstance
     New-FscDatabase       -Instance $instance
+    # Set-AppFiles/Set-AppSettings ÖNCE gelmeli: New-Website -PhysicalPath var olan bir
+    # klasör ister, $InstallPath'i ilk oluşturan Set-AppFiles'tır (VM testi 2026-07-18 —
+    # bu sıralama hatası önceki denemelerde SQL adımında patladığı için hiç görünmemişti).
+    Set-AppFiles
+    Set-AppSettings       -Instance $instance -Root $dataRoot
     Set-IisSite
     Grant-AppPoolSqlAccess -Instance $instance
     New-DataFolders       -Root $dataRoot
-    Set-AppFiles
-    Set-AppSettings       -Instance $instance -Root $dataRoot
     Set-FirewallRule
     Set-TrialMarker
     Test-SiteResponds

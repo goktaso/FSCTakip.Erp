@@ -1574,3 +1574,80 @@ salt-okunur denetim. FAZ 2 yeni kodu (marka/login/belge/hata sayfaları) TEMİZ 
 - Login hız sınırı / hesap kilidi + daha güçlü parola politikası (min 8 yapıldı, karmaşıklık yok).
 - Session-ID yenileme (fixation).
 - Dağınık `ex.Message` (liste/ETL satır hataları) — ETL artık admin-only, düşük risk.
+
+### Temiz VM testi bug'ı: D: = DVD sürücüsü tuzağı (2026-07-18)
+
+İlk temiz-VM kurulum testinde EXE ilk adımda patladı:
+`New-Item : Access to the path 'FscErpData' is denied` → `D:\FscErpData`.
+
+**Kök neden:** `install-engine.ps1 / Resolve-DataPath` "D: sürücüsü varsa veri klasörünü
+oraya koy" diyordu ve kontrolü `Get-PSDrive -Name D -PSProvider FileSystem` ile yapıyordu.
+Ama ISO'dan kurulan VM'de D: = **DVD sürücüsü** (takılı Windows ISO'su). `Get-PSDrive`
+DVD'yi de FileSystem sürücüsü sayar → D: seçildi → salt-okunur optik sürücüye yazma =
+Access Denied. Geliştirici makinesinde D: gerçek sabit diskti, bu yüzden hiç görülmedi.
+
+**Çözüm:** Yalnız DriveType=3 (yerel SABİT disk) kabul et:
+`Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='D:' AND DriveType=3"`.
+DriveType: 2=removable, 3=fixed, 4=network, 5=DVD/CD.
+
+**Ders:** Sürücü/ortam varsayımları geliştirici makinesine göre yazılır, temiz hedefte
+kırılır. "D: var mı" değil "D: yazılabilir SABİT disk mi" sorulmalı. Ve bu tam olarak
+temiz-VM testinin yakalaması gereken sınıf — dev makinede asla görünmez.
+
+### Installer'da 4 katmanlı gizli bug zinciri — SQL hiç bağlanamıyordu (2026-07-18)
+
+Temiz VM testinde installer ADIM 3'te ("SQL Server Express kuruluyor" / "Mevcut SQL
+örneği kullanılıyor") sürekli "bağlantı kurulamadı" hatasıyla düşüyordu. Servisler
+(`MSSQL$FSCERP`, `SQLBrowser`) `Running`, registry doğru, SQL setup log'unda hata yok —
+görünürde HER ŞEY sağlıklıydı. Gerçek neden 4 katmana gömülüydü, sırayla açığa çıktı:
+
+**Katman 1 — Kök neden: `$Db` parametresi `-Debug`'ın gizli takma adıyla çakışıyordu.**
+`Invoke-Sql` fonksiyonunda `[string] $Db = 'master'` parametresi vardı.
+`[Parameter(Mandatory)]` içeren HER fonksiyon örtük olarak "advanced function" sayılır
+ve PowerShell'in ortak parametrelerini (`-Verbose`, `-Debug`, `-ErrorAction`...) otomatik
+kazanır. `-Debug`'ın **belgelenmemiş gizli takma adı `-db`**'dir — case-insensitive
+eşleşme yüzünden kendi `$Db` parametremiz bu takma adla çakışıyor ve fonksiyon **HER
+ÇAĞRIDA** (açıkça `-Db` verilmese bile, sırf parametre bildirimi var diye) şu hatayı
+fırlatıyordu: *"The parameter 'Db' cannot be specified because it conflicts with the
+parameter alias of the same name for parameter 'Debug'."* Yani `Install-SqlExpress`,
+`New-FscDatabase`, `Grant-AppPoolSqlAccess` içindeki HER `Invoke-Sql` çağrısı baştan
+beri bozuktu. **Çözüm:** parametre adı `$DbName` yapıldı (`-Debug` ile hiçbir ortak
+harf öbeği paylaşmıyor).
+
+**Katman 2 — `Test-SqlConnection` gerçek hatayı yutuyordu.** `try { ... } catch {
+return $false }` — Katman 1'in ürettiği gerçek .NET exception mesajı hiçbir yere
+yazılmıyor, sadece `$false`'a indirgeniyordu. Bu yüzden saatlerce "SQL bağlanmıyor"
+diye servis durumu, registry, setup log'u kontrol edildi ama asıl mesaj hiç
+görünmedi. **Çözüm:** `catch` bloğunda `$script:LastSqlError = $_.Exception.Message`
+saklanıp retry döngülerinin `throw` mesajına eklendi. **Ders: bir fonksiyon `catch`
+ile hatayı `$true`/`$false`'a indirgiyorsa, orijinal exception mesajını bir yerde
+(script-scope değişken, log) MUTLAKA sakla — aksi halde teşhis kör uçuşa döner.**
+
+**Katman 3 — Sıralama hatası: `Set-IisSite`, `Set-AppFiles`'tan ÖNCE çalışıyordu.**
+Katman 1-2 düzeltilip SQL adımı geçilince ortaya çıktı (önceki denemeler hiç bu
+noktaya ulaşmamıştı). `New-Website -PhysicalPath $InstallPath` var olmayan bir
+klasörü işaret ediyordu çünkü `$InstallPath`'i ilk oluşturan `Set-AppFiles` ana
+akışta `Set-IisSite`'tan SONRA çağrılıyordu. **Çözüm:** `Set-AppFiles` +
+`Set-AppSettings` çifti `Set-IisSite`'tan önceye alındı. **Ders: bir script'in adım
+sırası ancak o adıma gerçekten ULAŞILDIĞINDA test edilmiş sayılır — erken bir adımda
+sürekli patlayan bir script'in sonraki adımları "test edilmemiş" kabul edilmeli.**
+
+**Katman 4 — `Invoke-WebRequest -MaximumRedirection 0` Windows PowerShell 5.1 hatası.**
+Katman 3 düzeltilip site kurulunca ortaya çıktı. Site canlıydı, ama doğrulama isteği
+"Operation is not valid due to the current state of the object" fırlatıyordu — sitenin
+durumuyla ilgisi yoktu, `-MaximumRedirection 0` parametresinin kendisi .NET Framework
+tabanlı `Invoke-WebRequest`'te (Windows PowerShell 5.1, PowerShell Core değil) bilinen
+bir hataydı. **Çözüm:** `-MaximumRedirection 0` kaldırıldı, yönlendirmeler serbestçe
+takip edilsin diye bırakıldı; catch bloğundaki durum kodu kontrolü `2xx-4xx` aralığına
+genişletildi (3xx artık zaten otomatik takip edildiği için nadiren görülür ama
+defansif olarak kalsın).
+
+**Genel ders — katmanlı bug'lar sırayla açığa çıkar, hepsini önceden tahmin edemezsin.**
+Her katman bir öncekini düzeltmeden GÖRÜNMÜYORDU (script hep aynı erken noktada
+patlıyordu). "Bu düzeltme işe yaramadı, demek ki teşhis yanlıştı" sonucuna varmak
+yanlıştı — her düzeltme gerçekten bir katmanı çözüyordu, sadece ARKASINDA bir katman
+daha vardı. Doğru tepki: her düzeltmeden sonra yeniden dene, YENİ ve FARKLI bir hata
+mesajı çıkıyorsa (aynısı değil) ilerleme var demektir, vazgeçme. Ayrıca: **VM testi
+olmadan bu 4 bug'ın hiçbiri bulunamazdı** — dev makinesinde SQL zaten kurulu/sağlıklı
+olduğu için `Install-SqlExpress`/`Resolve-SqlInstance` yolları hiç gerçek anlamda
+egzersiz edilmemişti.
