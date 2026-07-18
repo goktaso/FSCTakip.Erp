@@ -1651,3 +1651,22 @@ mesajı çıkıyorsa (aynısı değil) ilerleme var demektir, vazgeçme. Ayrıca
 olmadan bu 4 bug'ın hiçbiri bulunamazdı** — dev makinesinde SQL zaten kurulu/sağlıklı
 olduğu için `Install-SqlExpress`/`Resolve-SqlInstance` yolları hiç gerçek anlamda
 egzersiz edilmemişti.
+
+### 5. bug — Antiforgery çerezi ayrı konfigüre edilmemişti, IP+HTTP'de 400 (2026-07-18)
+
+Kurulum tamamlanıp uygulama açıldıktan sonra Şifre Değiştir formu `HTTP ERROR 400`
+verdi. Sebep: `AddSession`'da Session çerezi `SameSite=Lax` + `SecurePolicy=
+SameAsRequest` ile intranet (HTTP + IP adresi, HTTPS/DNS değil) için açıkça
+ayarlanmıştı, ama `AutoValidateAntiforgeryTokenAttribute` global filtresinin
+kullandığı Antiforgery çerezi **hiç konfigüre edilmemişti** — kendi ayrı
+`CookieBuilder`'ı var, Session'ınkini miras almaz. Framework varsayılanı bu
+senaryoda token round-trip'ini kırdı → her POST formunda (sadece Şifre Değiştir
+değil, antiforgery token içeren HER form) 400 riski vardı.
+
+**Çözüm:** `builder.Services.AddAntiforgery(...)` ile Session ile birebir aynı
+politika açıkça verildi (Program.cs).
+
+**Ders:** Bir cookie-tabanlı güvenlik mekanizmasını (Session) intranet/HTTP
+senaryosu için ayarlarken, aynı uygulamadaki DİĞER cookie-tabanlı mekanizmaları
+(Antiforgery, kimlik doğrulama çerezi vb.) da tara — her biri kendi ayrı
+`CookieBuilder`'ına sahiptir, biri ayarlanınca diğerleri otomatik uyum sağlamaz.
