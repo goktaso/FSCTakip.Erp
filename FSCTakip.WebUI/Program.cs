@@ -49,6 +49,18 @@ builder.Services.AddSession(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
+// Antiforgery çerezi Session çerezinden AYRI bir CookieBuilder kullanır — açıkça
+// ayarlanmazsa framework varsayılanına kalır. Intranet kurulumu düz HTTP + IP
+// adresiyle (https değil, DNS adı değil) erişildiğinde varsayılan davranış token
+// uyuşmazlığına ve POST'larda 400'e yol açabiliyordu (VM testi 2026-07-18 —
+// Şifre Değiştir formunda görüldü). Session ile aynı politika verildi.
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
+
 // PermissionService ve HttpContextAccessor kaydı
 builder.Services.AddScoped<PermissionService>();
 builder.Services.AddHttpContextAccessor();
