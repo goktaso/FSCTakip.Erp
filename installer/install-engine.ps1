@@ -469,6 +469,15 @@ function Set-AppSettings {
             Root    = (Join-Path $Root 'uploads')
             Folders = [ordered]@{ Invoice = 'invoices'; Dispatch = 'dispatches'; Other = 'other' }
         }
+        UpdateCheck    = [ordered]@{
+            # Varsayılan kapalı — internetsiz müşteride hiç dış istek atılmaz.
+            # İnternetli müşteride ARD, goktaso/FSCTakip-Releases (private) reposuna
+            # salt-okunur fine-grained token üretip burayı elle doldurur.
+            Enabled        = $false
+            Repo           = 'goktaso/FSCTakip-Releases'
+            Token          = ''
+            DownloadFolder = 'C:\FscErpUpdates'
+        }
     }
 
     $json = $cfg | ConvertTo-Json -Depth 6

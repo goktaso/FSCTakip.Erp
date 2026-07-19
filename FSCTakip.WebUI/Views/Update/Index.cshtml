@@ -1,0 +1,110 @@
+@{
+    ViewData["Title"] = "Güncellemeler";
+}
+
+<div class="topbar-area">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fw-semibold" style="color:var(--text);font-size:14px;">
+            <i class="fas fa-cloud-download-alt me-2 text-primary"></i>Güncellemeler
+        </span>
+    </div>
+    <div class="d-flex gap-2 ms-auto">
+        <span class="topbar-user"><i class="fas fa-user-circle"></i> @(User.Identity?.Name ?? "Kullanıcı")</span>
+    </div>
+</div>
+
+<div class="alert d-flex align-items-center gap-3 mb-3"
+     style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;">
+    <i class="fas fa-info-circle fa-lg" style="color:#1d4ed8;"></i>
+    <div class="small" style="color:#1e3a8a;">
+        Bu sayfa yalnızca yeni sürümü <strong>indirir</strong>. Veritabanı/dosya güncellemesi
+        OTOMATİK uygulanmaz — güvenlik gereği, indirilen paket açıldıktan sonra
+        <code>update-engine.ps1</code> bir yönetici tarafından elle çalıştırılmalıdır.
+    </div>
+</div>
+
+<div class="table-card" style="max-width:640px;">
+    <div style="padding:1.5rem;">
+        <div class="row g-3">
+            <div class="col-6">
+                <label class="form-label fw-semibold">Kurulu Sürüm</label>
+                <div class="form-control" id="curVersion" style="background:#f8fafc;">—</div>
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-semibold">En Son Sürüm</label>
+                <div class="form-control" id="latestVersion" style="background:#f8fafc;">—</div>
+            </div>
+            <div class="col-12" id="statusBox" style="display:none;"></div>
+            <div class="col-12 d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="btnCheck" onclick="checkUpdate()">
+                    <i class="fas fa-sync me-1"></i>Güncelleme Kontrol Et
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnDownload" style="display:none;" onclick="downloadUpdate()">
+                    <i class="fas fa-download me-1"></i>İndir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function checkUpdate() {
+            const btn = document.getElementById('btnCheck');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Kontrol ediliyor...';
+            const box = document.getElementById('statusBox');
+            document.getElementById('btnDownload').style.display = 'none';
+            try {
+                const res = await fetch('/Update/Check', { method: 'POST' });
+                const json = await res.json();
+                document.getElementById('curVersion').textContent = json.currentVersion || '-';
+                document.getElementById('latestVersion').textContent = json.latestVersion || '-';
+
+                box.style.display = 'block';
+                if (!json.enabled) {
+                    box.className = 'col-12 alert alert-secondary small mb-0';
+                    box.textContent = 'Güncelleme kontrolü kapalı (appsettings.json → UpdateCheck:Enabled=false). İnternet erişimi yoksa bu normaldir; güncelleme paketini ARD size elden/uzaktan iletir.';
+                } else if (json.error) {
+                    box.className = 'col-12 alert alert-danger small mb-0';
+                    box.textContent = 'Hata: ' + json.error;
+                } else if (json.hasUpdate) {
+                    box.className = 'col-12 alert alert-warning small mb-0';
+                    box.innerHTML = '<strong>Yeni sürüm mevcut: ' + json.latestVersion + '</strong>' + (json.notes ? '<br>' + json.notes : '');
+                    document.getElementById('btnDownload').style.display = '';
+                } else {
+                    box.className = 'col-12 alert alert-success small mb-0';
+                    box.textContent = 'Sisteminiz güncel.';
+                }
+            } catch (e) {
+                showToast('Kontrol başarısız: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync me-1"></i>Güncelleme Kontrol Et';
+            }
+        }
+
+        async function downloadUpdate() {
+            const btn = document.getElementById('btnDownload');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>İndiriliyor...';
+            try {
+                const res = await fetch('/Update/Download', { method: 'POST' });
+                const json = await res.json();
+                if (json.success) {
+                    showToast(json.message, 'success');
+                    await appAlert('Paket indirildi ve açıldı:\n' + json.path + '\n\nUygulamak için: Yönetici PowerShell açın, bu klasöre gidin ve update-engine.ps1 dosyasını çalıştırın.');
+                } else {
+                    showToast(json.message || 'İndirme başarısız.', 'error');
+                }
+            } catch (e) {
+                showToast('İndirme başarısız: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-download me-1"></i>İndir';
+            }
+        }
+
+        checkUpdate();
+    </script>
+}
