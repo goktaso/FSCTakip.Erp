@@ -49,6 +49,22 @@ namespace FSCTakip.WebUI.Services
             }
         }
 
+        // appsettings.json'a elle kopyala-yapıştırılan Repo/Token değerleri görünmez
+        // karakterler (BOM, sıfır-genişlikli boşluk, akıllı tırnak vb.) taşıyabilir -
+        // .NET HttpClient header değerinde ASCII-dışı karakter görünce
+        // "Request headers must contain only ASCII characters" ile patlar (2026-07-19,
+        // VM testinde bulundu). Baştaki/sondaki boşluk kırpılır, ASCII-dışı karakterler
+        // sessizce atılır.
+        private static string? CleanConfigValue(string? value)
+        {
+            if (string.IsNullOrEmpty(value)) return value;
+            var trimmed = value.Trim();
+            var sb = new System.Text.StringBuilder(trimmed.Length);
+            foreach (var c in trimmed)
+                if (c >= 32 && c <= 126) sb.Append(c);
+            return sb.ToString();
+        }
+
         private HttpRequestMessage BuildGitHubRequest(string url, string token, string accept)
         {
             var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -65,8 +81,8 @@ namespace FSCTakip.WebUI.Services
             if (!enabled)
                 return new UpdateCheckResult { Enabled = false, CurrentVersion = current };
 
-            var repo  = _config["UpdateCheck:Repo"];
-            var token = _config["UpdateCheck:Token"];
+            var repo  = CleanConfigValue(_config["UpdateCheck:Repo"]);
+            var token = CleanConfigValue(_config["UpdateCheck:Token"]);
             if (string.IsNullOrWhiteSpace(repo) || string.IsNullOrWhiteSpace(token))
                 return new UpdateCheckResult { Enabled = true, CurrentVersion = current, Error = "UpdateCheck:Repo veya Token appsettings.json'da eksik." };
 
@@ -100,8 +116,8 @@ namespace FSCTakip.WebUI.Services
 
         public async Task<(bool success, string message, string? extractedPath)> DownloadLatestAsync()
         {
-            var repo  = _config["UpdateCheck:Repo"];
-            var token = _config["UpdateCheck:Token"];
+            var repo  = CleanConfigValue(_config["UpdateCheck:Repo"]);
+            var token = CleanConfigValue(_config["UpdateCheck:Token"]);
             var downloadFolder = _config["UpdateCheck:DownloadFolder"];
             if (string.IsNullOrWhiteSpace(downloadFolder))
                 downloadFolder = Path.Combine(_env.ContentRootPath, "..", "FscErpUpdates");
