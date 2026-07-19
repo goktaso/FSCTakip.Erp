@@ -277,7 +277,15 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-semibold">Birim</label>
-                            <input type="text" name="Unit" id="unit" class="form-control text-uppercase" value="ADET" />
+                            <select name="Unit" id="unit" class="form-control form-select">
+                                <option value="ADET">ADET</option>
+                                <option value="KG">KG</option>
+                                <option value="MT">MT (Metre)</option>
+                                <option value="M2">M2</option>
+                                <option value="RULO">RULO</option>
+                                <option value="TON">TON</option>
+                                <option value="LT">LT</option>
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-semibold">FSC Tipi</label>
@@ -345,7 +353,11 @@
                     document.getElementById('paperColorId').value   = data.paperColorId || '';
                     document.getElementById('paperWeightId').value  = data.paperWeightId || '';
                     document.getElementById('paperWidthId').value   = data.paperWidthId || '';
-                    document.getElementById('unit').value           = data.unit;
+                    const unitSel = document.getElementById('unit');
+                    if (data.unit && !Array.from(unitSel.options).some(o => o.value === data.unit)) {
+                        unitSel.add(new Option(data.unit, data.unit));
+                    }
+                    unitSel.value = data.unit;
                     document.getElementById('fscTypeId').value      = data.fscTypeId || '';
                     document.getElementById('paperTypeId').value    = data.paperTypeId || '';
                     document.querySelector('.modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>Ürün Düzenle';

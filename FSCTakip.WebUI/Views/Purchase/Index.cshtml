@@ -514,7 +514,7 @@ else if ((bool)(ViewBag.ShowAll ?? false))
                                 @foreach (var s in suppliers)
                                 {
                                     <option value="@s.Id"
-                                            data-fsc="@s.IsFscActive.ToString().ToLower()"
+                                            data-expired="@((s.IsFscActive && s.FscExpiryDate.HasValue && s.FscExpiryDate.Value < DateTime.Today).ToString().ToLower())"
                                             data-expiry="@s.FscExpiryDate?.ToString("dd.MM.yyyy")">
                                         @s.Name
                                     </option>
@@ -542,7 +542,7 @@ else if ((bool)(ViewBag.ShowAll ?? false))
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">Geliş Tarihi <span class="text-danger">*</span></label>
-                        <input type="date" id="arrivalDate" class="form-control">
+                        <input type="date" id="arrivalDate" class="form-control" lang="tr">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">Araç Plakası</label>
@@ -1240,8 +1240,8 @@ $(document).on('draw.dt', 'table.data-table', function () {
 
 /* ─── TEDARİKÇİ FSC UYARI ───────────────────────────────────── */
 document.getElementById('supplierId').addEventListener('change', function () {
-    const fscOk = this.options[this.selectedIndex]?.dataset.fsc === 'true';
-    document.getElementById('supplierFscWarning').style.display = fscOk ? 'none' : 'block';
+    const isExpired = this.options[this.selectedIndex]?.dataset.expired === 'true';
+    document.getElementById('supplierFscWarning').style.display = isExpired ? 'block' : 'none';
 });
 
 /* ─── KAYDET ─────────────────────────────────────────────────── */
