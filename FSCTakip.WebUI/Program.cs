@@ -67,15 +67,16 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddSingleton<ILicenseService, LicenseService>();
 builder.Services.AddSingleton<ICompanyBrandingService, CompanyBrandingService>();
+builder.Services.AddHttpClient<IUpdateCheckService, UpdateCheckService>();
 builder.Services.AddHostedService<EtlBackgroundService>();
 
-// DbContext kayd�
+// DbContext kaydı
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
-// 2. Middleware (Ara Katman) Yap�land�rmas�
+// 2. Middleware (Ara Katman) Yapılandırması
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -105,7 +106,7 @@ app.Use(async (ctx, next) =>
 
 app.UseRouting();
 
-// SIRA �OK �NEML�: Authentication mutlaka Authorization'dan �NCE gelmeli
+// SIRA ÇOK ÖNEMLİ: Authentication mutlaka Authorization'dan ÖNCE gelmeli
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseSession();
