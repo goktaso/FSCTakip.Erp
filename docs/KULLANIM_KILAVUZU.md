@@ -1,6 +1,6 @@
 # FSC Takip ERP — Kullanım Kılavuzu
 
-> **Versiyon:** 3.3 · **Güncelleme:** Temmuz 2026  
+> **Versiyon:** 3.4 · **Güncelleme:** Temmuz 2026  
 > Bu kılavuz, FSC Takip ERP sistemini ilk kez kullanan firma personeli ve yöneticiler için hazırlanmıştır.
 
 ---
@@ -271,9 +271,15 @@ Alt bölümler:
 | Gramajlar | `/Paper/Weights` | 70, 80, 90 g/m²... |
 | Kağıt Enleri | `/Paper/Widths` | 1040mm, 1080mm... |
 | FSC Tipleri | `/Paper/FscTypes` | FSC-100%, FSC-MIX... |
-| Makineler | `/Machine/Machines` | Makine adı + kodu |
+| Makineler | `/Machine/Machines` | Makine adı + kodu + tür |
+| Makine Türleri | `/Machine/Types` | Baskı, Kesim, Dilimleme... (müşteriye özel, serbest tanımlanır) |
 
 > **ℹ️ Not:** Tanımlama sayfaları aynı yapıdadır: listele, ekle, düzenle, aktif/pasif. Hammadde ve üretim kayıtlarında kullanılmadan önce tanımlamalar tamamlanmalıdır.
+
+> **ℹ️ Makine Türleri:** Makine türü artık sabit 3 seçenekle (Baskı/Kesim/Dilimleme)
+> sınırlı değildir — her firma kendi makine türlerini `/Machine/Types` sayfasından
+> tanımlar. Bir makine eklerken/düzenlerken açılan "Makine Türü" dropdown'ı bu
+> listeden beslenir; listede istediğiniz tür yoksa önce buradan ekleyin.
 
 ### Önce Yapılması Gerekenler (İlk Kurulum Sırası)
 
@@ -284,10 +290,11 @@ Alt bölümler:
 4. Kağıt Enleri ekle (1040mm, 1080mm...)
 5. Ürün Grupları tanımla
 6. Torba Tipleri ekle
-7. Makineler tanımla
-8. Tedarikçiler ekle (FSC sertifikalarıyla birlikte)
-9. Müşteriler ekle
-10. Ürünler tanımla (reçeteyle birlikte)
+7. Makine Türleri tanımla (Baskı, Kesim, Dilimleme...)
+8. Makineler tanımla (yukarıdaki türlerden seçerek)
+9. Tedarikçiler ekle (FSC sertifikalarıyla birlikte)
+10. Müşteriler ekle
+11. Ürünler tanımla (reçeteyle birlikte)
 ```
 
 ---

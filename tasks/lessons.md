@@ -1670,3 +1670,131 @@ politika açıkça verildi (Program.cs).
 senaryosu için ayarlarken, aynı uygulamadaki DİĞER cookie-tabanlı mekanizmaları
 (Antiforgery, kimlik doğrulama çerezi vb.) da tara — her biri kendi ayrı
 `CookieBuilder`'ına sahiptir, biri ayarlanınca diğerleri otomatik uyum sağlamaz.
+
+### 6. bug — Form submit pattern tutarsızlığı: Customers JSON sayfası + çift kayıt (2026-07-19)
+
+Müşteri kaydet sonrası ekranda ham `{"success":true,...}` JSON'u açılıyordu ve aynı
+müşteri 2 kere kaydedilmişti. Kök neden: `Customers/Index.cshtml`'deki form
+`type="submit"` düz HTML POST yapıyordu, `CustomersController.Save` ise HER ZAMAN
+`Json(...)` döndürüyordu (redirect yok) — tarayıcı POST endpoint'ine native
+navigate edip JSON'u sayfa olarak render etti. Çift kayıt da aynı kökten: native
+form submit'te buton disable/debounce yok, çift tıkta çift POST gider.
+
+Aynı sayfa ailesinde (`Suppliers/Index.cshtml`) doğru pattern zaten vardı: buton
+`type="button"`, `saveSupplier()` JS fonksiyonu `fetch()` ile AJAX POST atıyor,
+istek sırasında butonu disable ediyor, `showToast` + `location.reload()` ile
+kapatıyor. **Ders:** Bir modül-ailesinde (CRUD sayfaları) bir sayfa doğru pattern
+kullanıyorsa, YENİ/eksik sayfayı o pattern'e göre denetle — controller `Json(...)`
+döndürüyorsa form'un `type="submit"` OLMAMASI ZORUNLU, aksi halde JSON sayfası +
+debounce'suz çift-submit riski birlikte gelir.
+
+### 7. bug — "FSC'siz tedarikçi" ile "FSC süresi dolmuş tedarikçi" karıştırılması (2026-07-19)
+
+Hammadde girişinde (Purchase/SaveLot) her FSC'siz (yani hiç sertifika iddiası
+olmayan, `IsFscActive=false`) tedarikçi seçildiğinde "FSC sertifikası geçersiz!"
+uyarısı + onay penceresi çıkıyordu — sanki gerçekten bir sorun varmış gibi. Kök
+neden: client-side JS `dataset.fsc === 'true'` kontrolü `IsFscActive`'i doğrudan
+kullanıyordu; ama `IsFscActive=false` çoğu tedarikçi için NORMAL durumdur (FSC
+iddiası yoktur), "geçersiz/süresi dolmuş" ile aynı şey değildir. Backend
+(`PurchaseController.SaveLot`) zaten doğru mantığı kullanıyordu:
+`IsFscActive && FscExpiryDate.HasValue && FscExpiryDate < Today` (yani ÖNCEDEN
+sertifikalıydı ama süresi geçti) — ama frontend bunu kopyalamamıştı.
+
+**Ders:** "X aktif değil" ile "X aktifti ama süresi doldu" iki ayrı durumdur;
+UI'da uyarı/blok tetikleyen boolean'ı türetirken backend'deki GERÇEK iş kuralı
+mantığını (sadece flag'i değil, flag+tarih kombinasyonunu) birebir kopyala. Aksi
+halde en sık karşılaşılan (ve tamamen normal) durum yanlışlıkla "hata" gibi
+gösterilir, kullanıcı sistemin kendisini engellediğini düşünür.
+
+### 8. bug — Migration zincirinde EF'in bilmediği elle eklenmiş index (2026-07-19)
+
+Yerel geliştirme DB'sinde (`ARDA\ARDA`) bekleyen bir migration
+(`AddRowVersionAndDecimalPrecision`, `ConversionFireKg` kolonunu
+`decimal(18,2)`→`decimal(18,4)` genişletiyordu) "index X kolona bağımlı" hatasıyla
+patladı: `IX_FscLots_SourceSerialId_Filtered`. Bu index migration geçmişinde
+(`grep`) HİÇ tanımlı değildi — EF model snapshot'ı da bilmiyordu. Demek ki bir
+noktada DB'ye elle/SSMS'ten eklenmiş, versiyon kontrolüne hiç girmemiş.
+
+**Çözüm:** Migration'ın başına `IF EXISTS (...) DROP INDEX ...` guard'lı bir
+`Sql()` adımı eklendi — index yoksa no-op, varsa (herhangi bir ortamda, bu DB'ye
+özel olması gerekmez) güvenle kaldırılır.
+
+**Ders:** `dotnet ef database update` bir ortamda beklenmedik obje-bağımlılığı
+hatasıyla patlarsa önce "bu objeyi migration geçmişi biliyor mu?" diye sor
+(`grep` ile index/constraint adını migration dosyalarında ara). Bilmiyorsa elle
+eklenmiş bir kalıntıdır — migration'ı o objeyi varsaymayacak/temizleyecek şekilde
+sağlamlaştırmak, DB'yi elle düzeltmekten daha güvenlidir (kod versiyon kontrolünde
+kalır, başka ortamda aynı kalıntı varsa orada da otomatik çözülür).
+
+### 9. Müşteri güncelleme dağıtımı — AutoMigrate keşfi script'i çok basitleştirdi (2026-07-19)
+
+10-15 müşteride her sürümde "yeni dosya + elle SQL script" yöntemi zahmetli
+görünüyordu. Çözüme başlamadan önce `Program.cs`'i okuyunca fark edildi:
+`Database:AutoMigrate=true` (müşteri kurulumlarının VARSAYILANI) ile uygulama
+zaten AÇILIŞTA `context.Database.Migrate()` çağırıyor. Yani derlenmiş DLL'ler
+yeni migration sınıflarını içeriyorsa, tek yapılması gereken dosyaları
+değiştirip siteyi yeniden başlatmak — migration'ı uygulama kendisi, DB'ye elle
+SQL script yapıştırmaya HİÇ gerek yok (yalnız `AutoMigrate=false` olan DBA'lı
+kurumsal kurulumlarda manuel script yolu gerekir, azınlık durum).
+
+**Ders:** Bir "nasıl dağıtırız/otomatikleştiririz" sorusuna cevap ararken önce
+uygulamanın KENDİ mevcut davranışını oku — genelde "zor" görünen problem
+zaten çözülmüş oluyor, sadece fark edilmemiş. `installer/update-engine.ps1` bu
+yüzden SQL script çalıştırmaz; sadece DB+app klasörü yedekler, dosyaları
+`robocopy` ile (asla `/MIR` değil — müşteriye özel `appsettings.json`/
+`license.lic` silinmesin) üzerine kopyalar, IIS'i yeniden başlatır.
+
+### 10. `Get-Content -Raw` + yeniden encode = kendi ürettiğin mojibake (2026-07-19)
+
+`update-engine.ps1`'e BOM eklerken `Get-Content -Raw` ile okuyup
+`[IO.File]::WriteAllText(...UTF8Encoding($true))` ile geri yazdım — dosyada
+BOM yoktu, PowerShell 5.1 BOM'suz dosyayı ANSI/sistem code page sanıp
+"─" (kutu-çizim tire, U+2500) gibi çok baytlı UTF-8 karakterlerini yanlış
+çözdü; sonucu UTF-8 olarak yazınca mojibake KALICI hale geldi (aynı sınıf
+hata `SalesController.cs`'de bu oturumun başında bulunup düzeltilmişti —
+üstüne bir de kendim üretmiş oldum).
+
+**Ders:** Türkçe/özel karakter içeren bir `.ps1`/metin dosyasına BOM eklerken
+veya encoding değiştirirken ASLA `Get-Content`'in ambient/varsayılan encoding
+tahminine güvenme. Okurken de yazarken de encoding'i AÇIKÇA belirt:
+`[System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)` →
+`[System.IO.File]::WriteAllText($path, $text, (New-Object
+System.Text.UTF8Encoding($true)))`. Değişiklik sonrası mutlaka
+`-match '[ÃÅÄ]|â€'` gibi bir mojibake taraması + parser doğrulaması yap.
+
+### 11. `update-engine.ps1` VM'de ilk çalıştırma — 3 katmanlı gerçek hata (2026-07-19)
+
+`update-engine.ps1`'i test VM'inde ilk kez çalıştırınca sırayla 3 farklı, birbirinden
+bağımsız hata çıktı (installer'daki 4-katmanlı bug zincirine benzer desen —
+her katman bir öncekini çözmeden görünmüyordu):
+
+**Katman 1 — `BACKUP DATABASE` yanlış klasöre yazmaya çalıştı.**
+`Operating system error 5 (Access is denied)` — hedef `C:\Users\Administrator\Desktop\...`
+idi. Kök neden: `BACKUP DATABASE` dosyayı **PowerShell'i çalıştıran kullanıcı değil,
+SQL Server SERVİS HESABI** (ör. `NT SERVICE\MSSQL$FSCERP`) yazar; bu hesabın
+Administrator'ın Desktop'ına yazma izni yoktur. **Çözüm:** hedef klasörü elle
+seçmek yerine `SELECT SERVERPROPERTY('InstanceDefaultBackupPath')` ile SQL'in
+KENDİ varsayılan yedek klasörünü sorgulayıp oraya yaz — o klasör zaten servis
+hesabınca yazılabilir.
+
+**Katman 2 — `WITH COMPRESSION` SQL Express'te desteklenmiyor.**
+Katman 1 düzeltilince yeni hata: `BACKUP DATABASE WITH COMPRESSION is not
+supported on Express Edition`. Backup compression Standard/Enterprise'a özel bir
+özellik. **Çözüm:** `WITH COMPRESSION` kaldırıldı, sade `WITH INIT` kullanıldı.
+
+**Katman 3 — `Stop-Website`/`Stop-WebAppPool` COM sınıfı kayıt hatası.**
+DB+app yedek adımları geçince: `Retrieving the COM class factory for component
+with CLSID 688EEEE5-... failed ... Class not registered`. WebAdministration
+PowerShell modülünün Stop/Start-WebItem cmdlet'leri bazı Windows Server
+kurulumlarında (muhtemelen IIS 6 Metabase uyumluluk bileşeni eksik/kayıtsız)
+bu COM hatasını veriyor — modül `Import-Module` ile sorunsuz yükleniyor ama
+gerçek çağrı patlıyor. **Çözüm:** Stop/Start-Website, Stop/Start-WebAppPool,
+Get-WebBinding çağrılarının HEPSİ `appcmd.exe` (`$env:windir\System32\inetsrv\appcmd.exe`)
+ile değiştirildi — native exe, COM/modül bağımlılığı yok, daha sağlam.
+
+**Genel ders:** Bir script'i ilk kez GERÇEK bir müşteri/VM ortamında çalıştırmak,
+geliştirme makinesinde asla görülmeyecek 3 farklı altyapı varsayımını (klasör
+izni, SQL Edition özelliği, IIS PowerShell provider sağlığı) tek seferde ortaya
+çıkardı. Yerel makinede "mantıken doğru" görünen bir script, hedef ortamın
+gerçek kısıtlarına (servis hesabı izinleri, Express sürüm limitleri, IIS modül
+sağlığı) göre en az bir kez GERÇEK ortamda prova edilmeden güvenilir sayılmamalı.

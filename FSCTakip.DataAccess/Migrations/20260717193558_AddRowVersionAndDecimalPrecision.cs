@@ -10,6 +10,16 @@ namespace FSCTakip.DataAccess.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Bazı ortamlarda (ör. yerel geliştirme DB'si) migration zincirinde tanımlı
+            // olmayan, elle eklenmiş 'IX_FscLots_SourceSerialId_Filtered' indeksi
+            // ConversionFireKg kolonuna bağımlı olabiliyor ve ALTER COLUMN'u engelliyor.
+            // EF migration geçmişinde bu index hiç oluşturulmadığından (model snapshot'ta
+            // yok) güvenle kaldırılabilir.
+            migrationBuilder.Sql(@"
+                IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_FscLots_SourceSerialId_Filtered' AND object_id = OBJECT_ID('FscLots'))
+                    DROP INDEX IX_FscLots_SourceSerialId_Filtered ON FscLots;
+            ");
+
             migrationBuilder.AlterColumn<decimal>(
                 name: "PlannedQuantity",
                 table: "WorkOrders",
