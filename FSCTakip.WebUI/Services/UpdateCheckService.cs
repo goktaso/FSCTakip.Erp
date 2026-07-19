@@ -91,7 +91,15 @@ namespace FSCTakip.WebUI.Services
                 var req  = BuildGitHubRequest($"https://api.github.com/repos/{repo}/releases/latest", token, "application/vnd.github+json");
                 var resp = await _http.SendAsync(req);
                 if (!resp.IsSuccessStatusCode)
-                    return new UpdateCheckResult { Enabled = true, CurrentVersion = current, Error = $"GitHub API hatası: HTTP {(int)resp.StatusCode}" };
+                {
+                    var bodyText = await resp.Content.ReadAsStringAsync();
+                    var maskedToken = token.Length > 8 ? $"{token[..4]}...{token[^4..]} ({token.Length} karakter)" : "(çok kısa)";
+                    return new UpdateCheckResult
+                    {
+                        Enabled = true, CurrentVersion = current,
+                        Error = $"GitHub API hatası: HTTP {(int)resp.StatusCode} — {bodyText.Trim()} | Kullanılan token: {maskedToken} | Repo: {repo}"
+                    };
+                }
 
                 var json   = await resp.Content.ReadFromJsonAsync<JsonElement>();
                 var tag    = json.GetProperty("tag_name").GetString() ?? "";
