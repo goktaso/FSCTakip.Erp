@@ -59,6 +59,13 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    // HeaderName ayarlanmazsa antiforgery yalnızca form-body alanına (__RequestVerificationToken)
+    // bakar, HTTP header'ı hiç kontrol etmez. _Layout.cshtml'deki global fetch() sarmalayıcı
+    // token'ı "RequestVerificationToken" header'ına koyuyor — <form> içermeyen (FormData
+    // üretmeyen) sayfalarda bu header'ın gerçekten okunması için burada açıkça eşleşmesi
+    // gerekir (2026-07-19: Update/Index sayfasında bulundu — form yok, fetch() body'siz POST
+    // atıyor, token hiçbir yere ulaşmıyordu, HTTP 400).
+    options.HeaderName = "RequestVerificationToken";
 });
 
 // PermissionService ve HttpContextAccessor kaydı
