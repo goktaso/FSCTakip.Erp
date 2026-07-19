@@ -1,6 +1,7 @@
 @model IEnumerable<FSCTakip.Core.Entities.Machine>
 @{
     ViewData["Title"] = "Makine Tanımlamaları";
+    var machineTypes = ViewBag.MachineTypes as List<FSCTakip.Core.Entities.MachineType> ?? new();
 }
 
 <div class="topbar-area">
@@ -11,6 +12,9 @@
         </button>
     </div>
     <div class="d-flex gap-2 ms-auto align-items-center">
+        <a class="btn btn-sm btn-outline-secondary" href="@Url.Action("Types", "Machine")">
+            <i class="fas fa-tags"></i> Makine Türleri
+        </a>
         <button class="btn btn-sm btn-outline-secondary" onclick="$('#filterPanel').slideToggle()">
             <i class="fas fa-filter"></i> Filtrele
         </button>
@@ -36,9 +40,10 @@
                 <label class="small font-weight-bold text-uppercase">Makine Türü</label>
                 <select class="form-control form-control-sm" id="machineTypeFilter">
                     <option value="">Tümü</option>
-                    <option value="Printing">Baskı</option>
-                    <option value="Cutting">Torba</option>
-                    <option value="Slitting">Dilimleme</option>
+                    @foreach (var t in machineTypes)
+                    {
+                        <option value="@t.Name">@t.Name</option>
+                    }
                 </select>
             </div>
             <div class="col-md-3">
@@ -79,7 +84,7 @@
                             <tr>
                                 <td><code>@item.Code</code></td>
                                 <td><strong class="text-primary">@item.Name</strong></td>
-                                <td><span class="badge badge-light border text-dark">@item.Type</span></td>
+                                <td><span class="badge badge-light border text-dark">@(item.MachineType?.Name ?? "-")</span></td>
 
                                 <td class="text-center">
                                     <div class="custom-control custom-switch">
@@ -96,7 +101,7 @@
 
                                 <td class="text-right">
                                     <button class="btn btn-sm btn-outline-primary mr-1"
-                                            onclick="editMachine(@item.Id, '@item.Name', '@item.Code', '@item.Type', @item.IsActive.ToString().ToLower())">
+                                            onclick="editMachine(@item.Id, '@item.Name', '@item.Code', @item.MachineTypeId, @item.IsActive.ToString().ToLower())">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button class="btn btn-sm btn-outline-danger" onclick="deleteMachine(@item.Id)">
@@ -145,11 +150,13 @@
                     </div>
                     <div class="form-group">
                         <label class="small font-weight-bold">Makine Türü</label>
-                        <select class="form-control" name="Type" id="machineType">
-                            <option value="Printing">Matbaa</option>
-                            <option value="Cutting">Kesim</option>
-                            <option value="Slitting">Dilimleme</option>
+                        <select class="form-control" name="MachineTypeId" id="machineType">
+                            @foreach (var t in machineTypes)
+                            {
+                                <option value="@t.Id">@t.Name</option>
+                            }
                         </select>
+                        <small class="text-muted">Listede yoksa <a href="@Url.Action("Types", "Machine")">Makine Türleri</a>'nden ekleyin.</small>
                     </div>
                     <div class="custom-control custom-switch mt-2">
                         <input type="checkbox" class="custom-control-input" id="isActiveSwitch" name="IsActive" checked>
@@ -201,17 +208,17 @@
             $('#machineId').val(0);
             $('#machineName').val('');
             $('#machineCode').val('');
-            $('#machineType').val('Printing');
+            $('#machineType').prop('selectedIndex', 0);
             $('#isActiveSwitch').prop('checked', true);
             $('.modal-title').html('<i class="fas fa-plus mr-2"></i>Yeni Makine Ekle');
             bootstrap.Modal.getOrCreateInstance(document.getElementById('machineModal')).show();
         }
 
-        function editMachine(id, name, code, type, isActive) {
+        function editMachine(id, name, code, machineTypeId, isActive) {
             $('#machineId').val(id);
             $('#machineName').val(name);
             $('#machineCode').val(code);
-            $('#machineType').val(type);
+            $('#machineType').val(machineTypeId);
             $('#isActiveSwitch').prop('checked', isActive);
             $('.modal-title').html('<i class="fas fa-edit mr-2"></i>Makine Düzenle');
             bootstrap.Modal.getOrCreateInstance(document.getElementById('machineModal')).show();

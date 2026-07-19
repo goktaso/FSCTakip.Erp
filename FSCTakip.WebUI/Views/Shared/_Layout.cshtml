@@ -1302,6 +1302,12 @@
                 </a>
             </div>
             <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Update"?"active":"")" href="/Update/Index">
+                    <span class="nav-icon"><i class="fas fa-cloud-download-alt"></i></span>
+                    <span class="nav-label">Güncellemeler</span>
+                </a>
+            </div>
+            <div class="nav-item">
                 <a class="nav-link-item @(ctrl=="Product"&&action=="BagTypes"?"active":"")" href="/Product/BagTypes">
                     <span class="nav-icon"><i class="fas fa-shopping-bag"></i></span>
                     <span class="nav-label">Torba Tipleri</span>
@@ -1344,9 +1350,15 @@
                 </a>
             </div>
             <div class="nav-item">
-                <a class="nav-link-item @(ctrl=="Machine"?"active":"")" href="/Machine/Machines">
+                <a class="nav-link-item @(ctrl=="Machine"&&action=="Machines"?"active":"")" href="/Machine/Machines">
                     <span class="nav-icon"><i class="fas fa-cogs"></i></span>
                     <span class="nav-label">Makineler</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link-item @(ctrl=="Machine"&&action=="Types"?"active":"")" href="/Machine/Types">
+                    <span class="nav-icon"><i class="fas fa-tags"></i></span>
+                    <span class="nav-label">Makine Türleri</span>
                 </a>
             </div>
             <div class="nav-item">

@@ -43,6 +43,7 @@ namespace FSCTakip.DataAccess.Data
         public DbSet<PaperColor>     PaperColors     { get; set; }
         public DbSet<PaperWidth>     PaperWidths     { get; set; }
         public DbSet<Machine>        Machines        { get; set; }
+        public DbSet<MachineType>    MachineTypes    { get; set; }
         public DbSet<BagType>        BagTypes        { get; set; }
         public DbSet<ProductGroup>   ProductGroups   { get; set; }
         public DbSet<Warehouse>      Warehouses      { get; set; }
@@ -422,6 +423,8 @@ namespace FSCTakip.DataAccess.Data
             modelBuilder.Entity<Product>().HasOne(p => p.ProductGroup).WithMany().HasForeignKey(p => p.ProductGroupId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<Product>().HasOne(p => p.FscType).WithMany().HasForeignKey(p => p.FscTypeId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<Product>().HasOne(p => p.PaperType).WithMany().HasForeignKey(p => p.PaperTypeId).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Machine>().HasOne(m => m.MachineType).WithMany().HasForeignKey(m => m.MachineTypeId).OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<WorkOrder>()
                 .HasOne(w => w.Product).WithMany().HasForeignKey(w => w.ProductId).OnDelete(DeleteBehavior.Restrict);

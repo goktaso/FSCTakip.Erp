@@ -14,7 +14,8 @@ namespace FSCTakip.Core.Entities
         public string Code { get; set; } // SQL'de NOT NULL olduğu için zorunlu
 
         [Required]
-        public string Type { get; set; } // SQL'de NOT NULL olduğu için zorunlu
+        public int MachineTypeId { get; set; }
+        public virtual MachineType? MachineType { get; set; }
 
         public bool IsActive { get; set; } = true;
 

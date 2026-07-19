@@ -81,10 +81,11 @@ namespace FSCTakip.WebUI.Data
                 return;
 
             // Demo istense bile herhangi bir tabloda veri varsa tekrar basma (idempotent).
-            if (await ctx.Suppliers.AnyAsync()  ||
-                await ctx.BagTypes.AnyAsync()   ||
-                await ctx.Warehouses.AnyAsync() ||
-                await ctx.Products.AnyAsync())
+            if (await ctx.Suppliers.AnyAsync()     ||
+                await ctx.BagTypes.AnyAsync()      ||
+                await ctx.Warehouses.AnyAsync()    ||
+                await ctx.Products.AnyAsync()      ||
+                await ctx.MachineTypes.AnyAsync())
                 return;
 
             var now = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Unspecified);
@@ -107,9 +108,18 @@ namespace FSCTakip.WebUI.Data
             var grpMamul    = new ProductGroup { GroupCode = 6, GroupName = "Mamul Urun", RangeStart = 6000, RangeEnd = 6999, IsActive = true, CreatedBy = sys, CreatedDate = now };
             ctx.ProductGroups.AddRange(grpHammadde, grpMamul);
 
-            // ── 4. Makineler ─────────────────────────────────────────────────────
-            var mak1 = new Machine { Name = "TORBA MAKINESI-1", Code = "MAK-01", Type = "Torba", IsActive = true, CreatedBy = sys, CreatedDate = now };
-            var mak2 = new Machine { Name = "TORBA MAKINESI-2", Code = "MAK-02", Type = "Torba", IsActive = true, CreatedBy = sys, CreatedDate = now };
+            // ── 4. Makine Türleri + Makineler ────────────────────────────────────
+            // Müşteriye özel olabileceği için sabit kodlanmadı — burada yalnız
+            // başlangıç değerleri seed edilir, Tanımlamalar → Makine Türleri'nden
+            // yönetilir.
+            var mtPrinting = new MachineType { Name = "Baskı",      IsActive = true, CreatedBy = sys, CreatedDate = now };
+            var mtCutting  = new MachineType { Name = "Kesim",      IsActive = true, CreatedBy = sys, CreatedDate = now };
+            var mtSlitting = new MachineType { Name = "Dilimleme",  IsActive = true, CreatedBy = sys, CreatedDate = now };
+            ctx.MachineTypes.AddRange(mtPrinting, mtCutting, mtSlitting);
+            await ctx.SaveChangesAsync();
+
+            var mak1 = new Machine { Name = "TORBA MAKINESI-1", Code = "MAK-01", MachineTypeId = mtCutting.Id, IsActive = true, CreatedBy = sys, CreatedDate = now };
+            var mak2 = new Machine { Name = "TORBA MAKINESI-2", Code = "MAK-02", MachineTypeId = mtCutting.Id, IsActive = true, CreatedBy = sys, CreatedDate = now };
             ctx.Machines.AddRange(mak1, mak2);
 
             // ── 5. Kağıt Tipleri ─────────────────────────────────────────────────
