@@ -116,23 +116,27 @@ try {
     $conn.Dispose()
 }
 
-# -- 2) UYGULAMA KLASORU YEDEK ------------------------------------------------
-Write-Step '2/6: Mevcut uygulama klasoru yedekleniyor'
-$appBackupZip = Join-Path $backupDir "AppFolder_$(Get-Date -Format 'yyyyMMdd_HHmmss').zip"
-Compress-Archive -Path (Join-Path $InstallPath '*') -DestinationPath $appBackupZip -Force
-Write-Ok "Uygulama klasoru yedeklendi: $appBackupZip"
-
 # appcmd.exe kullan - WebAdministration modulunun Stop/Start-WebItem cmdlet'leri
 # bazi sunucularda COM sinifi kayit hatasi verebiliyor ("Class not registered",
 # CLSID 688EEEE5-...). appcmd native bir exe, bu COM bagimliligina ihtiyac duymaz.
 $appcmd = Join-Path $env:windir 'System32\inetsrv\appcmd.exe'
 
-# -- 3) SITE DURDUR ------------------------------------------------------------
-Write-Step '3/6: IIS site durduruluyor'
+# -- 2) SITE DURDUR ------------------------------------------------------------
+# Uygulama klasoru yedeginden ONCE durdurulmali: site calisirken w3wp.exe
+# logs\*.log gibi dosyalari acik/kilitli tutar, Compress-Archive bu dosyalarda
+# "being used by another process" hatasi verir (2026-07-19 VM testinde bulundu -
+# yedek kismen alinmis olabiliyordu, sansla script durmadi ama yedek eksikti).
+Write-Step '2/6: IIS site durduruluyor'
 & $appcmd stop site "$SiteName" | Out-Null
 & $appcmd stop apppool "$AppPoolName" | Out-Null
 Start-Sleep -Seconds 3
 Write-Ok 'Site durduruldu.'
+
+# -- 3) UYGULAMA KLASORU YEDEK ------------------------------------------------
+Write-Step '3/6: Mevcut uygulama klasoru yedekleniyor'
+$appBackupZip = Join-Path $backupDir "AppFolder_$(Get-Date -Format 'yyyyMMdd_HHmmss').zip"
+Compress-Archive -Path (Join-Path $InstallPath '*') -DestinationPath $appBackupZip -Force
+Write-Ok "Uygulama klasoru yedeklendi: $appBackupZip"
 
 # -- 4) DOSYALARI KOPYALA (musteriye ozel dosyalar KORUNUR) ------------------
 Write-Step '4/6: Yeni dosyalar kopyalaniyor (appsettings.json ve license.lic korunuyor)'
