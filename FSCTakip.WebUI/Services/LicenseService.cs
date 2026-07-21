@@ -6,7 +6,7 @@ using Microsoft.Win32;
 
 namespace FSCTakip.WebUI.Services
 {
-    public enum LicenseState { Valid, Missing, Invalid, Expired, MachineMismatch, Trial }
+    public enum LicenseState { Valid, Missing, Invalid, Expired, MachineMismatch, Trial, ProductMismatch }
 
     public class LicenseInfo
     {
@@ -16,6 +16,12 @@ namespace FSCTakip.WebUI.Services
         public string?      LicenseId   { get; init; }
         public string       MachineKey  { get; init; } = "";
         public string?      Error       { get; init; }
+
+        /// <summary>Lisansın hedef ürünü (null => evrensel, her ürün kabul eder).</summary>
+        public string?      Product     { get; init; }
+
+        /// <summary>Sürüm/paket bilgisi (bilgilendirme).</summary>
+        public string?      Edition     { get; init; }
 
         /// <summary>Yalnız Trial durumunda dolu — kalan gün sayısı.</summary>
         public int?         TrialDaysLeft { get; init; }
@@ -51,6 +57,7 @@ awIDAQAB
         private readonly string _licensePath;
         private readonly string? _connectionString;
         private readonly int _trialDays;
+        private readonly string? _expectedProduct;
         private readonly object _lock = new();
         private LicenseInfo? _cached;
         private DateTime _cachedAt;
@@ -69,7 +76,14 @@ awIDAQAB
                 : configured;
             _connectionString = cfg.GetConnectionString("DefaultConnection");
             _trialDays = cfg.GetValue("License:TrialDays", 30);
+            // Bu kurulumun beklediği ürün. Boş => ürün kontrolü yapılmaz (geriye uyumlu:
+            // ürün alanı olmayan eski lisanslar da, herhangi bir ürüne ait lisanslar da kabul edilir).
+            var prod = cfg["License:Product"];
+            _expectedProduct = string.IsNullOrWhiteSpace(prod) ? null : prod.Trim();
         }
+
+        /// <summary>Bu kurulumun beklediği ürün kimliği (appsettings License:Product); null => kontrol yok.</summary>
+        public string? ExpectedProduct => _expectedProduct;
 
         public LicenseInfo Current
         {
@@ -121,7 +135,7 @@ awIDAQAB
 
             try
             {
-                var result = ValidateLicenseContent(File.ReadAllText(_licensePath), machineKey, DateTime.Today);
+                var result = ValidateLicenseContent(File.ReadAllText(_licensePath), machineKey, DateTime.Today, _expectedProduct);
                 return result;
             }
             catch (Exception ex)
@@ -228,8 +242,8 @@ awIDAQAB
             }
         }
 
-        /// <summary>Test edilebilir çekirdek: içerik + makine + tarih ile durum döndürür.</summary>
-        public static LicenseInfo ValidateLicenseContent(string content, string machineKey, DateTime today)
+        /// <summary>Test edilebilir çekirdek: içerik + makine + tarih (+ beklenen ürün) ile durum döndürür.</summary>
+        public static LicenseInfo ValidateLicenseContent(string content, string machineKey, DateTime today, string? expectedProduct = null)
         {
             // Dosya biçimi: base64(payloadJson) + "." + base64(imza)
             var parts = content.Trim().Split('.');
@@ -258,14 +272,24 @@ awIDAQAB
             string? licId      = doc.TryGetProperty("licenseId", out var li) ? li.GetString() : null;
             DateTime? validUntil = doc.TryGetProperty("validUntil", out var vu) && vu.ValueKind == JsonValueKind.String
                 ? DateTime.Parse(vu.GetString()!) : null;
+            // Ürün/sürüm: eski lisanslarda bu alanlar yoktur (geriye uyumlu).
+            string? licProduct = doc.TryGetProperty("product", out var pr) && pr.ValueKind == JsonValueKind.String ? pr.GetString() : null;
+            string? licEdition = doc.TryGetProperty("edition", out var ed) && ed.ValueKind == JsonValueKind.String ? ed.GetString() : null;
 
             if (!string.IsNullOrEmpty(licMachine) && !string.Equals(licMachine, machineKey, StringComparison.OrdinalIgnoreCase))
-                return new LicenseInfo { State = LicenseState.MachineMismatch, LicensedTo = licensedTo, LicenseId = licId, ValidUntil = validUntil, MachineKey = machineKey };
+                return new LicenseInfo { State = LicenseState.MachineMismatch, LicensedTo = licensedTo, LicenseId = licId, ValidUntil = validUntil, MachineKey = machineKey, Product = licProduct, Edition = licEdition };
+
+            // Ürün kilidi: lisansta ürün belirtilmişse VE kurulum bir ürün bekliyorsa VE uyuşmuyorsa reddet.
+            // Lisansta ürün yoksa (evrensel) veya kurulum ürün beklemiyorsa kontrol atlanır.
+            if (!string.IsNullOrEmpty(licProduct) && !string.IsNullOrEmpty(expectedProduct)
+                && !string.Equals(licProduct, expectedProduct, StringComparison.OrdinalIgnoreCase))
+                return new LicenseInfo { State = LicenseState.ProductMismatch, LicensedTo = licensedTo, LicenseId = licId, ValidUntil = validUntil, MachineKey = machineKey, Product = licProduct, Edition = licEdition,
+                    Error = $"Lisans '{licProduct}' ürünü için; bu kurulum '{expectedProduct}'." };
 
             if (validUntil.HasValue && validUntil.Value.Date < today)
-                return new LicenseInfo { State = LicenseState.Expired, LicensedTo = licensedTo, LicenseId = licId, ValidUntil = validUntil, MachineKey = machineKey };
+                return new LicenseInfo { State = LicenseState.Expired, LicensedTo = licensedTo, LicenseId = licId, ValidUntil = validUntil, MachineKey = machineKey, Product = licProduct, Edition = licEdition };
 
-            return new LicenseInfo { State = LicenseState.Valid, LicensedTo = licensedTo, LicenseId = licId, ValidUntil = validUntil, MachineKey = machineKey };
+            return new LicenseInfo { State = LicenseState.Valid, LicensedTo = licensedTo, LicenseId = licId, ValidUntil = validUntil, MachineKey = machineKey, Product = licProduct, Edition = licEdition };
         }
 
         public string LicensePath => _licensePath;

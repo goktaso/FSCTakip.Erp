@@ -11,6 +11,7 @@
         LicenseState.Missing         => ("Lisans Dosyası Bulunamadı", "#991b1b", "#fee2e2"),
         LicenseState.Expired         => ("Lisans Süresi Dolmuş", "#991b1b", "#fee2e2"),
         LicenseState.MachineMismatch => ("Lisans Bu Sunucuya Ait Değil", "#991b1b", "#fee2e2"),
+        LicenseState.ProductMismatch => ("Lisans Bu Ürün İçin Değil", "#991b1b", "#fee2e2"),
         _                            => ("Lisans Geçersiz", "#991b1b", "#fee2e2")
     };
 }
@@ -59,6 +60,10 @@ a.back { display:inline-block; margin-top:16px; color:var(--brand); font-size:13
     {
         <div class="row"><span class="k">Lisans Sahibi</span><span>@Model.LicensedTo</span></div>
         <div class="row"><span class="k">Lisans No</span><span>@Model.LicenseId</span></div>
+        @if (!string.IsNullOrEmpty(Model.Product))
+        {
+            <div class="row"><span class="k">Ürün</span><span>@Model.Product@(string.IsNullOrEmpty(Model.Edition) ? "" : $" · {Model.Edition}")</span></div>
+        }
         <div class="row"><span class="k">Geçerlilik</span><span>@(Model.ValidUntil?.ToString("dd.MM.yyyy") ?? "Süresiz")</span></div>
         <a class="back" href="/">← Uygulamaya dön</a>
     }
