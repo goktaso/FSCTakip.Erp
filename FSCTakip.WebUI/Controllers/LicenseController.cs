@@ -37,7 +37,8 @@ namespace FSCTakip.WebUI.Controllers
 
             // Kaydetmeden önce doğrula — bozuk dosya mevcut geçerli lisansın üzerine yazılmasın.
             var machineKey = LicenseService.GetMachineKey();
-            var check = LicenseService.ValidateLicenseContent(content, machineKey, DateTime.Today);
+            var expectedProduct = (_license as LicenseService)?.ExpectedProduct;
+            var check = LicenseService.ValidateLicenseContent(content, machineKey, DateTime.Today, expectedProduct);
             if (check.State != LicenseState.Valid)
                 return Json(new { success = false, message = $"Lisans doğrulanamadı: {check.State} {check.Error}".Trim() });
 
