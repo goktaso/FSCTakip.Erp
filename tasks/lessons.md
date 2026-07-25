@@ -2,12 +2,18 @@
 
 ## İndeks
 
-64 kayıt. Oturum başı hook'u **yalnız bu indeksi** enjekte eder — ham dosya
-86 KB ve her prompt'ta taşınması ~22K token/tur eder. İlgili başlığı `Read` +
-`offset/limit` ile oku; dosyayı baştan sona okuma.
+66 kayıt. Oturum başı hook'u **yalnız bu indeksi** enjekte eder — ham dosya
+120 KB ve her prompt'ta taşınması ~30K token/tur eder.
+
+**Bu dosyayı baştan sona OKUMA.** Ders ararken önce Obsidian vault'a bak:
+`D:\ARD-Vault\00-MOC\dersler-moc.md` (etiket + tarih + önem tablosu) → ilgili not.
+Vault `scripts/split_lessons.py` ile bu dosyadan üretilir; buraya yeni kayıt
+eklendikten sonra betik yeniden çalıştırılır. Vault yoksa başlığı `Read` +
+`offset/limit` ile oku.
 
 | # | Konu | Satır |
 |---|------|-------|
+| 0 | Config omurga revizyonu — ölçüm, vault, CLAUDE.md ayrıştırma (2026-07-25) | (en altta) |
 | 1 | Beyaz etiket + çevrimdışı lisans kilidi (2026-07-04) | 3 |
 | 2 | Sıfır kurulum hiç test edilmemişti — migration/seed zinciri 4 ayrı yerden kırıktı (2026-07-03) | 10 |
 | 3 | WorkOrder.ActualQuantity gün-bazlı toplama hatası (2026-07-02) | 23 |
@@ -1798,3 +1804,136 @@ izni, SQL Edition özelliği, IIS PowerShell provider sağlığı) tek seferde o
 çıkardı. Yerel makinede "mantıken doğru" görünen bir script, hedef ortamın
 gerçek kısıtlarına (servis hesabı izinleri, Express sürüm limitleri, IIS modül
 sağlığı) göre en az bir kez GERÇEK ortamda prova edilmeden güvenilir sayılmamalı.
+
+### 12. Şeytanın avukatı taraması — stale kurulum paketi + hiç test edilmemiş "EXE'yi tekrar çalıştır = güncelleme" iddiası (2026-07-19)
+
+Kullanıcı "sadece `dist\FscErpSetup-1.0.0.exe`'yi çalıştırırım, başka bir şey
+gerekmez" varsayımıyla PDF'i tekrar şüpheci gözle kontrol etmemi istedi. İki
+gerçek, ciddi bulgu çıktı:
+
+1. **Stale paket:** `dist\`'teki EXE 18 Temmuz'dan kalmaydı — o gün bugüne kadar
+   yapılan HİÇBİR şeyi (Makine Türü özelliği, 4 bug fix, encoding düzeltmeleri,
+   güncelleme mekanizmasının kendisi) içermiyordu. `build-installer.ps1` her
+   derlemede eskiyi silmediği için `dist\` klasöründe sessizce birikip yanlışlıkla
+   kullanılabilir. **Ders:** dağıtım öncesi her zaman dosya tarihini/sürümünü
+   kontrol et; script kendiliğinden eskiyi temizlemiyor.
+
+2. **Çok daha ciddi:** `docs/GUNCELLEME_KILAVUZU.md` ve `ThirdPartyKurulum.md`
+   FAZ 3.6, "yeni sürüm geldiğinde kurulum EXE'sini ikinci kez çalıştır, motor
+   idempotent, güncelleme moduna geçer" diyordu. Kodu okuyunca: `install-engine.ps1`
+   `Set-AppFiles` fonksiyonu dosyaları robocopy `/MIR` ile GERÇEKTEN yeniliyor
+   (bu kısım doğru) — AMA canlı çalışan bir IIS sitesini/havuzunu **hiçbir yerde
+   durdurmuyor**. Çalışan bir ASP.NET Core process'i DLL'lerini kilitler; kilitliyken
+   üzerine yazmaya çalışmak robocopy hatası ya da sessiz kısmi başarısızlıkla
+   sonuçlanabilir. Bu senaryo (`VM_TEST_KURULUMU.md` senaryo 7'de "EXE'yi 2. kez
+   çalıştır" olarak yazılıydı) muhtemelen HİÇ gerçek anlamda doğrulanmamıştı —
+   bugünkü `update-engine.ps1` (ki siteyi `appcmd.exe` ile açıkça durdurup açıyor)
+   3 katmanlı gerçek hatayla karşılaşıp düzeltilene kadar test edildi, eski yöntem
+   hiç bu titizlikte sınanmamış.
+
+**Ders:** Bir prosedürün dokümanda "idempotent/güvenli" yazması, gerçekten
+TEST EDİLDİĞİ anlamına gelmez — özellikle "zaten çalışan bir sistemi güncelleme"
+gibi ayrı bir senaryo, "sıfırdan kurulum" senaryosundan farklı varsayımlar
+taşır (kilitli dosyalar, çalışan process, açık bağlantılar). İki senaryo asla
+aynı kod yolunun otomatik olarak güvenli olacağı varsayılmamalı; ayrı ayrı
+doğrulanmalı. Sonuç: `GUNCELLEME_KILAVUZU.md` silindi (tamamen `update-engine.ps1`
++ `UPDATE_DAGITIMI.md` ile değiştirildi), `ThirdPartyKurulum.md` FAZ 3.6 ve
+`VM_TEST_KURULUMU.md` senaryo 7 güncellendi.
+
+### 13. Dokümantasyon süpürme — 10 dosya silindi, sebep her biri için ayrı doğrulandı (2026-07-19)
+
+Kullanıcı `docs/` altındaki tüm .md/.pdf'leri incelememi, güncel olmayanı
+güncellememi, işe yaramayan eskileri silmemi istedi. Silinenler ve neden:
+
+- `01_GELISTIRME_PLANI.md` — "Eksik: tüm işlem modülleri" diyordu, ama hepsi
+  (Purchase/Production/Sales/Stock) artık CLAUDE.md'de "Tamamlandı" — önermesi
+  tamamen geçersiz.
+- `02_ETL_ERP_MIMARISI.md` — doğrudan SQL bağlantılı staging-tablo mimarisi
+  öneriyordu; gerçek ETL (Excel-tabanlı, CLAUDE.md'de tarif edilen) TAMAMEN
+  FARKLI yapıldı. `grep` ile önerilen entity'lerin (`ErpConnection.cs` vb.)
+  kodda hiç var olmadığı doğrulandı — terk edilmiş bir tasarım yönüydü.
+- `03_YENI_ENTITY_KODLARI.md`, `04_CONTROLLER_SABLONLARI.md` — aynı terk
+  edilmiş plana ait entity/controller iskelet şablonları.
+- `05_PROMPTS_CLAUDE_CODE.md` — AI'a proje anlatma prompt seti; artık çok daha
+  kapsamlı ve güncel olan `CLAUDE.md` bu işi yapıyor.
+- `IS_Emri_Kullanim_Kilavuzu.pdf` + `_is_emri_kullanim.html`,
+  `Uretim_Tuketim_Is_Mantigi.pdf` + `_uretim_tuketim_mantigi.html` — içerikleri
+  `KULLANIM_KILAVUZU.md`'nin ilgili bölümlerinde (İş Emri, Üretim Detayı, Fire)
+  zaten birebir mevcut; ayrı duran, senkron tutulmayan kopyalardı.
+
+**Ders:** "Eski dosya" ile "yararsız dosya" aynı şey değil — audit/denetim
+raporları (`FSC_CoC_Ic_Denetim_Protokolu_*`, `multi_company_validation_*`) TARİHLİ
+KAYITLARDIR, güncellenmez/silinmez, oldukları haliyle kalırlar. Silme kararı
+her dosya için ayrı gerekçelendirilmeli: (a) önermesi artık yanlış mı, (b) başka
+bir kaynakta zaten var mı, (c) hiç kullanılmamış terk edilmiş bir plan mı.
+
+## Config omurga revizyonu — ölçüm, vault, CLAUDE.md ayrıştırma (2026-07-25)
+
+Konu ERP kodu değil, **onu üreten sistemin kendisi**. Dört ders çıktı.
+
+### 1. "gitignore whitelist" yedeği sessizce eksik yedekliyordu
+
+`~/.claude/.gitignore` whitelist yaklaşımıyla yalnız `CLAUDE.md`, `README.md`, `agents/`,
+`skills/` paylaşıyordu. `settings.json`, `hooks/`, `OMURGA.md`, `KURULUM.md` GitHub'da
+**hiç yoktu** — üstelik 12 agent + ~20 skill hiç commit edilmemişti. Yedek olduğunu
+sandığın şeyin *neyi içerdiğini* listelemeden yedek sayma.
+
+Bu, `CLAUDE.md`'deki **"gitignored ≠ pakete girmez"** dersinin ayna görüntüsü: orada
+gitignored dosya beklenmedik şekilde pakete *giriyordu*, burada beklenen dosya repoya
+*girmiyordu*. Aynı kök neden: dosya listesi tahmin edildi, doğrulanmadı.
+
+### 2. Taşınabilirlik `-File` ile değil `-Command` ile çözülür
+
+Hook komutları mutlak yol içeriyordu (`C:\Users\User\.claude\hooks\...`), bu yüzden
+`settings.json` repoya konamıyor, kurulum betiği her senkronda dosyayı ezmek zorunda
+kalıyordu.
+
+```
+# CALISMAZ — powershell.exe -File argumanini literal alir, degisken genisletmez
+powershell -File "$env:USERPROFILE\.claude\hooks\session-context.ps1"
+
+# CALISIR — -Command powershell'in kendi parser'indan gecer
+powershell -NoProfile -ExecutionPolicy Bypass -Command "& ([IO.Path]::Combine($env:USERPROFILE,'.claude','hooks','session-context.ps1'))"
+```
+
+İkisi de exit 0 döndürüyor (doğrulandı). Sonuç: kurulumda yol yeniden yazma adımı ortadan
+kalktı, `settings.json` (ortak) ↔ `settings.local.json` (makineye özel) ayrımı mümkün oldu.
+
+### 3. Token maliyeti "ne yazdığın" değil, "her turda ne yeniden okunduğu"
+
+`ccusage` ölçümü (46 gün): **cache read %97,17**, input %0,13, output %0,22, cache write
+%2,47. Toplam $1.808.
+
+Her tur, o ana kadar birikmiş tüm sabit ön eki yeniden okur → maliyet tur sayısıyla
+**karesel** büyür. Doğrudan sonuçlar:
+
+- Uzun tek oturum, aynı işi yapan iki kısa oturumdan **pahalıdır** → konu değişince `/clear`.
+- Alt-ajanın bağlamı ayrıdır, yalnız özeti döner → keşfi devretmek en ucuz hamle.
+- `CLAUDE.md`'yi oturum ortasında düzenlemek tüm ön ek cache'ini geçersiz kılar.
+
+Projenin `CLAUDE.md`'si 31,6 KB'dı ve büyük kısmı 10 turda 1 gereken referans kataloğuydu
+(MCD'nin tam JS gövdesi, sticky kolon CSS, Razor tuzakları...). Katalog talep üzerine
+yüklenen `fsc-erp-patterns` skill'ine taşındı; her bölüm yerine tek satırlık işaretçi
+bıraktı. **31,6 KB → 16,7 KB (%47).**
+
+> Kural: proje `CLAUDE.md`'si yalnız *her turda gereken* şeyi taşır. Katalog = skill.
+
+### 4. Toplu metin dönüşümünü LLM'e yaptırma
+
+120 KB'lık `lessons.md`'yi 65 vault notuna bölmek için alt-ajan düşünüldü — 120 KB okuma +
+120 KB yazma demekti, üstelik kesilme riskiyle. Yerine 130 satırlık Python betiği yazıldı
+(`~/.claude/scripts/split_lessons.py`): başlıkla böl, frontmatter üret, etiketleri regex ile
+çıkar, MOC tablosunu yaz. Deterministik, idempotent, ~0 token.
+
+Aynısı `CLAUDE.md` kırpımında da yapıldı — bölümler başlık adıyla eşlendi, hiçbir metin
+yeniden yazılmadı, dolayısıyla LLM'in içeriği "iyileştirme" riski yok.
+
+> Kural: girdi ve çıktı **mekanik olarak eşleşiyorsa** (böl, taşı, biçimlendir, yeniden
+> adlandır) betik yaz. LLM yalnız yargı gereken yerde devreye girer.
+
+### Nerede
+
+- Config: `~/.claude` — commit `46813bb`, `ebaf9a6`, `c39593a`, `15062d5`
+- Vault: `D:\ARD-Vault` (65 ders + 8 kalıp + 3014 kod grafiği notu)
+- Ölçüm: `D:\ARD-Vault\40-Decisions\token-baseline-20260725.md`
+- Katalog: `.claude/skills/fsc-erp-patterns/SKILL.md`

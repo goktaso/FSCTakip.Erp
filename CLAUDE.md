@@ -1,3 +1,5 @@
+
+
 # FSCTakip.Erp — Claude Code Kılavuzu
 
 ## Proje Özeti
@@ -130,268 +132,31 @@ new string(phone.Where(char.IsDigit).ToArray())
 
 ### ⚠️ Filtre/Arama — Zorunlu Tam Ekran Güncelleme Kuralı
 
-**Her sayfada filtre veya arama kutusu varsa**, ekrandaki TÜM öğeler filtreye göre güncellenmelidir:
-- Stat kartları (Toplam Lot, Toplam KG, vb.)
-- Tablo footer toplamları (`<tfoot>`)
-- Grup/ara toplamlar
-- Badge sayaçları
-
-**Uygulama pattern'i (DataTables kullanan sayfalar):**
-```javascript
-// 1. Her <tr>'ye data attribute ekle (InvariantCulture!)
-<tr data-giris="@val.ToString(CultureInfo.InvariantCulture)"
-    data-kalan="@val2.ToString(CultureInfo.InvariantCulture)">
-
-// 2. Stat kart/tfoot elementlerine ID ekle
-<div class="stat-value" id="cardGiris">...</div>
-<td id="ftGiris">...</td>
-
-// 3. draw.dt + input event'e bağla
-function recalcCards() {
-    var rows = table.querySelectorAll('tbody tr');
-    var giris = 0;
-    rows.forEach(tr => { if (tr.style.display !== 'none') giris += parseFloat(tr.dataset.giris) || 0; });
-    document.getElementById('cardGiris').textContent = Math.round(giris).toLocaleString('tr-TR');
-}
-$(table).on('draw.dt', recalcCards);
-searchInput.addEventListener('input', () => setTimeout(recalcCards, 60));
-recalcCards(); // ilk yüklemede de çalıştır
-```
-
-**Sunucu tarafı Razor `<tfoot>` toplamları DataTables ile UYUMSUZ** — filtreden bağımsız tüm satırları toplar. Çözüm: `data-val` attribute + JS recalc (yukarıdaki pattern). Hiçbir zaman sadece server-side toplam bırakma.
+Filtre/arama varsa **tüm** stat kartları, `<tfoot>` toplamları ve badge sayaçları da güncellenir. Server-side Razor toplamları DataTables ile uyumsuzdur. `draw.dt` recalc pattern'i: skill `fsc-erp-patterns` §1.
 
 ### ⚠️ Mesaj/Onay Kutusu Standardı
 
-Native `confirm()` / `alert()` KULLANMA. Bunun yerine `_Layout.cshtml`'de tanımlı ARD temalı sistemleri kullan:
-- `await appConfirm('mesaj', { danger, title })` → Promise\<bool\>
-- `showToast('mesaj', 'success|error|warning|info')` → sağ-alt toast
-- `await appAlert('mesaj')` → OK-only uyarı
+Native `confirm()`/`alert()` yasak — `appConfirm()` / `showToast()` / `appAlert()` kullan. Ayrıntı: skill `fsc-erp-patterns` §5.
 
 ### ⚠️ StockMovement Senkronizasyon Kuralı
 
-FscSerial ağırlığı değiştiğinde ilgili StockMovement da güncellenmelidir (1 lot = 1 SM kaydı):
-```csharp
-// SaveSerial() sonunda: lot toplamını hesapla, SM'yi bul ve güncelle
-// Anahtar: sm.DocumentNo == lot.DispatchNo ?? lot.PartiNo
-// Toplam KG: FscSerials.Sum(s => s.InitialWeight)
-// Orijinal birim: FscSerials.Sum(s => s.OriginalQuantity ?? s.InitialWeight)
-```
-SM yoksa oluştur, varsa güncelle. Bakınız: `PurchaseController.SaveSerial()`.
+FscSerial ağırlığı değişince ilgili StockMovement güncellenir (1 lot = 1 SM). Ayrıntı: skill `fsc-erp-patterns` §6.
 
 ### ⚠️ Decimal → JS/HTML Attribute Güvenliği
 
-JS'e veya `data-*` attribute'üne basılan her decimal **InvariantCulture** (nokta) kullanmalı:
-```cshtml
-// DOĞRU
-data-val="@item.Weight.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-var x = @item.Weight.ToString(System.Globalization.CultureInfo.InvariantCulture);
-
-// YANLIŞ — JS SyntaxError'a yol açar (tr-TR virgüllü yazar)
-data-val="@item.Weight"
-var x = @item.Weight;
-
-// YANLIŞ — JS argümanında virgül kaydırır
-onclick="fn(@item.Weight.ToString("N2"))"  // N0/N2 binlik ayraç ekler!
-```
+JS'e/`data-*`'a basılan her decimal **InvariantCulture** olmalı; `N0`/`N2` kullanma. Ayrıntı: skill `fsc-erp-patterns` §2.
 
 ### ⚠️ MCD (Multi-Choice Dropdown) Komponenti — Coklu Seçim Filtresi
 
-Tekli dropdown yerine Excel Advanced Filter tarzı coklu seçim paneli:
-
-**Yapı:**
-```html
-<div class="mcd" id="mcd-[pageId]" data-placeholder="— Seçiniz —">
-    <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-[pageId]')">
-        <span class="mcd-lbl">[seçili sayısı]</span>
-        <i class="fas fa-angle-down mcd-arrow"></i>
-    </button>
-    <div class="mcd-panel" id="mcd-[pageId]-panel" style="display:none;">
-        <div class="mcd-search-row">
-            <input type="text" class="mcd-search" placeholder="Kod/ad ara..." oninput="mcdSearch(this)">
-        </div>
-        <label class="mcd-row mcd-header">
-            <input type="checkbox" class="mcd-all-cb" onchange="mcdToggleAll(this,'mcd-[pageId]')">
-            <span>Tümünü Seç / Temizle</span>
-        </label>
-        <div class="mcd-items">
-            @foreach (var item in items) {
-                <label class="mcd-row">
-                    <input type="checkbox" name="itemIds" value="@item.Id" class="mcd-cb" onchange="mcdUpdate('mcd-[pageId]')">
-                    <span class="mcd-text">@item.Code</span>
-                    <span class="mcd-sub">@item.Name</span>
-                    <span class="mcd-ext" title="Dış kod">@item.ExternalCode</span>
-                </label>
-            }
-        </div>
-    </div>
-</div>
-```
-
-**JavaScript (view'de tek seferde tanımlanır, `window._mcdReady` guard ile):**
-```javascript
-if (!window._mcdReady) {
-    window._mcdReady = true;
-    window.mcdOpen = function(id) {
-        var panel = document.getElementById(id + '-panel');
-        var isOpen = panel && panel.style.display !== 'none';
-        document.querySelectorAll('.mcd-panel').forEach(p => p.style.display = 'none');
-        if (!isOpen && panel) {
-            panel.style.display = 'flex';
-            mcdUpdate(id);
-        }
-    };
-    window.mcdSearch = function(el) {
-        var term = el.value.toLowerCase();
-        el.closest('.mcd-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(row => {
-            row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
-        });
-    };
-    window.mcdToggleAll = function(cb, id) {
-        document.getElementById(id + '-panel').querySelectorAll('.mcd-row:not(.mcd-header)').forEach(row => {
-            if (row.style.display !== 'none') {
-                var c = row.querySelector('.mcd-cb');
-                if (c) c.checked = cb.checked;
-            }
-        });
-        mcdUpdate(id);
-    };
-    window.mcdUpdate = function(id) {
-        var panel = document.getElementById(id + '-panel');
-        var container = document.getElementById(id);
-        if (!panel || !container) return;
-        var count = panel.querySelectorAll('.mcd-cb:checked').length;
-        var label = container.querySelector('.mcd-lbl');
-        if (label) label.textContent = count === 0 ? (container.dataset.placeholder || '— Seçiniz —') : count + ' seçildi';
-        var allCb = panel.querySelector('.mcd-all-cb');
-        var visibleCbs = panel.querySelectorAll('.mcd-row:not(.mcd-header):not([style*="none"]) .mcd-cb').length;
-        if (allCb && visibleCbs > 0) allCb.checked = (count >= visibleCbs);
-    };
-    document.addEventListener('mousedown', e => {
-        if (!e.target.closest('.mcd')) {
-            document.querySelectorAll('.mcd-panel').forEach(p => p.style.display = 'none');
-        }
-    });
-}
-```
-
-**Controller parametresi:** `int? itemId` → `int[]? itemIds` → query `.Where(x => itemIds.Contains(x.ItemId))`
-
-**ViewBag tutulması:** `ViewBag.ItemIds = itemIds ?? Array.Empty<int>();` view'de checkbox state'i için.
-
-**Excel export:** Parametre URL'ye `itemIds=1&itemIds=2` şeklinde gönderilir (ASP.NET Core array binding).
-
-**Uyarı:** Her view'de MCD kullanılırsa, `window._mcdReady` guard ile coklu tanımlama önlenmelidir.
+Çoklu seçim filtresi için MCD komponenti (HTML + `window._mcdReady` guard'lı JS + `int[]` controller binding). Ayrıntı: skill `fsc-erp-patterns` §3.
 
 ### ⚠️ Shared Partial'lerde ViewData Aktarımı — `new ViewDataDictionary(ViewData)`
 
-Shared partial'lere (`Views/Shared/_PartialName.cshtml`) ViewBag değerleri geçiş işe yaramaz çünkü partial **farklı ViewContext**'te render edilir. ViewBag'e set edilen değerler partial'e görünmez.
-
-**Çözüm:** ViewData dictionary'yi explicit olarak çoğalt ve partial'e ver:
-```razor
-@await Html.PartialAsync("_PartialName", null, 
-    new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData))
-```
-
-Partial içinde ViewData["key"] ile erişim çalışır; `ViewBag.key` ve `Model` partial için bağlam dışı kalabilir.
-
-**Best practice:**
-- **Shared partial'ler:** ViewData kullan (`ViewData["FscliGiris"] = ...`)
-- **Page partial'ler** (aynı folder'da): ViewBag veya Model tercih edilebilir
-- **Reusable component'ler:** ViewData daha güvenli (context-independent)
-
-**Örnek — FSC Kütle Dengesi Kartı (_FscStokOzeti.cshtml):**
-```razor
-@* Partial başında ViewData'dan oku *@
-@{
-    var fscliGiris = (decimal)(ViewData["FscliGiris"] ?? 0m);
-    var fscsizGiris = (decimal)(ViewData["FscsizGiris"] ?? 0m);
-    // ...
-}
-
-@* HTML kartı render et *@
-<div class="card">...</div>
-```
-
-**Çağrı (4 sayfada ortak):**
-```razor
-@* Controller ViewData'yı doldur *@
-ViewData["FscliGiris"] = fscliGirisKg;
-ViewData["FscsizGiris"] = fscsizGirisKg;
-
-@* View'de partial'i çağır; ViewData'yı aktar *@
-@await Html.PartialAsync("_FscStokOzeti", null, 
-    new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData))
-```
-
-**Uygulandığı:** `_FscStokOzeti.cshtml` (Purchase, Stock/Summary, Stock/RawMaterial, Stock/AdminStock).
+Shared partial'e ViewBag geçmez; `new ViewDataDictionary(ViewData)` ile aktar. Ayrıntı: skill `fsc-erp-patterns` §4.
 
 ### ⚠️ Varsayılan Filtre Deseni — "Tüm Kayıtları Göster" Toggle
 
-Kullanıcı filtre seçmediğinde, sayfalar **sensible varsayılan** grup/kategori ile içerik sınırlamalı; ama "Tüm Kayıtları Göster" seçeneğiyle tam liste erişimi mümkün olmalı:
-
-```csharp
-// Controller
-public async Task<IActionResult> Index(
-    int[]? supplierIds, int[]? fscTypeIds,
-    string? stockCode, string? stockName,
-    int[]? productIds, bool showAll = false)
-{
-    // Kullanıcı herhangi bir filtre uyguladı mı?
-    bool hasUserFilter = showAll
-        || (supplierIds?.Length > 0)
-        || (fscTypeIds?.Length > 0)
-        || !string.IsNullOrWhiteSpace(stockCode)
-        || !string.IsNullOrWhiteSpace(stockName)
-        || (productIds?.Length > 0);
-
-    if (!hasUserFilter)
-    {
-        // Varsayılan: Hammadde + Yarı Mamül + Burgu Sap (GroupIds: 1, 3, 4)
-        var defaultGroupIds = new[] { 1, 3, 4 };
-        query = query.Where(l => l.Product != null
-            && l.Product.ProductGroupId.HasValue
-            && defaultGroupIds.Contains(l.Product.ProductGroupId.Value));
-    }
-    
-    ViewBag.IsDefaultFilter = !hasUserFilter;
-    ViewBag.ShowAll         = showAll;
-    // ... rest of filters
-}
-```
-
-**View HTML:**
-```html
-<!-- Varsayılan filtre aktif →  bilgi bandı + toggle -->
-@if (isDefaultFilter)
-{
-    <div class="d-flex align-items-center gap-2 mb-2 px-1 py-2 rounded"
-         style="background:rgba(25,118,210,.08);border:1px solid rgba(25,118,210,.2);">
-        <i class="fas fa-filter text-primary"></i>
-        <span>Varsayılan görünüm: <strong>Hammadde · Yarı Mamül · Burgu Sap</strong></span>
-        <a href="/Purchase/Index?showAll=true" class="ms-auto btn btn-sm">
-            <i class="fas fa-eye me-1"></i>Tüm Kayıtları Göster
-        </a>
-    </div>
-}
-else if ((bool)(ViewBag.ShowAll ?? false))
-{
-    <div class="d-flex align-items-center gap-2 mb-2 ...">
-        <i class="fas fa-list text-muted"></i>
-        <span>Tüm kayıtlar gösteriliyor.</span>
-        <a href="/Purchase/Index" class="ms-auto btn btn-sm">
-            <i class="fas fa-undo me-1"></i>Varsayılana Dön
-        </a>
-    </div>
-}
-```
-
-**URL deseni:** `?` (varsayılan) vs `?showAll=true` (tümü) vs `?productIds=5&productIds=6` (seçili filtre).
-
-**Uygulanan yerler:** 
-- `Purchase/Index` (varsayılan: Hammadde+YM+BS)
-- `Stock/RawMaterial` (varsayılan: Hammadde+YM+BS) — 2026-06-22 eklendi
-
-**⚠️ Grup adları dinamik (ID değil):** Yeni kodlarda hardcoded GroupId'ler yerine `ProductGroup.GroupName.ToUpper()` ile dinamik lookup yapılmalı. Böylece grup ID'leri değişse bile pattern çalışır.
+Filtre seçilmediğinde varsayılan grup uygulanır, `?showAll=true` ile tam liste açılır. Ayrıntı: skill `fsc-erp-patterns` §7.
 
 ### ⚠️ StockMovement.ProductId Non-Nullable Kural
 
@@ -409,82 +174,7 @@ query = query.Where(sm => sm.ProductId == productId);  // ✓
 
 ### ⚠️ HTML Yorum Satırında Razor Direktifi Hata Vermesi
 
-**Sorun:** HTML yorum satırında `@section` yazması Razor compile hatasına yol açar ("Unexpected character in tag helper").
-
-**Kök neden:** Razor parser HTML yorum `<!-- ... -->` bloğunun içini parse eder; `@` karakterleri directive olarak yorumlanır.
-
-**Çözüm:** Açıklama satırında `@` karakteri bulunacaksa Razor yorum `@* ... *@` kullan veya `@` kaldır:
-```razor
-// YANLIŞ
-<!-- @section Scripts bloğu tanımlanır -->
-
-// DOĞRU
-<!-- Section Scripts bolumu tanimlanir -->
-// veya
-@* @section Scripts bloğu açıklaması *@
-```
-
-### ⚠️ Razor @foreach Bloğunda İlk Satırda @{ } Kullanilamaz
-
-**Sorun:** `@foreach (var item in list) { @{ var x = ...; } ... }` → Razor compile hatası ("Unexpected end of file" vb.).
-
-**Kök neden:** `@foreach` blok içinin ilk statement'i `@{ }` (code block) olamaz. Razor parser blok başında HTML veya doğrudan C# statement beklediğinde, `@{ }` sözdizimi geçersizdir.
-
-**Çözüm:** Foreach içinde değişken bildirimi yapılacaksa `@{ }` kaldır, doğrudan statement yazın:
-```razor
-// YANLIŞ
-@foreach (var s in suppliers) {
-    @{ bool sel = condition; }
-    <input checked="@(sel ? "checked" : null)">
-}
-
-// DOĞRU
-@foreach (var s in suppliers) {
-    bool sel = condition;  // @{ } kaldırıldı
-    <input checked="@(sel ? "checked" : null)">
-}
-```
-
-### ⚠️ MCD Filtresi — CSS display:block + flex-column Wrapper Layout Kuralı
-
-Tekli dropdown yerine multi-select MCD komponenti içeren sayfalarda filtre paneli layout'unda iki düzeltme gerekli:
-
-**1. Global CSS** (_Layout.cshtml / mcd stil bloğu):
-```css
-.mcd {
-    position: relative;
-    display: block;  /* ← inline-block değil; flex container'da dikey hizalama sağlasın */
-}
-```
-
-**2. View'de MCD gruplarının wrapper'ı** (her MCD etiketi + MCD konteynerini kapsayan div):
-```html
-<div style="display:flex; flex-direction:column; min-width:160px;">
-    <label class="form-label small fw-semibold mb-1">Tedarikçi</label>
-    <div class="mcd" id="mcd-id" data-placeholder="...">
-        <button type="button" class="mcd-btn" onclick="mcdOpen('mcd-id')">
-            ...
-        </button>
-        <div class="mcd-panel" id="mcd-id-panel">
-            ...
-        </div>
-    </div>
-</div>
-```
-
-**Filtre paneli hizalama:** Birden çok MCD grubu yan yana basıldığında `row g-2 align-items-end` yerine:
-```html
-<div class="d-flex align-items-end gap-2 flex-wrap">
-    <!-- her grup kendi min-width taşır -->
-    <div style="min-width:130px;">...</div>
-    <div style="display:flex;flex-direction:column;min-width:160px;">
-        <label>...</label>
-        <div class="mcd">...</div>
-    </div>
-</div>
-```
-
-**Neden:** `display:inline-block` flex container'da hizalama kontrol edilemiyor; dikey etiket-input çiftinde input alanı etiketin yanına gelir (aynı satır). `display:block` ile wrapper flex-direction:column ayarıyla etiket tamamen üstte, input tamamen alta iner.
+Razor tuzakları (HTML yorumunda `@`, `@foreach` ilk satırında `@{ }`): skill `fsc-erp-patterns` §9.
 
 ## Dosya Yükleme Konvansiyonu
 
@@ -582,6 +272,7 @@ Bir alan değiştiğinde, **aşağıdaki ilgili alanlar otomatik kontrol edilmel
 ## Migration Komutları
 
 ```bash
+
 # WebUI projesini startup, DataAccess projesini migration hedefi olarak kullan
 cd FSCTakip.DataAccess
 dotnet ef migrations add MigrationName --startup-project ../FSCTakip.WebUI
@@ -590,7 +281,9 @@ dotnet ef database update --startup-project ../FSCTakip.WebUI
 
 ## Kullanım Kılavuzu Güncelleme Kuralı
 
-**Her yeni sayfa veya modül tamamlandığında** `docs/KULLANIM_KILAVUZU.md` dosyası mutlaka güncellenmeli ve `FSCTakip.WebUI/Views/Guide/Index.cshtml` sayfasındaki TOC + heading haritası senkronize edilmelidir.
+**Her yeni sayfa veya modül tamamlandığında** `docs/KULLANIM_KILAVUZU.md` güncellenir ve `FSCTakip.WebUI/Views/Guide/Index.cshtml` içindeki TOC + heading haritası senkronize edilir.
+
+Bölüm şablonu, topbar ASCII diyagramı ve adım adım kontrol listesi: skill `fsc-erp-patterns` §13.
 
 ### Güncelleme Adımları (her modül bitiminde otomatik yap)
 
@@ -632,88 +325,13 @@ FSCTakip.WebUI/
 
 ---
 
-## ⚠️ EF Core Navigation Property Kuralı
+## Referans kalıplar → skill `fsc-erp-patterns`
 
-FK alanı (örn. `FscLot.SourceSerialId`) tanımlandığında **navigation property de ekle** ve Include zincir ile eager-load et:
+Aşağıdaki kurallar talep üzerine yüklenen `fsc-erp-patterns` skill'inde:
+EF Core navigation property (§11) · LINQ GroupBy key minimal (§12) · sticky kolon layout (§8) · JS event sıralaması `onclick`/`onmousedown` (§10) · kullanım kılavuzu güncelleme adımları (§13).
 
-```csharp
-// Entity'de
-public int? SourceSerialId { get; set; }
-public virtual FscSerial? SourceSerial { get; set; }  // ← navigation property
-
-// AppDbContext'te fluent config
-modelBuilder.Entity<FscLot>()
-    .HasOne(l => l.SourceSerial).WithMany()
-    .HasForeignKey(l => l.SourceSerialId);
-
-// Controller'da Include zincir
-var lots = _context.FscLots
-    .Include(l => l.SourceSerial).ThenInclude(s => s!.Lot)
-    .Include(l => l.Product)
-    .ToListAsync();
-
-// Anonim FK okuma yerine typed property kullan
-var kaynak = lot.SourceSerial;  // lot.SourceSerialId.HasValue ? Find() yerine
-```
-
-**Neden:** Property olmadan Include çalışmaz; soft-error (null reference) riski. Typed property IntelliSense yardım sağlar, kod okunabilirliğini artırır.
-
-## ⚠️ LINQ GroupBy Key Minimal Tutma
-
-GroupBy key'i çok alanla tanımlanırsa (10+ alan) sorgu bloat olur, bellek tüketimi artar. Minimal key tutun, ek veriler Include ile eriş:
-
-```csharp
-// Eski: Key çok alan
-var byLot = serials.GroupBy(s => new {
-    PartiNo = s.Lot?.PartiNo,
-    Supplier = s.Lot?.Supplier?.Name,
-    FscType = s.Lot?.FscType.Name,
-    SourceInfo = s.Lot?.SourceSerial?.Lot?.PartiNo,
-}).ToList();
-
-// Yeni: Key minimal, ek veriler lg.First() ile al
-var byLot = serials
-    .Include(s => s.Lot!.SourceSerial!.Lot)
-    .GroupBy(s => new { s.Lot!.PartiNo, Supplier = s.Lot.Supplier!.Name })
-    .Select(lg => new {
-        FirstLot = lg.First().Lot,
-        SourceSerial = lg.First().Lot?.SourceSerial,
-        Items = lg.ToList()
-    }).ToList();
-```
-
-## ⚠️ Sticky Column Layout — Wrapper position:relative Kuralı
-
-Table sağ taraf buton kolonu scroll'lanırken kayboluyor mu? Wrapper'a `position:relative` ekle, child column'a `position:sticky; right:0; z-index:10; background:white` ve gölge (`box-shadow`):
-
-```html
-<div class="table-wrapper" style="position: relative; overflow-x: auto;">
-    <table>
-        <td class="sticky-col" 
-            style="position: sticky; right: 0; z-index: 10; background: white; box-shadow: -2px 0 4px rgba(0,0,0,.1);">
-            <button>Düzenle</button><button>Sil</button>
-        </td>
-    </table>
-</div>
-```
-
-Wrapper `position:relative` olmadan sticky konumu bağlamını kaybeder. Arka plan rengi (white) koyunmali; scroll'da arkasındaki metin gizlensin.
-
-## ⚠️ JavaScript Event Ordering — onclick vs onmousedown preventDefault
-
-Dropdown panel kapatma/açma + seçim işlemi birbiriyle çakışıyorsa: grup başlığında `onmousedown="event.preventDefault()"` ekle, seçim işlemi (selectSerial) `onclick`'e taş:
-
-```razor
-<div onmousedown="event.preventDefault()" onclick="toggleProdGroup('@id')">
-    Grup Başlığı
-</div>
-
-<tr onclick="selectSerial(...); hideSerialDropdown();">
-    Seri Satırı
-</tr>
-```
-
-`preventDefault()`, mousedown'ın panel toggle'ını engeller; click event'i sırasında seçim işlemi tamamlanır, sonra panel kapatılır. `setTimeout` ile panel kapanma gecikmesi sağla (400ms).
+Razor/.cshtml, filtre paneli, tablo, modal, dropdown veya stok hareketi kodu yazarken bu skill'i yükle.
+Aynı kalıplar Obsidian vault'ta da not olarak duruyor: `D:\ARD-Vault\30-Patterns\`.
 
 ## Önemli Notlar
 
