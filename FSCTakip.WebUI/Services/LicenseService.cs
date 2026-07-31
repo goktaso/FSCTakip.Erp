@@ -54,7 +54,9 @@ qCFALiMJ+EvPCl6Nma7EG125rONt9P1w9oAr+0vY9yYMvlSWJhPBB9wrAu9tWEx1
 awIDAQAB
 -----END PUBLIC KEY-----";
 
-        private readonly string _licensePath;
+        private readonly string? _configuredPath;   // License:Path (varsa mutlak yol)
+        private readonly string _legacyPath;         // eski: uygulama klasörü\license.lic (geriye uyumlu okuma)
+        private readonly string _dataPath;           // yeni: yazılabilir veri klasörü\license.lic
         private readonly string? _connectionString;
         private readonly int _trialDays;
         private readonly string? _expectedProduct;
@@ -70,10 +72,19 @@ awIDAQAB
 
         public LicenseService(IConfiguration cfg, IWebHostEnvironment env)
         {
-            var configured = cfg["License:Path"];
-            _licensePath = string.IsNullOrWhiteSpace(configured)
-                ? Path.Combine(env.ContentRootPath, "license.lic")
-                : configured;
+            // Yol çözümü:
+            //  - License:Path verilmişse mutlak otorite odur (hem okuma hem yazma).
+            //  - Verilmemişse: YAZMA daima yazılabilir bir veri klasörüne gider (IIS uygulama
+            //    klasörü genelde salt-okunurdur → eski davranış Upload'ta 500 veriyordu).
+            //    OKUMA ise geriye uyumlu: önce yeni veri klasörü, yoksa eski app klasörü.
+            _configuredPath = string.IsNullOrWhiteSpace(cfg["License:Path"]) ? null : cfg["License:Path"]!.Trim();
+            _legacyPath = Path.Combine(env.ContentRootPath, "license.lic");
+            // Yazılabilir kök: FileStorage:Root (kurulum yazılabilir yapar) üst klasörü, yoksa ProgramData.
+            var fsRoot = cfg["FileStorage:Root"];
+            var dataDir = !string.IsNullOrWhiteSpace(fsRoot)
+                ? (Directory.GetParent(fsRoot.TrimEnd('\\', '/'))?.FullName ?? fsRoot)
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ArdFscErp");
+            _dataPath = Path.Combine(dataDir, "license.lic");
             _connectionString = cfg.GetConnectionString("DefaultConnection");
             _trialDays = cfg.GetValue("License:TrialDays", 30);
             // Bu kurulumun beklediği ürün. Boş => ürün kontrolü yapılmaz (geriye uyumlu:
@@ -130,12 +141,13 @@ awIDAQAB
             // Lisans dosyası hiç yoksa deneme süresi işler. Dosya VARSA (bozuk/süresi dolmuş/
             // başka makineye ait olsa bile) karar verilmiş sayılır — denemeye geri düşülmez,
             // aksi halde süresi dolmuş lisansı silmek 30 gün daha kazandırırdı.
-            if (!File.Exists(_licensePath))
+            var readPath = ReadPath;
+            if (!File.Exists(readPath))
                 return EvaluateTrial(machineKey);
 
             try
             {
-                var result = ValidateLicenseContent(File.ReadAllText(_licensePath), machineKey, DateTime.Today, _expectedProduct);
+                var result = ValidateLicenseContent(File.ReadAllText(readPath), machineKey, DateTime.Today, _expectedProduct);
                 return result;
             }
             catch (Exception ex)
@@ -292,6 +304,14 @@ awIDAQAB
             return new LicenseInfo { State = LicenseState.Valid, LicensedTo = licensedTo, LicenseId = licId, ValidUntil = validUntil, MachineKey = machineKey, Product = licProduct, Edition = licEdition };
         }
 
-        public string LicensePath => _licensePath;
+        /// <summary>Okuma yolu: yapılandırılmış > yeni veri klasörü (varsa) > eski app klasörü > veri klasörü.</summary>
+        private string ReadPath =>
+            _configuredPath
+            ?? (File.Exists(_dataPath) ? _dataPath
+                : File.Exists(_legacyPath) ? _legacyPath
+                : _dataPath);
+
+        /// <summary>Yazma yolu: her zaman yazılabilir konum (yapılandırılmış > veri klasörü). Upload buraya yazar.</summary>
+        public string LicensePath => _configuredPath ?? _dataPath;
     }
 }

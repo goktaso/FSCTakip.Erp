@@ -43,7 +43,17 @@ namespace FSCTakip.WebUI.Controllers
                 return Json(new { success = false, message = $"Lisans doğrulanamadı: {check.State} {check.Error}".Trim() });
 
             var path = ((LicenseService)_license).LicensePath;
-            await System.IO.File.WriteAllTextAsync(path, content.Trim());
+            try
+            {
+                var dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                await System.IO.File.WriteAllTextAsync(path, content.Trim());
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                return Json(new { success = false, message =
+                    $"Lisans dosyası yazılamadı ({path}). Klasör salt-okunur olabilir. Ayrıntı: {ex.Message}" });
+            }
             _license.Invalidate();
 
             return Json(new { success = true, message = $"Lisans etkinleştirildi — {check.LicensedTo}" });
