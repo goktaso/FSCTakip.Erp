@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Projects target net8.0; the .slnx format needs SDK 9.0.200+, so install both.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore FSCTakip.Erp.slnx
+
+      - name: Build
+        run: dotnet build FSCTakip.Erp.slnx --no-restore -c Release
+
+      # Runs only when a test project exists in the solution.
+      - name: Test
+        run: |
+          if find . -name '*Tests*.csproj' -not -path './.claude/*' | grep -q .; then
+            dotnet test FSCTakip.Erp.slnx --no-build -c Release --logger "trx;LogFileName=results.trx"
+          else
+            echo "No test project found - skipping tests."
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/TestResults/*.trx"
+          if-no-files-found: ignore
+
+  vulnerable-packages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Fail on High/Critical vulnerable packages (incl. transitive)
+        run: |
+          dotnet restore FSCTakip.Erp.slnx
+          dotnet list FSCTakip.Erp.slnx package --vulnerable --include-transitive | tee vuln.txt
+          if grep -E '^\s+>\s.*\s(High|Critical)\s' vuln.txt; then
+            echo "::error::High/Critical vulnerable NuGet packages found (see log)."
+            exit 1
+          fi
